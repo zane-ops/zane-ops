@@ -1,2 +1,3 @@
 lib/
 venv/
+__pycache__/
