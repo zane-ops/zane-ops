@@ -40,3 +40,8 @@
 ## ❤️ Contributing
 
 Interested in contributing? Check out the [contribution guidelines](./CONTRIBUTING.md).
+
+
+## Credits 
+
+- [Plane](https://github.com/makeplane/plane): for giving us content for the contributions templates (contribution guidelines).
