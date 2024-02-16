@@ -6,7 +6,7 @@
 
 ## 📸 Screenshots
 
-*TODO: Screenshots will be added once available.*
+> *TODO: Screenshots will be added once available.*
 
 ## 🚀 Features
 
@@ -20,10 +20,10 @@
 ## 🍙 Getting Started
 
 1. **Setup**
-   *TODO: A quick-start tutorial will be provided.*
+   > *TODO: A quick-start tutorial will be provided.*
 
 2. **Usage**
-   *TODO: A quick-start tutorial will be provided.*
+   > *TODO: A quick-start tutorial will be provided.*
 
 ## 📚 Terminologies
 
