@@ -27,8 +27,6 @@
 
 ## 📚 Terminologies
 
-## 📚 Terminologies
-
 - **Worker**: A lightweight, ephemeral unit of work or process designed to run a specific task. Workers are typically utilized for one-off or background tasks that execute and then terminate upon completion.
 
 - **Service**: A persistent, scalable component of an application that runs continuously. Services act as the backbone of your application, managing HTTP requests, executing background jobs, interfacing with databases, and more.
