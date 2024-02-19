@@ -40,7 +40,7 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
     # Create a virtual env
     python -m venv ./venv
     # activate the virtualenv
-    source ./venv/bin/active
+    source ./venv/bin/activate
     # Install all the packages
     pip install -r requirements.txt
     ```

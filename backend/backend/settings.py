@@ -35,7 +35,7 @@ CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
 
 hosts = os.environ.get("ALLOWED_HOSTS")
-ALLOWED_HOSTS = [] if hosts is None else hosts.split(",")
+ALLOWED_HOSTS = ["zane.local", "localhost"] if hosts is None else hosts.split(",")
 
 CACHES = {
     "default": {
@@ -49,6 +49,7 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # Application definition
 
 INSTALLED_APPS = [
+    "zane_api.apps.ZaneApiConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

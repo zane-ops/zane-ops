@@ -1,0 +1,27 @@
+{
+  "linter": {
+    "enabled": false
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "indentStyle": "tab",
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "ignore": []
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "indentStyle": "space",
+      "trailingComma": "none",
+      "indentWidth": 2
+    }
+  },
+  "json": {
+    "formatter": {
+      "indentWidth": 2,
+      "indentStyle": "space"
+    }
+  }
+}
