@@ -49,6 +49,7 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # Application definition
 
 INSTALLED_APPS = [
+    "zane_api.apps.ZaneApiConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
