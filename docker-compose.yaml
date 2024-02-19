@@ -22,10 +22,13 @@ services:
         ports:
             - 8082:8080
     redis-gui:
-        image: rediscommander/redis-commander
+        image: redis/redisinsight
         environment:
-            - REDIS_HOSTS=local:redis:6379:0:redis_password
+            - REDIS_HOSTS=local:redis:6379
         ports:
-            - "8089:8081"
+            - "8089:5540"
+        volumes:
+            - redisinsight:/data
 volumes:
     db-data:
+    redisinsight:
