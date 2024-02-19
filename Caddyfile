@@ -1,0 +1,10 @@
+http://zane.local {
+	handle /api/* {
+		reverse_proxy http://127.0.0.1:8000
+	}
+
+	handle {
+		reverse_proxy http://127.0.0.1:5678
+	}
+	log
+}
