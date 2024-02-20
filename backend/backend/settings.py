@@ -185,4 +185,5 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
+    "EXCEPTION_HANDLER": "zane_api.views.custom_exception_handler",
 }
