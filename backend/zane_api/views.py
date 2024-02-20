@@ -36,7 +36,6 @@ class LoginView(APIView):
     @method_decorator(ratelimit(key="ip", rate="5/m"))
     @method_decorator(ratelimit(key="post:username", rate="5/m"))
     def post(self, request: Request):
-        # raise Ratelimited
         form = forms.PasswordLoginForm(request.data)
         if form.is_valid():
             data = form.data
