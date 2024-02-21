@@ -13,11 +13,11 @@ from django.core.cache import cache
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    DATABASES={
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-        }
-    },
+    # DATABASES={
+    #     "default": {
+    #         "ENGINE": "django.db.backends.sqlite3",
+    #     }
+    # },
 )
 class APITestCase(TestCase):
     client = APIClient()

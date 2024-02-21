@@ -1,0 +1,38 @@
+name: Django Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master # Adjust this if your default branch has a different name
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: test
+    
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5434:5432
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.11
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: python manage.py test --parallel
