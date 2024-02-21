@@ -1,4 +1,3 @@
-from time import sleep
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -13,11 +12,6 @@ from django.core.cache import cache
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DATABASES={
-    #     "default": {
-    #         "ENGINE": "django.db.backends.sqlite3",
-    #     }
-    # },
 )
 class APITestCase(TestCase):
     client = APIClient()

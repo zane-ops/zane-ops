@@ -33,7 +33,6 @@ jobs:
     - name: Install dependencies
       run: |
         cd backend
-        python -m pip install --upgrade pip
         pip install uv
         uv venv
         uv pip install -r requirements.txt
