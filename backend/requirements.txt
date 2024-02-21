@@ -20,5 +20,6 @@ requests==2.31.0
 setuptools==65.5.0
 six==1.16.0
 sqlparse==0.4.4
+tblib==3.0.0
 urllib3==2.2.0
 uv==0.1.0
