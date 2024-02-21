@@ -57,7 +57,15 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
     ```bash
     docker-compose up -d
     ```
-4. **And launch the project :**
+
+4. **Run migrations :**
+    
+    Backend 
+    ```bash
+    python manage.py migrate
+    ```
+
+5. **And launch the project :**
 
     Backend 
     ```bash
@@ -71,7 +79,7 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
 
     The API will be available at [http://localhost:8000](http://localhost:8000) and the frontend client at [http://localhost:5678](http://localhost:5678).
 
-5. **Open the source code and start rocking ! 😎**
+6. **Open the source code and start rocking ! 😎**
 
 
 ## 🧐 Project structure
@@ -115,6 +123,7 @@ If you would like to _implement_ it, an issue with your proposal must be submitt
 To ensure consistency throughout the source code, please keep these rules in mind as you are working:
 
 - All backend features or bug fixes must be tested by one or more specs (unit-tests).
+- Be sure to update the `requirements.txt` file if you installed new packages
 - For the frontend we use [biome](https://biomejs.dev/) as our formatter, be sure to format your code before pushing your code.
 
 ## Need help? Questions and suggestions
