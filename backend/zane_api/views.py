@@ -16,7 +16,7 @@ def custom_exception_handler(exception: Any, context: Any):
     if isinstance(exception, Ratelimited):
         return Response(
             {
-                "error": {
+                "errors": {
                     ".": [
                         "Too Many Requests",
                     ]
@@ -44,11 +44,11 @@ class LoginView(APIView):
             )
             if user is not None:
                 login(request, user)
-                return Response({"success": True})
+                return Response({"success": True}, status=status.HTTP_201_CREATED)
             else:
                 return Response(
                     {
-                        "error": {
+                        "errors": {
                             ".": [
                                 "Invalid username or password",
                             ]
@@ -59,7 +59,7 @@ class LoginView(APIView):
         else:
             return Response(
                 {
-                    "error": form.errors,
+                    "errors": form.errors,
                 },
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )

@@ -1,0 +1,40 @@
+name: Django Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_DB: zane
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5434:5432
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.11
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install uv
+        uv venv
+        uv pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        cd backend
+        source .venv/bin/activate
+        python manage.py test --parallel

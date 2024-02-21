@@ -42,7 +42,8 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
     # activate the virtualenv
     source ./venv/bin/activate
     # Install all the packages
-    pip install -r requirements.txt
+    pip install uv
+    uv pip install -r requirements.txt
     ```
 
     For the frontend
