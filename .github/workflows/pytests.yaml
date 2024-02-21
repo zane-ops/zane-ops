@@ -7,8 +7,6 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
-    env:
-        ENVIRONMENT_NAME: test # Sets the environment name to 'test'.
     
     services:
       postgres:
