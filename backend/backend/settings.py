@@ -35,7 +35,7 @@ CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
 
 hosts = os.environ.get("ALLOWED_HOSTS")
-ALLOWED_HOSTS = ["zane.local", "localhost"] if hosts is None else hosts.split(",")
+ALLOWED_HOSTS = ["zane.local", "localhost", "127.0.0.1"] if hosts is None else hosts.split(",")
 
 CACHES = {
     "default": {
@@ -49,14 +49,16 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # Application definition
 
 INSTALLED_APPS = [
-    "zane_api.apps.ZaneApiConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "zane_api.apps.ZaneApiConfig",
+    "rest_framework",
 ]
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -144,3 +146,44 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGGING = {
+    "version": 1,
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        }
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "filters": ["require_debug_true"],
+            "class": "logging.StreamHandler",
+        }
+    },
+    "loggers": {
+        "django.db.backends": {
+            "level": "DEBUG",
+            "handlers": ["console"],
+        }
+    },
+}
+
+REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
+
+if DEBUG:
+    REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = (
+        REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES
+        + ("rest_framework.renderers.BrowsableAPIRenderer",)
+    )
+
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
+    "EXCEPTION_HANDLER": "zane_api.views.custom_exception_handler",
+}
