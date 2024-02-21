@@ -35,7 +35,7 @@ CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
 
 hosts = os.environ.get("ALLOWED_HOSTS")
-ALLOWED_HOSTS = ["zane.local", "localhost"] if hosts is None else hosts.split(",")
+ALLOWED_HOSTS = ["zane.local", "localhost", "127.0.0.1"] if hosts is None else hosts.split(",")
 
 CACHES = {
     "default": {
