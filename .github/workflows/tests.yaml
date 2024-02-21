@@ -41,4 +41,5 @@ jobs:
     - name: Run tests
       run: |
         cd backend
+        source .venv/bin/activate
         python manage.py test --parallel
