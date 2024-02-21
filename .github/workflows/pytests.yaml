@@ -2,9 +2,7 @@ name: Django Tests
 
 on:
   pull_request:
-    branches:
-      - main
-      - master # Adjust this if your default branch has a different name
+  workflow_dispatch:
 
 jobs:
   run-tests:
