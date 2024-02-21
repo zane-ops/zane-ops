@@ -7,7 +7,7 @@ on:
       - master # Adjust this if your default branch has a different name
 
 jobs:
-  build:
+  run-tests:
     runs-on: ubuntu-latest
     env:
         ENVIRONMENT_NAME: test # Sets the environment name to 'test'.
@@ -35,6 +35,7 @@ jobs:
         cd backend
         python -m pip install --upgrade pip
         pip install uv
+        uv venv
         uv pip install -r requirements.txt
     
     - name: Run tests
