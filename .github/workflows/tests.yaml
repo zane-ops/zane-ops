@@ -9,14 +9,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: test
+    env:
+        ENVIRONMENT_NAME: test # Sets the environment name to 'test'.
     
     services:
       postgres:
         image: postgres:12
         env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: user
+          POSTGRES_DB: zane
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
         ports:
           - 5434:5432
@@ -29,6 +30,9 @@ jobs:
       with:
         python-version: 3.11
     
+    - name: "Checkout to backend project"
+      run: |
+        cd backend
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
