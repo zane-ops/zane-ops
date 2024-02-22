@@ -30,9 +30,8 @@ class AuthLoginViewTests(APITestCase):
             data={"username": "user", "password": "password"},
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIsNotNone(
-            response.cookies.get("sessionid"),
-        )
+        response = self.client.get(reverse("zane_api:auth_me"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_unsucessful_login(self):
         response = self.client.post(
