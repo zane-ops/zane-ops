@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
     "rest_framework",
+    "drf_spectacular",
 ]
 
 
@@ -188,4 +189,13 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
     "EXCEPTION_HANDLER": "zane_api.views.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "ZaneOps API",
+    "DESCRIPTION": "Your deployment, simplified. Everything handled for you.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # OTHER SETTINGS
 }

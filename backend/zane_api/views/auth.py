@@ -1,5 +1,5 @@
 from typing import Any
-from . import serializers, forms
+from .. import serializers, forms
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -10,6 +10,8 @@ from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from django_ratelimit.exceptions import Ratelimited
 from rest_framework.views import exception_handler
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 
 def custom_exception_handler(exception: Any, context: Any):
@@ -33,6 +35,7 @@ def custom_exception_handler(exception: Any, context: Any):
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    # @extend_schema(responses={201: AlbumSerializer}, operation_id="login")
     @method_decorator(ratelimit(key="ip", rate="5/m"))
     @method_decorator(ratelimit(key="post:username", rate="5/m"))
     def post(self, request: Request):
@@ -66,6 +69,9 @@ class LoginView(APIView):
 
 
 class AuthedView(APIView):
+    serializer_class = serializers.AuthRouteResponseSerializer
+
     def get(self, request: Request):
-        serializer = serializers.UserSerializer(request.user)
-        return Response({"user": serializer.data})
+        user_serializer = serializers.UserSerializer(request.user)
+        serializer = self.serializer_class({"user": user_serializer.data})
+        return Response(serializer.data)
