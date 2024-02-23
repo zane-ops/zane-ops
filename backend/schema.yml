@@ -6,18 +6,52 @@ info:
 paths:
   /api/auth/login/:
     post:
-      operationId: login_create
+      operationId: login
       tags:
       - login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
       security:
       - cookieAuth: []
       - {}
       responses:
-        '200':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginErrorResponse'
+          description: ''
   /api/auth/me/:
     get:
-      operationId: me_retrieve
+      operationId: getAuthedUser
       tags:
       - me
       security:
@@ -27,20 +61,57 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthRouteResponse'
+                $ref: '#/components/schemas/AuthedSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedForbiddenResponse'
           description: ''
 components:
   schemas:
-    AuthRouteResponse:
+    AuthedForbiddenResponse:
       type: object
       properties:
-        errors: {}
+        detail:
+          type: string
+      required:
+      - detail
+    AuthedSuccessResponse:
+      type: object
+      properties:
         user:
           allOf:
           - $ref: '#/components/schemas/User'
           readOnly: true
       required:
       - user
+    LoginErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: object
+          additionalProperties: {}
+      required:
+      - errors
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+      - password
+      - username
+    LoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
     User:
       type: object
       properties:
