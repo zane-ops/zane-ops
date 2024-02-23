@@ -216,7 +216,6 @@ cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS")
 CORS_ALLOWED_ORIGINS = (
     [
         "http://localhost:5678",
-        "http://localhost:8000",
     ]
     if cors_origins is None
     else cors_origins.split(",")
