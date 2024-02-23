@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "zane_api.apps.ZaneApiConfig",
     "rest_framework",
     "drf_spectacular",
+    "corsheaders",
 ]
 
 
@@ -71,6 +72,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -150,6 +152,8 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# DB Logging for queries
+
 LOGGING = {
     "version": 1,
     "filters": {
@@ -172,6 +176,8 @@ LOGGING = {
     },
 }
 
+## Django Rest framework
+
 REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
 
 if DEBUG:
@@ -192,6 +198,8 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+## DRF SPECTACULAR, for OpenAPI schema generation
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
     "DESCRIPTION": "Your deployment, simplified. Everything handled for you.",
@@ -199,3 +207,17 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     # OTHER SETTINGS
 }
+
+
+## DJANGO-CORS-HEADERS settings
+
+cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS")
+
+CORS_ALLOWED_ORIGINS = (
+    [
+        "http://localhost:5678",
+        "http://localhost:8000",
+    ]
+    if cors_origins is None
+    else cors_origins.split(",")
+)
