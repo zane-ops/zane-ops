@@ -6,7 +6,6 @@ crontab==1.0.1
 django==5.0.2
 django-background-tasks==1.2.5
 django-compat==1.0.15
-django-cors-headers==4.3.1
 django-filter==23.5
 django-ratelimit==4.1.0
 djangorestframework==3.14.0
