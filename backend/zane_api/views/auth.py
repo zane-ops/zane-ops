@@ -5,12 +5,16 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from django_ratelimit.exceptions import Ratelimited
 from rest_framework.views import exception_handler
 from drf_spectacular.utils import extend_schema
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+
+EMPTY_RESPONSE = {}
 
 
 def custom_exception_handler(exception: Any, context: Any):
@@ -129,4 +133,50 @@ class AuthedView(APIView):
         response = self.serializer_class({"user": request.user})
         return Response(
             response.data,
+        )
+
+
+class LogoutSuccessResponseSerializer(serializers.Serializer):
+    pass
+
+
+class AuthLogoutView(APIView):
+    serializer_class = LogoutSuccessResponseSerializer
+    error_serializer_class = AuthedForbiddenResponseSerializer
+
+    @extend_schema(
+        responses={
+            204: serializer_class,
+            403: error_serializer_class,
+        },
+        operation_id="logout",
+    )
+    def delete(self, request: Request):
+        logout(request)
+        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class CSRFSerializer(serializers.Serializer):
+    details = serializers.CharField()
+
+
+class CSRFCookieView(APIView):
+    """
+    CSRF cookie view for retrieving CSRF before doing requests
+    """
+
+    serializer_class = CSRFSerializer
+
+    permission_classes = [permissions.AllowAny]
+
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, _: Request):
+        response = CSRFSerializer(data={"details": "CSRF cookie set"})
+
+        if response.is_valid():
+            return Response(response.data)
+
+        return Response(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            data={"errors": {".": response.errors}},
         )
