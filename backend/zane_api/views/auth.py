@@ -10,8 +10,7 @@ from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from django_ratelimit.exceptions import Ratelimited
 from rest_framework.views import exception_handler
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 
 
 def custom_exception_handler(exception: Any, context: Any):
@@ -32,10 +31,34 @@ def custom_exception_handler(exception: Any, context: Any):
     return exception_handler(exception, context)
 
 
+class LoginSuccessResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+
+
+class LoginErrorResponseSerializer(serializers.ErrorResponseSerializer):
+    pass
+
+
+class LoginRequestSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    success_serializer_class = LoginSuccessResponseSerializer
+    error_serializer_class = LoginErrorResponseSerializer
 
-    # @extend_schema(responses={201: AlbumSerializer}, operation_id="login")
+    @extend_schema(
+        responses={
+            201: success_serializer_class,
+            422: error_serializer_class,
+            401: error_serializer_class,
+            429: error_serializer_class,
+        },
+        request=LoginRequestSerializer,
+        operation_id="login",
+    )
     @method_decorator(ratelimit(key="ip", rate="5/m"))
     @method_decorator(ratelimit(key="post:username", rate="5/m"))
     def post(self, request: Request):
@@ -47,31 +70,63 @@ class LoginView(APIView):
             )
             if user is not None:
                 login(request, user)
-                return Response({"success": True}, status=status.HTTP_201_CREATED)
+                response = self.success_serializer_class(data={"success": True})
+                if response.is_valid():
+                    return Response(response.data, status=status.HTTP_201_CREATED)
             else:
-                return Response(
-                    {
+                response = self.error_serializer_class(
+                    data={
                         "errors": {
                             ".": [
                                 "Invalid username or password",
                             ]
                         },
-                    },
-                    status=status.HTTP_401_UNAUTHORIZED,
+                    }
                 )
+                if response.is_valid():
+                    return Response(
+                        response.initial_data,
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
         else:
-            return Response(
-                {
+            response = self.error_serializer_class(
+                data={
                     "errors": form.errors,
-                },
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                }
             )
+            if response.is_valid():
+                return Response(
+                    response.initial_data,
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
+        return Response(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            data={"errors": {".": response.errors}},
+        )
+
+
+class AuthedSuccessResponseSerializer(serializers.Serializer):
+    user = serializers.UserSerializer(read_only=True, many=False)
+
+
+class AuthedForbiddenResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
 
 
 class AuthedView(APIView):
-    serializer_class = serializers.AuthRouteResponseSerializer
+    serializer_class = AuthedSuccessResponseSerializer
+    error_serializer_class = AuthedForbiddenResponseSerializer
 
+    @extend_schema(
+        responses={
+            200: serializer_class,
+            403: error_serializer_class,
+        },
+        operation_id="getAuthedUser",
+    )
     def get(self, request: Request):
-        user_serializer = serializers.UserSerializer(request.user)
-        serializer = self.serializer_class({"user": user_serializer.data})
-        return Response(serializer.data)
+        response = self.serializer_class({"user": request.user})
+        return Response(
+            response.data,
+        )

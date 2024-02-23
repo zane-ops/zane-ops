@@ -29,7 +29,7 @@ class AuthLoginViewTests(APITestCase):
             reverse("zane_api:auth_login"),
             data={"username": "user", "password": "password"},
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertIsNotNone(
             response.cookies.get("sessionid"),
         )
@@ -39,7 +39,7 @@ class AuthLoginViewTests(APITestCase):
             reverse("zane_api:auth_login"),
             data={"username": "user", "password": "bad_password"},
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
         self.assertIsNotNone(response.json().get("errors", None))
 
     def test_bad_request(self):
@@ -47,7 +47,7 @@ class AuthLoginViewTests(APITestCase):
             reverse("zane_api:auth_login"),
             data={},
         )
-        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
         errors = response.json().get("errors", None)
 
         self.assertIsNotNone(errors)
@@ -60,7 +60,7 @@ class AuthLoginViewTests(APITestCase):
                 reverse("zane_api:auth_login"),
                 data={},
             )
-        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code)
         self.assertIsNotNone(response.json().get("errors", None))
 
 
@@ -71,8 +71,10 @@ class AuthMeViewTests(APITestCase):
     def test_authed(self):
         self.client.login(username="user", password="password")
         response = self.client.get(reverse("zane_api:auth_me"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.json().get("user", None))
+        self.assertDictContainsSubset({"username": "user"}, response.json().get("user"))
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth_me"))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
