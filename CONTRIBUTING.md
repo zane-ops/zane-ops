@@ -23,6 +23,7 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
 - [pnpm](https://pnpm.io/installation) >= v8.7.1
 - [docker](https://docs.docker.com/engine/install/)
 - [docker-compose](https://docs.docker.com/compose/install/)  
+- [caddy](https://caddyserver.com/download)  
 - [python](https://www.python.org/downloads/) >= v3.11.7
 
 ## 🚀 How to work on the project ?
@@ -78,9 +79,21 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
     pnpm run dev
     ```
 
-    The API will be available at [http://localhost:8000](http://localhost:8000) and the frontend client at [http://localhost:5678](http://localhost:5678).
+6. Configure and start caddy server : 
+    Go to `/etc/hosts` and append this entry to that file : 
 
-6. **Open the source code and start rocking ! 😎**
+    ```
+    127.0.0.1       zane.local 
+    ```
+
+    Then from the root folder, run :
+    ```bash
+    caddy run
+    ```
+
+    The API will be available at [http://zane.local](http://zane.local).
+
+7. **Open the source code and start rocking ! 😎**
 
 
 ## 🧐 Project structure
@@ -90,8 +103,9 @@ A quick look at the top-level files and directories you will see in this project
     .
     ├── .github/
     │    └── workflows
-    │        ├── push-docker-images.yml
-    │        └── build-cli.yml
+    │        ├── pytests.yaml
+    │        ├── push-docker-images.yaml
+    │        └── build-cli.yaml
     ├── backend/
     │   └── zane_api
     ├── frontend/
@@ -101,9 +115,11 @@ A quick look at the top-level files and directories you will see in this project
 
 1. **`.github/`**: this folder contains the GitHub Actions workflow configuration for Continuous Integration/Continuous Deployment.
    
-    1. **`push-docker-images.yml`** : this workflow is used to build and push the docker images for the project.
+    1. **`pytests.yaml`** : this workflow is used to test the api of the project.
    
-    2. **`build-cli.yml`** : this workflow is used to build the cli app to different OSes (debian/ubuntu, macOS and windows).
+    2. **`push-docker-images.yaml`** : this workflow is used to build and push the docker images for the project.
+   
+    3. **`build-cli.yaml`** : this workflow is used to build the cli app to different OSes (debian/ubuntu, macOS and windows).
    
 2. **`backend/`**: A standard Django App, the code source of the API is in the `backend/zane_api/` folder.
    
