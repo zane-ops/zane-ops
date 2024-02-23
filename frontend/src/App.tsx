@@ -1,35 +1,54 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+import { useMutation } from "@tanstack/react-query";
+import { apiClient } from "./api/client";
+import type { paths } from "./api/v1";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { data, isPending, mutate } = useMutation({
+    mutationFn: async (
+      data: paths["/api/auth/login/"]["post"]["requestBody"]["content"]["application/json"]
+    ) => {
+      return apiClient.POST("/api/auth/login/", {
+        body: data
+      });
+    }
+  });
 
+  console.log({
+    data
+  });
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        mutate({
+          username: fd.get("username")!.toString(),
+          password: fd.get("password")!.toString()
+        });
+      }}
+    >
+      <h1>Login</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+        {data?.error && (
+          <div style={{ color: "red" }}>
+            {data.error.errors["."] as unknown as string[]}
+          </div>
+        )}
+        <div>
+          <label htmlFor="username">username</label>
+          <input name="username" type="text" />
+        </div>
+        <div>
+          <label htmlFor="password">Password</label>
+          <input name="password" type="password" />
+        </div>
+        <button disabled={isPending}>
+          {isPending ? "Submitting..." : "Submit"}
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </form>
+  );
 }
 
-export default App
+export default App;
