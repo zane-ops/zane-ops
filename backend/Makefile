@@ -9,4 +9,4 @@ test: ### Run tests
 	python manage.py test --parallel
 
 openapi: ### Generate the OpenApi spec schema at schema.yml
-	 python manage.py spectacular --color --file schema.yml
+	 python manage.py spectacular --color --file ../openapi/schema.yml
