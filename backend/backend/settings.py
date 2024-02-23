@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
     "rest_framework",
+    "drf_spectacular",
 ]
 
 
@@ -149,6 +150,8 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# DB Logging for queries
+
 LOGGING = {
     "version": 1,
     "filters": {
@@ -171,6 +174,8 @@ LOGGING = {
     },
 }
 
+## Django Rest framework
+
 REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
 
 if DEBUG:
@@ -188,4 +193,14 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
     "EXCEPTION_HANDLER": "zane_api.views.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+## DRF SPECTACULAR, for OpenAPI schema generation
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "ZaneOps API",
+    "DESCRIPTION": "Your deployment, simplified. Everything handled for you.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }

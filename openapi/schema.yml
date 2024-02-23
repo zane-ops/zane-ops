@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: ZaneOps API
+  version: 1.0.0
+  description: Your deployment, simplified. Everything handled for you.
+paths:
+  /api/auth/login/:
+    post:
+      operationId: login
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginErrorResponse'
+          description: ''
+  /api/auth/logout/:
+    delete:
+      operationId: logout
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedForbiddenResponse'
+          description: ''
+  /api/auth/me/:
+    get:
+      operationId: getAuthedUser
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedForbiddenResponse'
+          description: ''
+  /api/csrf/:
+    get:
+      operationId: csrf_retrieve
+      description: CSRF cookie view for retrieving CSRF before doing requests
+      tags:
+      - csrf
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CSRF'
+          description: ''
+components:
+  schemas:
+    AuthedForbiddenResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    AuthedSuccessResponse:
+      type: object
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+      required:
+      - user
+    CSRF:
+      type: object
+      properties:
+        details:
+          type: string
+      required:
+      - details
+    LoginErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: object
+          additionalProperties: {}
+      required:
+      - errors
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+      - password
+      - username
+    LoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_staff:
+          type: boolean
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+      required:
+      - username
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
