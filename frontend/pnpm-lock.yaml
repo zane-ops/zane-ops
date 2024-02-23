@@ -7,21 +7,21 @@ settings:
 dependencies:
   '@tanstack/react-query':
     specifier: ^5.22.2
-    version: 5.22.2(react@18.2.0)
+    version: 5.22.2(react@18.3.0-canary-47beb96cc-20240222)
   openapi-fetch:
     specifier: ^0.9.2
     version: 0.9.2
   react:
-    specifier: 18.2.0
-    version: 18.2.0
+    specifier: 18.3.0-canary-47beb96cc-20240222
+    version: 18.3.0-canary-47beb96cc-20240222
   react-dom:
-    specifier: 18.2.0
-    version: 18.2.0(react@18.2.0)
+    specifier: 18.3.0-canary-47beb96cc-20240222
+    version: 18.3.0-canary-47beb96cc-20240222(react@18.3.0-canary-47beb96cc-20240222)
 
 devDependencies:
   '@tanstack/react-query-devtools':
     specifier: ^5.24.0
-    version: 5.24.0(@tanstack/react-query@5.22.2)(react@18.2.0)
+    version: 5.24.0(@tanstack/react-query@5.22.2)(react@18.3.0-canary-47beb96cc-20240222)
   '@types/react':
     specifier: ^18.2.57
     version: 18.2.57
@@ -718,24 +718,24 @@ packages:
     resolution: {integrity: sha512-pThim455t69zrZaQKa7IRkEIK8UBTS+gHVAdNfhO72Xh4rWpMc63ovRje5/n6iw63+d6QiJzVadsJVdPoodSeQ==}
     dev: true
 
-  /@tanstack/react-query-devtools@5.24.0(@tanstack/react-query@5.22.2)(react@18.2.0):
+  /@tanstack/react-query-devtools@5.24.0(@tanstack/react-query@5.22.2)(react@18.3.0-canary-47beb96cc-20240222):
     resolution: {integrity: sha512-ae3TSg9hKSicLP6TZMj4hglLsLBaS8O3ex/mgHZNQ8yKCDLnVoLO1a9EqYWPzw2k+uaK5uMCKBAVbLVBLx93oA==}
     peerDependencies:
       '@tanstack/react-query': ^5.22.2
       react: ^18.0.0
     dependencies:
       '@tanstack/query-devtools': 5.24.0
-      '@tanstack/react-query': 5.22.2(react@18.2.0)
-      react: 18.2.0
+      '@tanstack/react-query': 5.22.2(react@18.3.0-canary-47beb96cc-20240222)
+      react: 18.3.0-canary-47beb96cc-20240222
     dev: true
 
-  /@tanstack/react-query@5.22.2(react@18.2.0):
+  /@tanstack/react-query@5.22.2(react@18.3.0-canary-47beb96cc-20240222):
     resolution: {integrity: sha512-TaxJDRzJ8/NWRT4lY2jguKCrNI6MRN+67dELzPjNUlvqzTxGANlMp68l7aC7hG8Bd1uHNxHl7ihv7MT50i/43A==}
     peerDependencies:
       react: ^18.0.0
     dependencies:
       '@tanstack/query-core': 5.22.2
-      react: 18.2.0
+      react: 18.3.0-canary-47beb96cc-20240222
 
   /@types/babel__core@7.20.5:
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1735,14 +1735,14 @@ packages:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
     dev: true
 
-  /react-dom@18.2.0(react@18.2.0):
-    resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
+  /react-dom@18.3.0-canary-47beb96cc-20240222(react@18.3.0-canary-47beb96cc-20240222):
+    resolution: {integrity: sha512-2nt1sjvoQXKJF3VcmqeQ7Bagcu6BvLFYY+4iVzV23hGEEtIp0/2GMJkKEtQd8omU5EwA+dp1Djl/fpgWx0pKcQ==}
     peerDependencies:
-      react: ^18.2.0
+      react: 18.3.0-canary-47beb96cc-20240222
     dependencies:
       loose-envify: 1.4.0
-      react: 18.2.0
-      scheduler: 0.23.0
+      react: 18.3.0-canary-47beb96cc-20240222
+      scheduler: 0.24.0-canary-47beb96cc-20240222
     dev: false
 
   /react-refresh@0.14.0:
@@ -1750,8 +1750,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /react@18.2.0:
-    resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
+  /react@18.3.0-canary-47beb96cc-20240222:
+    resolution: {integrity: sha512-ovx9lwCN5I26yjBBdVSyNZhH33Xmhz6jo5YqNA1or4sY4LEZMg+CTLqd919YV+RwlJwkycTEwvXsuuTLtI7TUQ==}
     engines: {node: '>=0.10.0'}
     dependencies:
       loose-envify: 1.4.0
@@ -1802,8 +1802,8 @@ packages:
       queue-microtask: 1.2.3
     dev: true
 
-  /scheduler@0.23.0:
-    resolution: {integrity: sha512-CtuThmgHNg7zIZWAXi3AsyIzA3n4xx7aNyjwC2VJldO2LMVDhFK+63xGqq6CsJH4rTAt6/M+N4GhZiDYPx9eUw==}
+  /scheduler@0.24.0-canary-47beb96cc-20240222:
+    resolution: {integrity: sha512-XOdz4qChotCKsf0K0QKhtSAPZZDLHg46+ChTHTtkTx8LbcPe9UxnwPbbUDIcXbn66TF/yCipJC43ykytdob1LA==}
     dependencies:
       loose-envify: 1.4.0
     dev: false

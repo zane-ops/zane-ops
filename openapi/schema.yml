@@ -8,7 +8,7 @@ paths:
     post:
       operationId: login
       tags:
-      - login
+      - auth
       requestBody:
         content:
           application/json:
@@ -49,11 +49,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/LoginErrorResponse'
           description: ''
+  /api/auth/logout/:
+    delete:
+      operationId: logout
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedForbiddenResponse'
+          description: ''
   /api/auth/me/:
     get:
       operationId: getAuthedUser
       tags:
-      - me
+      - auth
       security:
       - cookieAuth: []
       responses:
@@ -68,6 +84,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthedForbiddenResponse'
+          description: ''
+  /api/csrf/:
+    get:
+      operationId: csrf_retrieve
+      description: CSRF cookie view for retrieving CSRF before doing requests
+      tags:
+      - csrf
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CSRF'
           description: ''
 components:
   schemas:
@@ -87,6 +119,13 @@ components:
           readOnly: true
       required:
       - user
+    CSRF:
+      type: object
+      properties:
+        details:
+          type: string
+      required:
+      - details
     LoginErrorResponse:
       type: object
       properties:

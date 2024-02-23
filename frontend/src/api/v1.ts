@@ -8,8 +8,15 @@ export interface paths {
   "/api/auth/login/": {
     post: operations["login"];
   };
+  "/api/auth/logout/": {
+    delete: operations["logout"];
+  };
   "/api/auth/me/": {
     get: operations["getAuthedUser"];
+  };
+  "/api/csrf/": {
+    /** @description CSRF cookie view for retrieving CSRF before doing requests */
+    get: operations["csrf_retrieve"];
   };
 }
 
@@ -22,6 +29,9 @@ export interface components {
     };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
+    };
+    CSRF: {
+      details: string;
     };
     LoginErrorResponse: {
       errors: {
@@ -91,6 +101,19 @@ export interface operations {
       };
     };
   };
+  logout: {
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["AuthedForbiddenResponse"];
+        };
+      };
+    };
+  };
   getAuthedUser: {
     responses: {
       200: {
@@ -101,6 +124,16 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["AuthedForbiddenResponse"];
+        };
+      };
+    };
+  };
+  /** @description CSRF cookie view for retrieving CSRF before doing requests */
+  csrf_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["CSRF"];
         };
       };
     };
