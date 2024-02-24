@@ -37,9 +37,9 @@ class ProjectsListView(APIView):
     def get(self, request: Request):
         response = self.serializer_class(
             {
-                "projects": Project.objects.filter(
-                    Q(owner=request.user)
-                ).prefetch_related("owner"),
+                "projects": Project.objects.filter(owner=request.user).select_related(
+                    "owner"
+                ),
             }
         )
         return Response(response.data)
