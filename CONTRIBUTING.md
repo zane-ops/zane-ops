@@ -25,6 +25,7 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
 - [docker-compose](https://docs.docker.com/compose/install/)  
 - [caddy](https://caddyserver.com/download)  
 - [python](https://www.python.org/downloads/) >= v3.11.7
+- [biome extension installed in VSCode](https://biomejs.dev/reference/vscode/)
 
 ## 🚀 How to work on the project ?
 
