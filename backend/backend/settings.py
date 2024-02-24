@@ -213,3 +213,7 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+
+# For having colorized output in tests
+TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
