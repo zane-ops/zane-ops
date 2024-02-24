@@ -9,4 +9,5 @@ urlpatterns = [
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(r"^csrf/?$", views.CSRFCookieView.as_view(), name="csrf"),
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
+    re_path(r"^projects/?$", views.ProjectsListView.as_view(), name="projects.list"),
 ]

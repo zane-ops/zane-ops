@@ -27,6 +27,9 @@ class Project(TimestampedModel):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ["-updated_at"]
+
 
 class BaseService(TimestampedModel):
     name = models.CharField(max_length=255)

@@ -101,6 +101,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/CSRF'
           description: ''
+  /api/projects/:
+    get:
+      operationId: getProjectList
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
 components:
   schemas:
     AuthedForbiddenResponse:
@@ -126,6 +146,13 @@ components:
           type: string
       required:
       - details
+    ForbiddenResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
     LoginErrorResponse:
       type: object
       properties:
@@ -151,6 +178,44 @@ components:
           type: boolean
       required:
       - success
+    Project:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        archived:
+          type: boolean
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - name
+      - owner
+      - updated_at
+    ProjectSuccessResponse:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+      required:
+      - projects
     User:
       type: object
       properties:

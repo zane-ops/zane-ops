@@ -5,6 +5,8 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.core.cache import cache
 
+from .models import Project
+
 
 @override_settings(
     CACHES={
@@ -22,14 +24,17 @@ class APITestCase(TestCase):
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
-        User.objects.create_user(username="user", password="password")
+        return User.objects.create_user(username="Fredkiss3", password="password")
+
+    def loginUser(self):
+        self.client.login(username="Fredkiss3", password="password")
 
 
 class AuthLoginViewTests(AuthAPITestCase):
     def test_sucessful_login(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
-            data={"username": "user", "password": "password"},
+            data={"username": "Fredkiss3", "password": "password"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertIsNotNone(
@@ -68,11 +73,13 @@ class AuthLoginViewTests(AuthAPITestCase):
 
 class AuthMeViewTests(AuthAPITestCase):
     def test_authed(self):
-        self.client.login(username="user", password="password")
+        self.loginUser()
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(response.json().get("user", None))
-        self.assertDictContainsSubset({"username": "user"}, response.json().get("user"))
+        self.assertDictContainsSubset(
+            {"username": "Fredkiss3"}, response.json().get("user")
+        )
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
@@ -81,7 +88,7 @@ class AuthMeViewTests(AuthAPITestCase):
 
 class AuthLogoutViewTests(AuthAPITestCase):
     def test_sucessful_logout(self):
-        self.client.login(username="user", password="password")
+        self.loginUser()
         response = self.client.delete(reverse("zane_api:auth.logout"))
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNotNone(
@@ -100,3 +107,39 @@ class CSRFViewTests(APITestCase):
         self.assertIsNotNone(
             response.cookies.get("csrftoken"),
         )
+
+
+class ProjectViewTests(AuthAPITestCase):
+    def setUp(self):
+        owner = super().setUp()
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+                Project(owner=owner, name="Thullo", slug="thullo"),
+            ]
+        )
+
+    def test_list_projects(self):
+        self.loginUser()
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertIsNotNone(project_list)
+
+        assert type(project_list) is list
+        assert len(project_list) == 2
+
+    def test_get_projects(self):
+        assert True == False
+
+    def test_create_projects(self):
+        assert True == False
+
+    def test_update_projects(self):
+        assert True == False
+
+    def test_delete_projects(self):
+        assert True == False
+
+    def test_unauthed(self):
+        assert True == False
