@@ -41,6 +41,7 @@ ALLOWED_HOSTS = (
     ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
 )
 
+## This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
     ["http://zane.local", "https://zane.local"]
     if root_domain is None
