@@ -15,11 +15,11 @@
     "@tanstack/react-query": "^5.22.2",
     "@tanstack/react-router": "^1.16.6",
     "@tanstack/router-cli": "^1.16.5",
+    "@tanstack/router-devtools": "^1.16.6",
     "openapi-fetch": "^0.9.2",
     "react": "18.3.0-canary-47beb96cc-20240222",
     "react-dom": "18.3.0-canary-47beb96cc-20240222"
   },
-
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.24.0",
     "@tanstack/router-vite-plugin": "^1.16.5",
