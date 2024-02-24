@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#ignoring auto generated files 
+./src/routeTree.gen.ts

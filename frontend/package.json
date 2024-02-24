@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "predev": "npm run generate:api"
+    "predev": "npm run generate:api && tsr --watch && tsr --generate"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.22.2",
@@ -19,6 +19,7 @@
     "react": "18.3.0-canary-47beb96cc-20240222",
     "react-dom": "18.3.0-canary-47beb96cc-20240222"
   },
+
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.24.0",
     "@tanstack/router-vite-plugin": "^1.16.5",
@@ -33,7 +34,6 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "openapi-typescript": "^6.7.4",
     "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "vite": "^5.1.0"
   }
