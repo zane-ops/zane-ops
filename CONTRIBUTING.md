@@ -91,7 +91,7 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
     caddy run
     ```
 
-    The API will be available at [http://zane.local](http://zane.local).
+    The API will be available at [https://zane.local](https://zane.local).
 
 7. **Open the source code and start rocking ! 😎**
 
