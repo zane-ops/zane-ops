@@ -31,12 +31,21 @@ PRODUCTION_ENV = "PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not env == PRODUCTION_ENV
-CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
-SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
-hosts = os.environ.get("ALLOWED_HOSTS")
+## We will only support one root domain on production
+## And it will be in the format domain.com (without `http://` or `https://`)
+root_domain = os.environ.get("ROOT_DOMAIN")
 ALLOWED_HOSTS = (
-    ["zane.local", "localhost", "127.0.0.1"] if hosts is None else hosts.split(",")
+    ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
+)
+
+## This is necessary for making sure that CSRF protections work on production
+CSRF_TRUSTED_ORIGINS = (
+    ["http://zane.local", "https://zane.local"]
+    if root_domain is None
+    else [f"https://{root_domain}"]
 )
 
 CACHES = {
