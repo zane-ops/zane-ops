@@ -1,4 +1,3 @@
-import "./App.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type RequestInput, apiClient, ApiResponse } from "./api/client";
 import { deleteCookie, getCookie } from "./utils";
@@ -8,7 +7,7 @@ export function App() {
     queryKey: ["AUTHED_USER"],
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/auth/me/", { signal });
-    },
+    }
   });
   if (!query.data) {
     return <div className="text-3xl font-bold">Loading... with tailwind</div>;
@@ -27,18 +26,18 @@ function AuthedView({ user }: ApiResponse<"get", "/api/auth/me/">) {
       const csrfToken = getCookie("csrftoken");
       const { error } = await apiClient.DELETE("/api/auth/logout/", {
         headers: {
-          "X-CSRFToken": csrfToken,
-        },
+          "X-CSRFToken": csrfToken
+        }
       });
       if (error) {
         return error;
       }
 
       queryClient.invalidateQueries({
-        queryKey: ["AUTHED_USER"],
+        queryKey: ["AUTHED_USER"]
       });
       deleteCookie("csrftoken");
-    },
+    }
   });
   return (
     <dl>
@@ -62,19 +61,19 @@ function LoginForm() {
   const { isPending, mutate, data } = useMutation({
     mutationFn: async (input: RequestInput<"post", "/api/auth/login/">) => {
       const { error, data } = await apiClient.POST("/api/auth/login/", {
-        body: input,
+        body: input
       });
       if (error) {
         return error;
       }
       if (data?.success) {
         return queryClient.invalidateQueries({
-          queryKey: ["AUTHED_USER"],
+          queryKey: ["AUTHED_USER"]
         });
       }
 
       throw new Error("Unknow Response from api");
-    },
+    }
   });
 
   return (
@@ -82,7 +81,7 @@ function LoginForm() {
       action={(formData) =>
         mutate({
           username: formData.get("username")!.toString(),
-          password: formData.get("password")!.toString(),
+          password: formData.get("password")!.toString()
         })
       }
     >
