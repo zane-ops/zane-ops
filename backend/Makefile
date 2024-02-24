@@ -12,7 +12,11 @@ else
 	python manage.py test --parallel
 endif
 
+migration: ### create migrations
+	python manage.py makemigrations
 
+migrate: ### Run migrations
+	python manage.py migrate
 
 openapi: ### Generate the OpenApi spec schema at schema.yml
 	 python manage.py spectacular --color --file ../openapi/schema.yml
