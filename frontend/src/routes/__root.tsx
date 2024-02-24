@@ -5,12 +5,8 @@ export const Route = createRootRoute({
   component: () => (
     <>
       <div className="p-2 flex gap-2">
-        <Link to="/" className="[&.active]:font-bold">
-          Home
-        </Link>{" "}
-        <Link to="/login" className="[&.active]:font-bold">
-          Login
-        </Link>
+        <NavLink href="/" name="Home" />
+        <NavLink href="/login" name="Login" />
       </div>
       <hr />
       <Outlet />
@@ -18,3 +14,20 @@ export const Route = createRootRoute({
     </>
   )
 });
+
+function NavLink({ href, name }: { href: string; name: string }) {
+  return (
+    <>
+      <Link
+        activeProps={{
+          style: {
+            fontWeight: "bold"
+          }
+        }}
+        to={href}
+      >
+        {name}
+      </Link>
+    </>
+  );
+}
