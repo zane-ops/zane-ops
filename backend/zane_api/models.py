@@ -20,7 +20,7 @@ class Project(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, blank=True, unique=True)
     archived = models.BooleanField(default=False)
 
