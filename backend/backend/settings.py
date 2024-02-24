@@ -34,6 +34,8 @@ DEBUG = not env == PRODUCTION_ENV
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 
+## We will only support one root domain on production
+## And it will be in the format domain.com (without `http://` or `https://`)
 root_domain = os.environ.get("ROOT_DOMAIN")
 ALLOWED_HOSTS = (
     ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
