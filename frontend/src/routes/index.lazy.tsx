@@ -8,7 +8,7 @@ export const Route = createLazyFileRoute("/")({
 });
 
 function Index() {
-  const nav = useNavigate({ from: "/" });
+  const navigate = useNavigate({ from: "/" });
 
   const query = useQuery({
     queryKey: ["AUTHED_USER"],
@@ -22,7 +22,7 @@ function Index() {
 
   const authedUser = query.data?.data?.user;
   if (!authedUser) {
-    nav({ to: "/login" });
+    navigate({ to: "/login" });
     return null;
   }
   return <AuthedView user={authedUser} />;
