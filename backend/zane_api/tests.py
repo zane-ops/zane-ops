@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -28,6 +29,7 @@ class AuthAPITestCase(APITestCase):
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
+        return User.objects.get(username="Fredkiss3")
 
 
 class AuthLoginViewTests(AuthAPITestCase):
@@ -109,9 +111,9 @@ class CSRFViewTests(APITestCase):
         )
 
 
-class ProjectViewTests(AuthAPITestCase):
-    def setUp(self):
-        owner = super().setUp()
+class ProjectListViewTests(AuthAPITestCase):
+    def test_list_projects(self):
+        owner = self.loginUser()
         Project.objects.bulk_create(
             [
                 Project(owner=owner, name="Github Clone", slug="gh-clone"),
@@ -119,8 +121,6 @@ class ProjectViewTests(AuthAPITestCase):
             ]
         )
 
-    def test_list_projects(self):
-        self.loginUser()
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json().get("projects", None)
@@ -129,17 +129,112 @@ class ProjectViewTests(AuthAPITestCase):
         assert type(project_list) is list
         assert len(project_list) == 2
 
-    def test_get_projects(self):
-        assert True == False
+    def test_default_no_include_archived(self):
+        owner = self.loginUser()
 
-    def test_create_projects(self):
-        assert True == False
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo", archived=True),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+            ]
+        )
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual(1, len(project_list))
 
-    def test_update_projects(self):
-        assert True == False
+        found_archived_projects = list(
+            filter(lambda p: p["archived"] == True, project_list)
+        )
+        self.assertEqual(0, len(found_archived_projects))
 
-    def test_delete_projects(self):
-        assert True == False
+    def test_include_archived(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo", archived=True),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="include_archived",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual(1, len(project_list))
+
+        found_archived_projects = list(
+            filter(lambda p: p["archived"] == True, project_list)
+        )
+        self.assertNotEqual(0, len(found_archived_projects))
+
+    def test_query_filter_projects_is_using_name_and_slug(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo"),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+                Project(owner=owner, name="Locaci", slug="csdev-locaci"),
+                Project(owner=owner, name="CSDEV Ledjassa", slug="ledjassa"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="query=csdev",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+
+        self.assertEqual(2, len(project_list))
+
+    def test_sorting_projects_by_name(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo", archived=True),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="sort=name",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual("gh-clone", project_list[0]["slug"])
+
+    def test_sorting_projects_by_updated_at(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(
+                    owner=owner,
+                    name="Thullo",
+                    slug="thullo",
+                    archived=True,
+                    updated_at=datetime(year=2022, month=2, day=5),
+                ),
+                Project(
+                    owner=owner,
+                    name="Github Clone",
+                    slug="gh-clone",
+                    updated_at=datetime(year=2024, month=1, day=2),
+                ),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="sort=updated_at",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual("thullo", project_list[0]["slug"])
 
     def test_unauthed(self):
-        assert True == False
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
