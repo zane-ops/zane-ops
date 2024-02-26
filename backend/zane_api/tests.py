@@ -1,10 +1,11 @@
 from datetime import datetime
+
+from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 from rest_framework import status
-from django.core.cache import cache
+from rest_framework.test import APIClient
 
 from .models import Project
 
@@ -25,7 +26,7 @@ class APITestCase(TestCase):
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
-        return User.objects.create_user(username="Fredkiss3", password="password")
+        User.objects.create_user(username="Fredkiss3", password="password")
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
@@ -237,3 +238,72 @@ class ProjectListViewTests(AuthAPITestCase):
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+
+class ProjectCreateViewTests(AuthAPITestCase):
+    def test_sucessfully_create_project(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={
+                "name": "Zane Ops",
+            },
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(1, Project.objects.count())
+        self.assertEqual("zane-ops", Project.objects.first().slug)
+
+    def test_bad_request(self):
+        self.loginUser()
+        response = self.client.post(reverse("zane_api:projects.list"), data={})
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+        self.assertEqual(0, Project.objects.count())
+
+    def test_unique_name(self):
+        owner = self.loginUser()
+        Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
+        response = self.client.post(
+            reverse("zane_api:projects.list"), data={"name": "Zane Ops"}
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(1, Project.objects.count())
+        self.assertIsNotNone(response.json().get("errors", None))
+        print("e=", response.json().get("errors", None))
+
+
+class ProjectUpdateViewTests(AuthAPITestCase):
+    def test_sucessfully_update_project_name(self):
+        owner = self.loginUser()
+        Project.objects.bulk_create(
+            [
+                Project(name="GH Clone", slug="gh-clone", owner=owner),
+                Project(name="Zane Ops", slug="zane-ops", owner=owner),
+            ]
+        )
+        response = self.client.patch(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}),
+            data={
+                "name": "KissHub",
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_project = Project.objects.get(slug="gh-clone")
+        self.assertIsNotNone(updated_project)
+        self.assertEqual("KissHub", updated_project.name)
+
+    # def test_bad_request(self):
+    #     self.loginUser()
+    #     response = self.client.post(reverse("zane_api:projects.list"), data={})
+    #     self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+    #     self.assertEqual(0, Project.objects.count())
+    #
+    # def test_unique_name(self):
+    #     owner = self.loginUser()
+    #     Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
+    #     response = self.client.post(reverse("zane_api:projects.list"), data={
+    #         "name": "Zane Ops"
+    #     })
+    #     self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+    #     self.assertEqual(1, Project.objects.count())
+    #     self.assertIsNotNone(response.json().get("errors", None))
+    #     print("e=", response.json().get("errors", None))

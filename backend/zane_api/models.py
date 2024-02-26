@@ -1,10 +1,11 @@
+import uuid
 from typing import List
+
 from crontab import CronTab
-from django.db import models
 from django.conf import settings
+from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
-import uuid
 
 
 class TimestampedModel(models.Model):
@@ -20,7 +21,7 @@ class Project(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, blank=True, unique=True)
     archived = models.BooleanField(default=False)
 

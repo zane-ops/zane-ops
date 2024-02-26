@@ -1,23 +1,23 @@
-from .. import serializers
-from ..models import Project
-
-from rest_framework.views import APIView
+from django.db import IntegrityError, transaction
+from django.db.models import Q
+from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.contrib.auth import authenticate, login, logout
-from django.utils.decorators import method_decorator
-from django_ratelimit.exceptions import Ratelimited
-from rest_framework.views import exception_handler
-from drf_spectacular.utils import extend_schema
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.db.models import Q
-import django.forms as forms
-from django.utils.translation import gettext_lazy as _
+from rest_framework.views import APIView
+
+from .. import serializers
+from ..models import Project
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
     projects = serializers.ProjectSerializer(many=True)
+
+
+class SingleProjectSuccessResponseSerializer(serializers.Serializer):
+    project = serializers.ProjectSerializer()
 
 
 class ForbiddenResponseSerializer(serializers.Serializer):
@@ -37,7 +37,7 @@ class ProjectListSearchFiltersSerializer(serializers.Serializer):
         choices=SORT_CHOICES, required=False, default="updated_at_desc"
     )
 
-    def validate_include_archived(self, value):
+    def validate_include_archived(self, value: str | bool):
         if isinstance(value, str):
             if value.lower() == "true":
                 return True
@@ -51,8 +51,13 @@ class ProjectListSearchFiltersSerializer(serializers.Serializer):
         return value
 
 
+class ProjectCreateForm(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+
+
 class ProjectsListView(APIView):
     serializer_class = ProjectSuccessResponseSerializer
+    single_serializer_class = SingleProjectSuccessResponseSerializer
     forbidden_serializer_class = ForbiddenResponseSerializer
     error_serializer_class = serializers.ErrorResponseSerializer
 
@@ -86,12 +91,12 @@ class ProjectsListView(APIView):
                             archived=params["include_archived"],
                         )
                         & (
-                            Q(name__istartswith=params["query"])
-                            | Q(slug__startswith=params["query"].lower())
+                                Q(name__istartswith=params["query"])
+                                | Q(slug__startswith=params["query"].lower())
                         )
                     )
-                    .select_related("owner")
-                    .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
+                                .select_related("owner")
+                                .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
                 }
             )
             return Response(response.data)
@@ -101,3 +106,76 @@ class ProjectsListView(APIView):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             data={"errors": form.errors},
         )
+
+    @extend_schema(
+        request=ProjectCreateForm,
+        responses={
+            201: single_serializer_class,
+            403: forbidden_serializer_class,
+            422: error_serializer_class,
+            409: error_serializer_class,
+        },
+        operation_id="createProject",
+    )
+    def post(self, request: Request):
+        form = ProjectCreateForm(data=request.data)
+        if form.is_valid():
+            data = form.data
+            slug = slugify(data["name"])
+            try:
+                with transaction.atomic():
+                    new_project = Project.objects.create(
+                        name=data["name"], slug=slug, owner=request.user
+                    )
+                response = self.single_serializer_class({"project": new_project})
+                return Response(response.data, status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response(
+                    {
+                        "errors": {
+                            "slug": [
+                                "A project with a similar slug already exist, please use another name for this project"
+                            ]
+                        }
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+        return Response(
+            {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
+        )
+
+
+class ProjectUpdateForm(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+
+
+class ProjectDetailsView(APIView):
+    serializer_class = SingleProjectSuccessResponseSerializer
+    forbidden_serializer_class = ForbiddenResponseSerializer
+    error_serializer_class = serializers.ErrorResponseSerializer
+
+    @extend_schema(
+        request=ProjectUpdateForm,
+        responses={
+            200: serializer_class,
+            403: forbidden_serializer_class,
+            422: error_serializer_class,
+            404: error_serializer_class,
+        },
+        operation_id="updateProjectName",
+    )
+    def patch(self, request: Request, slug: str):
+        project = Project.objects.get(slug=slug)
+        form = ProjectUpdateForm(data=request.data)
+        if form.is_valid():
+            project.name = form.data['name']
+            project.save()
+            response = self.serializer_class({"project": project})
+            return Response(response.data)
+        return Response()
+
+    def get(self, request: Request, slug: str):
+        return Response()
+
+    def delete(self, request: Request, slug: str):
+        return Response()
