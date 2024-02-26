@@ -1,5 +1,5 @@
 from typing import Any
-from .. import serializers, forms
+from .. import serializers
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -39,34 +39,32 @@ class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
 
 
-class LoginErrorResponseSerializer(serializers.ErrorResponseSerializer):
-    pass
-
-
 class LoginRequestSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField()
+    username = serializers.CharField(
+        required=True, min_length=1, max_length=255, trim_whitespace=True
+    )
+    password = serializers.CharField(required=True, min_length=1, max_length=255)
 
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
     success_serializer_class = LoginSuccessResponseSerializer
-    error_serializer_class = LoginErrorResponseSerializer
+    error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(
+        request=LoginRequestSerializer,
         responses={
             201: success_serializer_class,
             422: error_serializer_class,
             401: error_serializer_class,
             429: error_serializer_class,
         },
-        request=LoginRequestSerializer,
         operation_id="login",
     )
     @method_decorator(ratelimit(key="ip", rate="5/m"))
     @method_decorator(ratelimit(key="post:username", rate="5/m"))
     def post(self, request: Request):
-        form = forms.PasswordLoginForm(request.data)
+        form = LoginRequestSerializer(data=request.data)
         if form.is_valid():
             data = form.data
             user = authenticate(
@@ -136,17 +134,12 @@ class AuthedView(APIView):
         )
 
 
-class LogoutSuccessResponseSerializer(serializers.Serializer):
-    pass
-
-
 class AuthLogoutView(APIView):
-    serializer_class = LogoutSuccessResponseSerializer
     error_serializer_class = AuthedForbiddenResponseSerializer
 
     @extend_schema(
         responses={
-            204: serializer_class,
+            204: None,
             403: error_serializer_class,
         },
         operation_id="logout",

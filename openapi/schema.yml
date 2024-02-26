@@ -35,19 +35,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '429':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/auth/logout/:
     delete:
@@ -104,6 +104,28 @@ paths:
   /api/projects/:
     get:
       operationId: getProjectList
+      parameters:
+      - in: query
+        name: include_archived
+        schema:
+          type: boolean
+          default: false
+      - in: query
+        name: query
+        schema:
+          type: string
+          default: ''
+      - in: query
+        name: sort
+        schema:
+          enum:
+          - name_asc
+          - updated_at_desc
+          type: string
+          minLength: 1
+        description: |-
+          * `name_asc` - name
+          * `updated_at_desc` - -updated_at
       tags:
       - projects
       security:
@@ -120,6 +142,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
 components:
   schemas:
@@ -146,14 +174,7 @@ components:
           type: string
       required:
       - details
-    ForbiddenResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
-    LoginErrorResponse:
+    ErrorResponse:
       type: object
       properties:
         errors:
@@ -161,13 +182,24 @@ components:
           additionalProperties: {}
       required:
       - errors
+    ForbiddenResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
     LoginRequest:
       type: object
       properties:
         username:
           type: string
+          maxLength: 255
+          minLength: 1
         password:
           type: string
+          maxLength: 255
+          minLength: 1
       required:
       - password
       - username

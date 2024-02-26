@@ -1,4 +1,3 @@
-from typing import List
 from rest_framework.serializers import *
 from django.contrib.auth.models import User
 from . import models
