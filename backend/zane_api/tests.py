@@ -268,7 +268,6 @@ class ProjectCreateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         self.assertEqual(1, Project.objects.count())
         self.assertIsNotNone(response.json().get("errors", None))
-        print("e=", response.json().get("errors", None))
 
 
 class ProjectUpdateViewTests(AuthAPITestCase):
@@ -282,28 +281,28 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         )
         response = self.client.patch(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}),
+            format="json",
             data={
                 "name": "KissHub",
             },
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_project = Project.objects.get(slug="gh-clone")
         self.assertIsNotNone(updated_project)
         self.assertEqual("KissHub", updated_project.name)
 
-    # def test_bad_request(self):
-    #     self.loginUser()
-    #     response = self.client.post(reverse("zane_api:projects.list"), data={})
-    #     self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-    #     self.assertEqual(0, Project.objects.count())
-    #
-    # def test_unique_name(self):
-    #     owner = self.loginUser()
-    #     Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
-    #     response = self.client.post(reverse("zane_api:projects.list"), data={
-    #         "name": "Zane Ops"
-    #     })
-    #     self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-    #     self.assertEqual(1, Project.objects.count())
-    #     self.assertIsNotNone(response.json().get("errors", None))
-    #     print("e=", response.json().get("errors", None))
+    def test_bad_request(self):
+        owner = self.loginUser()
+        Project.objects.bulk_create(
+            [
+                Project(name="GH Clone", slug="gh-clone", owner=owner),
+                Project(name="Zane Ops", slug="zane-ops", owner=owner),
+            ]
+        )
+        response = self.client.patch(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
+            data={},
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)

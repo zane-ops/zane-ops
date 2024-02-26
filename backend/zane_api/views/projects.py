@@ -172,7 +172,10 @@ class ProjectDetailsView(APIView):
             project.save()
             response = self.serializer_class({"project": project})
             return Response(response.data)
-        return Response()
+
+        return Response(
+            {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
+        )
 
     def get(self, request: Request, slug: str):
         return Response()
