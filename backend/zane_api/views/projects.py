@@ -1,4 +1,3 @@
-from typing import Any
 from .. import serializers
 from ..models import Project
 
@@ -14,6 +13,7 @@ from drf_spectacular.utils import extend_schema
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.models import Q
 import django.forms as forms
+from django.utils.translation import gettext_lazy as _
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
@@ -24,14 +24,31 @@ class ForbiddenResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
-class ProjectListSearchFiltersForm(forms.Form):
+class ProjectListSearchFiltersSerializer(serializers.Serializer):
     SORT_CHOICES = (
-        ("name", "name"),
-        ("updated_at", "updated_at"),
+        ("name_asc", _("name ascending")),
+        ("updated_at_desc", _("updated_at in descending order")),
     )
-    include_archived = forms.BooleanField(required=False, initial=False)
-    query = forms.CharField(required=False, strip=True, initial="")
-    sort = forms.ChoiceField(choices=SORT_CHOICES, required=False, initial="updated_at")
+    include_archived = serializers.BooleanField(required=False, default=False)
+    query = serializers.CharField(
+        required=False, allow_blank=True, default="", trim_whitespace=True
+    )
+    sort = serializers.ChoiceField(
+        choices=SORT_CHOICES, required=False, default="updated_at_desc"
+    )
+
+    def validate_include_archived(self, value):
+        if isinstance(value, str):
+            if value.lower() == "true":
+                return True
+            elif value.lower() == "false":
+                return False
+        return value
+
+    def validate_sort(self, value: str):
+        if not value:
+            return self.fields["sort"].default
+        return value
 
 
 class ProjectsListView(APIView):
@@ -40,6 +57,9 @@ class ProjectsListView(APIView):
     error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(
+        parameters=[
+            ProjectListSearchFiltersSerializer,
+        ],
         responses={
             200: serializer_class,
             403: forbidden_serializer_class,
@@ -49,25 +69,35 @@ class ProjectsListView(APIView):
     )
     def get(self, request: Request):
         query_params = request.query_params.dict()
-        query_params["include_archived"] = (
-            query_params.get("include_archived", None) is not None
-        )
-        form = ProjectListSearchFiltersForm(data=query_params)
+        form = ProjectListSearchFiltersSerializer(data=query_params)
         if form.is_valid():
             params = form.data
-            print("params=", params)
+
+            sort_by_map_to_fields = {
+                "name_asc": "name",
+                "updated_at_desc": "-updated_at",
+            }
+
             response = self.serializer_class(
                 {
                     "projects": Project.objects.filter(
-                        owner=request.user, archived=params.get("include_archived")
+                        Q(
+                            owner=request.user,
+                            archived=params["include_archived"],
+                        )
+                        & (
+                            Q(name__istartswith=params["query"])
+                            | Q(slug__startswith=params["query"].lower())
+                        )
                     )
                     .select_related("owner")
-                    .order_by(params.get("sort"))[:30],
+                    .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
                 }
             )
             return Response(response.data)
 
+        # This should be unreachable
         return Response(
-            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             data={"errors": form.errors},
         )

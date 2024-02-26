@@ -159,7 +159,7 @@ class ProjectListViewTests(AuthAPITestCase):
         )
         response = self.client.get(
             reverse("zane_api:projects.list"),
-            QUERY_STRING="include_archived",
+            QUERY_STRING="include_archived=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json().get("projects", None)
@@ -176,14 +176,13 @@ class ProjectListViewTests(AuthAPITestCase):
         Project.objects.bulk_create(
             [
                 Project(owner=owner, name="Thullo", slug="thullo"),
-                Project(owner=owner, name="Github Clone", slug="gh-clone"),
-                Project(owner=owner, name="Locaci", slug="csdev-locaci"),
-                Project(owner=owner, name="CSDEV Ledjassa", slug="ledjassa"),
+                Project(owner=owner, name="Kiss Hub", slug="gh-clone"),
+                Project(owner=owner, name="Camly", slug="kisscam"),
             ]
         )
         response = self.client.get(
             reverse("zane_api:projects.list"),
-            QUERY_STRING="query=csdev",
+            QUERY_STRING="query=kiss",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json().get("projects", None)
@@ -201,7 +200,7 @@ class ProjectListViewTests(AuthAPITestCase):
         )
         response = self.client.get(
             reverse("zane_api:projects.list"),
-            QUERY_STRING="sort=name",
+            QUERY_STRING="sort=name_asc",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json().get("projects", None)
@@ -229,11 +228,11 @@ class ProjectListViewTests(AuthAPITestCase):
         )
         response = self.client.get(
             reverse("zane_api:projects.list"),
-            QUERY_STRING="sort=updated_at",
+            QUERY_STRING="sort=updated_at_desc",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json().get("projects", None)
-        self.assertEqual("thullo", project_list[0]["slug"])
+        self.assertEqual("gh-clone", project_list[0]["slug"])
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:projects.list"))
