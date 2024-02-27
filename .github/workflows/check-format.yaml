@@ -12,7 +12,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "20.x"
-      - run: pnpm install --frozen-lockfile
+      - run:  |
+          cd frontend 
+          pnpm install --frozen-lockfile
       - name: Check formatting
         id: check_format
         run: |
