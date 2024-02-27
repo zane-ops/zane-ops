@@ -7,9 +7,10 @@
     "generate:api": "openapi-typescript ../openapi/schema.yml -o src/api/v1.ts",
     "dev": "vite --host",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "check": "biome check .",
     "preview": "vite preview",
-    "predev": "npm run generate:api"
+    "predev": "npm run generate:api",
+    "format": "biome check . --apply"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.22.2",
@@ -18,16 +19,13 @@
     "react-dom": "18.3.0-canary-47beb96cc-20240222"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.5.3",
     "@tanstack/react-query-devtools": "^5.24.0",
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.17",
-    "eslint": "^8.56.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
     "openapi-typescript": "^6.7.4",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
