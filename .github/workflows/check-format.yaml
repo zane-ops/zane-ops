@@ -6,15 +6,7 @@ jobs:
   check-formatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.head_ref }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "20.x"
-      - run:  |
-          cd frontend 
-          pnpm install --frozen-lockfile
+      - uses: actions/checkout@v4
       - name: Setup Biome
         uses: biomejs/setup-biome@v2
         with:
