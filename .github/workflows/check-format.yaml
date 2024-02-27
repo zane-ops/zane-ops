@@ -1,0 +1,15 @@
+name: Biome Check Formatting
+on:
+  pull_request:
+
+jobs:
+  check-formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: 1.5.3
+      - name: Run Biome
+        run: biome check .
