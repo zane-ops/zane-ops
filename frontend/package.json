@@ -27,6 +27,8 @@
     "@typescript-eslint/parser": "^6.21.0",
     "@vitejs/plugin-react": "^4.2.1",
     "openapi-typescript": "^6.7.4",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "vite": "^5.1.0"
   }

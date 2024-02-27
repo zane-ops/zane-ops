@@ -11,7 +11,7 @@ export function App() {
     }
   });
   if (!query.data) {
-    return <div>Loading...</div>;
+    return <div className="text-3xl font-bold">Loading... with tailwind</div>;
   }
 
   const authedUser = query.data.data?.user;

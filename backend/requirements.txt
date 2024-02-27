@@ -19,8 +19,10 @@ markdown==3.5.2
 packaging==23.2
 pip==24.0
 psycopg2-binary==2.9.9
+pygments==2.17.2
 pytz==2024.1
 pyyaml==6.0.1
+redgreenunittest==0.1.1
 redis==5.0.1
 referencing==0.33.0
 requests==2.31.0
