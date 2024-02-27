@@ -7,6 +7,13 @@
     "skipLibCheck": true,
     "types": ["react/canary", "react-dom/canary"],
 
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
