@@ -80,9 +80,8 @@ class AuthMeViewTests(AuthAPITestCase):
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(response.json().get("user", None))
-        self.assertDictContainsSubset(
-            {"username": "Fredkiss3"}, response.json().get("user")
-        )
+        user = response.json().get("user")
+        self.assertEqual("Fredkiss3", user['username'])
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
@@ -306,3 +305,46 @@ class ProjectUpdateViewTests(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+
+    def test_non_existent(self):
+        self.loginUser()
+        response = self.client.patch(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
+            data={
+                "name": 'ZenOps'
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class ProjectGetViewTests(AuthAPITestCase):
+    def test_sucessfully_get_project(self):
+        owner = self.loginUser()
+        Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
+        response = self.client.get(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.json().get('project', None))
+
+    def test_non_existent(self):
+        self.loginUser()
+        response = self.client.get(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class ProjectArchiveViewTests(AuthAPITestCase):
+    def test_sucessfully_archive_project(self):
+        owner = self.loginUser()
+        Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
+        response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertEqual(True, response.json().get('success', None))
+
+        updated_project = Project.objects.get(slug="gh-clone")
+        self.assertIsNotNone(updated_project)
+        self.assertEqual(True, updated_project.archived)
+
+    def test_non_existent(self):
+        self.loginUser()
+        response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

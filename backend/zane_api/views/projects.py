@@ -165,7 +165,15 @@ class ProjectDetailsView(APIView):
         operation_id="updateProjectName",
     )
     def patch(self, request: Request, slug: str):
-        project = Project.objects.get(slug=slug)
+        try:
+            project = Project.objects.get(slug=slug)
+        except Project.DoesNotExist:
+            return Response({
+                "errors": {
+                    ".": [f"A project with the slug `{slug}` does not exist"],
+                }
+            }, status=status.HTTP_404_NOT_FOUND)
+
         form = ProjectUpdateForm(data=request.data)
         if form.is_valid():
             project.name = form.data['name']
@@ -177,8 +185,35 @@ class ProjectDetailsView(APIView):
             {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
 
+    @extend_schema(
+        request=ProjectUpdateForm,
+        responses={
+            200: serializer_class,
+            403: forbidden_serializer_class,
+            404: error_serializer_class,
+        },
+        operation_id="getSingleProject",
+    )
     def get(self, request: Request, slug: str):
-        return Response()
+        try:
+            project = Project.objects.get(slug=slug)
+        except Project.DoesNotExist:
+            return Response({
+                "errors": {
+                    ".": [f"A project with the slug `{slug}` does not exist"],
+                }
+            }, status=status.HTTP_404_NOT_FOUND)
+        response = self.serializer_class({"project": project})
+        return Response(response.data)
 
+    @extend_schema(
+        request=ProjectUpdateForm,
+        responses={
+            200: serializer_class,
+            403: forbidden_serializer_class,
+            404: error_serializer_class,
+        },
+        operation_id="getSingleProject",
+    )
     def delete(self, request: Request, slug: str):
         return Response()
