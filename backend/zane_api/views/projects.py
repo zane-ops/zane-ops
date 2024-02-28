@@ -8,8 +8,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import EMPTY_RESPONSE
 from .. import serializers
 from ..models import Project
+from ..services import cleanup_project_resources
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
@@ -130,16 +132,14 @@ class ProjectsListView(APIView):
                 response = self.single_serializer_class({"project": new_project})
                 return Response(response.data, status=status.HTTP_201_CREATED)
             except IntegrityError:
-                return Response(
-                    {
-                        "errors": {
-                            "slug": [
-                                "A project with a similar slug already exist, please use another name for this project"
-                            ]
-                        }
-                    },
-                    status=status.HTTP_409_CONFLICT,
-                )
+                response = self.error_serializer_class({
+                    "errors": {
+                        "slug": [
+                            "A project with a similar slug already exist, please use another name for this project"
+                        ]
+                    }
+                })
+                return Response(response.data, status=status.HTTP_409_CONFLICT)
         return Response(
             {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
@@ -147,6 +147,10 @@ class ProjectsListView(APIView):
 
 class ProjectUpdateForm(serializers.Serializer):
     name = serializers.CharField(max_length=255)
+
+
+class DeleteProjectSuccessResponseSerializer(serializers.Serializer):
+    pass
 
 
 class ProjectDetailsView(APIView):
@@ -168,11 +172,12 @@ class ProjectDetailsView(APIView):
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
-            return Response({
+            response = self.error_serializer_class({
                 "errors": {
                     ".": [f"A project with the slug `{slug}` does not exist"],
                 }
-            }, status=status.HTTP_404_NOT_FOUND)
+            })
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
         form = ProjectUpdateForm(data=request.data)
         if form.is_valid():
@@ -186,7 +191,6 @@ class ProjectDetailsView(APIView):
         )
 
     @extend_schema(
-        request=ProjectUpdateForm,
         responses={
             200: serializer_class,
             403: forbidden_serializer_class,
@@ -198,22 +202,36 @@ class ProjectDetailsView(APIView):
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
-            return Response({
+            response = self.error_serializer_class({
                 "errors": {
                     ".": [f"A project with the slug `{slug}` does not exist"],
                 }
-            }, status=status.HTTP_404_NOT_FOUND)
+            })
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         response = self.serializer_class({"project": project})
         return Response(response.data)
 
     @extend_schema(
-        request=ProjectUpdateForm,
         responses={
-            200: serializer_class,
+            200: DeleteProjectSuccessResponseSerializer,
             403: forbidden_serializer_class,
             404: error_serializer_class,
         },
-        operation_id="getSingleProject",
+        operation_id="archiveSingleProject",
     )
     def delete(self, request: Request, slug: str):
-        return Response()
+        try:
+            project = Project.objects.get(slug=slug)
+            errors = cleanup_project_resources(project)
+
+            if errors is None:
+                project.archived = True
+                project.save()
+        except Project.DoesNotExist:
+            response = self.error_serializer_class({
+                "errors": {
+                    ".": [f"A project with the slug `{slug}` does not exist"],
+                }
+            })
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

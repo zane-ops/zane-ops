@@ -338,7 +338,6 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
         response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        self.assertEqual(True, response.json().get('success', None))
 
         updated_project = Project.objects.get(slug="gh-clone")
         self.assertIsNotNone(updated_project)
