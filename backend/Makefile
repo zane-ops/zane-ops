@@ -20,3 +20,6 @@ migrate: ### Run migrations
 
 openapi: ### Generate the OpenApi spec schema at schema.yml
 	 python manage.py spectacular --color --file ../openapi/schema.yml
+
+freeze: ### Update the `requirements.txt` file
+	pip freeze > requirements.txt

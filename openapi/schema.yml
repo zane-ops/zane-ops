@@ -193,14 +193,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
-  /api/projects/{slug}:
+  /api/projects/{slug}/:
     get:
-      operationId: projects_retrieve
+      operationId: getSingleProject
       parameters:
       - in: path
         name: slug
         schema:
           type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
         required: true
       tags:
       - projects
@@ -213,6 +214,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/SingleProjectSuccessResponse'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     patch:
       operationId: updateProjectName
       parameters:
@@ -220,6 +233,7 @@ paths:
         name: slug
         schema:
           type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
         required: true
       tags:
       - projects
@@ -237,7 +251,7 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '201':
+        '200':
           content:
             application/json:
               schema:
@@ -262,20 +276,33 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
     delete:
-      operationId: projects_destroy
+      operationId: archiveSingleProject
       parameters:
       - in: path
         name: slug
         schema:
           type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
         required: true
       tags:
       - projects
       security:
       - cookieAuth: []
       responses:
-        '204':
+        '200':
           description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
 components:
   schemas:
     AuthedForbiddenResponse:
