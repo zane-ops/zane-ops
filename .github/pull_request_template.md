@@ -11,6 +11,12 @@ make openapi # will generate OpenAPI schema at `/openapi/schema.yaml`
 make freeze # will update the `requirements.txt` file if you added new packages
 ```
 
+### ⚠️ If you modify frontend code, be sure to run these commands : 
+
+```bash
+pnpm run format # format the files using biome
+```
+
 
 ## Type of Change
 

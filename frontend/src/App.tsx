@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type RequestInput, apiClient, ApiResponse } from "./api/client";
+import { ApiResponse, type RequestInput, apiClient } from "./api/client";
+import { Input } from "./components/ui/input";
 import { deleteCookie, getCookie } from "./utils";
 
 export function App() {
@@ -10,7 +11,12 @@ export function App() {
     }
   });
   if (!query.data) {
-    return <div className="text-3xl font-bold">Loading... with tailwind</div>;
+    return (
+      <div className="text-3xl font-bold">
+        Loading... with tailwind
+        <Input />
+      </div>
+    );
   }
 
   const authedUser = query.data.data?.user;

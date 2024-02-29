@@ -2,6 +2,7 @@ import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { ApiResponse, apiClient } from "../api/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteCookie, getCookie } from "../utils";
+import { Input } from "~/components/ui/input";
 
 export const Route = createLazyFileRoute("/")({
   component: Index
