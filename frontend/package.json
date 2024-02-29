@@ -9,7 +9,8 @@
     "build": "tsc && vite build",
     "check": "biome check .",
     "preview": "vite preview",
-    "predev": "npm run generate:api && tsr --watch && tsr --generate"
+    "predev": "npm run generate:api && tsr --watch && tsr --generate",
+    "format": "biome check . --apply"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.22.2",
