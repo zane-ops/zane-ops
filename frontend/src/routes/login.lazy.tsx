@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
 import { Input } from "~/components/ui/input";
 
@@ -8,6 +8,8 @@ export const Route = createLazyFileRoute("/login")({
 });
 
 function Login() {
+  const navigate = useNavigate();
+
   const queryClient = useQueryClient();
   const { isPending, mutate, data } = useMutation({
     mutationFn: async (input: RequestInput<"post", "/api/auth/login/">) => {
@@ -18,12 +20,11 @@ function Login() {
         return error;
       }
       if (data?.success) {
-        return queryClient.invalidateQueries({
+        return queryClient.removeQueries({
           queryKey: ["AUTHED_USER"]
         });
       }
-
-      throw new Error("Unknow Response from api");
+      return await navigate({ to: "/" });
     }
   });
 

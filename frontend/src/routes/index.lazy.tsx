@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { Input } from "~/components/ui/input";
 import { ApiResponse, apiClient } from "../api/client";
 import { deleteCookie, getCookie } from "../utils";
 
@@ -45,7 +44,7 @@ function AuthedView({ user }: ApiResponse<"get", "/api/auth/me/">) {
         return error;
       }
 
-      queryClient.invalidateQueries({
+      queryClient.removeQueries({
         queryKey: ["AUTHED_USER"]
       });
       deleteCookie("csrftoken");
