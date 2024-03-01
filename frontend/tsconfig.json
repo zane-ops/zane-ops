@@ -28,6 +28,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
+  "include": ["src", "./src/tanstack-router.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
