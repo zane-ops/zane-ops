@@ -20,7 +20,7 @@ class DockerSuccessResponseSerializer(serializers.Serializer):
 
 
 class DockerImageListSearchSerializer(serializers.Serializer):
-    q = serializers.CharField(required=False, default='')
+    q = serializers.CharField(required=True)
 
 
 class DockerImageResultFromSearch(TypedDict):

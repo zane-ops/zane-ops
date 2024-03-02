@@ -383,3 +383,10 @@ class DockerViewTests(AuthAPITestCase):
         images = response.json().get('images')
         self.assertEqual(images[0]['full_image'], 'library/caddy:latest')
         self.assertEqual(images[1]['full_image'], 'siwecos/caddy:latest')
+
+    @patch('zane_api.views.docker.docker_client')
+    def test_search_query_empty(self, mock_docker_client):
+        self.loginUser()
+        response = self.client.get(reverse('zane_api:docker.image_search'))
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+        mock_docker_client.images.search.assert_not_called()
