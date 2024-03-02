@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..services import docker_client
+from ..services import DockerService
 
 
 class DockerImageSerializer(serializers.Serializer):
@@ -51,7 +51,7 @@ class DockerImageSearchView(APIView):
 
         if form.is_valid():
             params = form.data
-            result: list[DockerImageResultFromSearch] = docker_client.images.search(term=params['q'], limit=30)
+            result = DockerService.search_registry(term=params['q'])
 
             images_to_return = []
             for image in result:

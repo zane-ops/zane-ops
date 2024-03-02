@@ -352,7 +352,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
 
 class DockerViewTests(AuthAPITestCase):
-    @patch('zane_api.views.docker.docker_client')
+    @patch('zane_api.views.docker.DockerService')
     def test_search_docker_images(self, mock_docker_client: DockerClient):
         self.loginUser()
         # Mock the response of the Docker SDK
