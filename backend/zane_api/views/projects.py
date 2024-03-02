@@ -43,11 +43,10 @@ class ProjectListSearchFiltersSerializer(serializers.Serializer):
         if isinstance(value, str):
             if value.lower() == "true":
                 return True
-            elif value.lower() == "false":
-                return False
+            return False
         return value
 
-    def validate_sort(self, value: str):
+    def validate_sort(self, value: str | None):
         if not value:
             return self.fields["sort"].default
         return value
@@ -74,7 +73,7 @@ class ProjectsListView(APIView):
         },
         operation_id="getProjectList",
     )
-    def get(self, request: Request):
+    def get(self, request: Request) -> Response:
         query_params = request.query_params.dict()
         form = ProjectListSearchFiltersSerializer(data=query_params)
         if form.is_valid():
@@ -119,7 +118,7 @@ class ProjectsListView(APIView):
         },
         operation_id="createProject",
     )
-    def post(self, request: Request):
+    def post(self, request: Request) -> Response:
         form = ProjectCreateForm(data=request.data)
         if form.is_valid():
             data = form.data
@@ -168,7 +167,7 @@ class ProjectDetailsView(APIView):
         },
         operation_id="updateProjectName",
     )
-    def patch(self, request: Request, slug: str):
+    def patch(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
@@ -198,7 +197,7 @@ class ProjectDetailsView(APIView):
         },
         operation_id="getSingleProject",
     )
-    def get(self, request: Request, slug: str):
+    def get(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
@@ -219,7 +218,7 @@ class ProjectDetailsView(APIView):
         },
         operation_id="archiveSingleProject",
     )
-    def delete(self, request: Request, slug: str):
+    def delete(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
             errors = cleanup_project_resources(project)

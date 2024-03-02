@@ -1,23 +1,23 @@
 from typing import Any
-from .. import serializers
 
-from rest_framework.views import APIView
+from django.contrib.auth import authenticate, login, logout
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django_ratelimit.decorators import ratelimit
+from django_ratelimit.exceptions import Ratelimited
+from drf_spectacular.utils import extend_schema
+from rest_framework import status, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.contrib.auth import authenticate, login, logout
-from django_ratelimit.decorators import ratelimit
-from django.utils.decorators import method_decorator
-from django_ratelimit.exceptions import Ratelimited
+from rest_framework.views import APIView
 from rest_framework.views import exception_handler
-from drf_spectacular.utils import extend_schema
-from django.views.decorators.csrf import ensure_csrf_cookie
+
+from .. import serializers
+
+EMPTY_RESPONSE: dict = {}
 
 
-EMPTY_RESPONSE = {}
-
-
-def custom_exception_handler(exception: Any, context: Any):
+def custom_exception_handler(exception: Any, context: Any) -> Response:
     if isinstance(exception, Ratelimited):
         return Response(
             {
@@ -63,7 +63,7 @@ class LoginView(APIView):
     )
     @method_decorator(ratelimit(key="ip", rate="5/m"))
     @method_decorator(ratelimit(key="post:username", rate="5/m"))
-    def post(self, request: Request):
+    def post(self, request: Request) -> Response:
         form = LoginRequestSerializer(data=request.data)
         if form.is_valid():
             data = form.data
@@ -163,7 +163,7 @@ class CSRFCookieView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @method_decorator(ensure_csrf_cookie)
-    def get(self, _: Request):
+    def get(self, _: Request) -> Response:
         response = CSRFSerializer(data={"details": "CSRF cookie set"})
 
         if response.is_valid():
