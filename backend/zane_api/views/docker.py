@@ -29,7 +29,7 @@ class DockerImageResultFromSearch(TypedDict):
     is_official: bool
 
 
-class DockerServiceView(APIView):
+class DockerImageSearchView(APIView):
     serializer_class = DockerSuccessResponseSerializer
     forbidden_serializer_class = serializers.ForbiddenResponseSerializer
     error_serializer_class = serializers.ErrorResponseSerializer
