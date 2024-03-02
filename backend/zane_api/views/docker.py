@@ -43,7 +43,7 @@ class DockerServiceView(APIView):
             403: forbidden_serializer_class,
             422: error_serializer_class,
         },
-        operation_id="getProjectList",
+        operation_id="searchDockerRegistry",
     )
     def get(self, request: Request):
         query_params = request.query_params.dict()
