@@ -1,9 +1,13 @@
+from datetime import datetime
+
+from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
 from rest_framework import status
-from django.core.cache import cache
+from rest_framework.test import APIClient
+
+from .models import Project
 
 
 @override_settings(
@@ -22,14 +26,18 @@ class APITestCase(TestCase):
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
-        User.objects.create_user(username="user", password="password")
+        User.objects.create_user(username="Fredkiss3", password="password")
+
+    def loginUser(self):
+        self.client.login(username="Fredkiss3", password="password")
+        return User.objects.get(username="Fredkiss3")
 
 
 class AuthLoginViewTests(AuthAPITestCase):
     def test_sucessful_login(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
-            data={"username": "user", "password": "password"},
+            data={"username": "Fredkiss3", "password": "password"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertIsNotNone(
@@ -68,11 +76,12 @@ class AuthLoginViewTests(AuthAPITestCase):
 
 class AuthMeViewTests(AuthAPITestCase):
     def test_authed(self):
-        self.client.login(username="user", password="password")
+        self.loginUser()
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(response.json().get("user", None))
-        self.assertDictContainsSubset({"username": "user"}, response.json().get("user"))
+        user = response.json().get("user")
+        self.assertEqual("Fredkiss3", user['username'])
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
@@ -81,7 +90,7 @@ class AuthMeViewTests(AuthAPITestCase):
 
 class AuthLogoutViewTests(AuthAPITestCase):
     def test_sucessful_logout(self):
-        self.client.login(username="user", password="password")
+        self.loginUser()
         response = self.client.delete(reverse("zane_api:auth.logout"))
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNotNone(
@@ -100,3 +109,241 @@ class CSRFViewTests(APITestCase):
         self.assertIsNotNone(
             response.cookies.get("csrftoken"),
         )
+
+
+class ProjectListViewTests(AuthAPITestCase):
+    def test_list_projects(self):
+        owner = self.loginUser()
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+                Project(owner=owner, name="Thullo", slug="thullo"),
+            ]
+        )
+
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertIsNotNone(project_list)
+
+        assert type(project_list) is list
+        assert len(project_list) == 2
+
+    def test_default_no_include_archived(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo", archived=True),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+            ]
+        )
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual(1, len(project_list))
+
+        found_archived_projects = list(
+            filter(lambda p: p["archived"] == True, project_list)
+        )
+        self.assertEqual(0, len(found_archived_projects))
+
+    def test_include_archived(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo", archived=True),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="include_archived=true",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual(1, len(project_list))
+
+        found_archived_projects = list(
+            filter(lambda p: p["archived"] == True, project_list)
+        )
+        self.assertNotEqual(0, len(found_archived_projects))
+
+    def test_query_filter_projects_is_using_name_and_slug(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo"),
+                Project(owner=owner, name="Kiss Hub", slug="gh-clone"),
+                Project(owner=owner, name="Camly", slug="kisscam"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="query=kiss",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+
+        self.assertEqual(2, len(project_list))
+
+    def test_sorting_projects_by_name(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, name="Thullo", slug="thullo", archived=True),
+                Project(owner=owner, name="Github Clone", slug="gh-clone"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="sort=name_asc",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual("gh-clone", project_list[0]["slug"])
+
+    def test_sorting_projects_by_updated_at(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(
+                    owner=owner,
+                    name="Thullo",
+                    slug="thullo",
+                    archived=True,
+                    updated_at=datetime(year=2022, month=2, day=5),
+                ),
+                Project(
+                    owner=owner,
+                    name="Github Clone",
+                    slug="gh-clone",
+                    updated_at=datetime(year=2024, month=1, day=2),
+                ),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="sort=updated_at_desc",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("projects", None)
+        self.assertEqual("gh-clone", project_list[0]["slug"])
+
+    def test_unauthed(self):
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+
+class ProjectCreateViewTests(AuthAPITestCase):
+    def test_sucessfully_create_project(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={
+                "name": "Zane Ops",
+            },
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(1, Project.objects.count())
+        self.assertEqual("zane-ops", Project.objects.first().slug)
+
+    def test_bad_request(self):
+        self.loginUser()
+        response = self.client.post(reverse("zane_api:projects.list"), data={})
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+        self.assertEqual(0, Project.objects.count())
+
+    def test_unique_name(self):
+        owner = self.loginUser()
+        Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
+        response = self.client.post(
+            reverse("zane_api:projects.list"), data={"name": "Zane Ops"}
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(1, Project.objects.count())
+        self.assertIsNotNone(response.json().get("errors", None))
+
+
+class ProjectUpdateViewTests(AuthAPITestCase):
+    def test_sucessfully_update_project_name(self):
+        owner = self.loginUser()
+        Project.objects.bulk_create(
+            [
+                Project(name="GH Clone", slug="gh-clone", owner=owner),
+                Project(name="Zane Ops", slug="zane-ops", owner=owner),
+            ]
+        )
+        response = self.client.patch(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}),
+            format="json",
+            data={
+                "name": "KissHub",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_project = Project.objects.get(slug="gh-clone")
+        self.assertIsNotNone(updated_project)
+        self.assertEqual("KissHub", updated_project.name)
+
+    def test_bad_request(self):
+        owner = self.loginUser()
+        Project.objects.bulk_create(
+            [
+                Project(name="GH Clone", slug="gh-clone", owner=owner),
+                Project(name="Zane Ops", slug="zane-ops", owner=owner),
+            ]
+        )
+        response = self.client.patch(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
+            data={},
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+
+    def test_non_existent(self):
+        self.loginUser()
+        response = self.client.patch(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
+            data={
+                "name": 'ZenOps'
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class ProjectGetViewTests(AuthAPITestCase):
+    def test_sucessfully_get_project(self):
+        owner = self.loginUser()
+        Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
+        response = self.client.get(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.json().get('project', None))
+
+    def test_non_existent(self):
+        self.loginUser()
+        response = self.client.get(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class ProjectArchiveViewTests(AuthAPITestCase):
+    def test_sucessfully_archive_project(self):
+        owner = self.loginUser()
+        Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
+        response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        updated_project = Project.objects.get(slug="gh-clone")
+        self.assertIsNotNone(updated_project)
+        self.assertEqual(True, updated_project.archived)
+
+    def test_non_existent(self):
+        self.loginUser()
+        response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

@@ -1,10 +1,11 @@
+import uuid
 from typing import List
+
 from crontab import CronTab
-from django.db import models
 from django.conf import settings
+from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
-import uuid
 
 
 class TimestampedModel(models.Model):
@@ -26,6 +27,9 @@ class Project(TimestampedModel):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ["-updated_at"]
 
 
 class BaseService(TimestampedModel):

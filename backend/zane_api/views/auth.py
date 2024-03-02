@@ -1,23 +1,23 @@
 from typing import Any
-from .. import serializers, forms
 
-from rest_framework.views import APIView
+from django.contrib.auth import authenticate, login, logout
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django_ratelimit.decorators import ratelimit
+from django_ratelimit.exceptions import Ratelimited
+from drf_spectacular.utils import extend_schema
+from rest_framework import status, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.contrib.auth import authenticate, login, logout
-from django_ratelimit.decorators import ratelimit
-from django.utils.decorators import method_decorator
-from django_ratelimit.exceptions import Ratelimited
+from rest_framework.views import APIView
 from rest_framework.views import exception_handler
-from drf_spectacular.utils import extend_schema
-from django.views.decorators.csrf import ensure_csrf_cookie
+
+from .. import serializers
+
+EMPTY_RESPONSE: dict = {}
 
 
-EMPTY_RESPONSE = {}
-
-
-def custom_exception_handler(exception: Any, context: Any):
+def custom_exception_handler(exception: Any, context: Any) -> Response:
     if isinstance(exception, Ratelimited):
         return Response(
             {
@@ -39,34 +39,32 @@ class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
 
 
-class LoginErrorResponseSerializer(serializers.ErrorResponseSerializer):
-    pass
-
-
 class LoginRequestSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField()
+    username = serializers.CharField(
+        required=True, min_length=1, max_length=255, trim_whitespace=True
+    )
+    password = serializers.CharField(required=True, min_length=1, max_length=255)
 
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
     success_serializer_class = LoginSuccessResponseSerializer
-    error_serializer_class = LoginErrorResponseSerializer
+    error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(
+        request=LoginRequestSerializer,
         responses={
             201: success_serializer_class,
             422: error_serializer_class,
             401: error_serializer_class,
             429: error_serializer_class,
         },
-        request=LoginRequestSerializer,
         operation_id="login",
     )
     @method_decorator(ratelimit(key="ip", rate="5/m"))
     @method_decorator(ratelimit(key="post:username", rate="5/m"))
-    def post(self, request: Request):
-        form = forms.PasswordLoginForm(request.data)
+    def post(self, request: Request) -> Response:
+        form = LoginRequestSerializer(data=request.data)
         if form.is_valid():
             data = form.data
             user = authenticate(
@@ -136,17 +134,12 @@ class AuthedView(APIView):
         )
 
 
-class LogoutSuccessResponseSerializer(serializers.Serializer):
-    pass
-
-
 class AuthLogoutView(APIView):
-    serializer_class = LogoutSuccessResponseSerializer
     error_serializer_class = AuthedForbiddenResponseSerializer
 
     @extend_schema(
         responses={
-            204: serializer_class,
+            204: None,
             403: error_serializer_class,
         },
         operation_id="logout",
@@ -170,7 +163,7 @@ class CSRFCookieView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @method_decorator(ensure_csrf_cookie)
-    def get(self, _: Request):
+    def get(self, _: Request) -> Response:
         response = CSRFSerializer(data={"details": "CSRF cookie set"})
 
         if response.is_valid():

@@ -6,7 +6,20 @@ dev: ### Start the django dev server
 	python manage.py runserver 0.0.0.0:8000
 
 test: ### Run tests
+ifdef t
+	python manage.py test -k $(t)
+else
 	python manage.py test --parallel
+endif
+
+migration: ### create migrations
+	python manage.py makemigrations
+
+migrate: ### Run migrations
+	python manage.py migrate
 
 openapi: ### Generate the OpenApi spec schema at schema.yml
 	 python manage.py spectacular --color --file ../openapi/schema.yml
+
+freeze: ### Update the `requirements.txt` file
+	pip freeze > requirements.txt
