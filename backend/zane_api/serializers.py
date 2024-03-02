@@ -1,5 +1,6 @@
-from rest_framework.serializers import *
 from django.contrib.auth.models import User
+from rest_framework.serializers import *
+
 from . import models
 
 
@@ -19,3 +20,7 @@ class ProjectSerializer(ModelSerializer):
     class Meta:
         model = models.Project
         fields = ["name", "slug", "archived", "owner", "created_at", "updated_at"]
+
+
+class ForbiddenResponseSerializer(Serializer):
+    detail = CharField()
