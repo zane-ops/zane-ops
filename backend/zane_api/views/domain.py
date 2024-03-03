@@ -12,17 +12,9 @@ class GetRootDomainSerializer(serializers.Serializer):
     domain = serializers.CharField()
 
 
-class AuthedForbiddenResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-
-
 class GetRootDomainView(APIView):
-    """
-    CSRF cookie view for retrieving CSRF before doing requests
-    """
-
     serializer_class = GetRootDomainSerializer
-    error_serializer_class = AuthedForbiddenResponseSerializer
+    error_serializer_class = serializers.ForbiddenResponseSerializer
 
     @extend_schema(
         responses={

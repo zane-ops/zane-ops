@@ -22,10 +22,6 @@ class SingleProjectSuccessResponseSerializer(serializers.Serializer):
     project = serializers.ProjectSerializer()
 
 
-class ForbiddenResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-
-
 class ProjectListSearchFiltersSerializer(serializers.Serializer):
     SORT_CHOICES = (
         ("name_asc", _("name ascending")),
@@ -59,7 +55,7 @@ class ProjectCreateForm(serializers.Serializer):
 class ProjectsListView(APIView):
     serializer_class = ProjectSuccessResponseSerializer
     single_serializer_class = SingleProjectSuccessResponseSerializer
-    forbidden_serializer_class = ForbiddenResponseSerializer
+    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
     error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(
@@ -154,7 +150,7 @@ class DeleteProjectSuccessResponseSerializer(serializers.Serializer):
 
 class ProjectDetailsView(APIView):
     serializer_class = SingleProjectSuccessResponseSerializer
-    forbidden_serializer_class = ForbiddenResponseSerializer
+    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
     error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(

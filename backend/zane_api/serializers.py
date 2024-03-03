@@ -1,10 +1,15 @@
-from rest_framework.serializers import *
 from django.contrib.auth.models import User
+from rest_framework.serializers import *
+
 from . import models
 
 
 class ErrorResponseSerializer(Serializer):
     errors = DictField()
+
+
+class ForbiddenResponseSerializer(Serializer):
+    details = CharField()
 
 
 class UserSerializer(ModelSerializer):
