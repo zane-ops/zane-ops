@@ -13,4 +13,5 @@ urlpatterns = [
     re_path(r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/$", views.ProjectDetailsView.as_view(),
             name="projects.details"),
     re_path(r"^docker/image-search/?$", views.DockerImageSearchView.as_view(), name="docker.image_search"),
+    re_path(r"^docker/login/?$", views.DockerLoginView.as_view(), name="docker.login"),
 ]

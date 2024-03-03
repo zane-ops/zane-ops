@@ -1,11 +1,11 @@
 from datetime import datetime
+from typing import Any
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from docker import DockerClient
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -352,9 +352,12 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
 
 class DockerViewTests(AuthAPITestCase):
-    @patch('zane_api.views.docker.DockerService')
-    def test_search_docker_images(self, mock_docker_client: DockerClient):
+    def setUp(self):
+        super().setUp()
         self.loginUser()
+
+    @patch('zane_api.views.docker.DockerService')
+    def test_search_docker_images(self, mock_docker_client: Any):
         # Mock the response of the Docker SDK
         mock_response = [
             {
@@ -385,8 +388,44 @@ class DockerViewTests(AuthAPITestCase):
         self.assertEqual(images[1]['full_image'], 'siwecos/caddy:latest')
 
     @patch('zane_api.views.docker.DockerService')
-    def test_search_query_empty(self, mock_docker_client):
-        self.loginUser()
+    def test_search_query_empty(self, mock_docker_client: Any):
         response = self.client.get(reverse('zane_api:docker.image_search'))
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
         mock_docker_client.search_registry.assert_not_called()
+
+    @patch('zane_api.views.docker.DockerService')
+    def test_success_validate_credentials(self, mock_docker_client: Any):
+        mock_docker_client.login.return_value = True
+        response = self.client.post(reverse('zane_api:docker.login'), data={
+            'username': 'user',
+            'password': 'password',
+        })
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify that the Docker SDK was called with the correct query
+        mock_docker_client.login.assert_called_once_with(username='user', password='password')
+
+    @patch('zane_api.views.docker.DockerService')
+    def test_bad_credentials(self, mock_docker_client: Any):
+        mock_docker_client.login.return_value = False
+        response = self.client.post(reverse('zane_api:docker.login'), data={
+            'username': 'user',
+            'password': 'password',
+        })
+
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+        # Verify that the Docker SDK was called with the correct query
+        mock_docker_client.login.assert_called_once_with(username='user', password='password')
+
+    @patch('zane_api.views.docker.DockerService')
+    def test_bad_request_for_credentials(self, mock_docker_client: Any):
+        response = self.client.post(reverse('zane_api:docker.login'), data={
+            'password': 'password',
+        })
+
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+
+        # Verify that the Docker SDK was called with the correct query
+        mock_docker_client.login.assert_not_called()
