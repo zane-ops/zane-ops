@@ -101,6 +101,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/CSRF'
           description: ''
+  /api/domain/root/:
+    get:
+      operationId: getRootDomain
+      tags:
+      - domain
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRootDomain'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
   /api/projects/:
     get:
       operationId: getProjectList
@@ -339,10 +359,17 @@ components:
     ForbiddenResponse:
       type: object
       properties:
-        detail:
+        details:
           type: string
       required:
-      - detail
+      - details
+    GetRootDomain:
+      type: object
+      properties:
+        domain:
+          type: string
+      required:
+      - domain
     LoginRequest:
       type: object
       properties:
