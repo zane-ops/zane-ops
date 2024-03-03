@@ -429,3 +429,13 @@ class DockerViewTests(AuthAPITestCase):
 
         # Verify that the Docker SDK was called with the correct query
         mock_docker_client.login.assert_not_called()
+
+
+class CreateServiceViewTests(AuthAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.loginUser()
+
+    @patch('zane_api.views.docker.DockerService')
+    def test_create_project_sucessful(self, mock_docker_client: Any):
+        pass

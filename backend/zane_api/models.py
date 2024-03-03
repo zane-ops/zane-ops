@@ -44,6 +44,7 @@ class BaseService(TimestampedModel):
     )
     env_variables = models.ManyToManyField(to="EnvVariable")
     http_logs = models.ManyToManyField(to="HttpLog")
+    ports = models.ManyToManyField(to="PortMapping")
 
     class Meta:
         abstract = True
@@ -56,12 +57,24 @@ class BaseService(TimestampedModel):
         return f"{self.name} ({self.slug})"
 
 
+class PortMapping(models.Model):
+    source = models.PositiveIntegerField()
+    target = models.PositiveIntegerField(default=80)
+
+    class Meta:
+        unique_together = (
+            "source",
+            "target",
+        )
+
+
 class DockerRegistryService(BaseService):
     base_docker_image = models.CharField(max_length=510)
     docker_credentials_email = models.CharField(max_length=255, null=True, blank=True)
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
+    docker_cmd = models.CharField(max_length=255, null=True, blank=True)
 
 
 class GitRepositoryService(BaseService):
