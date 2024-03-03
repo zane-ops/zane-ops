@@ -347,3 +347,11 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.loginUser()
         response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class GetRootDomainViewTests(AuthAPITestCase):
+    def test_sucessful(self):
+        self.loginUser()
+        response = self.client.get(reverse("zane_api:domain.root"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get('domain'), "zane.local")

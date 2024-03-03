@@ -12,4 +12,5 @@ urlpatterns = [
     re_path(r"^projects/?$", views.ProjectsListView.as_view(), name="projects.list"),
     re_path(r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/$", views.ProjectDetailsView.as_view(),
             name="projects.details"),
+    re_path(r"^domain/root/?$", views.GetRootDomainView.as_view(), name="domain.root"),
 ]
