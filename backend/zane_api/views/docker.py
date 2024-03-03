@@ -120,3 +120,42 @@ class DockerLoginView(APIView):
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             data={"errors": form.errors},
         )
+
+
+class DockerPortCheckSuccessResponseSerializer(serializers.Serializer):
+    available = serializers.BooleanField()
+
+
+class DockerPortCheckRequestSerializer(serializers.Serializer):
+    port = serializers.IntegerField(required=True, min_value=0)
+
+
+class DockerPortCheckView(APIView):
+    serializer_class = DockerPortCheckSuccessResponseSerializer
+    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
+    error_serializer_class = serializers.ErrorResponseSerializer
+
+    @extend_schema(
+        request=DockerPortCheckRequestSerializer,
+        responses={
+            200: serializer_class,
+            400: serializer_class,
+            403: forbidden_serializer_class,
+            422: error_serializer_class,
+        },
+        operation_id="checkIfPortIsAvailable",
+    )
+    def post(self, request: Request):
+        form = DockerPortCheckRequestSerializer(data=request.data)
+
+        if form.is_valid():
+            data = form.data
+            result = DockerService.check_if_port_is_available(port=data['port'])
+
+            response = self.serializer_class({'available': result})
+            return Response(response.data, status=status.HTTP_200_OK if result else status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            data={"errors": form.errors},
+        )

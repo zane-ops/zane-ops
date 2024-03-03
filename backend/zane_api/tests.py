@@ -429,3 +429,29 @@ class DockerViewTests(AuthAPITestCase):
 
         # Verify that the Docker SDK was called with the correct query
         mock_docker_client.login.assert_not_called()
+
+
+class FakeDockerService:
+    @classmethod
+    def check_if_port_is_available(cls, port: int) -> bool:
+        return port != 80
+
+
+class DockerPortMappingViewTests(AuthAPITestCase):
+    @patch('zane_api.views.docker.DockerService', wraps=FakeDockerService)
+    def test_successfull(self, _: Any):
+        self.loginUser()
+        response = self.client.post(reverse('zane_api:docker.check_port_mapping'), data={
+            'port': 8080,
+        })
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get("available"), True)
+
+    @patch('zane_api.views.docker.DockerService', wraps=FakeDockerService)
+    def test_unavailable_port(self, _: Any):
+        self.loginUser()
+        response = self.client.post(reverse('zane_api:docker.check_port_mapping'), data={
+            'port': 80,
+        })
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(response.json().get("available"), False)
