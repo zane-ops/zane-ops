@@ -9,7 +9,7 @@ class ErrorResponseSerializer(Serializer):
 
 
 class ForbiddenResponseSerializer(Serializer):
-    details = CharField()
+    detail = CharField()
 
 
 class UserSerializer(ModelSerializer):

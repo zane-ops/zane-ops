@@ -359,10 +359,10 @@ components:
     ForbiddenResponse:
       type: object
       properties:
-        details:
+        detail:
           type: string
       required:
-      - details
+      - detail
     GetRootDomain:
       type: object
       properties:
