@@ -51,19 +51,19 @@ class DockerImageSearchView(APIView):
 
         if form.is_valid():
             params = form.data
-            result = DockerService.search_registry(term=params['q'])
+            result = DockerService.search_registry(term=params["q"])
 
             images_to_return = []
             for image in result:
                 api_image_result = {}
-                if image['is_official']:
-                    api_image_result['full_image'] = f'library/{image["name"]}:latest'
+                if image["is_official"]:
+                    api_image_result["full_image"] = f'library/{image["name"]}:latest'
                 else:
-                    api_image_result['full_image'] = f'{image["name"]}:latest'
-                api_image_result['description'] = image['description']
+                    api_image_result["full_image"] = f'{image["name"]}:latest'
+                api_image_result["description"] = image["description"]
                 images_to_return.append(api_image_result)
 
-            response = self.serializer_class({'images': images_to_return})
+            response = self.serializer_class({"images": images_to_return})
             return Response(response.data, status=status.HTTP_200_OK)
 
         return Response(
@@ -105,15 +105,12 @@ class DockerLoginView(APIView):
             result = DockerService.login(**data)
 
             if not result:
-                response = self.error_serializer_class({
-                    'errors': {
-                        '.': [
-                            'Invalid credentials'
-                        ]
-                    }})
+                response = self.error_serializer_class(
+                    {"errors": {".": ["Invalid credentials"]}}
+                )
                 return Response(response.data, status=status.HTTP_401_UNAUTHORIZED)
 
-            response = self.serializer_class({'success': result})
+            response = self.serializer_class({"success": result})
             return Response(response.data, status=status.HTTP_200_OK)
 
         return Response(

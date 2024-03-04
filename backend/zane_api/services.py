@@ -31,7 +31,9 @@ class DockerService:
         return instance.client.images.search(term=term, limit=30)
 
     @classmethod
-    def login(cls, username: str, password: str, registry_url: str = 'registry-1.docker.io/v2') -> bool:
+    def login(
+        cls, username: str, password: str, registry_url: str = "registry-1.docker.io/v2"
+    ) -> bool:
         """
         List all images in registry starting with a certain term.
         """
@@ -43,7 +45,9 @@ class DockerService:
             return False
 
     @classmethod
-    def cleanup_project_resources(cls, project: Project) -> Dict[str, Dict[str, List[str]]] | None:
+    def cleanup_project_resources(
+        cls, project: Project
+    ) -> Dict[str, Dict[str, List[str]]] | None:
         """
         TODO : we will need to cleanup :
           - services
