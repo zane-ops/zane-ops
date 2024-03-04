@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from . import EMPTY_RESPONSE
 from .. import serializers
 from ..models import Project
-from ..services import cleanup_project_resources
+from ..services import DockerService
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
@@ -20,10 +20,6 @@ class ProjectSuccessResponseSerializer(serializers.Serializer):
 
 class SingleProjectSuccessResponseSerializer(serializers.Serializer):
     project = serializers.ProjectSerializer()
-
-
-class ForbiddenResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
 
 
 class ProjectListSearchFiltersSerializer(serializers.Serializer):
@@ -59,7 +55,7 @@ class ProjectCreateForm(serializers.Serializer):
 class ProjectsListView(APIView):
     serializer_class = ProjectSuccessResponseSerializer
     single_serializer_class = SingleProjectSuccessResponseSerializer
-    forbidden_serializer_class = ForbiddenResponseSerializer
+    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
     error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(
@@ -154,7 +150,7 @@ class DeleteProjectSuccessResponseSerializer(serializers.Serializer):
 
 class ProjectDetailsView(APIView):
     serializer_class = SingleProjectSuccessResponseSerializer
-    forbidden_serializer_class = ForbiddenResponseSerializer
+    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
     error_serializer_class = serializers.ErrorResponseSerializer
 
     @extend_schema(
@@ -221,7 +217,7 @@ class ProjectDetailsView(APIView):
     def delete(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
-            errors = cleanup_project_resources(project)
+            errors = DockerService.cleanup_project_resources(project)
 
             if errors is None:
                 project.archived = True

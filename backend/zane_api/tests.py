@@ -1,9 +1,11 @@
 from datetime import datetime
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from docker import DockerClient
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -347,3 +349,44 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.loginUser()
         response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class DockerViewTests(AuthAPITestCase):
+    @patch('zane_api.views.docker.DockerService')
+    def test_search_docker_images(self, mock_docker_client: DockerClient):
+        self.loginUser()
+        # Mock the response of the Docker SDK
+        mock_response = [
+            {
+                'name': 'caddy',
+                'is_official': True,
+                'is_automated': True,
+                "description":
+                    'Caddy 2 is a powerful, enterprise-ready, open source web server with automatic HTTPS written in Go'
+            },
+            {
+                'description': 'caddy webserver optimized for usage within the SIWECOS project',
+                'is_automated': False,
+                'is_official': False,
+                'name': 'siwecos/caddy',
+                'star_count': 0
+            }
+        ]
+        mock_docker_client.search_registry.return_value = mock_response
+        response = self.client.get(reverse('zane_api:docker.image_search'), QUERY_STRING="q=caddy")
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify that the Docker SDK was called with the correct query
+        mock_docker_client.search_registry.assert_called_once_with(term='caddy')
+
+        self.assertIsNotNone(response.json().get('images'))
+        images = response.json().get('images')
+        self.assertEqual(images[0]['full_image'], 'library/caddy:latest')
+        self.assertEqual(images[1]['full_image'], 'siwecos/caddy:latest')
+
+    @patch('zane_api.views.docker.DockerService')
+    def test_search_query_empty(self, mock_docker_client):
+        self.loginUser()
+        response = self.client.get(reverse('zane_api:docker.image_search'))
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+        mock_docker_client.search_registry.assert_not_called()

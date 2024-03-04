@@ -1,16 +1,46 @@
-from typing import Dict, List
+from typing import Dict, List, TypedDict
+
+import docker
+from docker.client import DockerClient
 
 from .models import Project
 
 
-def cleanup_project_resources(project: Project) -> Dict[str, Dict[str, List[str]]] | None:
-    """
-    TODO : we will need to cleanup :
-      - services
-      - workers &
-      - CRONs
-      - volumes
+class DockerImageResultFromSearch(TypedDict):
+    name: str
+    description: str
+    is_official: bool
 
-    It returns None when everything has gone well, else it will return errors
-    """
-    return None
+
+class DockerService:
+    instance: 'DockerService' = None
+    client: DockerClient
+
+    @classmethod
+    def _get_instance(cls):
+        if cls.instance is None:
+            cls.instance = DockerService()
+            cls.client = docker.from_env()
+        return cls.instance
+
+    @classmethod
+    def search_registry(cls, term: str) -> List[DockerImageResultFromSearch]:
+        """
+        List all images in registry starting with a certain term.
+        """
+        instance = cls._get_instance()
+        return instance.client.images.search(term=term, limit=30)
+
+    @classmethod
+    def cleanup_project_resources(cls, project: Project) -> Dict[str, Dict[str, List[str]]] | None:
+        """
+        TODO : we will need to cleanup :
+          - services
+          - workers &
+          - CRONs
+          - volumes
+
+        It returns None when everything has gone well, else it will return errors
+        """
+        instance = cls._get_instance()
+        return None
