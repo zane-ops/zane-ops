@@ -14,6 +14,7 @@ class DockerImageResultFromSearch(TypedDict):
 class DockerService:
     instance = None  # type: DockerService | None
     client: docker.DockerClient
+    DOCKER_HUB_REGISTRY_URL = 'registry-1.docker.io/v2'
 
     @classmethod
     def _get_instance(cls):
@@ -31,23 +32,19 @@ class DockerService:
         return instance.client.images.search(term=term, limit=30)
 
     @classmethod
-    def login(
-        cls, username: str, password: str, registry_url: str = "registry-1.docker.io/v2"
-    ) -> bool:
+    def login(cls, username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL) -> bool:
         """
         List all images in registry starting with a certain term.
         """
         instance = cls._get_instance()
         try:
-            instance.client.login(username, password, registry_url)
+            instance.client.login(username, password, registry_url, reauth=True)
             return True
         except docker.errors.APIError:
             return False
 
     @classmethod
-    def cleanup_project_resources(
-        cls, project: Project
-    ) -> Dict[str, Dict[str, List[str]]] | None:
+    def cleanup_project_resources(cls, project: Project) -> Dict[str, Dict[str, List[str]]] | None:
         """
         TODO : we will need to cleanup :
           - services
@@ -59,3 +56,17 @@ class DockerService:
         """
         instance = cls._get_instance()
         return None
+
+    @classmethod
+    def check_if_port_is_available(cls, port: int) -> bool:
+        instance = cls._get_instance()
+        try:
+            instance.client.containers.run(
+                image='nginx:alpine-perl',
+                ports={'80/tcp': ('0.0.0.0', port)},
+                command="echo hello world",
+                remove=True
+            )
+            return True
+        except docker.errors.APIError:
+            return False
