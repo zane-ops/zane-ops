@@ -8,10 +8,6 @@ class ErrorResponseSerializer(Serializer):
     errors = DictField()
 
 
-class ForbiddenResponseSerializer(Serializer):
-    detail = CharField()
-
-
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
