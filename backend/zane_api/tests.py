@@ -450,3 +450,11 @@ class DockerViewTests(AuthAPITestCase):
 
         # Verify that the Docker SDK was called with the correct query
         mock_docker_client.login.assert_not_called()
+
+
+class GetRootDomainViewTests(AuthAPITestCase):
+    def test_sucessful(self):
+        self.loginUser()
+        response = self.client.get(reverse("zane_api:domain.root"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get("domain"), "zane.local")

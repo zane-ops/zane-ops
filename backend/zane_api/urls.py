@@ -21,4 +21,5 @@ urlpatterns = [
         name="docker.image_search",
     ),
     re_path(r"^docker/login/?$", views.DockerLoginView.as_view(), name="docker.login"),
+    re_path(r"^domain/root/?$", views.GetRootDomainView.as_view(), name="domain.root"),
 ]
