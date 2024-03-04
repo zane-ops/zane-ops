@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from docker import DockerClient
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -83,7 +84,7 @@ class AuthMeViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(response.json().get("user", None))
         user = response.json().get("user")
-        self.assertEqual("Fredkiss3", user['username'])
+        self.assertEqual("Fredkiss3", user["username"])
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
@@ -312,9 +313,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         self.loginUser()
         response = self.client.patch(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
-            data={
-                "name": 'ZenOps'
-            },
+            data={"name": "ZenOps"},
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
@@ -324,13 +323,17 @@ class ProjectGetViewTests(AuthAPITestCase):
     def test_sucessfully_get_project(self):
         owner = self.loginUser()
         Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
-        response = self.client.get(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
+        response = self.client.get(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertIsNotNone(response.json().get('project', None))
+        self.assertIsNotNone(response.json().get("project", None))
 
     def test_non_existent(self):
         self.loginUser()
-        response = self.client.get(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
+        response = self.client.get(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
+        )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
 
@@ -338,7 +341,9 @@ class ProjectArchiveViewTests(AuthAPITestCase):
     def test_sucessfully_archive_project(self):
         owner = self.loginUser()
         Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
-        response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"}))
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         updated_project = Project.objects.get(slug="gh-clone")
@@ -347,7 +352,9 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     def test_non_existent(self):
         self.loginUser()
-        response = self.client.delete(reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}))
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
+        )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
 
@@ -356,74 +363,88 @@ class DockerViewTests(AuthAPITestCase):
         super().setUp()
         self.loginUser()
 
-    @patch('zane_api.views.docker.DockerService')
+    @patch("zane_api.views.docker.DockerService")
     def test_search_docker_images(self, mock_docker_client: Any):
         # Mock the response of the Docker SDK
         mock_response = [
             {
-                'name': 'caddy',
-                'is_official': True,
-                'is_automated': True,
-                "description":
-                    'Caddy 2 is a powerful, enterprise-ready, open source web server with automatic HTTPS written in Go'
+                "name": "caddy",
+                "is_official": True,
+                "is_automated": True,
+                "description": "Caddy 2 is a powerful, enterprise-ready, open source web server with automatic HTTPS written in Go",
             },
             {
-                'description': 'caddy webserver optimized for usage within the SIWECOS project',
-                'is_automated': False,
-                'is_official': False,
-                'name': 'siwecos/caddy',
-                'star_count': 0
-            }
+                "description": "caddy webserver optimized for usage within the SIWECOS project",
+                "is_automated": False,
+                "is_official": False,
+                "name": "siwecos/caddy",
+                "star_count": 0,
+            },
         ]
         mock_docker_client.search_registry.return_value = mock_response
-        response = self.client.get(reverse('zane_api:docker.image_search'), QUERY_STRING="q=caddy")
+        response = self.client.get(
+            reverse("zane_api:docker.image_search"), QUERY_STRING="q=caddy"
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify that the Docker SDK was called with the correct query
-        mock_docker_client.search_registry.assert_called_once_with(term='caddy')
+        mock_docker_client.search_registry.assert_called_once_with(term="caddy")
 
-        self.assertIsNotNone(response.json().get('images'))
-        images = response.json().get('images')
-        self.assertEqual(images[0]['full_image'], 'library/caddy:latest')
-        self.assertEqual(images[1]['full_image'], 'siwecos/caddy:latest')
+        self.assertIsNotNone(response.json().get("images"))
+        images = response.json().get("images")
+        self.assertEqual(images[0]["full_image"], "library/caddy:latest")
+        self.assertEqual(images[1]["full_image"], "siwecos/caddy:latest")
 
-    @patch('zane_api.views.docker.DockerService')
+    @patch("zane_api.views.docker.DockerService")
     def test_search_query_empty(self, mock_docker_client: Any):
-        response = self.client.get(reverse('zane_api:docker.image_search'))
+        response = self.client.get(reverse("zane_api:docker.image_search"))
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
         mock_docker_client.search_registry.assert_not_called()
 
-    @patch('zane_api.views.docker.DockerService')
+    @patch("zane_api.views.docker.DockerService")
     def test_success_validate_credentials(self, mock_docker_client: Any):
         mock_docker_client.login.return_value = True
-        response = self.client.post(reverse('zane_api:docker.login'), data={
-            'username': 'user',
-            'password': 'password',
-        })
+        response = self.client.post(
+            reverse("zane_api:docker.login"),
+            data={
+                "username": "user",
+                "password": "password",
+            },
+        )
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify that the Docker SDK was called with the correct query
-        mock_docker_client.login.assert_called_once_with(username='user', password='password')
+        mock_docker_client.login.assert_called_once_with(
+            username="user", password="password"
+        )
 
-    @patch('zane_api.views.docker.DockerService')
+    @patch("zane_api.views.docker.DockerService")
     def test_bad_credentials(self, mock_docker_client: Any):
         mock_docker_client.login.return_value = False
-        response = self.client.post(reverse('zane_api:docker.login'), data={
-            'username': 'user',
-            'password': 'password',
-        })
+        response = self.client.post(
+            reverse("zane_api:docker.login"),
+            data={
+                "username": "user",
+                "password": "password",
+            },
+        )
 
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
         # Verify that the Docker SDK was called with the correct query
-        mock_docker_client.login.assert_called_once_with(username='user', password='password')
+        mock_docker_client.login.assert_called_once_with(
+            username="user", password="password"
+        )
 
-    @patch('zane_api.views.docker.DockerService')
+    @patch("zane_api.views.docker.DockerService")
     def test_bad_request_for_credentials(self, mock_docker_client: Any):
-        response = self.client.post(reverse('zane_api:docker.login'), data={
-            'password': 'password',
-        })
+        response = self.client.post(
+            reverse("zane_api:docker.login"),
+            data={
+                "password": "password",
+            },
+        )
 
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
@@ -438,20 +459,26 @@ class FakeDockerService:
 
 
 class DockerPortMappingViewTests(AuthAPITestCase):
-    @patch('zane_api.views.docker.DockerService', wraps=FakeDockerService)
+    @patch("zane_api.views.docker.DockerService", wraps=FakeDockerService)
     def test_successfull(self, _: Any):
         self.loginUser()
-        response = self.client.post(reverse('zane_api:docker.check_port_mapping'), data={
-            'port': 8080,
-        })
+        response = self.client.post(
+            reverse("zane_api:docker.check_port_mapping"),
+            data={
+                "port": 8080,
+            },
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(response.json().get("available"), True)
 
-    @patch('zane_api.views.docker.DockerService', wraps=FakeDockerService)
+    @patch("zane_api.views.docker.DockerService", wraps=FakeDockerService)
     def test_unavailable_port(self, _: Any):
         self.loginUser()
-        response = self.client.post(reverse('zane_api:docker.check_port_mapping'), data={
-            'port': 80,
-        })
+        response = self.client.post(
+            reverse("zane_api:docker.check_port_mapping"),
+            data={
+                "port": 80,
+            },
+        )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertEqual(response.json().get("available"), False)

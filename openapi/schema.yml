@@ -101,6 +101,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/CSRF'
           description: ''
+  /api/docker/check-port/:
+    post:
+      operationId: checkIfPortIsAvailable
+      tags:
+      - docker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerPortCheckRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerPortCheckRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerPortCheckRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerPortCheckSuccessResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerPortCheckSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/docker/image-search/:
     get:
       operationId: searchDockerRegistry
@@ -177,6 +221,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/domain/root/:
+    get:
+      operationId: getRootDomain
+      tags:
+      - domain
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRootDomain'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
           description: ''
   /api/projects/:
     get:
@@ -438,6 +502,21 @@ components:
           type: boolean
       required:
       - success
+    DockerPortCheckRequest:
+      type: object
+      properties:
+        port:
+          type: integer
+          minimum: 0
+      required:
+      - port
+    DockerPortCheckSuccessResponse:
+      type: object
+      properties:
+        available:
+          type: boolean
+      required:
+      - available
     DockerSuccessResponse:
       type: object
       properties:
@@ -462,6 +541,13 @@ components:
           type: string
       required:
       - detail
+    GetRootDomain:
+      type: object
+      properties:
+        domain:
+          type: string
+      required:
+      - domain
     LoginRequest:
       type: object
       properties:
