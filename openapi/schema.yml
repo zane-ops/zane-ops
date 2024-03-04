@@ -109,8 +109,8 @@ paths:
         name: q
         schema:
           type: string
-          default: ''
           minLength: 1
+        required: true
       tags:
       - docker
       security:
@@ -129,6 +129,50 @@ paths:
                 $ref: '#/components/schemas/ForbiddenResponse'
           description: ''
         '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/docker/login/:
+    post:
+      operationId: dockerLogin
+      tags:
+      - docker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerLoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerLoginSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -372,6 +416,28 @@ components:
       required:
       - description
       - full_image
+    DockerLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 255
+        password:
+          type: string
+          maxLength: 255
+        registry_url:
+          type: string
+          format: uri
+      required:
+      - password
+      - username
+    DockerLoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
     DockerSuccessResponse:
       type: object
       properties:
