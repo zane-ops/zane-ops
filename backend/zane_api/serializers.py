@@ -24,3 +24,7 @@ class ProjectSerializer(ModelSerializer):
     class Meta:
         model = models.Project
         fields = ["name", "slug", "archived", "owner", "created_at", "updated_at"]
+
+
+class ForbiddenResponseSerializer(Serializer):
+    detail = CharField()

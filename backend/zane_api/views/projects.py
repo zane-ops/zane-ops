@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from . import EMPTY_RESPONSE
 from .. import serializers
 from ..models import Project
-from ..services import cleanup_project_resources
+from ..services import DockerService
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
@@ -217,7 +217,7 @@ class ProjectDetailsView(APIView):
     def delete(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
-            errors = cleanup_project_resources(project)
+            errors = DockerService.cleanup_project_resources(project)
 
             if errors is None:
                 project.archived = True
