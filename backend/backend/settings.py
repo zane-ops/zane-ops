@@ -184,8 +184,8 @@ REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRendere
 
 if DEBUG:
     REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = (
-            REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES
-            + ("rest_framework.renderers.BrowsableAPIRenderer",)
+        REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES
+        + ("rest_framework.renderers.BrowsableAPIRenderer",)
     )
 
 REST_FRAMEWORK = {
