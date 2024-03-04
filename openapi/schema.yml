@@ -8,118 +8,175 @@ paths:
     post:
       operationId: login
       tags:
-        - auth
+      - auth
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              $ref: '#/components/schemas/LoginRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              $ref: '#/components/schemas/LoginRequest'
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              $ref: '#/components/schemas/LoginRequest'
         required: true
       security:
-        - cookieAuth: []
-        - {}
+      - cookieAuth: []
+      - {}
       responses:
-        "201":
+        '201':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LoginSuccessResponse"
-          description: ""
-        "422":
+                $ref: '#/components/schemas/LoginSuccessResponse'
+          description: ''
+        '422':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
-        "401":
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
-        "429":
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '429':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/auth/logout/:
     delete:
       operationId: logout
       tags:
-        - auth
+      - auth
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "204":
+        '204':
           description: No response body
-        "403":
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthedForbiddenResponse"
-          description: ""
+                $ref: '#/components/schemas/AuthedForbiddenResponse'
+          description: ''
   /api/auth/me/:
     get:
       operationId: getAuthedUser
       tags:
-        - auth
+      - auth
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthedSuccessResponse"
-          description: ""
-        "403":
+                $ref: '#/components/schemas/AuthedSuccessResponse'
+          description: ''
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthedForbiddenResponse"
-          description: ""
+                $ref: '#/components/schemas/AuthedForbiddenResponse'
+          description: ''
   /api/csrf/:
     get:
       operationId: csrf_retrieve
       description: CSRF cookie view for retrieving CSRF before doing requests
       tags:
-        - csrf
+      - csrf
       security:
-        - cookieAuth: []
-        - {}
+      - cookieAuth: []
+      - {}
       responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CSRF"
-          description: ""
-  /api/domain/root/:
-    get:
-      operationId: getRootDomain
-      tags:
-        - domain
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetRootDomain"
-          description: ""
-        "403":
+        '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CSRF'
+          description: ''
+  /api/docker/image-search/:
+    get:
+      operationId: searchDockerRegistry
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      tags:
+      - docker
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/docker/login/:
+    post:
+      operationId: dockerLogin
+      tags:
+      - docker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerLoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerLoginSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/domain/root/:
     get:
@@ -145,204 +202,204 @@ paths:
     get:
       operationId: getProjectList
       parameters:
-        - in: query
-          name: include_archived
-          schema:
-            type: boolean
-            default: false
-        - in: query
-          name: query
-          schema:
-            type: string
-            default: ""
-        - in: query
-          name: sort
-          schema:
-            enum:
-              - name_asc
-              - updated_at_desc
-            type: string
-            default: updated_at_desc
-            minLength: 1
-          description: |-
-            * `name_asc` - name ascending
-            * `updated_at_desc` - updated_at in descending order
+      - in: query
+        name: include_archived
+        schema:
+          type: boolean
+          default: false
+      - in: query
+        name: query
+        schema:
+          type: string
+          default: ''
+      - in: query
+        name: sort
+        schema:
+          enum:
+          - name_asc
+          - updated_at_desc
+          type: string
+          default: updated_at_desc
+          minLength: 1
+        description: |-
+          * `name_asc` - name ascending
+          * `updated_at_desc` - updated_at in descending order
       tags:
-        - projects
+      - projects
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProjectSuccessResponse"
-          description: ""
-        "403":
+                $ref: '#/components/schemas/ProjectSuccessResponse'
+          description: ''
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ForbiddenResponse"
-          description: ""
-        "422":
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     post:
       operationId: createProject
       tags:
-        - projects
+      - projects
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ProjectCreateForm"
+              $ref: '#/components/schemas/ProjectCreateForm'
           application/x-www-form-urlencoded:
             schema:
-              $ref: "#/components/schemas/ProjectCreateForm"
+              $ref: '#/components/schemas/ProjectCreateForm'
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/ProjectCreateForm"
+              $ref: '#/components/schemas/ProjectCreateForm'
         required: true
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "201":
+        '201':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SingleProjectSuccessResponse"
-          description: ""
-        "403":
+                $ref: '#/components/schemas/SingleProjectSuccessResponse'
+          description: ''
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ForbiddenResponse"
-          description: ""
-        "422":
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
-        "409":
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
       parameters:
-        - in: path
-          name: slug
-          schema:
-            type: string
-            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-          required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
       tags:
-        - projects
+      - projects
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SingleProjectSuccessResponse"
-          description: ""
-        "403":
+                $ref: '#/components/schemas/SingleProjectSuccessResponse'
+          description: ''
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ForbiddenResponse"
-          description: ""
-        "404":
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '404':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     patch:
       operationId: updateProjectName
       parameters:
-        - in: path
-          name: slug
-          schema:
-            type: string
-            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-          required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
       tags:
-        - projects
+      - projects
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PatchedProjectUpdateForm"
+              $ref: '#/components/schemas/PatchedProjectUpdateForm'
           application/x-www-form-urlencoded:
             schema:
-              $ref: "#/components/schemas/PatchedProjectUpdateForm"
+              $ref: '#/components/schemas/PatchedProjectUpdateForm'
           multipart/form-data:
             schema:
-              $ref: "#/components/schemas/PatchedProjectUpdateForm"
+              $ref: '#/components/schemas/PatchedProjectUpdateForm'
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SingleProjectSuccessResponse"
-          description: ""
-        "403":
+                $ref: '#/components/schemas/SingleProjectSuccessResponse'
+          description: ''
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ForbiddenResponse"
-          description: ""
-        "422":
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '422':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
-        "404":
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     delete:
       operationId: archiveSingleProject
       parameters:
-        - in: path
-          name: slug
-          schema:
-            type: string
-            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-          required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
       tags:
-        - projects
+      - projects
       security:
-        - cookieAuth: []
+      - cookieAuth: []
       responses:
-        "200":
+        '200':
           description: No response body
-        "403":
+        '403':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ForbiddenResponse"
-          description: ""
-        "404":
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '404':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: ""
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
 components:
   schemas:
     AuthedForbiddenResponse:
@@ -351,16 +408,16 @@ components:
         detail:
           type: string
       required:
-        - detail
+      - detail
     AuthedSuccessResponse:
       type: object
       properties:
         user:
           allOf:
-            - $ref: "#/components/schemas/User"
+          - $ref: '#/components/schemas/User'
           readOnly: true
       required:
-        - user
+      - user
     CSRF:
       type: object
       properties:
@@ -368,6 +425,48 @@ components:
           type: string
       required:
       - details
+    DockerImage:
+      type: object
+      properties:
+        full_image:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+      required:
+      - description
+      - full_image
+    DockerLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 255
+        password:
+          type: string
+          maxLength: 255
+        registry_url:
+          type: string
+          format: uri
+      required:
+      - password
+      - username
+    DockerLoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
+    DockerSuccessResponse:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerImage'
+      required:
+      - images
     ErrorResponse:
       type: object
       properties:
@@ -375,7 +474,7 @@ components:
           type: object
           additionalProperties: {}
       required:
-        - errors
+      - errors
     ForbiddenResponse:
       type: object
       properties:
@@ -402,15 +501,15 @@ components:
           maxLength: 255
           minLength: 1
       required:
-        - password
-        - username
+      - password
+      - username
     LoginSuccessResponse:
       type: object
       properties:
         success:
           type: boolean
       required:
-        - success
+      - success
     PatchedProjectUpdateForm:
       type: object
       properties:
@@ -431,7 +530,7 @@ components:
           type: boolean
         owner:
           allOf:
-            - $ref: "#/components/schemas/User"
+          - $ref: '#/components/schemas/User'
           readOnly: true
         created_at:
           type: string
@@ -442,10 +541,10 @@ components:
           format: date-time
           readOnly: true
       required:
-        - created_at
-        - name
-        - owner
-        - updated_at
+      - created_at
+      - name
+      - owner
+      - updated_at
     ProjectCreateForm:
       type: object
       properties:
@@ -453,30 +552,29 @@ components:
           type: string
           maxLength: 255
       required:
-        - name
+      - name
     ProjectSuccessResponse:
       type: object
       properties:
         projects:
           type: array
           items:
-            $ref: "#/components/schemas/Project"
+            $ref: '#/components/schemas/Project'
       required:
-        - projects
+      - projects
     SingleProjectSuccessResponse:
       type: object
       properties:
         project:
-          $ref: "#/components/schemas/Project"
+          $ref: '#/components/schemas/Project'
       required:
-        - project
+      - project
     User:
       type: object
       properties:
         username:
           type: string
-          description:
-            Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
             only.
           pattern: ^[\w.@+-]+$
           maxLength: 150
@@ -491,7 +589,7 @@ components:
           title: Staff status
           description: Designates whether the user can log into this admin site.
       required:
-        - username
+      - username
   securitySchemes:
     cookieAuth:
       type: apiKey
