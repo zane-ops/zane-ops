@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
 import { Input } from "~/components/ui/input";
-import logo from "/logo/Zane Ops logo black.svg";
+import logo from "/logo/Zane Ops logo black text.svg";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -34,7 +34,7 @@ function Login() {
       <div className="h-[100vh]  flex md:flex-row flex-col  justify-center items-center">
         <div className="flex w-[50%] md:h-screen  justify-center items-center">
           <img
-            className="md:w-[160px] md:h-[160px] h-[110px] w-[110px]"
+            className="md:w-[180px] md:h-[180px] h-[110px] w-[110px]"
             src={logo}
             alt="logo"
           />
@@ -50,7 +50,7 @@ function Login() {
           }
         >
           <h1 className="text-2xl font-bold my-3 md:text-left text-center">
-            Log in to ZaneOps
+            Log in
           </h1>
           <div className="card flex flex-col gap-3">
             {data?.errors && (
