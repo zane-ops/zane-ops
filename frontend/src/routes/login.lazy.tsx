@@ -4,7 +4,7 @@ import { RequestInput, apiClient } from "~/api/client";
 import { Input } from "~/components/ui/input";
 import blackLogo from "/logo/ZaneOps-HORIZONTAL-BLACK.svg";
 import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
-import logo from "/logo/Zane Ops logo white text.svg";
+import whiteLogo from "/logo/Zane Ops logo white text.svg";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -44,7 +44,7 @@ function Login() {
         <div className="md:flex hidden flex-col px-20 bg-slate-900 md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"
-            src={logo}
+            src={whiteLogo}
             alt="logo"
           />
           <p className="text-white px-5 ">
