@@ -31,7 +31,7 @@ function Login() {
 
   return (
     <>
-      <div className="h-[80vh]  flex md:flex-row flex-col  justify-center items-center">
+      <div className="h-[100vh]  flex md:flex-row flex-col  justify-center items-center">
         <div className="flex w-[50%] md:h-screen  justify-center items-center">
           <img
             className="md:w-[160px] md:h-[160px] h-[110px] w-[110px]"

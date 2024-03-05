@@ -10,7 +10,8 @@ import * as React from "react";
 export const Route = createRootRoute({
   component: () => (
     <>
-      <div className="p-2 flex gap-2">
+      {/**
+      *  <div className="p-2 flex gap-2">
         <NavLink href="/" className={`aria-[current="page"]:font-bold`}>
           home
         </NavLink>
@@ -19,6 +20,8 @@ export const Route = createRootRoute({
         </NavLink>
       </div>
       <hr />
+      * 
+      */}
       <Outlet />
       <TanStackRouterDevtools />
     </>
