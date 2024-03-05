@@ -2,7 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
 import { Input } from "~/components/ui/input";
-import logo from "/logo/Zane Ops logo black text.svg";
+import blackLogo from "/logo/ZaneOps-HORIZONTAL-BLACK.svg";
+import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
+import logo from "/logo/Zane Ops logo white text.svg";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -31,17 +33,28 @@ function Login() {
 
   return (
     <>
-      <div className="h-[100vh]  flex md:flex-row flex-col  justify-center items-center">
-        <div className="flex w-[50%] md:h-screen  justify-center items-center">
+      <div className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
+        <div className="md:hidden flex justify-center items-center ">
           <img
-            className="md:w-[180px] md:h-[180px] h-[110px] w-[110px]"
-            src={logo}
+            className="md:w-[180px]  md:fit h-[110px] w-[110px]"
+            src={logoSymbol}
             alt="logo"
           />
         </div>
+        <div className="md:flex hidden flex-col px-20 bg-slate-900 md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
+          <img
+            className="md:w-[180px]  md:fit h-[110px] w-[110px]"
+            src={logo}
+            alt="logo"
+          />
+          <p className="text-white px-5 ">
+            Embrace ZaneOps, Your Self-Hosted PaaS Solution for Seamless Web
+            Service Management.
+          </p>
+        </div>
 
         <form
-          className="p-7 md:w-[50%] w-full"
+          className="p-7 md:px-32 md:w-[50%]  flex flex-col w-full"
           action={(formData) =>
             mutate({
               username: formData.get("username")!.toString(),
@@ -49,7 +62,7 @@ function Login() {
             })
           }
         >
-          <h1 className="text-2xl font-bold my-3 md:text-left text-center">
+          <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
             Log in
           </h1>
           <div className="card flex flex-col gap-3">
@@ -85,7 +98,7 @@ function Login() {
               )}
             </div>
             <button
-              className="bg-black md:w-[60%] w-full p-3 text-white rounded-lg "
+              className="bg-slate-900  w-full p-3 text-white rounded-lg"
               disabled={isPending}
             >
               {isPending ? "Submitting..." : "Submit"}
