@@ -23,5 +23,8 @@
       "indentWidth": 2,
       "indentStyle": "space"
     }
+  },
+  "files": {
+    "ignore": ["./frontend/src/api/v1.ts", "./frontend/src/routeTree.gen.ts"]
   }
 }
