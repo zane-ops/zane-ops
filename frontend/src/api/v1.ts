@@ -18,6 +18,27 @@ export interface paths {
     /** @description CSRF cookie view for retrieving CSRF before doing requests */
     get: operations["csrf_retrieve"];
   };
+  "/api/docker/check-port/": {
+    post: operations["checkIfPortIsAvailable"];
+  };
+  "/api/docker/image-search/": {
+    get: operations["searchDockerRegistry"];
+  };
+  "/api/docker/login/": {
+    post: operations["dockerLogin"];
+  };
+  "/api/domain/root/": {
+    get: operations["getRootDomain"];
+  };
+  "/api/projects/": {
+    get: operations["getProjectList"];
+    post: operations["createProject"];
+  };
+  "/api/projects/{slug}/": {
+    get: operations["getSingleProject"];
+    delete: operations["archiveSingleProject"];
+    patch: operations["updateProjectName"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -33,10 +54,38 @@ export interface components {
     CSRF: {
       details: string;
     };
-    LoginErrorResponse: {
+    DockerImage: {
+      full_image: string;
+      description: string;
+    };
+    DockerLoginRequest: {
+      username: string;
+      password: string;
+      /** Format: uri */
+      registry_url?: string;
+    };
+    DockerLoginSuccessResponse: {
+      success: boolean;
+    };
+    DockerPortCheckRequest: {
+      port: number;
+    };
+    DockerPortCheckSuccessResponse: {
+      available: boolean;
+    };
+    DockerSuccessResponse: {
+      images: components["schemas"]["DockerImage"][];
+    };
+    ErrorResponse: {
       errors: {
         [key: string]: unknown;
       };
+    };
+    ForbiddenResponse: {
+      detail: string;
+    };
+    GetRootDomain: {
+      domain: string;
     };
     LoginRequest: {
       username: string;
@@ -44,6 +93,28 @@ export interface components {
     };
     LoginSuccessResponse: {
       success: boolean;
+    };
+    PatchedProjectUpdateForm: {
+      name?: string;
+    };
+    Project: {
+      name: string;
+      slug?: string;
+      archived?: boolean;
+      owner: components["schemas"]["User"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ProjectCreateForm: {
+      name: string;
+    };
+    ProjectSuccessResponse: {
+      projects: components["schemas"]["Project"][];
+    };
+    SingleProjectSuccessResponse: {
+      project: components["schemas"]["Project"];
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -86,17 +157,17 @@ export interface operations {
       };
       401: {
         content: {
-          "application/json": components["schemas"]["LoginErrorResponse"];
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       422: {
         content: {
-          "application/json": components["schemas"]["LoginErrorResponse"];
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
       429: {
         content: {
-          "application/json": components["schemas"]["LoginErrorResponse"];
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
     };
@@ -134,6 +205,250 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["CSRF"];
+        };
+      };
+    };
+  };
+  checkIfPortIsAvailable: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DockerPortCheckRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerPortCheckRequest"];
+        "multipart/form-data": components["schemas"]["DockerPortCheckRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerPortCheckSuccessResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DockerPortCheckSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  searchDockerRegistry: {
+    parameters: {
+      query: {
+        q: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  dockerLogin: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DockerLoginRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerLoginRequest"];
+        "multipart/form-data": components["schemas"]["DockerLoginRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerLoginSuccessResponse"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  getRootDomain: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GetRootDomain"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+    };
+  };
+  getProjectList: {
+    parameters: {
+      query?: {
+        include_archived?: boolean;
+        query?: string;
+        /**
+         * @description * `name_asc` - name ascending
+         * * `updated_at_desc` - updated_at in descending order
+         */
+        sort?: "name_asc" | "updated_at_desc";
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProjectSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  createProject: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectCreateForm"];
+        "application/x-www-form-urlencoded": components["schemas"]["ProjectCreateForm"];
+        "multipart/form-data": components["schemas"]["ProjectCreateForm"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["SingleProjectSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  getSingleProject: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SingleProjectSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  archiveSingleProject: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      200: {
+        content: never;
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+    };
+  };
+  updateProjectName: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedProjectUpdateForm"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedProjectUpdateForm"];
+        "multipart/form-data": components["schemas"]["PatchedProjectUpdateForm"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SingleProjectSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
         };
       };
     };
