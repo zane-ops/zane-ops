@@ -2,9 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
 import { Input } from "~/components/ui/input";
-import blackLogo from "/logo/ZaneOps-HORIZONTAL-BLACK.svg";
+import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
-import whiteLogo from "/logo/Zane Ops logo white text.svg";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
