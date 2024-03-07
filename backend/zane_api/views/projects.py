@@ -124,6 +124,7 @@ class ProjectsListView(APIView):
                     new_project = Project.objects.create(
                         name=data["name"], slug=slug, owner=request.user
                     )
+                DockerService.create_project_resources(project=new_project)
                 response = self.single_serializer_class({"project": new_project})
                 return Response(response.data, status=status.HTTP_201_CREATED)
             except IntegrityError:
@@ -135,6 +136,17 @@ class ProjectsListView(APIView):
                     }
                 })
                 return Response(response.data, status=status.HTTP_409_CONFLICT)
+            except Exception as e:
+                with transaction.atomic():
+                    newly_created_project = Project.objects.get(slug=slug)
+                    if newly_created_project is not None:
+                        newly_created_project.delete()
+                response = self.error_serializer_class({
+                    "errors": {
+                        ".": [str(e)],
+                    }
+                })
+                return Response(response.data, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
@@ -211,6 +223,7 @@ class ProjectDetailsView(APIView):
             200: DeleteProjectSuccessResponseSerializer,
             403: forbidden_serializer_class,
             404: error_serializer_class,
+            400: error_serializer_class,
         },
         operation_id="archiveSingleProject",
     )

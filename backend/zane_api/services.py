@@ -13,7 +13,7 @@ class DockerImageResultFromSearch(TypedDict):
 
 class DockerService:
     instance = None  # type: DockerService | None
-    client: docker.DockerClient
+    client: docker.DockerClient | None = None
     DOCKER_HUB_REGISTRY_URL = 'registry-1.docker.io/v2'
 
     @classmethod
@@ -55,7 +55,21 @@ class DockerService:
         It returns None when everything has gone well, else it will return errors
         """
         instance = cls._get_instance()
+
+        try:
+            network_associated_to_project = instance.client.networks.get(
+                f"{project.slug}-{project.created_at.timestamp()}"
+            )
+            network_associated_to_project.remove()
+        except docker.errors.NotFound:
+            # We will assume the network has been deleted before
+            pass
         return None
+
+    @classmethod
+    def create_project_resources(cls, project: Project):
+        instance = cls._get_instance()
+        instance.client.networks.create(f"{project.slug}-{project.created_at.timestamp()}")
 
     @classmethod
     def check_if_port_is_available(cls, port: int) -> bool:
