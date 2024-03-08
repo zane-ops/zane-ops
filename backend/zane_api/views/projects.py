@@ -83,17 +83,14 @@ class ProjectsListView(APIView):
             response = self.serializer_class(
                 {
                     "projects": Project.objects.filter(
-                        Q(
-                            owner=request.user,
-                            archived=params["include_archived"],
-                        )
+                        Q(owner=request.user, archived=params["include_archived"])
                         & (
-                                Q(name__istartswith=params["query"])
-                                | Q(slug__startswith=params["query"].lower())
+                            Q(name__istartswith=params["query"])
+                            | Q(slug__startswith=params["query"].lower())
                         )
                     )
-                                .select_related("owner")
-                                .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
+                    .select_related("owner")
+                    .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
                 }
             )
             return Response(response.data)
@@ -128,24 +125,28 @@ class ProjectsListView(APIView):
                 response = self.single_serializer_class({"project": new_project})
                 return Response(response.data, status=status.HTTP_201_CREATED)
             except IntegrityError:
-                response = self.error_serializer_class({
-                    "errors": {
-                        "slug": [
-                            "A project with a similar slug already exist, please use another name for this project"
-                        ]
+                response = self.error_serializer_class(
+                    {
+                        "errors": {
+                            "slug": [
+                                "A project with a similar slug already exist, please use another name for this project"
+                            ]
+                        }
                     }
-                })
+                )
                 return Response(response.data, status=status.HTTP_409_CONFLICT)
             except Exception as e:
                 with transaction.atomic():
                     newly_created_project = Project.objects.get(slug=slug)
                     if newly_created_project is not None:
                         newly_created_project.delete()
-                response = self.error_serializer_class({
-                    "errors": {
-                        ".": [str(e)],
+                response = self.error_serializer_class(
+                    {
+                        "errors": {
+                            ".": [str(e)],
+                        }
                     }
-                })
+                )
                 return Response(response.data, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -179,16 +180,18 @@ class ProjectDetailsView(APIView):
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
-            response = self.error_serializer_class({
-                "errors": {
-                    ".": [f"A project with the slug `{slug}` does not exist"],
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        ".": [f"A project with the slug `{slug}` does not exist"],
+                    }
                 }
-            })
+            )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
         form = ProjectUpdateForm(data=request.data)
         if form.is_valid():
-            project.name = form.data['name']
+            project.name = form.data["name"]
             project.save()
             response = self.serializer_class({"project": project})
             return Response(response.data)
@@ -209,11 +212,13 @@ class ProjectDetailsView(APIView):
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
-            response = self.error_serializer_class({
-                "errors": {
-                    ".": [f"A project with the slug `{slug}` does not exist"],
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        ".": [f"A project with the slug `{slug}` does not exist"],
+                    }
                 }
-            })
+            )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         response = self.serializer_class({"project": project})
         return Response(response.data)
@@ -236,10 +241,12 @@ class ProjectDetailsView(APIView):
                 project.archived = True
                 project.save()
         except Project.DoesNotExist:
-            response = self.error_serializer_class({
-                "errors": {
-                    ".": [f"A project with the slug `{slug}` does not exist"],
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        ".": [f"A project with the slug `{slug}` does not exist"],
+                    }
                 }
-            })
+            )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
