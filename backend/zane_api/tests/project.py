@@ -9,6 +9,7 @@ from rest_framework import status
 
 from .base import AuthAPITestCase
 from ..models import Project
+from ..services import get_resource_name
 
 
 class FakeDockerClientWithNetworks:
@@ -28,7 +29,7 @@ class FakeDockerClientWithNetworks:
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
-    def docker_create_network(self, name: str):
+    def docker_create_network(self, name: str, scope: str, driver: str):
         if self.raise_error:
             raise docker.errors.APIError('Unknown error when creating a network')
 
@@ -49,10 +50,10 @@ class FakeDockerClientWithNetworks:
             raise docker.errors.NotFound('network not found')
 
     def get_network(self, p: Project):
-        return self.network_map.get(f'{p.slug}-{p.created_at.timestamp()}')
+        return self.network_map.get(get_resource_name(p, 'network'))
 
     def create_network(self, p: Project):
-        return self.docker_create_network(f'{p.slug}-{p.created_at.timestamp()}')
+        return self.docker_create_network(get_resource_name(p, 'network'), scope="swarm", driver="overlay")
 
     def get_networks(self):
         return self.network_map
@@ -298,6 +299,14 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     def test_non_existent(self, _: Mock):
         self.loginUser()
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_cannot_archive_already_archived_project(self, _: Mock):
+        owner = self.loginUser()
+        Project.objects.create(name="Zane Ops", slug="zane-ops", archived=True, owner=owner)
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
         )

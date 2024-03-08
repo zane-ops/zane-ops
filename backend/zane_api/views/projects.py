@@ -85,12 +85,12 @@ class ProjectsListView(APIView):
                     "projects": Project.objects.filter(
                         Q(owner=request.user, archived=params["include_archived"])
                         & (
-                            Q(name__istartswith=params["query"])
-                            | Q(slug__startswith=params["query"].lower())
+                                Q(name__istartswith=params["query"])
+                                | Q(slug__startswith=params["query"].lower())
                         )
                     )
-                    .select_related("owner")
-                    .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
+                                .select_related("owner")
+                                .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
                 }
             )
             return Response(response.data)
@@ -234,7 +234,7 @@ class ProjectDetailsView(APIView):
     )
     def delete(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = Project.objects.get(slug=slug, archived=False)
             errors = DockerService.cleanup_project_resources(project)
 
             if errors is None:
@@ -244,7 +244,7 @@ class ProjectDetailsView(APIView):
             response = self.error_serializer_class(
                 {
                     "errors": {
-                        ".": [f"A project with the slug `{slug}` does not exist"],
+                        ".": [f"A project with the slug `{slug}` does not exist or have already been archived"],
                     }
                 }
             )
