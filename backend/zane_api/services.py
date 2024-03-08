@@ -73,9 +73,7 @@ class DockerService:
         client = cls._get_client()
 
         try:
-            network_associated_to_project = client.networks.get(
-                f"{project.slug}-{project.created_at.timestamp()}"
-            )
+            network_associated_to_project = client.networks.get(get_resource_name(project, resource_type='network'))
             network_associated_to_project.remove()
         except docker.errors.NotFound:
             # We will assume the network has been deleted before
@@ -85,7 +83,11 @@ class DockerService:
     @classmethod
     def create_project_resources(cls, project: Project):
         client = cls._get_client()
-        client.networks.create(f"{project.slug}-{project.created_at.timestamp()}")
+        client.networks.create(
+            name=get_resource_name(project, resource_type='network'),
+            scope="swarm",
+            driver="overlay",
+        )
 
     @classmethod
     def check_if_port_is_available(cls, port: int) -> bool:
@@ -100,3 +102,12 @@ class DockerService:
             return True
         except docker.errors.APIError:
             return False
+
+
+def get_resource_name(project: Project, resource_type: str) -> str:
+    match resource_type:
+        case 'network':
+            ts_to_full_number = str(project.created_at.timestamp()).replace(".", "")
+            return f"{project.slug}-{ts_to_full_number}"
+        case _:
+            raise ValueError(f"resource type '{resource_type}' is not supported")
