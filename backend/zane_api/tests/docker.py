@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import List
 from unittest.mock import patch, Mock, MagicMock
 
 import docker.errors
@@ -65,11 +65,11 @@ class DockerViewTests(AuthAPITestCase):
         self.assertEqual(images[0]["full_image"], "library/caddy:latest")
         self.assertEqual(images[1]["full_image"], "siwecos/caddy:latest")
 
-    def test_search_query_empty(self, _: Any):
+    def test_search_query_empty(self, _: Mock):
         response = self.client.get(reverse("zane_api:docker.image_search"))
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-    def test_success_validate_credentials(self, _: Any):
+    def test_success_validate_credentials(self, _: Mock):
         response = self.client.post(
             reverse("zane_api:docker.login"),
             data={
@@ -80,7 +80,7 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_bad_credentials(self, _: Any):
+    def test_bad_credentials(self, _: Mock):
         response = self.client.post(
             reverse("zane_api:docker.login"),
             data={
@@ -91,7 +91,7 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
-    def test_bad_request_for_credentials(self, _: Any):
+    def test_bad_request_for_credentials(self, _: Mock):
         response = self.client.post(
             reverse("zane_api:docker.login"),
             data={

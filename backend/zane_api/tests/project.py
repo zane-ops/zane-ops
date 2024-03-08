@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 from unittest.mock import patch, Mock, MagicMock
 
 import docker
@@ -189,7 +188,7 @@ class ProjectListViewTests(AuthAPITestCase):
 
 @patch("zane_api.views.docker.DockerService._get_client", wraps=FakeDockerClientWithNetworks)
 class ProjectCreateViewTests(AuthAPITestCase):
-    def test_sucessfully_create_project(self, _: Any):
+    def test_sucessfully_create_project(self, _: Mock):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -335,7 +334,7 @@ class DockerAddNetworkTest(AuthAPITestCase):
 
 @patch("zane_api.views.docker.DockerService._get_client")
 class DockerRemoveNetworkTest(AuthAPITestCase):
-    def test_network_is_deleted_on_archived_project(self, mock_fake_docker: Any):
+    def test_network_is_deleted_on_archived_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         fake_docker_client = FakeDockerClientWithNetworks()
         mock_fake_docker.return_value = fake_docker_client
@@ -349,7 +348,7 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
         self.assertIsNone(fake_docker_client.get_network(p))
         self.assertEqual(0, len(fake_docker_client.get_networks()))
 
-    def test_with_nonexistent_network(self, mock_fake_docker: Any):
+    def test_with_nonexistent_network(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         fake_docker_client = FakeDockerClientWithNetworks()
         mock_fake_docker.return_value = fake_docker_client
