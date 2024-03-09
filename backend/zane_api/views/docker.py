@@ -7,7 +7,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..services import DockerService
+from ..services import (
+    search_docker_registry,
+    check_if_port_is_available,
+    login_to_docker_registry
+)
 
 
 class DockerImageSerializer(serializers.Serializer):
@@ -51,7 +55,7 @@ class DockerImageSearchView(APIView):
 
         if form.is_valid():
             params = form.data
-            result = DockerService.search_registry(term=params["q"])
+            result = search_docker_registry(term=params["q"])
             response = self.serializer_class({"images": result})
             return Response(response.data, status=status.HTTP_200_OK)
 
@@ -91,7 +95,7 @@ class DockerLoginView(APIView):
 
         if form.is_valid():
             data = form.data
-            result = DockerService.login(**data)
+            result = login_to_docker_registry(**data)
 
             if not result:
                 response = self.error_serializer_class(
@@ -136,7 +140,7 @@ class DockerPortCheckView(APIView):
 
         if form.is_valid():
             data = form.data
-            result = DockerService.check_if_port_is_available(port=data["port"])
+            result = check_if_port_is_available(port=data["port"])
 
             response = self.serializer_class({"available": result})
             return Response(
