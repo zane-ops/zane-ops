@@ -70,9 +70,10 @@ def login_to_docker_registry(username: str, password: str, registry_url: str = D
     client = get_docker_client()
     try:
         client.login(username, password, registry_url, reauth=True)
-        return True
     except docker.errors.APIError:
         return False
+    else:
+        return True
 
 
 def cleanup_project_resources(project: Project):
@@ -95,10 +96,11 @@ def cleanup_project_resources(project: Project):
 
     try:
         network_associated_to_project = client.networks.get(get_network_resource_name(project))
-        network_associated_to_project.remove()
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
         pass
+    else:
+        network_associated_to_project.remove()
 
 
 def create_project_resources(project: Project):
@@ -123,9 +125,10 @@ def check_if_port_is_available(port: int) -> bool:
             command="echo hello world",
             remove=True
         )
-        return True
     except docker.errors.APIError:
         return False
+    else:
+        return True
 
 
 def get_volume_resource_name(volume: Volume):
@@ -146,3 +149,14 @@ def create_docker_volume(volume: Volume):
         driver_opts=driver_options,
         labels=get_resource_labels(volume.project)
     )
+
+
+def remove_docker_volume(volume: Volume):
+    client = get_docker_client()
+    try:
+        docker_volume = client.volumes.get(get_volume_resource_name(volume))
+    except docker.errors.NotFound:
+        # We will assume the volume has been deleted before
+        pass
+    else:
+        docker_volume.remove(force=True)

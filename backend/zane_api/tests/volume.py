@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 
 from .base import APITestCase
 from ..models import Project, Volume
-from ..services import create_docker_volume
+from ..services import create_docker_volume, remove_docker_volume
 
 
 class FakeDockerClient:
@@ -15,11 +15,17 @@ class FakeDockerClient:
             self.parent = parent
             self.size_limit = size_limit
 
+        def remove(self, force: bool):
+            if self.parent.raise_error:
+                raise docker.errors.APIError("Unknown error")
+            self.parent.volume_map.pop(self.name)
+
     def __init__(self, raise_error: bool = False):
         self.volumes = MagicMock()
         self.raise_error = raise_error
 
         self.volumes.create = self.volumes_create
+        self.volumes.get = self.volumes_get
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
 
     def volumes_create(self, name: str, driver_opts: dict[str, str], **kwargs):
@@ -27,6 +33,11 @@ class FakeDockerClient:
             raise docker.errors.APIError("Unkwown error")
 
         self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name, size_limit=driver_opts.get('o'))
+
+    def volumes_get(self, name: str):
+        if name not in self.volume_map:
+            raise docker.errors.NotFound("Volume Not found")
+        return self.volume_map[name]
 
 
 class DockerVolumeTests(APITestCase):
@@ -67,3 +78,28 @@ class DockerVolumeTests(APITestCase):
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         volume = list(fake_docker_client.volume_map.values())[0]
         self.assertIsNone(volume.size_limit)
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_remove_volume_successful(self, mock_fake_docker: Mock):
+        volume = Volume.objects.create(
+            name="postgres DB Data",
+            slug="postgres-db-data",
+            project=Project.objects.first()
+        )
+        create_docker_volume(volume)
+
+        remove_docker_volume(volume)
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.volume_map))
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_remove_non_existent_volume_doesnt_throw_error(self, mock_fake_docker: Mock):
+        volume = Volume.objects.create(
+            name="postgres DB Data",
+            slug="postgres-db-data",
+            project=Project.objects.first()
+        )
+
+        remove_docker_volume(volume)
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.volume_map))
