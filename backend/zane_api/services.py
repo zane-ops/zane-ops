@@ -1,4 +1,4 @@
-from typing import Dict, List, TypedDict
+from typing import List, TypedDict
 
 import docker
 import docker.errors
@@ -60,7 +60,7 @@ class DockerService:
             return False
 
     @classmethod
-    def cleanup_project_resources(cls, project: Project) -> Dict[str, Dict[str, List[str]]] | None:
+    def cleanup_project_resources(cls, project: Project):
         """
         TODO : we will need to cleanup :
           - services
@@ -78,7 +78,6 @@ class DockerService:
         except docker.errors.NotFound:
             # We will assume the network has been deleted before
             pass
-        return None
 
     @classmethod
     def create_project_resources(cls, project: Project):

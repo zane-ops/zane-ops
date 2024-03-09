@@ -19,18 +19,21 @@ class FakeDockerClientWithNetworks:
         parent: "FakeDockerClientWithNetworks"
 
         def remove(self):
+            if self.parent.raise_error_on_delete:
+                raise docker.errors.APIError("Unknow error when deleting network")
             self.parent.remove(self.name)
 
-    def __init__(self, raise_error: bool = False):
+    def __init__(self, raise_error_on_create: bool = False, raise_error_on_delete: bool = False):
         self.networks = MagicMock()
         self.network_map = {}  # type: dict[str, FakeDockerClientWithNetworks.FakeNetwork]
-        self.raise_error = raise_error
+        self.raise_error_on_create = raise_error_on_create
+        self.raise_error_on_delete = raise_error_on_delete
 
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
     def docker_create_network(self, name: str, scope: str, driver: str):
-        if self.raise_error:
+        if self.raise_error_on_create:
             raise docker.errors.APIError('Unknown error when creating a network')
 
         created_network = FakeDockerClientWithNetworks.FakeNetwork(name, parent=self)
@@ -312,6 +315,22 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
+    def test_archive_with_error(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        fake_docker_client = FakeDockerClientWithNetworks(raise_error_on_delete=True)
+        mock_fake_docker.return_value = fake_docker_client
+        p = Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner)
+        fake_docker_client.create_network(p)
+
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
+        self.assertEqual(status.HTTP_500_INTERNAL_SERVER_ERROR, response.status_code)
+
+        updated_project = Project.objects.filter(slug="gh-clone").first()
+        self.assertIsNotNone(updated_project)
+        self.assertEqual(False, updated_project.archived)
+
 
 @patch("zane_api.views.docker.DockerService._get_client")
 class DockerAddNetworkTest(AuthAPITestCase):
@@ -329,7 +348,7 @@ class DockerAddNetworkTest(AuthAPITestCase):
 
     def test_error_when_creating_new_network(self, mock_fake_docker: Mock):
         self.loginUser()
-        mock_fake_docker.return_value = FakeDockerClientWithNetworks(raise_error=True)
+        mock_fake_docker.return_value = FakeDockerClientWithNetworks(raise_error_on_create=True)
 
         # Create a new project
         response = self.client.post(
@@ -337,7 +356,7 @@ class DockerAddNetworkTest(AuthAPITestCase):
             data={"name": "Zane Ops"},
         )
 
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(status.HTTP_500_INTERNAL_SERVER_ERROR, response.status_code)
         self.assertEqual(0, Project.objects.count())
 
 

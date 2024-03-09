@@ -108,6 +108,7 @@ class ProjectsListView(APIView):
             403: forbidden_serializer_class,
             422: error_serializer_class,
             409: error_serializer_class,
+            500: error_serializer_class,
         },
         operation_id="createProject",
     )
@@ -147,7 +148,7 @@ class ProjectsListView(APIView):
                         }
                     }
                 )
-                return Response(response.data, status=status.HTTP_400_BAD_REQUEST)
+                return Response(response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(
             {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
@@ -228,18 +229,16 @@ class ProjectDetailsView(APIView):
             200: DeleteProjectSuccessResponseSerializer,
             403: forbidden_serializer_class,
             404: error_serializer_class,
-            400: error_serializer_class,
+            500: error_serializer_class,
         },
         operation_id="archiveSingleProject",
     )
     def delete(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug, archived=False)
-            errors = DockerService.cleanup_project_resources(project)
-
-            if errors is None:
-                project.archived = True
-                project.save()
+            DockerService.cleanup_project_resources(project)
+            project.archived = True
+            project.save()
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -249,4 +248,13 @@ class ProjectDetailsView(APIView):
                 }
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        ".": [str(e)],
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
