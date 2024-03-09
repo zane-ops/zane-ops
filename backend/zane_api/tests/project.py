@@ -32,7 +32,7 @@ class FakeDockerClientWithNetworks:
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
-    def docker_create_network(self, name: str, scope: str, driver: str):
+    def docker_create_network(self, name: str, **kwargs):
         if self.raise_error_on_create:
             raise docker.errors.APIError('Unknown error when creating a network')
 
