@@ -29,6 +29,10 @@ def get_resource_name(project: Project, resource_type: str) -> str:
             raise ValueError(f"resource type '{resource_type}' is not supported")
 
 
+def get_resource_labels(project: Project):
+    return {"zane-managed": "true", "zane-project": project.slug}
+
+
 class DockerImageResultFromRegistry(TypedDict):
     name: str
     description: str
@@ -110,6 +114,7 @@ def create_project_resources(project: Project):
         name=get_resource_name(project, resource_type='network'),
         scope="swarm",
         driver="overlay",
+        labels=get_resource_labels(project)
     )
 
 
