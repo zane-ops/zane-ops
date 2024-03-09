@@ -94,7 +94,7 @@ def cleanup_project_resources(project: Project):
     client = get_docker_client()
 
     try:
-        network_associated_to_project = client.networks.get(get_network_resource_name(project, resource_type='network'))
+        network_associated_to_project = client.networks.get(get_network_resource_name(project))
         network_associated_to_project.remove()
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
