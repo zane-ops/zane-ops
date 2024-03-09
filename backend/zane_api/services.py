@@ -3,7 +3,7 @@ from typing import List, TypedDict
 import docker
 import docker.errors
 
-from .models import Project
+from .models import Project, Volume
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = 'registry-1.docker.io/v2'
@@ -20,13 +20,9 @@ def get_docker_client():
     return docker_client
 
 
-def get_resource_name(project: Project, resource_type: str) -> str:
-    match resource_type:
-        case 'network':
-            ts_to_full_number = str(project.created_at.timestamp()).replace(".", "")
-            return f"{project.slug}-{ts_to_full_number}"
-        case _:
-            raise ValueError(f"resource type '{resource_type}' is not supported")
+def get_network_resource_name(project: Project) -> str:
+    ts_to_full_number = str(project.created_at.timestamp()).replace(".", "")
+    return f"{project.slug}-{ts_to_full_number}"
 
 
 def get_resource_labels(project: Project):
@@ -98,7 +94,7 @@ def cleanup_project_resources(project: Project):
     client = get_docker_client()
 
     try:
-        network_associated_to_project = client.networks.get(get_resource_name(project, resource_type='network'))
+        network_associated_to_project = client.networks.get(get_network_resource_name(project, resource_type='network'))
         network_associated_to_project.remove()
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
@@ -111,7 +107,7 @@ def create_project_resources(project: Project):
     """
     client = get_docker_client()
     client.networks.create(
-        name=get_resource_name(project, resource_type='network'),
+        name=get_network_resource_name(project),
         scope="swarm",
         driver="overlay",
         labels=get_resource_labels(project)
@@ -130,3 +126,23 @@ def check_if_port_is_available(port: int) -> bool:
         return True
     except docker.errors.APIError:
         return False
+
+
+def get_volume_resource_name(volume: Volume):
+    ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
+    return f"{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
+
+
+def create_docker_volume(volume: Volume):
+    client = get_docker_client()
+
+    driver_options = {'type': 'tmpfs', 'device': 'tmpfs'}
+    if volume.size_limit is not None:
+        driver_options['o'] = f'size={volume.size_limit}'
+
+    client.volumes.create(
+        name=get_volume_resource_name(volume),
+        driver='local',
+        driver_opts=driver_options,
+        labels=get_resource_labels(volume.project)
+    )
