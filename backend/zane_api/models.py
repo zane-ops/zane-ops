@@ -99,6 +99,7 @@ class Volume(models.Model):
         to=Project,
         on_delete=models.CASCADE,
     )
+    size_limit = models.PositiveIntegerField(null=True)
     containerPath = models.CharField(max_length=255)
     dockerService = models.ForeignKey(
         to=DockerRegistryService, null=True, on_delete=models.SET_NULL
