@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from . import EMPTY_RESPONSE
 from .. import serializers
 from ..models import Project
-from ..services import DockerService
+from ..services import create_project_resources, cleanup_project_resources
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
@@ -122,7 +122,7 @@ class ProjectsListView(APIView):
                     new_project = Project.objects.create(
                         name=data["name"], slug=slug, owner=request.user
                     )
-                DockerService.create_project_resources(project=new_project)
+                create_project_resources(project=new_project)
                 response = self.single_serializer_class({"project": new_project})
                 return Response(response.data, status=status.HTTP_201_CREATED)
             except IntegrityError:
@@ -236,7 +236,7 @@ class ProjectDetailsView(APIView):
     def delete(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug, archived=False)
-            DockerService.cleanup_project_resources(project)
+            cleanup_project_resources(project)
             project.archived = True
             project.save()
         except Project.DoesNotExist:
