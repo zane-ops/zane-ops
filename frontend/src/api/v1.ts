@@ -368,6 +368,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse"];
         };
       };
+      500: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
     };
   };
   getSingleProject: {
@@ -411,6 +416,11 @@ export interface operations {
         };
       };
       404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      500: {
         content: {
           "application/json": components["schemas"]["ErrorResponse"];
         };
