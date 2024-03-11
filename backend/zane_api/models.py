@@ -3,6 +3,7 @@ from typing import List
 
 from crontab import CronTab
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -92,13 +93,15 @@ class EnvVariable(models.Model):
         return self.key
 
 
-class Volume(models.Model):
+class Volume(TimestampedModel):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(
         to=Project,
         on_delete=models.CASCADE,
     )
+    ONE_KB = 1024
+    size_limit = models.PositiveIntegerField(null=True, validators=[MinValueValidator(ONE_KB)])
     containerPath = models.CharField(max_length=255)
     dockerService = models.ForeignKey(
         to=DockerRegistryService, null=True, on_delete=models.SET_NULL
