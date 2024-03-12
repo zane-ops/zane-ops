@@ -22,7 +22,7 @@ def custom_exception_handler(exception: Any, context: Any) -> Response:
         return Response(
             {
                 "errors": {
-                    ".": [
+                    "root": [
                         "Too Many Requests",
                     ]
                 }
@@ -46,10 +46,19 @@ class LoginRequestSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, min_length=1, max_length=255)
 
 
+class LoginErrorSerializer(serializers.BaseErrorSerializer):
+    username = serializers.StringListField(required=False)
+    password = serializers.StringListField(required=False)
+
+
+class LoginErrorResponseSerializer(serializers.Serializer):
+    errors = LoginErrorSerializer()
+
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
     success_serializer_class = LoginSuccessResponseSerializer
-    error_serializer_class = serializers.ErrorResponseSerializer
+    error_serializer_class = LoginErrorResponseSerializer
 
     @extend_schema(
         request=LoginRequestSerializer,
@@ -76,36 +85,23 @@ class LoginView(APIView):
                 if response.is_valid():
                     return Response(response.data, status=status.HTTP_201_CREATED)
             else:
-                response = self.error_serializer_class(
-                    data={
-                        "errors": {
-                            ".": [
-                                "Invalid username or password",
-                            ]
-                        },
-                    }
-                )
-                if response.is_valid():
-                    return Response(
-                        response.initial_data,
-                        status=status.HTTP_401_UNAUTHORIZED,
-                    )
-        else:
-            response = self.error_serializer_class(
-                data={
-                    "errors": form.errors,
-                }
-            )
-            if response.is_valid():
+                response = self.error_serializer_class({
+                    "errors": {
+                        "root": [
+                            "Invalid username or password",
+                        ]
+                    },
+                })
                 return Response(
-                    response.initial_data,
-                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    response.data,
+                    status=status.HTTP_401_UNAUTHORIZED,
                 )
-
-        return Response(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            data={"errors": {".": response.errors}},
-        )
+        else:
+            response = self.error_serializer_class({"errors": form.errors})
+            return Response(
+                response.data,
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
 
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):

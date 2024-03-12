@@ -35,19 +35,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/LoginErrorResponse'
           description: ''
         '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/LoginErrorResponse'
           description: ''
         '429':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/LoginErrorResponse'
           description: ''
   /api/auth/logout/:
     delete:
@@ -143,7 +143,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
   /api/docker/image-search/:
     get:
@@ -176,7 +176,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
   /api/docker/login/:
     post:
@@ -214,13 +214,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
         '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
   /api/domain/root/:
     get:
@@ -289,7 +289,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
     post:
       operationId: createProject
@@ -326,19 +326,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
         '409':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
         '500':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
   /api/projects/{slug}/:
     get:
@@ -371,7 +371,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
     patch:
       operationId: updateProjectName
@@ -414,13 +414,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
     delete:
       operationId: archiveSingleProject
@@ -448,13 +448,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
         '500':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
 components:
   schemas:
@@ -474,6 +474,20 @@ components:
           readOnly: true
       required:
       - user
+    BaseError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+    BaseErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/BaseError'
+      required:
+      - errors
     CSRF:
       type: object
       properties:
@@ -538,14 +552,6 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
-    ErrorResponse:
-      type: object
-      properties:
-        errors:
-          type: object
-          additionalProperties: {}
-      required:
-      - errors
     ForbiddenResponse:
       type: object
       properties:
@@ -560,6 +566,28 @@ components:
           type: string
       required:
       - domain
+    LoginError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        username:
+          type: array
+          items:
+            type: string
+        password:
+          type: array
+          items:
+            type: string
+    LoginErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/LoginError'
+      required:
+      - errors
     LoginRequest:
       type: object
       properties:
