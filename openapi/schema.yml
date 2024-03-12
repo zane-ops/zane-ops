@@ -63,7 +63,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthedForbiddenResponse'
+                $ref: '#/components/schemas/ForbiddenResponse'
           description: ''
   /api/auth/me/:
     get:
@@ -83,7 +83,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthedForbiddenResponse'
+                $ref: '#/components/schemas/ForbiddenResponse'
           description: ''
   /api/csrf/:
     get:
@@ -143,7 +143,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/DockerPortCheckErrorResponse'
           description: ''
   /api/docker/image-search/:
     get:
@@ -176,7 +176,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/DockerImageSearchErrorResponse'
           description: ''
   /api/docker/login/:
     post:
@@ -214,13 +214,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/DockerLoginErrorResponse'
           description: ''
         '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/DockerLoginErrorResponse'
           description: ''
   /api/domain/root/:
     get:
@@ -289,7 +289,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjetCreateErrorResponse'
           description: ''
     post:
       operationId: createProject
@@ -299,13 +299,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectCreateForm'
+              $ref: '#/components/schemas/ProjectCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ProjectCreateForm'
+              $ref: '#/components/schemas/ProjectCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ProjectCreateForm'
+              $ref: '#/components/schemas/ProjectCreateRequest'
         required: true
       security:
       - cookieAuth: []
@@ -326,19 +326,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjetCreateErrorResponse'
           description: ''
         '409':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjetCreateErrorResponse'
           description: ''
         '500':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjetCreateErrorResponse'
           description: ''
   /api/projects/{slug}/:
     get:
@@ -371,7 +371,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
           description: ''
     patch:
       operationId: updateProjectName
@@ -388,13 +388,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateForm'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateForm'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateForm'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
       security:
       - cookieAuth: []
       responses:
@@ -414,13 +414,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
           description: ''
     delete:
       operationId: archiveSingleProject
@@ -448,23 +448,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
           description: ''
         '500':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
           description: ''
 components:
   schemas:
-    AuthedForbiddenResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
     AuthedSuccessResponse:
       type: object
       properties:
@@ -474,20 +467,6 @@ components:
           readOnly: true
       required:
       - user
-    BaseError:
-      type: object
-      properties:
-        root:
-          type: array
-          items:
-            type: string
-    BaseErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/BaseError'
-      required:
-      - errors
     CSRF:
       type: object
       properties:
@@ -506,6 +485,50 @@ components:
       required:
       - description
       - full_image
+    DockerImageSearchError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        q:
+          type: array
+          items:
+            type: string
+    DockerImageSearchErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/DockerImageSearchError'
+      required:
+      - errors
+    DockerLoginError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        username:
+          type: array
+          items:
+            type: string
+        password:
+          type: array
+          items:
+            type: string
+        registry_url:
+          type: array
+          items:
+            type: string
+    DockerLoginErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/DockerLoginError'
+      required:
+      - errors
     DockerLoginRequest:
       type: object
       properties:
@@ -528,6 +551,24 @@ components:
           type: boolean
       required:
       - success
+    DockerPortCheckError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        port:
+          type: array
+          items:
+            type: string
+    DockerPortCheckErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/DockerPortCheckError'
+      required:
+      - errors
     DockerPortCheckRequest:
       type: object
       properties:
@@ -609,7 +650,7 @@ components:
           type: boolean
       required:
       - success
-    PatchedProjectUpdateForm:
+    PatchedProjectUpdateRequest:
       type: object
       properties:
         name:
@@ -644,7 +685,7 @@ components:
       - name
       - owner
       - updated_at
-    ProjectCreateForm:
+    ProjectCreateRequest:
       type: object
       properties:
         name:
@@ -661,6 +702,42 @@ components:
             $ref: '#/components/schemas/Project'
       required:
       - projects
+    ProjectUpdateErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/ProjetUpdateError'
+      required:
+      - errors
+    ProjetCreateError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        name:
+          type: array
+          items:
+            type: string
+    ProjetCreateErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/ProjetCreateError'
+      required:
+      - errors
+    ProjetUpdateError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        name:
+          type: array
+          items:
+            type: string
     SingleProjectSuccessResponse:
       type: object
       properties:

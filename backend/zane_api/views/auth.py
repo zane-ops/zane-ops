@@ -108,13 +108,9 @@ class AuthedSuccessResponseSerializer(serializers.Serializer):
     user = serializers.UserSerializer(read_only=True, many=False)
 
 
-class AuthedForbiddenResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-
-
 class AuthedView(APIView):
     serializer_class = AuthedSuccessResponseSerializer
-    error_serializer_class = AuthedForbiddenResponseSerializer
+    error_serializer_class = serializers.ForbiddenResponseSerializer
 
     @extend_schema(
         responses={
@@ -131,7 +127,7 @@ class AuthedView(APIView):
 
 
 class AuthLogoutView(APIView):
-    error_serializer_class = AuthedForbiddenResponseSerializer
+    error_serializer_class = serializers.ForbiddenResponseSerializer
 
     @extend_schema(
         responses={
@@ -167,5 +163,5 @@ class CSRFCookieView(APIView):
 
         return Response(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            data={"errors": {".": response.errors}},
+            data={"errors": {"root": response.errors}},
         )

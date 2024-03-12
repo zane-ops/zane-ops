@@ -1,5 +1,3 @@
-from typing import TypedDict
-
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
@@ -27,16 +25,18 @@ class DockerImageListSearchSerializer(serializers.Serializer):
     q = serializers.CharField(required=True)
 
 
-class DockerImageResultFromSearch(TypedDict):
-    name: str
-    description: str
-    is_official: bool
+class DockerImageSearchErrorSerializer(serializers.BaseErrorSerializer):
+    q = serializers.StringListField(required=False)
+
+
+class DockerImageSearchErrorResponseSerializer(serializers.Serializer):
+    errors = DockerImageSearchErrorSerializer()
 
 
 class DockerImageSearchView(APIView):
     serializer_class = DockerSuccessResponseSerializer
     forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = serializers.ErrorResponseSerializer
+    error_serializer_class = DockerImageSearchErrorResponseSerializer
 
     @extend_schema(
         parameters=[
@@ -75,10 +75,20 @@ class DockerLoginRequestSerializer(serializers.Serializer):
     registry_url = serializers.URLField(required=False)
 
 
+class DockerLoginErrorSerializer(serializers.BaseErrorSerializer):
+    username = serializers.StringListField(required=False)
+    password = serializers.StringListField(required=False)
+    registry_url = serializers.StringListField(required=False)
+
+
+class DockerLoginErrorResponseSerializer(serializers.Serializer):
+    errors = DockerLoginErrorSerializer()
+
+
 class DockerLoginView(APIView):
     serializer_class = DockerLoginSuccessResponseSerializer
     forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = serializers.ErrorResponseSerializer
+    error_serializer_class = DockerLoginErrorResponseSerializer
 
     @extend_schema(
         request=DockerLoginRequestSerializer,
@@ -99,7 +109,7 @@ class DockerLoginView(APIView):
 
             if not result:
                 response = self.error_serializer_class(
-                    {"errors": {".": ["Invalid credentials"]}}
+                    {"errors": {"root": ["Invalid credentials"]}}
                 )
                 return Response(response.data, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -120,10 +130,18 @@ class DockerPortCheckRequestSerializer(serializers.Serializer):
     port = serializers.IntegerField(required=True, min_value=0)
 
 
+class DockerPortCheckErrorSerializer(serializers.BaseErrorSerializer):
+    port = serializers.StringListField(required=False)
+
+
+class DockerPortCheckErrorResponseSerializer(serializers.Serializer):
+    errors = DockerPortCheckErrorSerializer()
+
+
 class DockerPortCheckView(APIView):
     serializer_class = DockerPortCheckSuccessResponseSerializer
     forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = serializers.ErrorResponseSerializer
+    error_serializer_class = DockerPortCheckErrorResponseSerializer
 
     @extend_schema(
         request=DockerPortCheckRequestSerializer,
