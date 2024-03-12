@@ -448,13 +448,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
         '500':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
+                $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
 components:
   schemas:
@@ -467,6 +467,20 @@ components:
           readOnly: true
       required:
       - user
+    BaseError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+    BaseErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/BaseError'
+      required:
+      - errors
     CSRF:
       type: object
       properties:

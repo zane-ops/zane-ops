@@ -12,6 +12,10 @@ class BaseErrorSerializer(Serializer):
     root = StringListField(required=False)
 
 
+class BaseErrorResponseSerializer(Serializer):
+    errors = BaseErrorSerializer()
+
+
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User

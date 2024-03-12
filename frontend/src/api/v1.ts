@@ -48,6 +48,12 @@ export interface components {
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
     };
+    BaseError: {
+      root?: string[];
+    };
+    BaseErrorResponse: {
+      errors: components["schemas"]["BaseError"];
+    };
     CSRF: {
       details: string;
     };
@@ -454,12 +460,12 @@ export interface operations {
       };
       404: {
         content: {
-          "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
+          "application/json": components["schemas"]["BaseErrorResponse"];
         };
       };
       500: {
         content: {
-          "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
+          "application/json": components["schemas"]["BaseErrorResponse"];
         };
       };
     };
