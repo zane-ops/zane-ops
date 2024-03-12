@@ -72,7 +72,7 @@ function Login() {
             <div className="card flex flex-col gap-3">
               {data?.errors && (
                 <Form.Message className="text-red-500 text-sm">
-                  <AlertDestructive message={data.errors.root} />
+                  <AlertDestructive>{data.errors.root}</AlertDestructive>
                 </Form.Message>
               )}
 
@@ -128,12 +128,12 @@ function Login() {
   );
 }
 
-export function AlertDestructive({ message }) {
+export function AlertDestructive({ children }: { children: React.ReactNode }) {
   return (
     <Alert variant="destructive">
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Error</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
+      <AlertDescription>{children}</AlertDescription>
     </Alert>
   );
 }
