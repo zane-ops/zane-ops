@@ -45,11 +45,14 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    AuthedForbiddenResponse: {
-      detail: string;
-    };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
+    };
+    BaseError: {
+      root?: string[];
+    };
+    BaseErrorResponse: {
+      errors: components["schemas"]["BaseError"];
     };
     CSRF: {
       details: string;
@@ -57,6 +60,22 @@ export interface components {
     DockerImage: {
       full_image: string;
       description: string;
+    };
+    DockerImageSearchError: {
+      root?: string[];
+      q?: string[];
+    };
+    DockerImageSearchErrorResponse: {
+      errors: components["schemas"]["DockerImageSearchError"];
+    };
+    DockerLoginError: {
+      root?: string[];
+      username?: string[];
+      password?: string[];
+      registry_url?: string[];
+    };
+    DockerLoginErrorResponse: {
+      errors: components["schemas"]["DockerLoginError"];
     };
     DockerLoginRequest: {
       username: string;
@@ -67,6 +86,13 @@ export interface components {
     DockerLoginSuccessResponse: {
       success: boolean;
     };
+    DockerPortCheckError: {
+      root?: string[];
+      port?: string[];
+    };
+    DockerPortCheckErrorResponse: {
+      errors: components["schemas"]["DockerPortCheckError"];
+    };
     DockerPortCheckRequest: {
       port: number;
     };
@@ -76,16 +102,19 @@ export interface components {
     DockerSuccessResponse: {
       images: components["schemas"]["DockerImage"][];
     };
-    ErrorResponse: {
-      errors: {
-        [key: string]: unknown;
-      };
-    };
     ForbiddenResponse: {
       detail: string;
     };
     GetRootDomain: {
       domain: string;
+    };
+    LoginError: {
+      root?: string[];
+      username?: string[];
+      password?: string[];
+    };
+    LoginErrorResponse: {
+      errors: components["schemas"]["LoginError"];
     };
     LoginRequest: {
       username: string;
@@ -94,7 +123,7 @@ export interface components {
     LoginSuccessResponse: {
       success: boolean;
     };
-    PatchedProjectUpdateForm: {
+    PatchedProjectUpdateRequest: {
       name?: string;
     };
     Project: {
@@ -107,11 +136,25 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
     };
-    ProjectCreateForm: {
+    ProjectCreateRequest: {
       name: string;
     };
     ProjectSuccessResponse: {
       projects: components["schemas"]["Project"][];
+    };
+    ProjectUpdateErrorResponse: {
+      errors: components["schemas"]["ProjetUpdateError"];
+    };
+    ProjetCreateError: {
+      root?: string[];
+      name?: string[];
+    };
+    ProjetCreateErrorResponse: {
+      errors: components["schemas"]["ProjetCreateError"];
+    };
+    ProjetUpdateError: {
+      root?: string[];
+      name?: string[];
     };
     SingleProjectSuccessResponse: {
       project: components["schemas"]["Project"];
@@ -157,17 +200,17 @@ export interface operations {
       };
       401: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["LoginErrorResponse"];
         };
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["LoginErrorResponse"];
         };
       };
       429: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["LoginErrorResponse"];
         };
       };
     };
@@ -180,7 +223,7 @@ export interface operations {
       };
       403: {
         content: {
-          "application/json": components["schemas"]["AuthedForbiddenResponse"];
+          "application/json": components["schemas"]["ForbiddenResponse"];
         };
       };
     };
@@ -194,7 +237,7 @@ export interface operations {
       };
       403: {
         content: {
-          "application/json": components["schemas"]["AuthedForbiddenResponse"];
+          "application/json": components["schemas"]["ForbiddenResponse"];
         };
       };
     };
@@ -235,7 +278,7 @@ export interface operations {
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["DockerPortCheckErrorResponse"];
         };
       };
     };
@@ -259,7 +302,7 @@ export interface operations {
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["DockerImageSearchErrorResponse"];
         };
       };
     };
@@ -280,7 +323,7 @@ export interface operations {
       };
       401: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["DockerLoginErrorResponse"];
         };
       };
       403: {
@@ -290,7 +333,7 @@ export interface operations {
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["DockerLoginErrorResponse"];
         };
       };
     };
@@ -334,7 +377,7 @@ export interface operations {
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["ProjetCreateErrorResponse"];
         };
       };
     };
@@ -342,9 +385,9 @@ export interface operations {
   createProject: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ProjectCreateForm"];
-        "application/x-www-form-urlencoded": components["schemas"]["ProjectCreateForm"];
-        "multipart/form-data": components["schemas"]["ProjectCreateForm"];
+        "application/json": components["schemas"]["ProjectCreateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ProjectCreateRequest"];
+        "multipart/form-data": components["schemas"]["ProjectCreateRequest"];
       };
     };
     responses: {
@@ -360,12 +403,17 @@ export interface operations {
       };
       409: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["ProjetCreateErrorResponse"];
         };
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["ProjetCreateErrorResponse"];
+        };
+      };
+      500: {
+        content: {
+          "application/json": components["schemas"]["ProjetCreateErrorResponse"];
         };
       };
     };
@@ -389,7 +437,7 @@ export interface operations {
       };
       404: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
         };
       };
     };
@@ -412,7 +460,12 @@ export interface operations {
       };
       404: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["BaseErrorResponse"];
+        };
+      };
+      500: {
+        content: {
+          "application/json": components["schemas"]["BaseErrorResponse"];
         };
       };
     };
@@ -425,9 +478,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedProjectUpdateForm"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedProjectUpdateForm"];
-        "multipart/form-data": components["schemas"]["PatchedProjectUpdateForm"];
+        "application/json": components["schemas"]["PatchedProjectUpdateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedProjectUpdateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedProjectUpdateRequest"];
       };
     };
     responses: {
@@ -443,12 +496,12 @@ export interface operations {
       };
       404: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
         };
       };
       422: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
         };
       };
     };

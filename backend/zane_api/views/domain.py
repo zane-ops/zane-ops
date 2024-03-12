@@ -31,5 +31,5 @@ class GetRootDomainView(APIView):
 
         return Response(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            data={"errors": {".": response.errors}},
+            data={"errors": {"root": response.errors}},
         )

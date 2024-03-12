@@ -65,10 +65,8 @@ function Login() {
             Log in
           </h1>
           <div className="card flex flex-col gap-3">
-            {data?.errors && (
-              <div style={{ color: "red" }}>
-                {data.errors["."] as unknown as string[]}
-              </div>
+            {data?.errors?.root && (
+              <div style={{ color: "red" }}>{data.errors.root}</div>
             )}
             <div>
               <Input
@@ -78,9 +76,7 @@ function Login() {
                 type="text"
               />
               {!!data?.errors?.username && (
-                <p style={{ color: "red" }}>
-                  {data.errors.username as unknown as string[]}
-                </p>
+                <p style={{ color: "red" }}>{data.errors.username}</p>
               )}
             </div>
             <div>
@@ -91,9 +87,7 @@ function Login() {
                 name="password"
               />
               {!!data?.errors?.password && (
-                <p style={{ color: "red" }}>
-                  {data.errors.password as unknown as string[]}
-                </p>
+                <p style={{ color: "red" }}>{data.errors.password}</p>
               )}
             </div>
             <button

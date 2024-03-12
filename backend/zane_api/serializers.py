@@ -4,8 +4,16 @@ from rest_framework.serializers import *
 from . import models
 
 
-class ErrorResponseSerializer(Serializer):
-    errors = DictField()
+class StringListField(ListField):
+    child = CharField()
+
+
+class BaseErrorSerializer(Serializer):
+    root = StringListField(required=False)
+
+
+class BaseErrorResponseSerializer(Serializer):
+    errors = BaseErrorSerializer()
 
 
 class UserSerializer(ModelSerializer):
