@@ -48,15 +48,23 @@ class ProjectListSearchFiltersSerializer(serializers.Serializer):
         return value
 
 
-class ProjectCreateForm(serializers.Serializer):
+class ProjectCreateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
+
+
+class ProjetCreateErrorSerializer(serializers.BaseErrorSerializer):
+    name = serializers.StringListField(required=False)
+
+
+class ProjetCreateErrorResponseSerializer(serializers.Serializer):
+    errors = ProjetCreateErrorSerializer()
 
 
 class ProjectsListView(APIView):
     serializer_class = ProjectSuccessResponseSerializer
     single_serializer_class = SingleProjectSuccessResponseSerializer
     forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = serializers.ErrorResponseSerializer
+    error_serializer_class = ProjetCreateErrorResponseSerializer
 
     @extend_schema(
         parameters=[
@@ -102,7 +110,7 @@ class ProjectsListView(APIView):
         )
 
     @extend_schema(
-        request=ProjectCreateForm,
+        request=ProjectCreateRequestSerializer,
         responses={
             201: single_serializer_class,
             403: forbidden_serializer_class,
@@ -113,7 +121,7 @@ class ProjectsListView(APIView):
         operation_id="createProject",
     )
     def post(self, request: Request) -> Response:
-        form = ProjectCreateForm(data=request.data)
+        form = ProjectCreateRequestSerializer(data=request.data)
         if form.is_valid():
             data = form.data
             slug = slugify(data["name"])
@@ -144,7 +152,7 @@ class ProjectsListView(APIView):
                 response = self.error_serializer_class(
                     {
                         "errors": {
-                            ".": [str(e)],
+                            "root": [str(e)],
                         }
                     }
                 )
@@ -154,8 +162,16 @@ class ProjectsListView(APIView):
         )
 
 
-class ProjectUpdateForm(serializers.Serializer):
+class ProjectUpdateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
+
+
+class ProjetUpdateErrorSerializer(serializers.BaseErrorSerializer):
+    name = serializers.StringListField(required=False)
+
+
+class ProjectUpdateErrorResponseSerializer(serializers.Serializer):
+    errors = ProjetUpdateErrorSerializer()
 
 
 class DeleteProjectSuccessResponseSerializer(serializers.Serializer):
@@ -165,10 +181,10 @@ class DeleteProjectSuccessResponseSerializer(serializers.Serializer):
 class ProjectDetailsView(APIView):
     serializer_class = SingleProjectSuccessResponseSerializer
     forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = serializers.ErrorResponseSerializer
+    error_serializer_class = ProjectUpdateErrorResponseSerializer
 
     @extend_schema(
-        request=ProjectUpdateForm,
+        request=ProjectUpdateRequestSerializer,
         responses={
             200: serializer_class,
             403: forbidden_serializer_class,
@@ -184,13 +200,13 @@ class ProjectDetailsView(APIView):
             response = self.error_serializer_class(
                 {
                     "errors": {
-                        ".": [f"A project with the slug `{slug}` does not exist"],
+                        "root": [f"A project with the slug `{slug}` does not exist"],
                     }
                 }
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
-        form = ProjectUpdateForm(data=request.data)
+        form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid():
             project.name = form.data["name"]
             project.save()
@@ -213,13 +229,11 @@ class ProjectDetailsView(APIView):
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        ".": [f"A project with the slug `{slug}` does not exist"],
-                    }
+            response = self.error_serializer_class({
+                "errors": {
+                    "root": [f"A project with the slug `{slug}` does not exist"],
                 }
-            )
+            })
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         response = self.serializer_class({"project": project})
         return Response(response.data)
@@ -228,8 +242,8 @@ class ProjectDetailsView(APIView):
         responses={
             200: DeleteProjectSuccessResponseSerializer,
             403: forbidden_serializer_class,
-            404: error_serializer_class,
-            500: error_serializer_class,
+            404: serializers.BaseErrorResponseSerializer,
+            500: serializers.BaseErrorResponseSerializer,
         },
         operation_id="archiveSingleProject",
     )
@@ -240,21 +254,17 @@ class ProjectDetailsView(APIView):
             project.archived = True
             project.save()
         except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        ".": [f"A project with the slug `{slug}` does not exist or have already been archived"],
-                    }
+            response = self.error_serializer_class({
+                "errors": {
+                    "root": [f"A project with the slug `{slug}` does not exist or have already been archived"],
                 }
-            )
+            })
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        ".": [str(e)],
-                    }
+            response = self.error_serializer_class({
+                "errors": {
+                    "root": [str(e)],
                 }
-            )
+            })
             return Response(response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

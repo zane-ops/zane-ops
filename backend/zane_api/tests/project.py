@@ -9,7 +9,7 @@ from rest_framework import status
 
 from .base import AuthAPITestCase
 from ..models import Project
-from ..services import get_resource_name
+from ..services import get_network_resource_name
 
 
 class FakeDockerClientWithNetworks:
@@ -53,10 +53,10 @@ class FakeDockerClientWithNetworks:
             raise docker.errors.NotFound('network not found')
 
     def get_network(self, p: Project):
-        return self.network_map.get(get_resource_name(p, 'network'))
+        return self.network_map.get(get_network_resource_name(p))
 
     def create_network(self, p: Project):
-        return self.docker_create_network(get_resource_name(p, 'network'), scope="swarm", driver="overlay")
+        return self.docker_create_network(get_network_resource_name(p), scope="swarm", driver="overlay")
 
     def get_networks(self):
         return self.network_map

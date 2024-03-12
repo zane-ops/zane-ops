@@ -1,3 +1,4 @@
+import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
@@ -65,12 +66,84 @@ function Login() {
             Log in
           </h1>
           <div className="card flex flex-col gap-3">
-            {data?.errors && (
-              <div className="text-red-500 text-sm">
-                {data.errors["."] as unknown as string[]}
-              </div>
-            )}
-            <div>
+            <Form.Root>
+              {data?.errors && (
+                <Form.Message
+                  className="text-red-500 text-sm"
+                  match={"valueMissing"}
+                >
+                  {data.errors.root}
+                </Form.Message>
+              )}
+
+              <Form.Field className="my-5" name="username">
+                {!!data?.errors?.username && (
+                  <Form.Message
+                    className="text-red-500 text-sm"
+                    match={"valueMissing"}
+                  >
+                    {data.errors.username}
+                  </Form.Message>
+                )}
+
+                <Form.Control asChild>
+                  <Input
+                    placeholder="username"
+                    aria-label="username"
+                    name="username"
+                    type="text"
+                  />
+                </Form.Control>
+              </Form.Field>
+
+              <Form.Field className="my-5" name="password">
+                <Form.Control asChild>
+                  <Input
+                    aria-label="password"
+                    placeholder="password"
+                    type="password"
+                    name="password"
+                  />
+                </Form.Control>
+                {!!data?.errors?.password && (
+                  <Form.Message
+                    className="text-red-500 text-sm"
+                    match={"valueMissing"}
+                  >
+                    {data.errors.password}
+                  </Form.Message>
+                )}
+              </Form.Field>
+
+              <Form.Submit asChild>
+                <button
+                  className="bg-slate-900  w-full p-3 text-white rounded-lg"
+                  disabled={isPending}
+                >
+                  {isPending ? "Submitting..." : "Submit"}
+                </button>
+              </Form.Submit>
+            </Form.Root>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}
+
+/**
+ * 
+ * function Error({ errors }) {
+  return (
+    <div className="text-red-500 text-sm">
+      {errors["."] as unknown as string[]}
+    </div>
+  );
+}
+
+
+
+  <div>
               <Input
                 placeholder="username"
                 aria-label="username"
@@ -102,9 +175,5 @@ function Login() {
             >
               {isPending ? "Submitting..." : "Submit"}
             </button>
-          </div>
-        </form>
-      </div>
-    </>
-  );
-}
+
+ */
