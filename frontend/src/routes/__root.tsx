@@ -1,16 +1,18 @@
 import {
   Link,
-  LinkProps,
+  type LinkProps,
   Outlet,
   createRootRoute
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import * as React from "react";
+import { TailwindIndicator } from "~/components/tailwind-indicator";
 
 export const Route = createRootRoute({
   component: () => (
     <>
       <Outlet />
+      <TailwindIndicator />
       <TanStackRouterDevtools />
     </>
   )
@@ -35,23 +37,3 @@ export const NavLink = React.forwardRef<
     />
   );
 });
-
-/**
- * 
- * function NavLink({ href, name }: { href: string; name: string }) {
-  return (
-    <>
-      <Link
-        activeProps={{
-          style: {
-            fontWeight: "bold"
-          }
-        }}
-        to={href}
-      >
-        {name}
-      </Link>
-    </>
-  );
-}
- */
