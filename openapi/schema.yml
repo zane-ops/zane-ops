@@ -456,6 +456,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
+  /api/volumes/{slug}/size/:
+    get:
+      operationId: getVolumeSize
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - volumes
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeGetSizeSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseErrorResponse'
+          description: ''
 components:
   schemas:
     AuthedSuccessResponse:
@@ -780,6 +813,13 @@ components:
           description: Designates whether the user can log into this admin site.
       required:
       - username
+    VolumeGetSizeSuccessResponse:
+      type: object
+      properties:
+        size:
+          type: integer
+      required:
+      - size
   securitySchemes:
     cookieAuth:
       type: apiKey

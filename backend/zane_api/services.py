@@ -160,3 +160,17 @@ def remove_docker_volume(volume: Volume):
         pass
     else:
         docker_volume.remove(force=True)
+
+
+def get_docker_volume_size(volume: Volume) -> int:
+    client = get_docker_client()
+    docker_volume_name = get_volume_resource_name(volume)
+
+    result: bytes = client.containers.run(
+        image='alpine',
+        command="du -sb /data",
+        volumes={docker_volume_name: {'bind': '/data', 'mode': 'ro'}},
+        remove=True,
+    )
+    size_string, _ = result.decode(encoding='utf-8').split("\t")
+    return int(size_string)
