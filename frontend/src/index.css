@@ -26,7 +26,7 @@
     --radius: 0.5rem;
   }
 
-  .dark {
+  @media (prefers-color-scheme: dark) {
     --background: 87 38% 1%;
     --foreground: 87 36% 100%;
     --muted: 267 39% 7%;
