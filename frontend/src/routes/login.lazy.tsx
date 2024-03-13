@@ -57,7 +57,10 @@ function Login() {
           </p>
         </div>
 
-        <Form.Root className="p-7 md:px-32 md:w-[50%]  flex flex-col w-full">
+        <Form.Root
+          className="p-7 md:px-32 md:w-[50%]  flex flex-col w-full"
+          asChild
+        >
           <form
             action={(formData) =>
               mutate({
@@ -71,9 +74,11 @@ function Login() {
             </h1>
             <div className="card flex flex-col gap-3">
               {data?.errors && (
-                <Form.Message className="text-red-500 text-sm">
-                  <AlertDestructive>{data.errors.root}</AlertDestructive>
-                </Form.Message>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{data.errors.root}</AlertDescription>
+                </Alert>
               )}
 
               <Form.Field className="my-2 flex flex-col gap-1" name="username">
@@ -125,15 +130,5 @@ function Login() {
         </Form.Root>
       </div>
     </>
-  );
-}
-
-export function AlertDestructive({ children }: { children: React.ReactNode }) {
-  return (
-    <Alert variant="destructive">
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>Error</AlertTitle>
-      <AlertDescription>{children}</AlertDescription>
-    </Alert>
   );
 }
