@@ -19,7 +19,7 @@ const alertVariants = cva(
   }
 );
 
-const ShadcnAlert = React.forwardRef<
+const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
 >(({ className, variant, ...props }, ref) => (
@@ -30,7 +30,7 @@ const ShadcnAlert = React.forwardRef<
     {...props}
   />
 ));
-ShadcnAlert.displayName = "Alert";
+Alert.displayName = "Alert";
 
 const AlertTitle = React.forwardRef<
   HTMLParagraphElement,
@@ -56,4 +56,4 @@ const AlertDescription = React.forwardRef<
 ));
 AlertDescription.displayName = "AlertDescription";
 
-export { ShadcnAlert, AlertTitle, AlertDescription };
+export { Alert, AlertTitle, AlertDescription };

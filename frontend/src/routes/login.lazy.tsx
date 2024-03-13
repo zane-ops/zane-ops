@@ -8,11 +8,7 @@ import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 
 import { AlertCircle } from "lucide-react";
 
-import {
-  AlertDescription,
-  AlertTitle,
-  ShadcnAlert
-} from "~/components/ui/shadcn-alert";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -78,11 +74,11 @@ function Login() {
             </h1>
             <div className="card flex flex-col gap-3">
               {data?.errors && (
-                <ShadcnAlert variant="destructive">
+                <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Error</AlertTitle>
                   <AlertDescription>{data.errors.root}</AlertDescription>
-                </ShadcnAlert>
+                </Alert>
               )}
 
               <Form.Field className="my-2 flex flex-col gap-1" name="username">
