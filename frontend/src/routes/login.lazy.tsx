@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
 import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 
@@ -45,7 +46,7 @@ function Login() {
             alt="logo"
           />
         </div>
-        <div className="md:flex hidden flex-col px-20 bg-slate-900 md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
+        <div className="md:flex hidden flex-col px-20 bg-card  md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"
             src={whiteLogo}
@@ -86,7 +87,6 @@ function Login() {
                 <Form.Control asChild>
                   <Input
                     placeholder="ex: JohnDoe"
-                    aria-label="username"
                     name="username"
                     type="text"
                   />
@@ -101,11 +101,7 @@ function Login() {
               <Form.Field className="my-2 flex flex-col gap-1" name="password">
                 <Form.Label>Password</Form.Label>
                 <Form.Control asChild>
-                  <Input
-                    aria-label="password"
-                    type="password"
-                    name="password"
-                  />
+                  <Input type="password" name="password" />
                 </Form.Control>
                 {data?.errors?.password && (
                   <Form.Message className="text-red-500 text-sm">
@@ -115,12 +111,9 @@ function Login() {
               </Form.Field>
 
               <Form.Submit asChild>
-                <button
-                  className="bg-slate-900  w-full p-3 text-white rounded-lg"
-                  disabled={isPending}
-                >
+                <Button className="w-full p-3 rounded-lg" disabled={isPending}>
                   {isPending ? "Submitting..." : "Submit"}
-                </button>
+                </Button>
               </Form.Submit>
             </div>
           </form>

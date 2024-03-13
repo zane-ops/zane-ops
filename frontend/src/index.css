@@ -3,6 +3,10 @@
 @tailwind utilities;
  
 
+:root {
+  color: theme('colors.card.foreground')
+}
+
 @layer base {
   :root {
     --background: 164 62% 99%;
