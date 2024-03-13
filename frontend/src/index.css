@@ -7,6 +7,7 @@
   color: theme('colors.card.foreground')
 }
 
+
 @layer base {
   :root {
     --background: 164 62% 99%;
@@ -15,7 +16,7 @@
     --muted-foreground: 164 0% 26%;
     --popover: 164 62% 99%;
     --popover-foreground: 164 67% 0%;
-    --card: 164 62% 99%;
+    --card:  219, 40%, 18%;
     --card-foreground: 164 67% 0%;
     --border: 164 9% 90%;
     --input: 164 9% 90%;

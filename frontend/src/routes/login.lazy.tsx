@@ -2,8 +2,8 @@ import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequestInput, apiClient } from "~/api/client";
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 
@@ -46,7 +46,7 @@ function Login() {
             alt="logo"
           />
         </div>
-        <div className="md:flex hidden flex-col px-20  bg-card  md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
+        <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"
             src={whiteLogo}
