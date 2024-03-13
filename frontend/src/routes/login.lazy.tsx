@@ -58,7 +58,7 @@ function Login() {
         </div>
 
         <Form.Root
-          className="p-7 md:px-32 md:w-[50%]  flex flex-col w-full"
+          className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
           asChild
         >
           <form
