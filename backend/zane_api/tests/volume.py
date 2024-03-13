@@ -103,3 +103,9 @@ class DockerVolumeTests(APITestCase):
         remove_docker_volume(volume)
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(0, len(fake_docker_client.volume_map))
+
+
+class VolumeGetSizeViewTests(APITestCase):
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_get_volume_size(self, mock_fake_docker: Mock):
+        self.assertEqual(True, False)
