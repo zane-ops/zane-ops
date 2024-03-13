@@ -77,7 +77,7 @@ function Login() {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{data.errors.root}</AlertDescription>
+                  <AlertDescription>{data?.errors?.root}</AlertDescription>
                 </Alert>
               )}
 
