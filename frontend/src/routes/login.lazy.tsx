@@ -73,7 +73,7 @@ function Login() {
               Log in
             </h1>
             <div className="card flex flex-col gap-3">
-              {data?.errors.root && (
+              {data?.errors?.root && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Error</AlertTitle>
