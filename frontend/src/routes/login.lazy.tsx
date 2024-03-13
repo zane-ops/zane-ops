@@ -9,9 +9,9 @@ import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 import { AlertCircle } from "lucide-react";
 
 import {
-  ShadcnAlert,
   AlertDescription,
-  AlertTitle
+  AlertTitle,
+  ShadcnAlert
 } from "~/components/ui/shadcn-alert";
 
 export const Route = createLazyFileRoute("/login")({
