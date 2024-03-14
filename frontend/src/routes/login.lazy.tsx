@@ -71,7 +71,6 @@ function Login() {
             })
           }
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
-          asChild
         >
           <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
             Log in
