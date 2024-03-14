@@ -48,16 +48,7 @@ function Login() {
             media="(prefers-color-scheme: light)"
             srcSet={logoSymbolBlack}
           />
-          <img
-            src={
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-                ? logoSymbolWhite
-                : logoSymbolBlack
-            }
-            alt="Zane logo"
-            width={100}
-            height={100}
-          />
+          <img src={logoSymbolBlack} alt="Zane logo" width={100} height={100} />
         </picture>
 
         <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
