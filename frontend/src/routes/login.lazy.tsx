@@ -5,10 +5,10 @@ import { RequestInput, apiClient } from "~/api/client";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
-import logoSymbol from "/logo/ZaneOps-SYMBOL-BLACK.svg";
+import logoSymbolBlack from "/logo/ZaneOps-SYMBOL-BLACK.svg";
+import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 
 import { AlertCircle } from "lucide-react";
-
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 export const Route = createLazyFileRoute("/login")({
@@ -39,13 +39,27 @@ function Login() {
   return (
     <>
       <div className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
-        <div className="md:hidden flex justify-center items-center ">
-          <img
-            className="md:w-[180px]  md:fit h-[110px] w-[110px]"
-            src={logoSymbol}
-            alt="logo"
+        <picture className="md:hidden flex justify-center items-center">
+          <source
+            media="(prefers-color-scheme: dark)"
+            srcSet={logoSymbolWhite}
           />
-        </div>
+          <source
+            media="(prefers-color-scheme: light)"
+            srcSet={logoSymbolBlack}
+          />
+          <img
+            src={
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? logoSymbolWhite
+                : logoSymbolBlack
+            }
+            alt="Zane logo"
+            width={100}
+            height={100}
+          />
+        </picture>
+
         <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"
