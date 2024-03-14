@@ -64,64 +64,56 @@ function Login() {
         </div>
 
         <Form.Root
+          action={(formData) =>
+            mutate({
+              username: formData.get("username")!.toString(),
+              password: formData.get("password")!.toString()
+            })
+          }
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
-          asChild
         >
-          <form
-            action={(formData) =>
-              mutate({
-                username: formData.get("username")!.toString(),
-                password: formData.get("password")!.toString()
-              })
-            }
-          >
-            <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
-              Log in
-            </h1>
-            <div className="card flex flex-col gap-3">
-              {data?.errors?.root && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{data.errors.root}</AlertDescription>
-                </Alert>
+          <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
+            Log in
+          </h1>
+          <div className="card flex flex-col gap-3">
+            {data?.errors?.root && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{data.errors.root}</AlertDescription>
+              </Alert>
+            )}
+
+            <Form.Field className="my-2 flex flex-col gap-1" name="username">
+              <Form.Label className="">Username</Form.Label>
+              <Form.Control asChild>
+                <Input placeholder="ex: JohnDoe" name="username" type="text" />
+              </Form.Control>
+              {data?.errors?.username && (
+                <Form.Message className="text-red-500 text-sm">
+                  {data.errors.username}
+                </Form.Message>
               )}
+            </Form.Field>
 
-              <Form.Field className="my-2 flex flex-col gap-1" name="username">
-                <Form.Label className="">Username</Form.Label>
-                <Form.Control asChild>
-                  <Input
-                    placeholder="ex: JohnDoe"
-                    name="username"
-                    type="text"
-                  />
-                </Form.Control>
-                {data?.errors?.username && (
-                  <Form.Message className="text-red-500 text-sm">
-                    {data.errors.username}
-                  </Form.Message>
-                )}
-              </Form.Field>
+            <Form.Field className="my-2 flex flex-col gap-1" name="password">
+              <Form.Label>Password</Form.Label>
+              <Form.Control asChild>
+                <Input type="password" name="password" />
+              </Form.Control>
+              {data?.errors?.password && (
+                <Form.Message className="text-red-500 text-sm">
+                  {data.errors.password}
+                </Form.Message>
+              )}
+            </Form.Field>
 
-              <Form.Field className="my-2 flex flex-col gap-1" name="password">
-                <Form.Label>Password</Form.Label>
-                <Form.Control asChild>
-                  <Input type="password" name="password" />
-                </Form.Control>
-                {data?.errors?.password && (
-                  <Form.Message className="text-red-500 text-sm">
-                    {data.errors.password}
-                  </Form.Message>
-                )}
-              </Form.Field>
-
-              <Form.Submit asChild>
-                <Button className="w-full p-3 rounded-lg" disabled={isPending}>
-                  {isPending ? "Submitting..." : "Submit"}
-                </Button>
-              </Form.Submit>
-            </div>
-          </form>
+            <Form.Submit asChild>
+              <Button className="w-full p-3 rounded-lg" disabled={isPending}>
+                {isPending ? "Submitting..." : "Submit"}
+              </Button>
+            </Form.Submit>
+          </div>
         </Form.Root>
       </div>
     </>
