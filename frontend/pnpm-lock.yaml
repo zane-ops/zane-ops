@@ -8,6 +8,9 @@ dependencies:
   '@radix-ui/react-form':
     specifier: ^0.0.3
     version: 0.0.3(@types/react-dom@18.2.19)(@types/react@18.2.61)(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
+  '@radix-ui/react-slot':
+    specifier: ^1.0.2
+    version: 1.0.2(@types/react@18.2.61)(react@18.3.0-canary-47beb96cc-20240222)
   '@tanstack/react-query':
     specifier: ^5.22.2
     version: 5.24.1(react@18.3.0-canary-47beb96cc-20240222)
