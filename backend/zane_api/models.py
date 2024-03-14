@@ -142,12 +142,6 @@ class BaseDeployment(models.Model):
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
 
-    class Meta:
-        unique_together = (
-            "is_production",
-            "service",
-        )
-
 
 class GitDeployment(BaseDeployment):
     commit_hash = models.CharField(
@@ -180,12 +174,6 @@ class GitDeployment(BaseDeployment):
             return self.service.base_domain
 
         return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
-
-    class Meta:
-        unique_together = (
-            "is_production",
-            "service",
-        )
 
     def __str__(self):
         return f"{self.branch} - {self.commit_hash[:7]} - {self.status}"
