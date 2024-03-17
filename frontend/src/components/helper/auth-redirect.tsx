@@ -1,7 +1,7 @@
-import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "../../api/client";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { apiClient } from "../../api/client";
 
 export function withAuthRedirect(WrappedComponent: any) {
   return function AuthRedirectWrapper(props: any) {
