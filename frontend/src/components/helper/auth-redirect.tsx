@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { ComponentType, ReactElement, useEffect } from "react";
 import { apiClient } from "../../api/client";
 
-export function withAuthRedirect(WrappedComponent: any) {
-  return function AuthRedirectWrapper(props: any) {
+export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
+  return function AuthRedirectWrapper(props: ReactElement) {
     const navigate = useNavigate();
 
     const query = useQuery({
