@@ -38,4 +38,9 @@ urlpatterns = [
         views.VolumeGetSizeView.as_view(),
         name="volume.size",
     ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/create-service/docker/?$",
+        views.DockerServiceAPIView.as_view(),
+        name="services.docker"
+    ),
 ]

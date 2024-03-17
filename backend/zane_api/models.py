@@ -44,7 +44,6 @@ class BaseService(TimestampedModel):
         on_delete=models.CASCADE,
     )
     env_variables = models.ManyToManyField(to="EnvVariable")
-    http_logs = models.ManyToManyField(to="HttpLog")
 
     class Meta:
         abstract = True
@@ -134,6 +133,7 @@ class BaseDeployment(models.Model):
         default=DeploymentStatus.PENDING,
     )
     logs = models.ManyToManyField(to="SimpleLog")
+    http_logs = models.ManyToManyField(to="HttpLog")
 
     class Meta:
         abstract = True
@@ -148,7 +148,7 @@ class GitDeployment(BaseDeployment):
         max_length=40
     )  # Typical length of a Git commit hash, but we will use the short version
     commit_message = models.TextField(blank=True)
-    build_duration_in_ms = models.PositiveIntegerField()
+    build_duration_in_ms = models.PositiveIntegerField(null=True)
     branch = models.CharField(max_length=255)
     service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
     commit_author_username = models.CharField(max_length=255)
