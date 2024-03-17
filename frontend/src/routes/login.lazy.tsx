@@ -15,7 +15,7 @@ export const Route = createLazyFileRoute("/login")({
   component: Login
 });
 
-function Login() {
+export default function Login() {
   const navigate = useNavigate();
 
   const queryClient = useQueryClient();
