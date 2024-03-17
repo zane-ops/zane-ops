@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
     },
 )
 class APITestCase(TestCase):
-    client = APIClient(enforce_csrf_checks=True)
+    client = APIClient(enforce_csrf_checks=True, content_type='application/json')
 
     def tearDown(self):
         cache.clear()

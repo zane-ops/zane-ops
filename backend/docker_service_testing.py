@@ -5,15 +5,15 @@ if __name__ == '__main__':
     client = docker.from_env()
     endpoint_spec = EndpointSpec(ports={6382: 6379})
     try:
-        service = client.services.get("cache_db")
+        service = client.services.get("memcache_db")
     except docker.errors.NotFound:
         service = client.services.create(
-            image='redis:latest',
-            name="cache_db",
-            mounts=['redis_data_volume:/data:rw'],
-            env=["REDIS_PASSWORD=strongPassword123"],
+            image='memcached:latest',
+            name="memcache_db",
+            # mounts=['redis_data_volume:/data:rw'],
+            # env=["REDIS_PASSWORD=strongPassword123"],
             networks=['zane-out'],
-            endpoint_spec=endpoint_spec,
+            # endpoint_spec=endpoint_spec,
             restart_policy=RestartPolicy(
                 condition="on-failure",
                 max_attempts=3,
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         )
 
     result = service.scale(replicas=1)
-    for event in client.events(decode=True, filters={'service': 'cache_db'}):
+    for event in client.events(decode=True, filters={'service': 'memcache_db'}):
         print(event)
         if event['status'] == 'start' and event['Type'] == 'container':
             break

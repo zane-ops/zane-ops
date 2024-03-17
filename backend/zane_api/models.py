@@ -44,6 +44,8 @@ class BaseService(TimestampedModel):
         on_delete=models.CASCADE,
     )
     env_variables = models.ManyToManyField(to="EnvVariable")
+    volumes = models.ManyToManyField(to="Volume")
+    port_config = models.ManyToManyField(to="PortConfiguration")
 
     class Meta:
         abstract = True
@@ -56,8 +58,14 @@ class BaseService(TimestampedModel):
         return f"{self.name} ({self.slug})"
 
 
+class PortConfiguration(models.Model):
+    public = models.PositiveIntegerField(null=True, unique=True)
+    private = models.PositiveIntegerField()
+
+
 class DockerRegistryService(BaseService):
-    base_docker_image = models.CharField(max_length=510)
+    image = models.CharField(max_length=510)
+    command = models.TextField(null=True, blank=True)
     docker_credentials_email = models.CharField(max_length=255, null=True, blank=True)
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
@@ -102,12 +110,6 @@ class Volume(TimestampedModel):
     ONE_KB = 1024
     size_limit = models.PositiveIntegerField(null=True, validators=[MinValueValidator(ONE_KB)])
     containerPath = models.CharField(max_length=255)
-    dockerService = models.ForeignKey(
-        to=DockerRegistryService, null=True, on_delete=models.SET_NULL
-    )
-    gitService = models.ForeignKey(
-        to=GitRepositoryService, null=True, on_delete=models.SET_NULL
-    )
 
     class Meta:
         unique_together = (

@@ -1,9 +1,9 @@
-from typing import List, TypedDict
+from typing import List, TypedDict, Literal
 
 import docker
 import docker.errors
 
-from .models import Project, Volume
+from .models import Project, Volume, DockerRegistryService, BaseService
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = 'registry-1.docker.io/v2'
@@ -22,7 +22,7 @@ def get_docker_client():
 
 def get_network_resource_name(project: Project) -> str:
     ts_to_full_number = str(project.created_at.timestamp()).replace(".", "")
-    return f"{project.slug}-{ts_to_full_number}"
+    return f"net-{project.slug}-{ts_to_full_number}"
 
 
 def get_resource_labels(project: Project):
@@ -133,7 +133,7 @@ def check_if_port_is_available(port: int) -> bool:
 
 def get_volume_resource_name(volume: Volume):
     ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
-    return f"{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
+    return f"vol-{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
 
 
 def create_docker_volume(volume: Volume):
@@ -174,3 +174,22 @@ def get_docker_volume_size(volume: Volume) -> int:
     )
     size_string, _ = result.decode(encoding='utf-8').split("\t")
     return int(size_string)
+
+
+def get_service_resource_name(service: BaseService):
+    ts_to_full_number = str(service.created_at.timestamp()).replace(".", "")
+    return f"ser-{service.project.slug}-{service.slug}-{ts_to_full_number}"
+
+
+def create_service_from_docker_registry(service: DockerRegistryService):
+    client = get_docker_client()
+
+    client.services.create(
+        image=service.image,
+        name=get_service_resource_name(service)
+    )
+
+
+def size_in_bytes(n: int, unit: Literal['B'] | Literal["MB"] | Literal["GB"] | Literal["KB"]):
+    units = {'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3}
+    return n * units[unit]
