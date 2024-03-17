@@ -16,6 +16,7 @@ export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
 
     useEffect(() => {
       if (query.data?.data?.user) {
+        navigate({ to: "/dashboard" });
         return;
       }
       navigate({ to: "/login" });
