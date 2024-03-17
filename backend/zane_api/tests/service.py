@@ -6,14 +6,15 @@ from django.urls import reverse
 from rest_framework import status
 
 from . import AuthAPITestCase
-from ..models import Project, DockerRegistryService, DockerDeployment
+from ..models import Project, DockerRegistryService, DockerDeployment, Volume, PortConfiguration
 
 
 class FakeDockerClient:
     class FakeVolume:
-        def __init__(self, parent: 'FakeDockerClient', name: str):
+        def __init__(self, parent: 'FakeDockerClient', name: str, size_limit: str = None):
             self.name = name
             self.parent = parent
+            self.size_limit = size_limit
 
         def remove(self, force: bool):
             if self.parent.raise_error:
@@ -38,8 +39,8 @@ class FakeDockerClient:
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
         self.service_map = {}  # type: dict[str, FakeDockerClient.FakeService]
 
-    def volumes_create(self, name: str, **kwargs):
-        self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name)
+    def volumes_create(self, name: str, driver_opts: dict[str, str], **kwargs):
+        self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name, size_limit=driver_opts.get('o'))
 
     def volumes_get(self, name: str):
         if name not in self.volume_map:
@@ -109,6 +110,99 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(1, len(fake_docker_client.volume_map))
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_with_volume_and_size_limit(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_redis_payload = {
+            "name": "cache db",
+            "image": "redis:alpine",
+            "volumes": [
+                {
+                    "name": "redis_data_volume",
+                    "mount_path": "/data",
+                    "size": {
+                        "n": 500,
+                        "unit": "MB"
+                    },
+                }
+            ]
+        }
+
+        response = self.client.post(
+            reverse('zane_api:services.docker', kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_redis_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="cache-db").first()
+        volume: Volume = created_service.volumes.first()
+
+        self.assertIsNotNone(volume.size_limit)
+
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        fake_volume = list(fake_docker_client.volume_map.values())[0]
+
+        self.assertIsNotNone(fake_volume.size_limit)
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_with_env_and_command(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_redis_payload = {
+            "name": "cache db",
+            "image": "redis:alpine",
+            "command": "redis-server --requirepass ${REDIS_PASSWORD}",
+            "env": {
+                "REDIS_PASSWORD": "strongPassword123"
+            },
+        }
+
+        response = self.client.post(
+            reverse('zane_api:services.docker', kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_redis_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="cache-db").first()
+        env = created_service.env_variables.first()
+
+        self.assertIsNotNone(created_service.command)
+        self.assertIsNotNone(env)
+        print(env)
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_with_port(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_redis_payload = {
+            "name": "noSQL db",
+            "image": "redis:alpine",
+            "ports": {
+                "public": 6383,
+                "private": 6379
+            }
+        }
+
+        response = self.client.post(
+            reverse('zane_api:services.docker', kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_redis_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="nosql-db").first()
+        port: PortConfiguration = created_service.port_config.first()
+
+        self.assertIsNotNone(port)
+        self.assertEqual(6383, port.host)
+        self.assertEqual(6379, port.forwarded)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_redis_service(self, mock_fake_docker: Mock):

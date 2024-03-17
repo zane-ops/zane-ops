@@ -59,8 +59,9 @@ class BaseService(TimestampedModel):
 
 
 class PortConfiguration(models.Model):
-    public = models.PositiveIntegerField(null=True, unique=True)
-    private = models.PositiveIntegerField()
+    host = models.PositiveIntegerField(null=True, unique=True)
+    forwarded = models.PositiveIntegerField()
+    project = models.ForeignKey(to='Project', on_delete=models.CASCADE)
 
 
 class DockerRegistryService(BaseService):
@@ -97,7 +98,7 @@ class EnvVariable(models.Model):
     )
 
     def __str__(self):
-        return self.key
+        return f"EnvVariable ({self.key})"
 
 
 class Volume(TimestampedModel):
@@ -118,7 +119,7 @@ class Volume(TimestampedModel):
         )
 
     def __str__(self):
-        return self.name
+        return f"Volume ({self.name})"
 
 
 class BaseDeployment(models.Model):
