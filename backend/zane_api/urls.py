@@ -33,4 +33,9 @@ urlpatterns = [
         views.DockerPortCheckView.as_view(),
         name="docker.check_port_mapping",
     ),
+    re_path(
+        r"^volumes/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/size/?$",
+        views.VolumeGetSizeView.as_view(),
+        name="volume.size",
+    ),
 ]

@@ -4,10 +4,10 @@ import { TailwindIndicator } from "~/components/tailwind-indicator";
 
 export const Route = createRootRoute({
   component: () => (
-    <>
+    <main className="bg-background">
       <Outlet />
       <TailwindIndicator />
       <TanStackRouterDevtools />
-    </>
+    </main>
   )
 });
