@@ -14,16 +14,14 @@ export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
       }
     });
 
-    useEffect(() => {
-      if (query.data?.data?.user) {
-        navigate({ to: "/dashboard" });
-        return;
-      }
-      navigate({ to: "/login" });
-    }, [query.data, navigate]);
-
     if (query.isLoading) {
       return <div className="text-3xl font-bold">Loading... with tailwind</div>;
+    }
+
+    const user = query.data?.data?.user;
+    if (!user) {
+      navigate({ to: "/login" });
+      return null;
     }
 
     return <WrappedComponent {...props} />;
