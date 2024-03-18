@@ -1,0 +1,21 @@
+{
+  "name": "@zane-ops/root",
+  "version": "1.0.0",
+  "author": {
+    "name": "Adrien KISSIE",
+    "email": "hello@fredkiss.dev"
+  },
+  "description": "A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "format": "biome check ./frontend --apply",
+    "test": "turbo run test"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.6.1",
+    "turbo": "^1.12.5"
+  }
+}

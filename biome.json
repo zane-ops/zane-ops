@@ -25,6 +25,10 @@
     }
   },
   "files": {
-    "ignore": ["./frontend/src/api/v1.ts", "./frontend/src/routeTree.gen.ts"]
+    "ignore": [
+      "./frontend/src/api/v1.ts",
+      "./frontend/src/routeTree.gen.ts",
+      "node_modules/**"
+    ]
   }
 }

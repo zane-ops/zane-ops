@@ -1,0 +1,7 @@
+{
+  "name": "@zane-ops/server",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "caddy run"
+  }
+}

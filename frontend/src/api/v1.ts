@@ -39,6 +39,9 @@ export interface paths {
     delete: operations["archiveSingleProject"];
     patch: operations["updateProjectName"];
   };
+  "/api/volumes/{slug}/size/": {
+    get: operations["getVolumeSize"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -169,6 +172,9 @@ export interface components {
        * @description Designates whether the user can log into this admin site.
        */
       is_staff?: boolean;
+    };
+    VolumeGetSizeSuccessResponse: {
+      size: number;
     };
   };
   responses: never;
@@ -502,6 +508,30 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
+        };
+      };
+    };
+  };
+  getVolumeSize: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["VolumeGetSizeSuccessResponse"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["BaseErrorResponse"];
         };
       };
     };
