@@ -37,8 +37,14 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
 
 2. **Then, Install the dependencies :**
 
+    From the root of the project :
+    ```bash
+    pnpm install --frozen-lockfile
+    ```
+
     For the backend
     ```bash
+    cd backend
     # Create a virtual env
     python -m venv ./venv
     # activate the virtualenv
@@ -48,53 +54,31 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
     uv pip install -r requirements.txt
     ```
 
-    For the frontend
-    ```bash
-    cd frontend
-    pnpm install --frozen-lockfile
-    ```
 
+3. **Start the project**
 
-3. **Start the postgres DB and redis instance :**
-
-    ```bash
-    docker-compose up -d
-    ```
-
-4. **Run migrations :**
-    
-    Backend 
-    ```bash
-    python manage.py migrate
-    ```
-
-5. **And launch the project :**
-
-    Backend 
-    ```bash
-    python manage.py runserver
-    ```
-
-    Frontend 
+    From the root
     ```bash
     pnpm run dev
     ```
 
-6. Configure and start caddy server : 
-    Go to `/etc/hosts` and append this entry to that file : 
+4. **Run DB migrations :**
+    
+    From the Backend 
+    ```bash
+    cd backend
+    python manage.py migrate
+    ```
+
+5. Go to `/etc/hosts` and append this entry to that file : 
 
     ```
     127.0.0.1       zane.local 
     ```
 
-    Then from the root folder, run :
-    ```bash
-    caddy run
-    ```
-
     The API will be available at [https://zane.local](https://zane.local).
 
-7. **Open the source code and start rocking ! 😎**
+6. **Open the source code and start rocking ! 😎**
 
 
 ## 🧐 Project structure
