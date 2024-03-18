@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django.utils.text import slugify
 from drf_spectacular.utils import extend_schema
 from faker import Faker
@@ -19,7 +20,7 @@ class DockerCredentialsSerializer(serializers.Serializer):
 
 
 class ServicePortsSerializer(serializers.Serializer):
-    public = serializers.IntegerField(required=False)
+    public = serializers.IntegerField(required=False, default=80)
     forwarded = serializers.IntegerField()
 
 
@@ -36,7 +37,7 @@ class VolumeSerializer(serializers.Serializer):
 
 class URLSerializer(serializers.Serializer):
     domain = serializers.URLDomainField(required=True)
-    base_path = serializers.URLPathField(required=False)
+    base_path = serializers.URLPathField(required=False, default="/")
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
@@ -48,6 +49,36 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     ports = ServicePortsSerializer(required=False, many=True)
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeSerializer(many=True, required=False)
+
+    def validate_ports(self, value: list[dict[str, int]]):
+        # Check for only 1 http port
+        no_of_http_ports = 0
+        http_ports = [80, 443]
+        for port in value:
+            public_port = port['public']
+            if public_port in http_ports:
+                no_of_http_ports += 1
+            if no_of_http_ports > 1:
+                raise serializers.ValidationError("Only one HTTP port is allowed")
+
+        # Check for duplicate public ports
+        public_ports_seen = set()
+        for port in value:
+            public_port = port['public']
+            if public_port in public_ports_seen:
+                raise serializers.ValidationError("Duplicate public port values are not allowed.")
+            public_ports_seen.add(public_port)
+        return value
+
+    def validate_urls(self, value: list[dict[str, str]]):
+        # Check for duplicate public ports
+        urls_seen = set()
+        for url in value:
+            new_url = (url['domain'], url['base_path'])
+            if new_url in urls_seen:
+                raise serializers.ValidationError("Duplicate urls values are not allowed.")
+            urls_seen.add(new_url)
+        return value
 
 
 class DockerServiceCreateSuccessResponseSerializer(serializers.Serializer):
@@ -70,6 +101,7 @@ class CreateDockerServiceAPIView(APIView):
         },
         operation_id="createDockerService",
     )
+    @transaction.atomic()
     def post(self, request: Request, project_slug: str):
         project = Project.objects.get(slug=project_slug)
         form = DockerServiceCreateRequestSerializer(data=request.data)
@@ -102,7 +134,6 @@ class CreateDockerServiceAPIView(APIView):
 
             for volume in created_volumes:
                 service.volumes.add(volume)
-                create_docker_volume(volume)
 
             # Create envs if exists
             envs_from_request: dict[str, str] = data.get('env', {})
@@ -124,7 +155,7 @@ class CreateDockerServiceAPIView(APIView):
             created_ports = PortConfiguration.objects.bulk_create([
                 PortConfiguration(
                     project=project,
-                    host=port.get('public'),
+                    host=port['public'],
                     forwarded=port['forwarded'],
                 ) for port in ports_from_request
             ])
@@ -132,11 +163,17 @@ class CreateDockerServiceAPIView(APIView):
             for port in created_ports:
                 service.port_config.add(port)
 
-            # Create service in docker
-            create_service_from_docker_registry(service)
-
             # Create urls to route the service to
-            if data['port']:
+            http_ports = [80, 443]
+
+            can_create_urls = False
+            for port in ports_from_request:
+                public_port = port['public']
+                if public_port in http_ports:
+                    can_create_urls = True
+                    break
+
+            if can_create_urls:
                 service_urls = data.get("urls", [])
                 if len(service_urls) == 0:
                     default_url = URL.objects.create(
@@ -157,7 +194,15 @@ class CreateDockerServiceAPIView(APIView):
                 service=service
             )
 
+            # Create resources in docker
+            create_service_from_docker_registry(service)
+            for volume in created_volumes:
+                create_docker_volume(volume)
+
             response = self.serializer_class({})
             return Response(response.data, status=status.HTTP_201_CREATED)
 
-        return Response(data=form.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        # TODO use dedicated serializer
+        return Response(data={
+            "errors": form.errors
+        }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)

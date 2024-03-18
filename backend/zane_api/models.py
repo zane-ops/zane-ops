@@ -69,7 +69,7 @@ class BaseService(TimestampedModel):
 
 
 class PortConfiguration(models.Model):
-    host = models.PositiveIntegerField(null=True, unique=True)
+    host = models.PositiveIntegerField(default=80, unique=True)
     forwarded = models.PositiveIntegerField()
     project = models.ForeignKey(to='Project', on_delete=models.CASCADE)
 
