@@ -2,6 +2,7 @@ from typing import List, TypedDict, Literal
 
 import docker
 import docker.errors
+from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 
 from .models import Project, Volume, DockerRegistryService, BaseService
 
@@ -184,9 +185,37 @@ def get_service_resource_name(service: BaseService):
 def create_service_from_docker_registry(service: DockerRegistryService):
     client = get_docker_client()
 
+    exposed_ports: dict[int, int] = {}
+    endpoint_spec: EndpointSpec | None = None
+
+    for port in service.port_config.all():
+        if port.host is not None:
+            exposed_ports[port.host] = port.forwarded
+
+    if len(exposed_ports) > 0:
+        endpoint_spec = EndpointSpec(ports=exposed_ports)
+
     client.services.create(
         image=service.image,
-        name=get_service_resource_name(service)
+        name=get_service_resource_name(service),
+        mounts=[f"{get_volume_resource_name(volume)}:{volume.containerPath}:rw" for volume in service.volumes.all()],
+        endpoint_spec=endpoint_spec,
+        env=[f"{env.key}={env.value}" for env in service.env_variables.all()],
+        labels=get_resource_labels(service.project),
+        command=service.command,
+        networks=[get_network_resource_name(service.project)],
+        restart_policy=RestartPolicy(
+            condition="on-failure",
+            max_attempts=3,
+            delay=5,
+        ),
+        update_config=UpdateConfig(
+            parallelism=1,
+            delay=5,
+            monitor=10,
+            order="start-first",
+            failure_action="rollback"
+        ),
     )
 
 

@@ -8,6 +8,8 @@ from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from .helpers import validate_url_domain
+
 
 class TimestampedModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
@@ -33,19 +35,27 @@ class Project(TimestampedModel):
         ordering = ["-updated_at"]
 
 
+class URL(models.Model):
+    domain = models.CharField(max_length=1000, null=True, blank=True, validators=[validate_url_domain])
+    base_path = models.CharField(default="/")
+
+    class Meta:
+        unique_together = (
+            "domain",
+            "base_path",
+        )
+
+
 class BaseService(TimestampedModel):
     name = models.CharField(max_length=255)
     archived = models.BooleanField(default=False)
     slug = models.SlugField(max_length=255)
     is_public = models.BooleanField(default=False)
-    base_domain = models.URLField(max_length=1000, null=True, blank=True)
-    project = models.ForeignKey(
-        to=Project,
-        on_delete=models.CASCADE,
-    )
+    project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     env_variables = models.ManyToManyField(to="EnvVariable")
     volumes = models.ManyToManyField(to="Volume")
     port_config = models.ManyToManyField(to="PortConfiguration")
+    urls = models.ManyToManyField(to=URL)
 
     class Meta:
         abstract = True
@@ -119,7 +129,7 @@ class Volume(TimestampedModel):
         )
 
     def __str__(self):
-        return f"Volume ({self.name})"
+        return f"Volume ({self.slug})"
 
 
 class BaseDeployment(models.Model):
@@ -171,12 +181,12 @@ class GitDeployment(BaseDeployment):
         service_prefix = self.service.slug
         return f"{project_prefix}-{service_prefix}"
 
-    @property
-    def domain(self):
-        if self.is_production:
-            return self.service.base_domain
-
-        return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
+    # @property
+    # def domain(self):
+    #     if self.is_production:
+    #         return self.service.base_domain
+    #
+    #     return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
 
     def __str__(self):
         return f"{self.branch} - {self.commit_hash[:7]} - {self.status}"

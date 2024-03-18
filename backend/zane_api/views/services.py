@@ -1,12 +1,14 @@
+from django.conf import settings
 from django.utils.text import slugify
 from drf_spectacular.utils import extend_schema
+from faker import Faker
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..models import Project, DockerRegistryService, DockerDeployment, Volume, EnvVariable, PortConfiguration
+from ..models import Project, DockerRegistryService, DockerDeployment, Volume, EnvVariable, PortConfiguration, URL
 from ..services import create_service_from_docker_registry, size_in_bytes, create_docker_volume
 
 
@@ -18,7 +20,7 @@ class DockerCredentialsSerializer(serializers.Serializer):
 
 class ServicePortsSerializer(serializers.Serializer):
     public = serializers.IntegerField(required=False)
-    private = serializers.IntegerField()
+    forwarded = serializers.IntegerField()
 
 
 class VolumeSizeSerializer(serializers.Serializer):
@@ -32,11 +34,16 @@ class VolumeSerializer(serializers.Serializer):
     mount_path = serializers.CharField(max_length=255)
 
 
+class URLSerializer(serializers.Serializer):
+    domain = serializers.URLDomainField(required=True)
+    base_path = serializers.URLPathField(required=False)
+
+
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     image = serializers.CharField(required=True)
     credentials = DockerCredentialsSerializer(required=False)
-    domain = serializers.URLField(required=False)
+    urls = URLSerializer(many=True, required=False)
     command = serializers.CharField(required=False)
     ports = ServicePortsSerializer(required=False, many=True)
     env = serializers.DictField(child=serializers.CharField(), required=False)
@@ -70,20 +77,22 @@ class CreateDockerServiceAPIView(APIView):
             data = form.data
 
             # Create service in DB
+            service_slug = slugify(data["name"])
             service = DockerRegistryService.objects.create(
                 name=data['name'],
-                slug=slugify(data["name"]),
+                slug=service_slug,
                 project=project,
                 image=data['image'],
                 command=data.get('command'),
             )
 
             # Create volumes if exists
+            fake = Faker()
             volumes_request = data.get('volumes', [])
             created_volumes = Volume.objects.bulk_create([
                 Volume(
                     name=volume['name'],
-                    slug=slugify(volume["name"]),
+                    slug=f"{service.slug}-{fake.slug()}",
                     project=project,
                     size_limit=size_in_bytes(volume["size"]['n'], volume['size']['unit']) if volume.get(
                         "size") is not None else None,
@@ -112,18 +121,38 @@ class CreateDockerServiceAPIView(APIView):
             # create ports configuration
             ports_from_request = data.get('ports', [])
 
-            PortConfiguration.objects.bulk_create([
+            created_ports = PortConfiguration.objects.bulk_create([
                 PortConfiguration(
                     project=project,
                     host=port.get('public'),
-                    forwarded=port['private'],
+                    forwarded=port['forwarded'],
                 ) for port in ports_from_request
             ])
+
+            for port in created_ports:
+                service.port_config.add(port)
 
             # Create service in docker
             create_service_from_docker_registry(service)
 
-            # 2. Create first deployment
+            # Create urls to route the service to
+            if data['port']:
+                service_urls = data.get("urls", [])
+                if len(service_urls) == 0:
+                    default_url = URL.objects.create(
+                        domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
+                        base_path="/"
+                    )
+                    service.urls.add(default_url)
+                else:
+                    created_urls = URL.objects.bulk_create([
+                        URL(domain=url['domain'], base_path=url['base_path']) for url in service_urls
+                    ])
+
+                    for url in created_urls:
+                        service.urls.add(url)
+
+            # Create first deployment
             first_deployment = DockerDeployment.objects.create(
                 service=service
             )
