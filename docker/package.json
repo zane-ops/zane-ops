@@ -1,0 +1,7 @@
+{
+  "name": "@zane-ops/docker",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "docker-compose up --remove-orphans"
+  }
+}

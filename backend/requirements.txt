@@ -4,7 +4,6 @@ certifi==2024.2.2
 charset-normalizer==3.3.2
 crontab==1.0.1
 Django==5.0.2
-django-background-tasks==1.2.5
 django-compat==1.0.15
 django-filter==23.5
 django-ratelimit==4.1.0
