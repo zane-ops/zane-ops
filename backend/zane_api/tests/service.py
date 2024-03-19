@@ -166,7 +166,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(1, len(fake_docker_client.volume_map))
 
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service)]
+        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
         self.assertEqual(1, len(fake_service.attached_volumes))
         self.assertIsNotNone(fake_service.attached_volumes.get(get_volume_resource_name(created_volume)))
 
@@ -234,7 +234,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(env)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service)]
+        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
         self.assertEqual(1, len(fake_service.env))
         self.assertEqual("strongPassword123", fake_service.env.get("REDIS_PASSWORD"))
 
@@ -269,7 +269,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(6379, port.forwarded)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service)]
+        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
 
         self.assertIsNotNone(fake_service.endpoint)
 
@@ -307,7 +307,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(8080, port.forwarded)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service)]
+        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
 
         self.assertIsNone(fake_service.endpoint)
 
