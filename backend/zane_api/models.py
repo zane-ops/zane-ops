@@ -7,6 +7,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
+from shortuuid.django_fields import ShortUUIDField
 
 from .helpers import validate_url_domain
 
@@ -50,7 +51,6 @@ class BaseService(TimestampedModel):
     name = models.CharField(max_length=255)
     archived = models.BooleanField(default=False)
     slug = models.SlugField(max_length=255)
-    is_public = models.BooleanField(default=False)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     env_variables = models.ManyToManyField(to="EnvVariable")
     volumes = models.ManyToManyField(to="Volume")
@@ -154,6 +154,7 @@ class BaseDeployment(models.Model):
 
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    hash = ShortUUIDField(length=11, max_length=11, unique=True)
 
 
 class GitDeployment(BaseDeployment):

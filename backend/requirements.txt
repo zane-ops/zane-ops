@@ -28,6 +28,7 @@ redis==5.0.1
 referencing==0.33.0
 requests==2.31.0
 rpds-py==0.18.0
+shortuuid==1.0.13
 six==1.16.0
 sqlparse==0.4.4
 tblib==3.0.0
