@@ -112,7 +112,8 @@ def create_project_resources(project: Project):
         name=get_network_resource_name(project),
         scope="swarm",
         driver="overlay",
-        labels=get_resource_labels(project)
+        labels=get_resource_labels(project),
+        attachable=True
     )
 
 
