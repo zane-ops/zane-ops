@@ -118,7 +118,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
 
 class DockerServiceCreateSuccessResponseSerializer(serializers.Serializer):
-    pass
+    service = serializers.DockerServiceSerializer(read_only=True)
 
 
 class DockerServiceCreateErrorSerializer(serializers.BaseErrorSerializer):
@@ -279,7 +279,7 @@ class CreateDockerServiceAPIView(APIView):
                 for volume in created_volumes:
                     create_docker_volume(volume)
 
-                response = self.serializer_class({})
+                response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
             response = self.error_serializer_class({"errors": form.errors})

@@ -45,5 +45,41 @@ class ProjectSerializer(ModelSerializer):
         fields = ["name", "slug", "archived", "owner", "created_at", "updated_at"]
 
 
+class VolumeSerializer(ModelSerializer):
+    class Meta:
+        model = models.Volume
+        fields = ["created_at", "updated_at", "slug", "name", "containerPath", "size_limit"]
+
+
+class URLModelSerializer(ModelSerializer):
+    class Meta:
+        model = models.URL
+        fields = ["domain", "base_path"]
+
+
+class EnvVariableSerializer(ModelSerializer):
+    class Meta:
+        model = models.EnvVariable
+        fields = ["key", "value", "is_for_production"]
+
+
+class PortConfigurationSerializer(ModelSerializer):
+    class Meta:
+        model = models.EnvVariable
+        fields = ["key", "value", "is_for_production"]
+
+
+class DockerServiceSerializer(ModelSerializer):
+    volumes = VolumeSerializer(read_only=True, many=True)
+    urls = URLModelSerializer(read_only=True, many=True)
+    env_variables = EnvVariableSerializer(read_only=True, many=True)
+    ports = PortConfigurationSerializer(read_only=True, many=True, source="port_config")
+
+    class Meta:
+        model = models.DockerRegistryService
+        fields = ["image", "slug", "urls", "created_at", "updated_at", "volumes", "name", "archived", "command",
+                  "env_variables", "ports"]
+
+
 class ForbiddenResponseSerializer(Serializer):
     detail = CharField()

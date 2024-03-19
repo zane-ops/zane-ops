@@ -123,6 +123,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=create_service_payload
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json().get('service')
+        self.assertIsNotNone(data)
 
         created_service = DockerRegistryService.objects.filter(slug="cache-db").first()
         self.assertIsNotNone(created_service)
