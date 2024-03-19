@@ -270,7 +270,7 @@ class CreateDockerServiceAPIView(APIView):
                             service.urls.add(url)
 
                 # Create first deployment
-                first_deployment = DockerDeployment.objects.create(
+                DockerDeployment.objects.create(
                     service=service
                 )
 
