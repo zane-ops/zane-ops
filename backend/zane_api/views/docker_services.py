@@ -16,25 +16,25 @@ from ..services import create_service_from_docker_registry, size_in_bytes, creat
     login_to_docker_registry, pull_docker_image
 
 
-class DockerCredentialsSerializer(serializers.Serializer):
+class DockerCredentialsRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=100)
     password = serializers.CharField(max_length=100)
     registry_url = serializers.URLField(required=False)
 
 
-class ServicePortsSerializer(serializers.Serializer):
+class ServicePortsRequestSerializer(serializers.Serializer):
     public = serializers.IntegerField(required=False, default=80)
     forwarded = serializers.IntegerField()
 
 
-class VolumeSizeSerializer(serializers.Serializer):
+class VolumeSizeRequestSerializer(serializers.Serializer):
     n = serializers.IntegerField()
     unit = serializers.ChoiceField(choices=['B', 'MB', 'KB', 'GB'], default='B')
 
 
-class VolumeSerializer(serializers.Serializer):
+class VolumeRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
-    size = VolumeSizeSerializer(required=False)
+    size = VolumeSizeRequestSerializer(required=False)
     mount_path = serializers.CharField(max_length=255)
 
 
@@ -46,12 +46,12 @@ class URLSerializer(serializers.Serializer):
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     image = serializers.CharField(required=True)
-    credentials = DockerCredentialsSerializer(required=False)
+    credentials = DockerCredentialsRequestSerializer(required=False)
     urls = URLSerializer(many=True, required=False)
     command = serializers.CharField(required=False)
-    ports = ServicePortsSerializer(required=False, many=True)
+    ports = ServicePortsRequestSerializer(required=False, many=True)
     env = serializers.DictField(child=serializers.CharField(), required=False)
-    volumes = VolumeSerializer(many=True, required=False)
+    volumes = VolumeRequestSerializer(many=True, required=False)
 
     def validate(self, data: dict):
         credentials = data.get('credentials')
