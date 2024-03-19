@@ -43,7 +43,7 @@ class FakeDockerClient:
         ]
 
     @staticmethod
-    def login(username: str, password: str, regitry_url: str, reauth: bool):
+    def login(username: str, password: str, **kwargs):
         if username != 'user' or password != 'password':
             raise docker.errors.APIError("Bad Credentials")
 

@@ -61,20 +61,21 @@ def search_docker_registry(term: str) -> List[DockerImageResult]:
     return images_to_return
 
 
-def login_to_docker_registry(username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL) -> bool:
-    """
-    Login to docker registry
-
-    :returns:
-        True if the operation was succesfull and False if the credentials weren't correct
-    """
+def login_to_docker_registry(username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL):
     client = get_docker_client()
-    try:
-        client.login(username, password, registry_url, reauth=True)
-    except docker.errors.APIError:
-        return False
-    else:
-        return True
+    client.login(username=username, password=password, registry=registry_url, reauth=True)
+
+
+class DockerAuthConfig(TypedDict):
+    username: str
+    password: str
+    registry_url: str
+
+
+def pull_docker_image(image: str, auth: DockerAuthConfig = None):
+    client = get_docker_client()
+    login_to_docker_registry(**auth)
+    client.images.pull(image, auth_config=auth)
 
 
 def cleanup_project_resources(project: Project):

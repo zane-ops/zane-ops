@@ -1,3 +1,4 @@
+import docker.errors
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
@@ -105,16 +106,16 @@ class DockerLoginView(APIView):
 
         if form.is_valid():
             data = form.data
-            result = login_to_docker_registry(**data)
-
-            if not result:
+            try:
+                login_to_docker_registry(**data)
+            except docker.errors.APIError:
                 response = self.error_serializer_class(
                     {"errors": {"root": ["Invalid credentials"]}}
                 )
                 return Response(response.data, status=status.HTTP_401_UNAUTHORIZED)
-
-            response = self.serializer_class({"success": result})
-            return Response(response.data, status=status.HTTP_200_OK)
+            else:
+                response = self.serializer_class({"success": True})
+                return Response(response.data, status=status.HTTP_200_OK)
 
         return Response(
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,

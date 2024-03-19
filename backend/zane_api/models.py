@@ -77,7 +77,7 @@ class PortConfiguration(models.Model):
 class DockerRegistryService(BaseService):
     image = models.CharField(max_length=510)
     command = models.TextField(null=True, blank=True)
-    docker_credentials_email = models.CharField(max_length=255, null=True, blank=True)
+    docker_credentials_username = models.CharField(max_length=255, null=True, blank=True)
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
