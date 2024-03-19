@@ -1,6 +1,7 @@
 import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from django.utils.text import slugify
 from drf_spectacular.utils import extend_schema
 from faker import Faker
@@ -139,7 +140,6 @@ class DockerServiceCreateErrorResponseSerializer(serializers.Serializer):
 class CreateDockerServiceAPIView(APIView):
     serializer_class = DockerServiceCreateSuccessResponseSerializer
     error_serializer_class = DockerServiceCreateErrorResponseSerializer
-    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
@@ -148,7 +148,7 @@ class CreateDockerServiceAPIView(APIView):
             404: error_serializer_class,
             409: error_serializer_class,
             201: serializer_class,
-            403: forbidden_serializer_class
+            403: serializers.ForbiddenResponseSerializer
         },
         operation_id="createDockerService",
     )
@@ -284,3 +284,50 @@ class CreateDockerServiceAPIView(APIView):
 
             response = self.error_serializer_class({"errors": form.errors})
             return Response(data=response.data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+class GetDockerServiceAPIView(APIView):
+    serializer_class = DockerServiceCreateSuccessResponseSerializer
+    error_serializer_class = serializers.BaseErrorResponseSerializer
+
+    @extend_schema(
+        request=DockerServiceCreateRequestSerializer,
+        responses={
+            404: error_serializer_class,
+            200: serializer_class,
+            403: serializers.ForbiddenResponseSerializer
+        },
+        operation_id="getDockerService",
+    )
+    def get(self, request: Request, project_slug: str, service_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug)
+        except Project.DoesNotExist:
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        "root": [f"A project with the slug `{project_slug}` does not exist"],
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+
+        service = ((DockerRegistryService.objects.filter(
+            Q(slug=service_slug) & Q(project=project))
+                    .select_related("project")
+                    .prefetch_related("volumes", "port_config", "env_variables", "urls"))
+                   .first())
+
+        if service is None:
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        "root": [f"A service with the slug `{service_slug}`"
+                                 f" does not exist within the project `{project_slug}`"],
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+
+        response = self.serializer_class({"service": service})
+        return Response(response.data, status=status.HTTP_200_OK)

@@ -176,9 +176,10 @@ def get_docker_volume_size(volume: Volume) -> int:
     return int(size_string)
 
 
-def get_service_resource_name(service: BaseService):
+def get_service_resource_name(service: BaseService, service_type: Literal['docker'] | Literal['git']):
     ts_to_full_number = str(service.created_at.timestamp()).replace(".", "")
-    return f"ser-{service.project.slug}-{service.slug}-{ts_to_full_number}"
+    abbreviated_type = 'dk' if service_type == 'docker' else 'git'
+    return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
 
 
 def create_service_from_docker_registry(service: DockerRegistryService):
@@ -198,7 +199,7 @@ def create_service_from_docker_registry(service: DockerRegistryService):
 
     client.services.create(
         image=service.image,
-        name=get_service_resource_name(service),
+        name=get_service_resource_name(service, 'docker'),
         mounts=[f"{get_volume_resource_name(volume)}:{volume.containerPath}:rw" for volume in service.volumes.all()],
         endpoint_spec=endpoint_spec,
         env=[f"{env.key}={env.value}" for env in service.env_variables.all()],
