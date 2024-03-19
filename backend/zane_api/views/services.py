@@ -56,13 +56,21 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials = data.get('credentials')
         image = data.get('image')
 
-        if credentials is not None:
-            try:
-                pull_docker_image(image, auth=dict(credentials))
-            except docker.errors.APIError:
-                raise serializers.ValidationError({
-                    'image': ["Non existent image"]
-                })
+        try:
+            pull_docker_image(image, auth=dict(credentials) if credentials is not None else None)
+        except docker.errors.NotFound:
+            registry = credentials.get('registry_url') if credentials is not None else None
+            if registry is None:
+                registry = "Docker Hub's Registry"
+            else:
+                registry = f"the registry at {registry}"
+            raise serializers.ValidationError({
+                'image': [f"This image does not exist on {registry}"]
+            })
+        except docker.errors.APIError:
+            raise serializers.ValidationError({
+                'image': [f"This image does not correspond to the credentials provided"]
+            })
 
         return data
 
@@ -131,6 +139,7 @@ class DockerServiceCreateErrorResponseSerializer(serializers.Serializer):
 class CreateDockerServiceAPIView(APIView):
     serializer_class = DockerServiceCreateSuccessResponseSerializer
     error_serializer_class = DockerServiceCreateErrorResponseSerializer
+    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
@@ -139,6 +148,7 @@ class CreateDockerServiceAPIView(APIView):
             404: error_serializer_class,
             409: error_serializer_class,
             201: serializer_class,
+            403: forbidden_serializer_class
         },
         operation_id="createDockerService",
     )

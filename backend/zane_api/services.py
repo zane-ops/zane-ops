@@ -69,12 +69,10 @@ def login_to_docker_registry(username: str, password: str, registry_url: str = D
 class DockerAuthConfig(TypedDict):
     username: str
     password: str
-    registry_url: str
 
 
 def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client = get_docker_client()
-    login_to_docker_registry(**auth)
     client.images.pull(image, auth_config=auth)
 
 
