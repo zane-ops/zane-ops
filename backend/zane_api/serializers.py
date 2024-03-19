@@ -65,8 +65,8 @@ class EnvVariableSerializer(ModelSerializer):
 
 class PortConfigurationSerializer(ModelSerializer):
     class Meta:
-        model = models.EnvVariable
-        fields = ["key", "value", "is_for_production"]
+        model = models.PortConfiguration
+        fields = ["host", "forwarded"]
 
 
 class DockerServiceSerializer(ModelSerializer):
