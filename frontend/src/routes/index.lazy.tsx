@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
-import { ApiResponse, apiClient } from "../api/client";
+import { apiClient } from "../api/client";
 import { deleteCookie, getCookie } from "../utils";
 
 export const Route = createLazyFileRoute("/")({
@@ -10,11 +10,9 @@ export const Route = createLazyFileRoute("/")({
 });
 
 function AuthedView() {
+  const navigate = useNavigate();
   const query = useAuthUser();
   const user = query.data?.data?.user;
-  if (!user) {
-    return null;
-  }
 
   const queryClient = useQueryClient();
   const { data, isPending, mutate } = useMutation({
@@ -35,8 +33,15 @@ function AuthedView() {
         queryKey: ["AUTHED_USER"]
       });
       deleteCookie("csrftoken");
+      navigate({ to: "/login" });
+      return null;
     }
   });
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <dl>
       <h1>

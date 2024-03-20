@@ -9,10 +9,11 @@ import logoSymbolBlack from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 
 import { AlertCircle } from "lucide-react";
+import { withLoggedOutRedirect } from "~/components/helper/auth-redirect";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 export const Route = createLazyFileRoute("/login")({
-  component: Login
+  component: withLoggedOutRedirect(Login)
 });
 
 export default function Login() {
@@ -28,11 +29,11 @@ export default function Login() {
         return error;
       }
       if (data?.success) {
+        navigate({ to: "/" });
         return queryClient.removeQueries({
           queryKey: ["AUTHED_USER"]
         });
       }
-      return await navigate({ to: "/" });
     }
   });
 
