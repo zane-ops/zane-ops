@@ -1,8 +1,9 @@
 {
-  "name": "frontend",
+  "name": "@zane-ops/frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "description": "Frontend for ZaneOps",
   "scripts": {
     "generate:api": "openapi-typescript ../openapi/schema.yml -o src/api/v1.ts",
     "dev": "vite --host",
