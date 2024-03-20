@@ -96,7 +96,7 @@ export default function Login() {
               )}
             </Form.Field>
 
-            <Form.Field className="my-2 flex flex-col gap-1" name="password">
+            <Form.Field className="flex flex-col gap-1" name="password">
               <Form.Label>Password</Form.Label>
               <Form.Control asChild>
                 <Input type="password" name="password" />
