@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ComponentType } from "react";
+import type { ComponentType } from "react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 
 export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
