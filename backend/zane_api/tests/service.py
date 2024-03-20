@@ -39,11 +39,13 @@ class FakeDockerClient:
         self.volumes = MagicMock()
         self.services = MagicMock()
         self.images = MagicMock()
+        self.containers = MagicMock()
         self.raise_error = raise_error
         self.is_logged_in = False
         self.downloaded_images: list[str] = []
         self.credentials = {}
 
+        self.containers.run = self.containers_run
         self.images.pull = self.images_pull
         self.services.create = self.services_create
         self.services.get = self.services_get
@@ -51,6 +53,12 @@ class FakeDockerClient:
         self.volumes.get = self.volumes_get
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
         self.service_map = {}  # type: dict[str, FakeDockerClient.FakeService]
+
+    @staticmethod
+    def containers_run(image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool):
+        _, port = list(ports.values())[0]
+        if port == 8080:
+            raise docker.errors.APIError(f"Port {port} is already used")
 
     def volumes_create(self, name: str, driver_opts: dict[str, str], **kwargs):
         self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name, size_limit=driver_opts.get('o'))
@@ -73,6 +81,8 @@ class FakeDockerClient:
         volumes: dict[str, str] = {}
         for mount in mounts:
             volume_name, mount_path, _ = mount.split(":")
+            if volume_name not in self.volume_map:
+                raise docker.errors.NotFound("Volume not created")
             volumes[volume_name] = mount_path
 
         envs: dict[str, str] = {}
@@ -276,6 +286,84 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         port_in_docker = fake_service.endpoint.get('Ports')[0]
         self.assertEqual(6383, port_in_docker["PublishedPort"])
         self.assertEqual(6379, port_in_docker["TargetPort"])
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_should_not_work_with_unavailable_host_port(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "name": "noSQL db",
+            "image": "redis:alpine",
+            "ports": [
+                {
+                    "public": 8080,
+                    "forwarded": 6379
+                },
+                {
+                    "public": 8085,
+                    "forwarded": 6379
+                },
+            ]
+        }
+
+        response = self.client.post(
+            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+
+        errors = response.json().get("errors")
+        self.assertIsNotNone(errors)
+        self.assertIsNotNone(errors.get('ports'))
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="nosql-db").first()
+        self.assertIsNone(created_service)
+
+    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_should_not_work_with_port_already_used_by_other_services(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        service = DockerRegistryService.objects.create(
+            name="cache db2",
+            slug="cache-db",
+            image="redis:alpine",
+            project=p
+        )
+
+        used_port = PortConfiguration(
+            project=p,
+            host=8082,
+            forwarded=5540,
+        )
+        used_port.save()
+        service.port_config.add(used_port)
+
+        create_service_payload = {
+            "name": "Adminer",
+            "image": "adminer:latest",
+            "ports": [
+                {
+                    "public": used_port.host,
+                    "forwarded": 8080
+                }
+            ]
+        }
+
+        response = self.client.post(
+            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type='application/json'
+        )
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+        errors = response.json().get("errors")
+        self.assertIsNotNone(errors)
+        self.assertIsNotNone(errors.get('ports'))
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="adminer").first()
+        self.assertIsNone(created_service)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_http_port(self, mock_fake_docker: Mock):

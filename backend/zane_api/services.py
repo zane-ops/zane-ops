@@ -198,10 +198,15 @@ def create_service_from_docker_registry(service: DockerRegistryService):
     if len(exposed_ports) > 0:
         endpoint_spec = EndpointSpec(ports=exposed_ports)
 
+    mounts: list[str] = []
+    for volume in service.volumes.all():
+        docker_volume = client.volumes.get(get_volume_resource_name(volume))
+        mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
+
     client.services.create(
         image=service.image,
         name=get_service_resource_name(service, 'docker'),
-        mounts=[f"{get_volume_resource_name(volume)}:{volume.containerPath}:rw" for volume in service.volumes.all()],
+        mounts=mounts,
         endpoint_spec=endpoint_spec,
         env=[f"{env.key}={env.value}" for env in service.env_variables.all()],
         labels=get_resource_labels(service.project),

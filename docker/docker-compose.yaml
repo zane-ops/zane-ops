@@ -23,6 +23,8 @@ services:
     restart: always
     ports:
       - 8082:8080
+    networks:
+      - net-kiss-hub-1710866375856995
   redis-gui:
     image: redis/redisinsight
     environment:
@@ -33,9 +35,12 @@ services:
       - redisinsight:/data
     networks:
       - zane-out
+      - net-kiss-hub-1710866375856995
 volumes:
   db-data:
   redisinsight:
 networks:
   zane-out:
+    external: true
+  net-kiss-hub-1710866375856995:
     external: true

@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from .. import serializers
 from ..models import Project, DockerRegistryService, DockerDeployment, Volume, EnvVariable, PortConfiguration, URL
 from ..services import create_service_from_docker_registry, size_in_bytes, create_docker_volume, \
-    login_to_docker_registry, pull_docker_image
+    login_to_docker_registry, pull_docker_image, check_if_port_is_available
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
@@ -38,7 +38,7 @@ class VolumeRequestSerializer(serializers.Serializer):
     mount_path = serializers.CharField(max_length=255)
 
 
-class URLSerializer(serializers.Serializer):
+class URLRequestSerializer(serializers.Serializer):
     domain = serializers.URLDomainField(required=True)
     base_path = serializers.URLPathField(required=False, default="/")
 
@@ -47,7 +47,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     image = serializers.CharField(required=True)
     credentials = DockerCredentialsRequestSerializer(required=False)
-    urls = URLSerializer(many=True, required=False)
+    urls = URLRequestSerializer(many=True, required=False)
     command = serializers.CharField(required=False)
     ports = ServicePortsRequestSerializer(required=False, many=True)
     env = serializers.DictField(child=serializers.CharField(), required=False)
@@ -87,25 +87,44 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         else:
             return value
 
-    def validate_ports(self, value: list[dict[str, int]]):
-        # Check for only 1 http port
+    def validate_ports(self, ports: list[dict[str, int]]):
         no_of_http_ports = 0
         http_ports = [80, 443]
-        for port in value:
+        public_ports_seen = set()
+        for port in ports:
             public_port = port['public']
+
+            # Check for only 1 http port
             if public_port in http_ports:
                 no_of_http_ports += 1
             if no_of_http_ports > 1:
                 raise serializers.ValidationError("Only one HTTP port is allowed")
 
-        # Check for duplicate public ports
-        public_ports_seen = set()
-        for port in value:
-            public_port = port['public']
+            # Check for duplicate public ports
             if public_port in public_ports_seen:
                 raise serializers.ValidationError("Duplicate public port values are not allowed.")
-            public_ports_seen.add(public_port)
-        return value
+            if public_port not in http_ports:
+                public_ports_seen.add(public_port)
+
+            # check if port is available
+            is_port_available = check_if_port_is_available(public_port)
+            if not is_port_available:
+                raise serializers.ValidationError(f"Port {public_port} is not available on the host machine.")
+
+        already_existing_ports = [
+            str(port.host) for port in PortConfiguration.objects.filter(host__in=list(public_ports_seen))
+        ]
+
+        if len(already_existing_ports) > 0:
+            ports_str = ", ".join(already_existing_ports)
+
+            if len(already_existing_ports) == 1:
+                message = f"Port {ports_str} is already used by other services."
+            else:
+                message = f"Ports {ports_str} are already used by other services."
+            raise serializers.ValidationError(message)
+
+        return ports
 
     def validate_urls(self, value: list[dict[str, str]]):
         # Check for duplicate public ports
@@ -212,8 +231,7 @@ class CreateDockerServiceAPIView(APIView):
                     ) for volume in volumes_request
                 ])
 
-                for volume in created_volumes:
-                    service.volumes.add(volume)
+                service.volumes.add(*created_volumes)
 
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get('env', {})
@@ -226,8 +244,7 @@ class CreateDockerServiceAPIView(APIView):
                     ) for key, value in envs_from_request.items()
                 ])
 
-                for env in created_envs:
-                    service.env_variables.add(env)
+                service.env_variables.add(*created_envs)
 
                 # create ports configuration
                 ports_from_request = data.get('ports', [])
@@ -240,8 +257,7 @@ class CreateDockerServiceAPIView(APIView):
                     ) for port in ports_from_request
                 ])
 
-                for port in created_ports:
-                    service.port_config.add(port)
+                service.port_config.add(*created_ports)
 
                 # Create urls to route the service to
                 http_ports = [80, 443]
@@ -265,9 +281,7 @@ class CreateDockerServiceAPIView(APIView):
                         created_urls = URL.objects.bulk_create([
                             URL(domain=url['domain'], base_path=url['base_path']) for url in service_urls
                         ])
-
-                        for url in created_urls:
-                            service.urls.add(url)
+                        service.urls.add(*created_urls)
 
                 # Create first deployment
                 DockerDeployment.objects.create(
@@ -275,9 +289,9 @@ class CreateDockerServiceAPIView(APIView):
                 )
 
                 # Create resources in docker
-                create_service_from_docker_registry(service)
                 for volume in created_volumes:
                     create_docker_volume(volume)
+                create_service_from_docker_registry(service)
 
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
