@@ -9,15 +9,17 @@ import logoSymbolBlack from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 
 import { AlertCircle } from "lucide-react";
-import { withLoggedOutRedirect } from "~/components/helper/auth-redirect";
+import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 export const Route = createLazyFileRoute("/login")({
-  component: withLoggedOutRedirect(Login)
+  component: Login
 });
 
 export default function Login() {
   const navigate = useNavigate();
+  const query = useAuthUser();
+  const user = query.data?.data?.user;
 
   const queryClient = useQueryClient();
   const { isPending, mutate, data } = useMutation({
@@ -37,6 +39,15 @@ export default function Login() {
       }
     }
   });
+
+  if (query.isLoading) {
+    return <div className="text-3xl font-bold">Loading... with tailwind</div>;
+  }
+
+  if (user) {
+    navigate({ to: "/" });
+    return null;
+  }
 
   return (
     <>
