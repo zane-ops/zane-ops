@@ -17,6 +17,10 @@ importers:
 
   backend: {}
 
+  cli: {}
+
+  docker: {}
+
   frontend:
     dependencies:
       '@radix-ui/react-form':
@@ -113,6 +117,8 @@ importers:
       vite:
         specifier: ^5.1.0
         version: 5.1.6
+
+  server: {}
 
 packages:
 

@@ -9,6 +9,7 @@ import logoSymbolBlack from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 
 import { AlertCircle } from "lucide-react";
+import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 
 export const Route = createLazyFileRoute("/login")({
@@ -17,6 +18,8 @@ export const Route = createLazyFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
+  const query = useAuthUser();
+  const user = query.data?.data?.user;
 
   const queryClient = useQueryClient();
   const { isPending, mutate, data } = useMutation({
@@ -28,13 +31,23 @@ function Login() {
         return error;
       }
       if (data?.success) {
-        return queryClient.removeQueries({
+        queryClient.removeQueries({
           queryKey: ["AUTHED_USER"]
         });
+        navigate({ to: "/" });
+        return;
       }
-      return await navigate({ to: "/" });
     }
   });
+
+  if (query.isLoading) {
+    return <div className="text-3xl font-bold">Loading... with tailwind</div>;
+  }
+
+  if (user) {
+    navigate({ to: "/" });
+    return null;
+  }
 
   return (
     <>
@@ -96,7 +109,7 @@ function Login() {
               )}
             </Form.Field>
 
-            <Form.Field className="my-2 flex flex-col gap-1" name="password">
+            <Form.Field className="flex flex-col gap-1" name="password">
               <Form.Label>Password</Form.Label>
               <Form.Control asChild>
                 <Input type="password" name="password" />
