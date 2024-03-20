@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ComponentType, ReactElement, useEffect } from "react";
+import { ComponentType, ReactElement } from "react";
 import { apiClient } from "../../api/client";
 
 export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
@@ -24,6 +24,6 @@ export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
       return null;
     }
 
-    return <WrappedComponent {...props} />;
+    return <WrappedComponent {...props} user={user} />;
   };
 }
