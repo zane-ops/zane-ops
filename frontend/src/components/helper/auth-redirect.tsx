@@ -1,9 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ComponentType, ReactElement } from "react";
+import { ComponentType } from "react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 
 export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
-  return function AuthRedirectWrapper(props: ReactElement) {
+  return function AuthRedirectWrapper(props: any) {
     const navigate = useNavigate();
 
     const query = useAuthUser();
