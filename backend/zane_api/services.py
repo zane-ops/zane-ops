@@ -140,14 +140,9 @@ def get_volume_resource_name(volume: Volume):
 def create_docker_volume(volume: Volume):
     client = get_docker_client()
 
-    driver_options = {'type': 'tmpfs', 'device': 'tmpfs'}
-    if volume.size_limit is not None:
-        driver_options['o'] = f'size={volume.size_limit}'
-
     client.volumes.create(
         name=get_volume_resource_name(volume),
         driver='local',
-        driver_opts=driver_options,
         labels=get_resource_labels(volume.project)
     )
 
@@ -225,8 +220,3 @@ def create_service_from_docker_registry(service: DockerRegistryService):
             failure_action="rollback"
         ),
     )
-
-
-def size_in_bytes(n: int, unit: Literal['B'] | Literal["MB"] | Literal["GB"] | Literal["KB"]):
-    units = {'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3}
-    return n * units[unit]

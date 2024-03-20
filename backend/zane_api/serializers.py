@@ -48,7 +48,7 @@ class ProjectSerializer(ModelSerializer):
 class VolumeSerializer(ModelSerializer):
     class Meta:
         model = models.Volume
-        fields = ["created_at", "updated_at", "slug", "name", "containerPath", "size_limit"]
+        fields = ["created_at", "updated_at", "slug", "name", "containerPath"]
 
 
 class URLModelSerializer(ModelSerializer):

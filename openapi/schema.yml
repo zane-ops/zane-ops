@@ -857,7 +857,7 @@ components:
         urls:
           type: array
           items:
-            $ref: '#/components/schemas/URL'
+            $ref: '#/components/schemas/URLRequest'
         command:
           type: string
         ports:
@@ -1082,16 +1082,6 @@ components:
           $ref: '#/components/schemas/Project'
       required:
       - project
-    URL:
-      type: object
-      properties:
-        domain:
-          type: string
-        base_path:
-          type: string
-          default: /
-      required:
-      - domain
     URLModel:
       type: object
       properties:
@@ -1104,18 +1094,16 @@ components:
           default: /
       required:
       - domain
-    UnitEnum:
-      enum:
-      - B
-      - MB
-      - KB
-      - GB
-      type: string
-      description: |-
-        * `B` - B
-        * `MB` - MB
-        * `KB` - KB
-        * `GB` - GB
+    URLRequest:
+      type: object
+      properties:
+        domain:
+          type: string
+        base_path:
+          type: string
+          default: /
+      required:
+      - domain
     User:
       type: object
       properties:
@@ -1158,11 +1146,6 @@ components:
         containerPath:
           type: string
           maxLength: 255
-        size_limit:
-          type: integer
-          maximum: 2147483647
-          minimum: 1024
-          nullable: true
       required:
       - containerPath
       - created_at
@@ -1182,25 +1165,12 @@ components:
         name:
           type: string
           maxLength: 100
-        size:
-          $ref: '#/components/schemas/VolumeSizeRequest'
         mount_path:
           type: string
           maxLength: 255
       required:
       - mount_path
       - name
-    VolumeSizeRequest:
-      type: object
-      properties:
-        n:
-          type: integer
-        unit:
-          allOf:
-          - $ref: '#/components/schemas/UnitEnum'
-          default: B
-      required:
-      - n
   securitySchemes:
     cookieAuth:
       type: apiKey

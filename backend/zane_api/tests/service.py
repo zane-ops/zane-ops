@@ -10,16 +10,15 @@ from docker.types import EndpointSpec
 from rest_framework import status
 
 from . import AuthAPITestCase
-from ..models import Project, DockerRegistryService, DockerDeployment, Volume, PortConfiguration, URL
-from ..services import get_service_resource_name, get_volume_resource_name, size_in_bytes
+from ..models import Project, DockerRegistryService, DockerDeployment, PortConfiguration, URL
+from ..services import get_service_resource_name, get_volume_resource_name
 
 
 class FakeDockerClient:
     class FakeVolume:
-        def __init__(self, parent: 'FakeDockerClient', name: str, size_limit: str = None):
+        def __init__(self, parent: 'FakeDockerClient', name: str):
             self.name = name
             self.parent = parent
-            self.size_limit = size_limit
 
         def remove(self, force: bool):
             if self.parent.raise_error:
@@ -60,8 +59,8 @@ class FakeDockerClient:
         if port == 8080:
             raise docker.errors.APIError(f"Port {port} is already used")
 
-    def volumes_create(self, name: str, driver_opts: dict[str, str], **kwargs):
-        self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name, size_limit=driver_opts.get('o'))
+    def volumes_create(self, name: str, **kwargs):
+        self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name)
 
     def volumes_get(self, name: str):
         if name not in self.volume_map:
@@ -179,42 +178,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
         self.assertEqual(1, len(fake_service.attached_volumes))
         self.assertIsNotNone(fake_service.attached_volumes.get(get_volume_resource_name(created_volume)))
-
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_with_volume_and_size_limit(self, mock_fake_docker: Mock):
-        owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "name": "cache db",
-            "image": "redis:alpine",
-            "volumes": [
-                {
-                    "name": "redis_data_volume",
-                    "mount_path": "/data",
-                    "size": {
-                        "n": 500,
-                        "unit": "MB"
-                    },
-                }
-            ]
-        }
-
-        response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
-            data=json.dumps(create_service_payload),
-            content_type='application/json'
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="cache-db").first()
-        volume: Volume = created_service.volumes.first()
-
-        self.assertEqual(size_in_bytes(500, 'MB'), volume.size_limit)
-
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_volume = list(fake_docker_client.volume_map.values())[0]
-        self.assertIsNotNone(fake_volume.size_limit)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_env_and_command(self, mock_fake_docker: Mock):

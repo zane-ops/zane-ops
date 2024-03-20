@@ -3,7 +3,6 @@ from typing import List
 
 from crontab import CronTab
 from django.conf import settings
-from django.core.validators import MinValueValidator
 from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -118,8 +117,6 @@ class Volume(TimestampedModel):
         to=Project,
         on_delete=models.CASCADE,
     )
-    ONE_KB = 1024
-    size_limit = models.PositiveIntegerField(null=True, validators=[MinValueValidator(ONE_KB)])
     containerPath = models.CharField(max_length=255)
 
     class Meta:

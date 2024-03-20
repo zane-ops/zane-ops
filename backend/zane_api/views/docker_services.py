@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from .. import serializers
 from ..models import Project, DockerRegistryService, DockerDeployment, Volume, EnvVariable, PortConfiguration, URL
-from ..services import create_service_from_docker_registry, size_in_bytes, create_docker_volume, \
+from ..services import create_service_from_docker_registry, create_docker_volume, \
     login_to_docker_registry, pull_docker_image, check_if_port_is_available
 
 
@@ -27,14 +27,8 @@ class ServicePortsRequestSerializer(serializers.Serializer):
     forwarded = serializers.IntegerField()
 
 
-class VolumeSizeRequestSerializer(serializers.Serializer):
-    n = serializers.IntegerField()
-    unit = serializers.ChoiceField(choices=['B', 'MB', 'KB', 'GB'], default='B')
-
-
 class VolumeRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
-    size = VolumeSizeRequestSerializer(required=False)
     mount_path = serializers.CharField(max_length=255)
 
 
@@ -66,7 +60,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             else:
                 registry = f"the registry at {registry}"
             raise serializers.ValidationError({
-                'image': [f"This image does not exist on {registry}"]
+                'image': [f"The image `{image}` does not exist on {registry}"]
             })
         except docker.errors.APIError:
             raise serializers.ValidationError({
@@ -225,8 +219,6 @@ class CreateDockerServiceAPIView(APIView):
                         name=volume['name'],
                         slug=f"{service.slug}-{fake.slug()}",
                         project=project,
-                        size_limit=size_in_bytes(volume["size"]['n'], volume['size']['unit']) if volume.get(
-                            "size") is not None else None,
                         containerPath=volume['mount_path'],
                     ) for volume in volumes_request
                 ])
