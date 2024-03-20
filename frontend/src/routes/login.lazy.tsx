@@ -29,10 +29,11 @@ export default function Login() {
         return error;
       }
       if (data?.success) {
-        navigate({ to: "/" });
-        return queryClient.removeQueries({
+        queryClient.removeQueries({
           queryKey: ["AUTHED_USER"]
         });
+        navigate({ to: "/" });
+        return;
       }
     }
   });
