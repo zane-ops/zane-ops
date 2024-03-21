@@ -3,10 +3,12 @@ from typing import List
 
 from crontab import CronTab
 from django.conf import settings
-from django.core.validators import MinValueValidator
 from django.db import models
 from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
+from shortuuid.django_fields import ShortUUIDField
+
+from .helpers import validate_url_domain
 
 
 class TimestampedModel(models.Model):
@@ -33,18 +35,26 @@ class Project(TimestampedModel):
         ordering = ["-updated_at"]
 
 
+class URL(models.Model):
+    domain = models.CharField(max_length=1000, null=True, blank=True, validators=[validate_url_domain])
+    base_path = models.CharField(default="/")
+
+    class Meta:
+        unique_together = (
+            "domain",
+            "base_path",
+        )
+
+
 class BaseService(TimestampedModel):
     name = models.CharField(max_length=255)
     archived = models.BooleanField(default=False)
     slug = models.SlugField(max_length=255)
-    is_public = models.BooleanField(default=False)
-    base_domain = models.URLField(max_length=1000, null=True, blank=True)
-    project = models.ForeignKey(
-        to=Project,
-        on_delete=models.CASCADE,
-    )
+    project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     env_variables = models.ManyToManyField(to="EnvVariable")
-    http_logs = models.ManyToManyField(to="HttpLog")
+    volumes = models.ManyToManyField(to="Volume")
+    port_config = models.ManyToManyField(to="PortConfiguration")
+    urls = models.ManyToManyField(to=URL)
 
     class Meta:
         abstract = True
@@ -57,9 +67,16 @@ class BaseService(TimestampedModel):
         return f"{self.name} ({self.slug})"
 
 
+class PortConfiguration(models.Model):
+    host = models.PositiveIntegerField(default=80, unique=True)
+    forwarded = models.PositiveIntegerField()
+    project = models.ForeignKey(to='Project', on_delete=models.CASCADE)
+
+
 class DockerRegistryService(BaseService):
-    base_docker_image = models.CharField(max_length=510)
-    docker_credentials_email = models.CharField(max_length=255, null=True, blank=True)
+    image = models.CharField(max_length=510)
+    command = models.TextField(null=True, blank=True)
+    docker_credentials_username = models.CharField(max_length=255, null=True, blank=True)
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
@@ -90,7 +107,7 @@ class EnvVariable(models.Model):
     )
 
     def __str__(self):
-        return self.key
+        return f"EnvVariable ({self.key})"
 
 
 class Volume(TimestampedModel):
@@ -100,15 +117,7 @@ class Volume(TimestampedModel):
         to=Project,
         on_delete=models.CASCADE,
     )
-    ONE_KB = 1024
-    size_limit = models.PositiveIntegerField(null=True, validators=[MinValueValidator(ONE_KB)])
     containerPath = models.CharField(max_length=255)
-    dockerService = models.ForeignKey(
-        to=DockerRegistryService, null=True, on_delete=models.SET_NULL
-    )
-    gitService = models.ForeignKey(
-        to=GitRepositoryService, null=True, on_delete=models.SET_NULL
-    )
 
     class Meta:
         unique_together = (
@@ -117,7 +126,7 @@ class Volume(TimestampedModel):
         )
 
     def __str__(self):
-        return self.name
+        return f"Volume ({self.slug})"
 
 
 class BaseDeployment(models.Model):
@@ -134,6 +143,7 @@ class BaseDeployment(models.Model):
         default=DeploymentStatus.PENDING,
     )
     logs = models.ManyToManyField(to="SimpleLog")
+    http_logs = models.ManyToManyField(to="HttpLog")
 
     class Meta:
         abstract = True
@@ -141,12 +151,7 @@ class BaseDeployment(models.Model):
 
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = (
-            "is_production",
-            "service",
-        )
+    hash = ShortUUIDField(length=11, max_length=11, unique=True)
 
 
 class GitDeployment(BaseDeployment):
@@ -154,7 +159,7 @@ class GitDeployment(BaseDeployment):
         max_length=40
     )  # Typical length of a Git commit hash, but we will use the short version
     commit_message = models.TextField(blank=True)
-    build_duration_in_ms = models.PositiveIntegerField()
+    build_duration_in_ms = models.PositiveIntegerField(null=True)
     branch = models.CharField(max_length=255)
     service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
     commit_author_username = models.CharField(max_length=255)
@@ -174,18 +179,12 @@ class GitDeployment(BaseDeployment):
         service_prefix = self.service.slug
         return f"{project_prefix}-{service_prefix}"
 
-    @property
-    def domain(self):
-        if self.is_production:
-            return self.service.base_domain
-
-        return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
-
-    class Meta:
-        unique_together = (
-            "is_production",
-            "service",
-        )
+    # @property
+    # def domain(self):
+    #     if self.is_production:
+    #         return self.service.base_domain
+    #
+    #     return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
 
     def __str__(self):
         return f"{self.branch} - {self.commit_hash[:7]} - {self.status}"

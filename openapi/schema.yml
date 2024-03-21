@@ -340,6 +340,102 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjetCreateErrorResponse'
           description: ''
+  /api/projects/{project_slug}/create-service/docker/:
+    post:
+      operationId: createDockerService
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceCreateErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceCreateErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceCreateErrorResponse'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceCreateSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/:
+    get:
+      operationId: getDockerService
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseErrorResponse'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceCreateSuccessResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -521,6 +617,21 @@ components:
           type: string
       required:
       - details
+    DockerCredentialsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 100
+        password:
+          type: string
+          maxLength: 100
+        registry_url:
+          type: string
+          format: uri
+      required:
+      - password
+      - username
     DockerImage:
       type: object
       properties:
@@ -631,6 +742,148 @@ components:
           type: boolean
       required:
       - available
+    DockerService:
+      type: object
+      properties:
+        image:
+          type: string
+          maxLength: 510
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLModel'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        archived:
+          type: boolean
+        command:
+          type: string
+          nullable: true
+        env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvVariable'
+          readOnly: true
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortConfiguration'
+          readOnly: true
+      required:
+      - created_at
+      - env_variables
+      - image
+      - name
+      - ports
+      - slug
+      - updated_at
+      - urls
+      - volumes
+    DockerServiceCreateError:
+      type: object
+      properties:
+        root:
+          type: array
+          items:
+            type: string
+        name:
+          type: array
+          items:
+            type: string
+        image:
+          type: array
+          items:
+            type: string
+        credentials:
+          type: array
+          items:
+            type: string
+        urls:
+          type: array
+          items:
+            type: string
+        command:
+          type: array
+          items:
+            type: string
+        ports:
+          type: array
+          items:
+            type: string
+        env:
+          type: array
+          items:
+            type: string
+        volumes:
+          type: array
+          items:
+            type: string
+    DockerServiceCreateErrorResponse:
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/DockerServiceCreateError'
+      required:
+      - errors
+    DockerServiceCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        image:
+          type: string
+        credentials:
+          $ref: '#/components/schemas/DockerCredentialsRequest'
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLRequest'
+        command:
+          type: string
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServicePortsRequest'
+        env:
+          type: object
+          additionalProperties:
+            type: string
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VolumeRequest'
+      required:
+      - image
+      - name
+    DockerServiceCreateSuccessResponse:
+      type: object
+      properties:
+        service:
+          allOf:
+          - $ref: '#/components/schemas/DockerService'
+          readOnly: true
+      required:
+      - service
     DockerSuccessResponse:
       type: object
       properties:
@@ -640,6 +893,20 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
+    EnvVariable:
+      type: object
+      properties:
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+          maxLength: 255
+        is_for_production:
+          type: boolean
+      required:
+      - key
+      - value
     ForbiddenResponse:
       type: object
       properties:
@@ -703,6 +970,19 @@ components:
         name:
           type: string
           maxLength: 255
+    PortConfiguration:
+      type: object
+      properties:
+        host:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        forwarded:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - forwarded
     Project:
       type: object
       properties:
@@ -785,6 +1065,16 @@ components:
           type: array
           items:
             type: string
+    ServicePortsRequest:
+      type: object
+      properties:
+        public:
+          type: integer
+          default: 80
+        forwarded:
+          type: integer
+      required:
+      - forwarded
     SingleProjectSuccessResponse:
       type: object
       properties:
@@ -792,6 +1082,28 @@ components:
           $ref: '#/components/schemas/Project'
       required:
       - project
+    URLModel:
+      type: object
+      properties:
+        domain:
+          type: string
+          nullable: true
+          maxLength: 1000
+        base_path:
+          type: string
+          default: /
+      required:
+      - domain
+    URLRequest:
+      type: object
+      properties:
+        domain:
+          type: string
+        base_path:
+          type: string
+          default: /
+      required:
+      - domain
     User:
       type: object
       properties:
@@ -813,6 +1125,33 @@ components:
           description: Designates whether the user can log into this admin site.
       required:
       - username
+    Volume:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 255
+        containerPath:
+          type: string
+          maxLength: 255
+      required:
+      - containerPath
+      - created_at
+      - name
+      - slug
+      - updated_at
     VolumeGetSizeSuccessResponse:
       type: object
       properties:
@@ -820,6 +1159,18 @@ components:
           type: integer
       required:
       - size
+    VolumeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        mount_path:
+          type: string
+          maxLength: 255
+      required:
+      - mount_path
+      - name
   securitySchemes:
     cookieAuth:
       type: apiKey

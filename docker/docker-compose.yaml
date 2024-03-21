@@ -1,34 +1,46 @@
 version: "3.4"
 
 services:
-    redis:
-        image: redis
-        ports:
-            - "6381:6379"
-    db:
-        image: postgres:12-alpine
-        restart: always
-        volumes:
-            - db-data:/var/lib/postgresql/data
-        environment:
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: password
-            POSTGRES_DB: zane
-        ports:
-            - "5434:5432"
-    adminer:
-        image: adminer
-        restart: always
-        ports:
-            - 8082:8080
-    redis-gui:
-        image: redis/redisinsight
-        environment:
-            - REDIS_HOSTS=local:redis:6379
-        ports:
-            - "8089:5540"
-        volumes:
-            - redisinsight:/data
+  redis:
+    image: redis
+    ports:
+      - "6381:6379"
+    networks:
+      - zane-out
+  db:
+    image: postgres:12-alpine
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: zane
+    ports:
+      - "5434:5432"
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8082:8080
+    networks:
+      - net-kiss-hub-1710866375856995
+  redis-gui:
+    image: redis/redisinsight
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8089:5540"
+    volumes:
+      - redisinsight:/data
+    networks:
+      - zane-out
+      - net-kiss-hub-1710866375856995
 volumes:
-    db-data:
-    redisinsight:
+  db-data:
+  redisinsight:
+networks:
+  zane-out:
+    external: true
+  net-kiss-hub-1710866375856995:
+    external: true

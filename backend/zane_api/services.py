@@ -1,9 +1,10 @@
-from typing import List, TypedDict
+from typing import List, TypedDict, Literal
 
 import docker
 import docker.errors
+from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 
-from .models import Project, Volume
+from .models import Project, Volume, DockerRegistryService, BaseService
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = 'registry-1.docker.io/v2'
@@ -22,7 +23,7 @@ def get_docker_client():
 
 def get_network_resource_name(project: Project) -> str:
     ts_to_full_number = str(project.created_at.timestamp()).replace(".", "")
-    return f"{project.slug}-{ts_to_full_number}"
+    return f"net-{project.slug}-{ts_to_full_number}"
 
 
 def get_resource_labels(project: Project):
@@ -60,20 +61,19 @@ def search_docker_registry(term: str) -> List[DockerImageResult]:
     return images_to_return
 
 
-def login_to_docker_registry(username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL) -> bool:
-    """
-    Login to docker registry
-
-    :returns:
-        True if the operation was succesfull and False if the credentials weren't correct
-    """
+def login_to_docker_registry(username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL):
     client = get_docker_client()
-    try:
-        client.login(username, password, registry_url, reauth=True)
-    except docker.errors.APIError:
-        return False
-    else:
-        return True
+    client.login(username=username, password=password, registry=registry_url, reauth=True)
+
+
+class DockerAuthConfig(TypedDict):
+    username: str
+    password: str
+
+
+def pull_docker_image(image: str, auth: DockerAuthConfig = None):
+    client = get_docker_client()
+    client.images.pull(image, auth_config=auth)
 
 
 def cleanup_project_resources(project: Project):
@@ -112,7 +112,8 @@ def create_project_resources(project: Project):
         name=get_network_resource_name(project),
         scope="swarm",
         driver="overlay",
-        labels=get_resource_labels(project)
+        labels=get_resource_labels(project),
+        attachable=True
     )
 
 
@@ -133,20 +134,15 @@ def check_if_port_is_available(port: int) -> bool:
 
 def get_volume_resource_name(volume: Volume):
     ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
-    return f"{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
+    return f"vol-{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
 
 
 def create_docker_volume(volume: Volume):
     client = get_docker_client()
 
-    driver_options = {'type': 'tmpfs', 'device': 'tmpfs'}
-    if volume.size_limit is not None:
-        driver_options['o'] = f'size={volume.size_limit}'
-
     client.volumes.create(
         name=get_volume_resource_name(volume),
         driver='local',
-        driver_opts=driver_options,
         labels=get_resource_labels(volume.project)
     )
 
@@ -174,3 +170,53 @@ def get_docker_volume_size(volume: Volume) -> int:
     )
     size_string, _ = result.decode(encoding='utf-8').split("\t")
     return int(size_string)
+
+
+def get_service_resource_name(service: BaseService, service_type: Literal['docker'] | Literal['git']):
+    ts_to_full_number = str(service.created_at.timestamp()).replace(".", "")
+    abbreviated_type = 'dk' if service_type == 'docker' else 'git'
+    return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
+
+
+def create_service_from_docker_registry(service: DockerRegistryService):
+    client = get_docker_client()
+
+    exposed_ports: dict[int, int] = {}
+    endpoint_spec: EndpointSpec | None = None
+
+    # We don't expose HTTP ports with docker because they will be handled by caddy directly
+    http_ports = [80, 443]
+    for port in service.port_config.all():
+        if port.host not in http_ports:
+            exposed_ports[port.host] = port.forwarded
+
+    if len(exposed_ports) > 0:
+        endpoint_spec = EndpointSpec(ports=exposed_ports)
+
+    mounts: list[str] = []
+    for volume in service.volumes.all():
+        docker_volume = client.volumes.get(get_volume_resource_name(volume))
+        mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
+
+    client.services.create(
+        image=service.image,
+        name=get_service_resource_name(service, 'docker'),
+        mounts=mounts,
+        endpoint_spec=endpoint_spec,
+        env=[f"{env.key}={env.value}" for env in service.env_variables.all()],
+        labels=get_resource_labels(service.project),
+        command=service.command,
+        networks=[get_network_resource_name(service.project)],
+        restart_policy=RestartPolicy(
+            condition="on-failure",
+            max_attempts=3,
+            delay=5,
+        ),
+        update_config=UpdateConfig(
+            parallelism=1,
+            delay=5,
+            monitor=10,
+            order="start-first",
+            failure_action="rollback"
+        ),
+    )

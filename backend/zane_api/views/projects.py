@@ -137,7 +137,7 @@ class ProjectsListView(APIView):
                 response = self.error_serializer_class(
                     {
                         "errors": {
-                            "slug": [
+                            "name": [
                                 "A project with a similar slug already exist, please use another name for this project"
                             ]
                         }
