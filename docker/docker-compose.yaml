@@ -2,6 +2,7 @@ version: "3.4"
 
 services:
   redis:
+    container_name: zane-redis
     image: redis
     ports:
       - "6381:6379"
@@ -9,6 +10,7 @@ services:
       - zane-out
   db:
     image: postgres:12-alpine
+    container_name: zane-db
     restart: always
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -20,11 +22,13 @@ services:
       - "5434:5432"
   adminer:
     image: adminer
+    container_name: zane-adminer
     restart: always
     ports:
       - 8082:8080
   redis-gui:
     image: redis/redisinsight
+    container_name: zane-redis-gui
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
