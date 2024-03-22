@@ -191,7 +191,7 @@ class ProjectListViewTests(AuthAPITestCase):
 
 
 class ProjectCreateViewTests(AuthAPITestCase):
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_sucessfully_create_project(self, _: Mock):
         self.loginUser()
         response = self.client.post(
@@ -204,14 +204,14 @@ class ProjectCreateViewTests(AuthAPITestCase):
         self.assertEqual(1, Project.objects.count())
         self.assertEqual("zane-ops", Project.objects.first().slug)
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_bad_request(self, _: Mock):
         self.loginUser()
         response = self.client.post(reverse("zane_api:projects.list"), data={})
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
         self.assertEqual(0, Project.objects.count())
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_unique_name(self, _: Mock):
         owner = self.loginUser()
         Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
@@ -289,7 +289,7 @@ class ProjectGetViewTests(AuthAPITestCase):
 
 
 class ProjectArchiveViewTests(AuthAPITestCase):
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_sucessfully_archive_project(self, _: Mock):
         owner = self.loginUser()
         Project.objects.create(name="GH Clone", slug="gh-clone", owner=owner),
@@ -302,7 +302,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNotNone(updated_project)
         self.assertEqual(True, updated_project.archived)
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_non_existent(self, _: Mock):
         self.loginUser()
         response = self.client.delete(
@@ -310,7 +310,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_cannot_archive_already_archived_project(self, _: Mock):
         owner = self.loginUser()
         Project.objects.create(name="Zane Ops", slug="zane-ops", archived=True, owner=owner)
@@ -319,7 +319,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks(raise_error_on_delete=True))
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks(raise_error_on_delete=True))
     def test_archive_with_error(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         fake_docker_client: FakeDockerClientWithNetworks = mock_fake_docker.return_value
@@ -337,7 +337,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
 
 class DockerAddNetworkTest(AuthAPITestCase):
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_network_is_created_on_new_project(self, mock_fake_docker: Mock):
         self.loginUser()
         # Create a new project
@@ -349,7 +349,7 @@ class DockerAddNetworkTest(AuthAPITestCase):
         p: Project | None = Project.objects.filter(slug="zane-ops").first()
         self.assertIsNotNone(mock_fake_docker.return_value.get_network(p))
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks(raise_error_on_create=True))
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks(raise_error_on_create=True))
     def test_error_when_creating_new_network(self, _: Mock):
         self.loginUser()
         # Create a new project
@@ -363,7 +363,7 @@ class DockerAddNetworkTest(AuthAPITestCase):
 
 
 class DockerRemoveNetworkTest(AuthAPITestCase):
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_network_is_deleted_on_archived_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         fake_docker_client: FakeDockerClientWithNetworks = mock_fake_docker.return_value
@@ -377,7 +377,7 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
         self.assertIsNone(fake_docker_client.get_network(p))
         self.assertEqual(0, len(fake_docker_client.get_networks()))
 
-    @patch("zane_api.services.get_docker_client", return_value=FakeDockerClientWithNetworks())
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClientWithNetworks())
     def test_with_nonexistent_network(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         fake_docker_client: FakeDockerClientWithNetworks = mock_fake_docker.return_value
