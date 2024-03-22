@@ -1,3 +1,3 @@
 export const userKeys = {
-  user: ["AUTHED_USER"] as const
+  authedUser: ["AUTHED_USER"] as const
 };

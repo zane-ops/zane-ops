@@ -31,7 +31,7 @@ function AuthedView() {
       }
 
       queryClient.removeQueries({
-        queryKey: userKeys.user
+        queryKey: userKeys.authedUser
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });

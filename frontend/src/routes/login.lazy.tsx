@@ -33,7 +33,7 @@ function Login() {
       }
       if (data?.success) {
         queryClient.removeQueries({
-          queryKey: userKeys.user
+          queryKey: userKeys.authedUser
         });
         navigate({ to: "/" });
         return;
