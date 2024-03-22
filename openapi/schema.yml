@@ -629,6 +629,7 @@ components:
         registry_url:
           type: string
           format: uri
+          default: registry-1.docker.io/v2
       required:
       - password
       - username
@@ -778,11 +779,6 @@ components:
         command:
           type: string
           nullable: true
-        env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/EnvVariable'
-          readOnly: true
         ports:
           type: array
           items:
@@ -790,7 +786,6 @@ components:
           readOnly: true
       required:
       - created_at
-      - env_variables
       - image
       - name
       - ports
@@ -893,20 +888,6 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
-    EnvVariable:
-      type: object
-      properties:
-        key:
-          type: string
-          maxLength: 255
-        value:
-          type: string
-          maxLength: 255
-        is_for_production:
-          type: boolean
-      required:
-      - key
-      - value
     ForbiddenResponse:
       type: object
       properties:
@@ -977,6 +958,7 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+          nullable: true
         forwarded:
           type: integer
           maximum: 2147483647
