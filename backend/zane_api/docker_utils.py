@@ -4,7 +4,13 @@ import docker
 import docker.errors
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 
-from .models import Project, Volume, DockerRegistryService, BaseService
+from .models import (
+    Project,
+    Volume,
+    DockerRegistryService,
+    BaseService,
+    DockerDeployment,
+)
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
@@ -188,7 +194,9 @@ def get_service_resource_name(
     return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
 
 
-def create_service_from_docker_registry(service: DockerRegistryService):
+def create_service_from_docker_registry(
+    service: DockerRegistryService, deployment: DockerDeployment
+):
     client = get_docker_client()
 
     exposed_ports: dict[int, int] = {}
@@ -208,12 +216,16 @@ def create_service_from_docker_registry(service: DockerRegistryService):
         docker_volume = client.volumes.get(get_volume_resource_name(volume))
         mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
 
+    envs: list[str] = [
+        f"{env.key}={env.value}" for env in deployment.env_variables.all()
+    ]
+
     client.services.create(
         image=service.image,
         name=get_service_resource_name(service, "docker"),
         mounts=mounts,
         endpoint_spec=endpoint_spec,
-        env=[f"{env.key}={env.value}" for env in service.env_variables.all()],
+        env=envs,
         labels=get_resource_labels(service.project),
         command=service.command,
         networks=[get_network_resource_name(service.project)],

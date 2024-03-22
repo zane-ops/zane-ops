@@ -23,9 +23,9 @@ from ..models import (
     DockerRegistryService,
     DockerDeployment,
     Volume,
-    EnvVariable,
     PortConfiguration,
     URL,
+    EnvVariable,
 )
 
 
@@ -281,40 +281,25 @@ class CreateDockerServiceAPIView(APIView):
 
                 service.volumes.add(*created_volumes)
 
-                # Create envs if exists
-                envs_from_request: dict[str, str] = data.get("env", {})
-
-                created_envs = EnvVariable.objects.bulk_create(
-                    [
-                        EnvVariable(
-                            key=key,
-                            value=value,
-                            project=project,
-                        )
-                        for key, value in envs_from_request.items()
-                    ]
-                )
-
-                service.env_variables.add(*created_envs)
-
                 # create ports configuration
                 service_urls_from_request = data.get("urls", [])
                 ports_from_request = data.get("ports", [])
                 http_ports = [80, 443]
 
-                has_at_least_one_http_port = False
-                for port in ports_from_request:
-                    if port["pulblic"] in http_ports:
-                        has_at_least_one_http_port = True
-                        break
+                if len(service_urls_from_request) > 0:
+                    has_at_least_one_http_port = False
+                    for port in ports_from_request:
+                        if port["public"] in http_ports:
+                            has_at_least_one_http_port = True
+                            break
 
-                if not has_at_least_one_http_port:
-                    ports_from_request.append(
-                        {
-                            "public": 80,
-                            "forwarded": 80,
-                        }
-                    )
+                    if not has_at_least_one_http_port:
+                        ports_from_request.append(
+                            {
+                                "public": 80,
+                                "forwarded": 80,
+                            }
+                        )
 
                 created_ports = PortConfiguration.objects.bulk_create(
                     [
@@ -359,12 +344,29 @@ class CreateDockerServiceAPIView(APIView):
                         service.urls.add(*created_urls)
 
                 # Create first deployment
-                DockerDeployment.objects.create(service=service)
+                first_deployment = DockerDeployment.objects.create(service=service)
 
+                # Create envs if exists
+                envs_from_request: dict[str, str] = data.get("env", {})
+
+                created_envs = EnvVariable.objects.bulk_create(
+                    [
+                        EnvVariable(
+                            key=key,
+                            value=value,
+                            project=project,
+                        )
+                        for key, value in envs_from_request.items()
+                    ]
+                )
+
+                first_deployment.env_variables.add(*created_envs)
+
+                # TODO move to a celery task (in #44)
                 # Create resources in docker
                 for volume in created_volumes:
                     create_docker_volume(volume)
-                create_service_from_docker_registry(service)
+                create_service_from_docker_registry(service, first_deployment)
 
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
@@ -408,7 +410,7 @@ class GetDockerServiceAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "port_config", "env_variables", "urls")
+            .prefetch_related("volumes", "port_config", "urls")
         ).first()
 
         if service is None:

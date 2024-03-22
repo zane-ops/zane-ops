@@ -224,7 +224,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="cache-db"
         ).first()
-        env = created_service.env_variables.first()
+        first_deployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
+        env = first_deployment.env_variables.first()
 
         self.assertIsNotNone(created_service.command)
         self.assertIsNotNone(env)
@@ -486,6 +489,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="public-database"
         ).first()
+
         self.assertEqual(0, created_service.urls.count())
 
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
