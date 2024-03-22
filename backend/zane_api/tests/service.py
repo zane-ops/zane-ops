@@ -595,6 +595,65 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(errors.get("urls"))
 
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_cannot_specify_custom_url_and_public_port_at_the_same_time(
+        self, mock_fake_docker: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "name": "Adminer UI",
+            "image": "portainer-ce:latest",
+            "urls": [
+                {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
+            ],
+            "ports": [
+                {"public": 8099, "forwarded": 8080},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("urls"))
+
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    def test_create_service_create_implicit_port_if_custom_url_is_specified(
+        self, mock_fake_docker: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "name": "Adminer UI",
+            "image": "portainer-ce:latest",
+            "urls": [
+                {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="adminer-ui"
+        ).first()
+
+        self.assertEqual(1, created_service.urls.count())
+        self.assertEqual(1, created_service.port_config.count())
+        create_port: PortConfiguration = created_service.port_config.first()
+        self.assertEqual(80, create_port.forwarded)
+
+    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)

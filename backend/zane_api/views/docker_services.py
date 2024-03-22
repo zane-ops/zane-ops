@@ -88,6 +88,21 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                 }
             )
 
+        urls = data.get("urls", [])
+        ports = data.get("ports", [])
+
+        http_ports = [80, 443]
+        if len(urls) > 0:
+            for port in ports:
+                if port["public"] not in http_ports:
+                    raise serializers.ValidationError(
+                        {
+                            "urls": [
+                                f"Cannot specify both a custom URL and a public port other than HTTP"
+                            ]
+                        }
+                    )
+
         return data
 
     def validate_credentials(self, value: dict):
@@ -283,9 +298,23 @@ class CreateDockerServiceAPIView(APIView):
                 service.env_variables.add(*created_envs)
 
                 # create ports configuration
+                service_urls_from_request = data.get("urls", [])
                 ports_from_request = data.get("ports", [])
-
                 http_ports = [80, 443]
+
+                has_at_least_one_http_port = False
+                for port in ports_from_request:
+                    if port["pulblic"] in http_ports:
+                        has_at_least_one_http_port = True
+                        break
+
+                if not has_at_least_one_http_port:
+                    ports_from_request.append(
+                        {
+                            "public": 80,
+                            "forwarded": 80,
+                        }
+                    )
 
                 created_ports = PortConfiguration.objects.bulk_create(
                     [
@@ -305,17 +334,16 @@ class CreateDockerServiceAPIView(APIView):
                 service.port_config.add(*created_ports)
 
                 # Create urls to route the service to
-
-                can_create_urls = False
-                for port in ports_from_request:
-                    public_port = port["public"]
-                    if public_port in http_ports:
-                        can_create_urls = True
-                        break
+                can_create_urls = len(service_urls_from_request) > 0
+                if not can_create_urls:
+                    for port in ports_from_request:
+                        public_port = port["public"]
+                        if public_port in http_ports:
+                            can_create_urls = True
+                            break
 
                 if can_create_urls:
-                    service_urls = data.get("urls", [])
-                    if len(service_urls) == 0:
+                    if len(service_urls_from_request) == 0:
                         default_url = URL.objects.create(
                             domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
                             base_path="/",
@@ -325,7 +353,7 @@ class CreateDockerServiceAPIView(APIView):
                         created_urls = URL.objects.bulk_create(
                             [
                                 URL(domain=url["domain"], base_path=url["base_path"])
-                                for url in service_urls
+                                for url in service_urls_from_request
                             ]
                         )
                         service.urls.add(*created_urls)
