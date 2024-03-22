@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
+import { userKeys } from "~/key-factories";
 import { apiClient } from "../api/client";
 import { deleteCookie, getCookie } from "../utils";
 
@@ -30,7 +31,7 @@ function AuthedView() {
       }
 
       queryClient.removeQueries({
-        queryKey: ["AUTHED_USER"]
+        queryKey: userKeys.authedUser
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });
