@@ -4,10 +4,16 @@ import docker
 import docker.errors
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 
-from .models import Project, Volume, DockerRegistryService, BaseService
+from .models import (
+    Project,
+    Volume,
+    DockerRegistryService,
+    BaseService,
+    DockerDeployment,
+)
 
 docker_client: docker.DockerClient | None = None
-DOCKER_HUB_REGISTRY_URL = 'registry-1.docker.io/v2'
+DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
 
 
 def get_docker_client():
@@ -42,12 +48,14 @@ class DockerImageResult(TypedDict):
     description: str
 
 
-def search_docker_registry(term: str) -> List[DockerImageResult]:
+def search_images_docker_hub(term: str) -> List[DockerImageResult]:
     """
     List all images in registry starting with a certain term.
     """
     client = get_docker_client()
-    result: List[DockerImageResultFromRegistry] = client.images.search(term=term, limit=30)
+    result: List[DockerImageResultFromRegistry] = client.images.search(
+        term=term, limit=30
+    )
     images_to_return: List[DockerImageResult] = []
 
     for image in result:
@@ -61,9 +69,13 @@ def search_docker_registry(term: str) -> List[DockerImageResult]:
     return images_to_return
 
 
-def login_to_docker_registry(username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL):
+def login_to_docker_registry(
+    username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL
+):
     client = get_docker_client()
-    client.login(username=username, password=password, registry=registry_url, reauth=True)
+    client.login(
+        username=username, password=password, registry=registry_url, reauth=True
+    )
 
 
 class DockerAuthConfig(TypedDict):
@@ -74,6 +86,24 @@ class DockerAuthConfig(TypedDict):
 def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client = get_docker_client()
     client.images.pull(image, auth_config=auth)
+
+
+def strip_slash_if_exists(url: str):
+    if url.endswith("/"):
+        return url[:-1]
+    return url
+
+
+def check_if_docker_image_exists(
+    image: str, credentials: DockerAuthConfig = None
+) -> bool:
+    client = get_docker_client()
+    try:
+        client.images.get_registry_data(image, auth_config=credentials)
+    except docker.errors.NotFound:
+        return False
+    else:
+        return True
 
 
 def cleanup_project_resources(project: Project):
@@ -95,7 +125,9 @@ def cleanup_project_resources(project: Project):
     client = get_docker_client()
 
     try:
-        network_associated_to_project = client.networks.get(get_network_resource_name(project))
+        network_associated_to_project = client.networks.get(
+            get_network_resource_name(project)
+        )
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
         pass
@@ -113,7 +145,7 @@ def create_project_resources(project: Project):
         scope="swarm",
         driver="overlay",
         labels=get_resource_labels(project),
-        attachable=True
+        attachable=True,
     )
 
 
@@ -121,10 +153,10 @@ def check_if_port_is_available(port: int) -> bool:
     client = get_docker_client()
     try:
         client.containers.run(
-            image='nginx:alpine',
-            ports={'80/tcp': ('0.0.0.0', port)},
+            image="nginx:alpine",
+            ports={"80/tcp": ("0.0.0.0", port)},
             command="echo hello world",
-            remove=True
+            remove=True,
         )
     except docker.errors.APIError:
         return False
@@ -142,8 +174,8 @@ def create_docker_volume(volume: Volume):
 
     client.volumes.create(
         name=get_volume_resource_name(volume),
-        driver='local',
-        labels=get_resource_labels(volume.project)
+        driver="local",
+        labels=get_resource_labels(volume.project),
     )
 
 
@@ -163,22 +195,26 @@ def get_docker_volume_size(volume: Volume) -> int:
     docker_volume_name = get_volume_resource_name(volume)
 
     result: bytes = client.containers.run(
-        image='alpine',
+        image="alpine",
         command="du -sb /data",
-        volumes={docker_volume_name: {'bind': '/data', 'mode': 'ro'}},
+        volumes={docker_volume_name: {"bind": "/data", "mode": "ro"}},
         remove=True,
     )
-    size_string, _ = result.decode(encoding='utf-8').split("\t")
+    size_string, _ = result.decode(encoding="utf-8").split("\t")
     return int(size_string)
 
 
-def get_service_resource_name(service: BaseService, service_type: Literal['docker'] | Literal['git']):
+def get_service_resource_name(
+    service: BaseService, service_type: Literal["docker"] | Literal["git"]
+):
     ts_to_full_number = str(service.created_at.timestamp()).replace(".", "")
-    abbreviated_type = 'dk' if service_type == 'docker' else 'git'
+    abbreviated_type = "dk" if service_type == "docker" else "git"
     return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
 
 
-def create_service_from_docker_registry(service: DockerRegistryService):
+def create_service_from_docker_registry(
+    service: DockerRegistryService, deployment: DockerDeployment
+):
     client = get_docker_client()
 
     exposed_ports: dict[int, int] = {}
@@ -187,7 +223,7 @@ def create_service_from_docker_registry(service: DockerRegistryService):
     # We don't expose HTTP ports with docker because they will be handled by caddy directly
     http_ports = [80, 443]
     for port in service.port_config.all():
-        if port.host not in http_ports:
+        if port.host not in http_ports and port.host is not None:
             exposed_ports[port.host] = port.forwarded
 
     if len(exposed_ports) > 0:
@@ -198,12 +234,16 @@ def create_service_from_docker_registry(service: DockerRegistryService):
         docker_volume = client.volumes.get(get_volume_resource_name(volume))
         mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
 
+    envs: list[str] = [
+        f"{env.key}={env.value}" for env in deployment.env_variables.all()
+    ]
+
     client.services.create(
         image=service.image,
-        name=get_service_resource_name(service, 'docker'),
+        name=get_service_resource_name(service, "docker"),
         mounts=mounts,
         endpoint_spec=endpoint_spec,
-        env=[f"{env.key}={env.value}" for env in service.env_variables.all()],
+        env=envs,
         labels=get_resource_labels(service.project),
         command=service.command,
         networks=[get_network_resource_name(service.project)],
@@ -217,6 +257,6 @@ def create_service_from_docker_registry(service: DockerRegistryService):
             delay=5,
             monitor=10,
             order="start-first",
-            failure_action="rollback"
+            failure_action="rollback",
         ),
     )

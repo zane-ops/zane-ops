@@ -6,10 +6,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..services import (
-    search_docker_registry,
+from ..docker_utils import (
+    search_images_docker_hub,
     check_if_port_is_available,
-    login_to_docker_registry
+    login_to_docker_registry,
 )
 
 
@@ -56,7 +56,7 @@ class DockerImageSearchView(APIView):
 
         if form.is_valid():
             params = form.data
-            result = search_docker_registry(term=params["q"])
+            result = search_images_docker_hub(term=params["q"])
             response = self.serializer_class({"images": result})
             return Response(response.data, status=status.HTTP_200_OK)
 

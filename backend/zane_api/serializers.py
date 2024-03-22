@@ -72,13 +72,22 @@ class PortConfigurationSerializer(ModelSerializer):
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
-    env_variables = EnvVariableSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True, source="port_config")
 
     class Meta:
         model = models.DockerRegistryService
-        fields = ["image", "slug", "urls", "created_at", "updated_at", "volumes", "name", "archived", "command",
-                  "env_variables", "ports"]
+        fields = [
+            "image",
+            "slug",
+            "urls",
+            "created_at",
+            "updated_at",
+            "volumes",
+            "name",
+            "archived",
+            "command",
+            "ports",
+        ]
 
 
 class ForbiddenResponseSerializer(Serializer):

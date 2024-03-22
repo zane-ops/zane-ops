@@ -11,15 +11,29 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..models import Project, DockerRegistryService, DockerDeployment, Volume, EnvVariable, PortConfiguration, URL
-from ..services import create_service_from_docker_registry, create_docker_volume, \
-    login_to_docker_registry, pull_docker_image, check_if_port_is_available
+from ..docker_utils import (
+    create_service_from_docker_registry,
+    create_docker_volume,
+    login_to_docker_registry,
+    check_if_port_is_available,
+    check_if_docker_image_exists,
+    DOCKER_HUB_REGISTRY_URL,
+)
+from ..models import (
+    Project,
+    DockerRegistryService,
+    DockerDeployment,
+    Volume,
+    PortConfiguration,
+    URL,
+    EnvVariable,
+)
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=100)
     password = serializers.CharField(max_length=100)
-    registry_url = serializers.URLField(required=False)
+    registry_url = serializers.URLField(required=False, default=DOCKER_HUB_REGISTRY_URL)
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
@@ -48,32 +62,53 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     volumes = VolumeRequestSerializer(many=True, required=False)
 
     def validate(self, data: dict):
-        credentials = data.get('credentials')
-        image = data.get('image')
+        credentials = data.get("credentials")
+        image = data.get("image")
 
         try:
-            pull_docker_image(image, auth=dict(credentials) if credentials is not None else None)
-        except docker.errors.NotFound:
-            registry = credentials.get('registry_url') if credentials is not None else None
-            if registry is None:
-                registry = "Docker Hub's Registry"
-            else:
-                registry = f"the registry at {registry}"
-            raise serializers.ValidationError({
-                'image': [f"The image `{image}` does not exist on {registry}"]
-            })
+            do_image_exists = check_if_docker_image_exists(
+                image,
+                credentials=dict(credentials) if credentials is not None else None,
+            )
         except docker.errors.APIError:
-            raise serializers.ValidationError({
-                'image': [f"This image does not correspond to the credentials provided"]
-            })
+            raise serializers.ValidationError(
+                {"credentials": [f"Invalid credentials for the specified registry"]}
+            )
+        else:
+            if not do_image_exists:
+                registry_url = (
+                    credentials.get("registry_url") if credentials is not None else None
+                )
+                if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
+                    registry_str = "on Docker Hub"
+                else:
+                    registry_str = f"in the specified registry"
+                raise serializers.ValidationError(
+                    {"image": [f"the image `{image}` does not exist {registry_str}"]}
+                )
+
+        urls = data.get("urls", [])
+        ports = data.get("ports", [])
+
+        http_ports = [80, 443]
+        if len(urls) > 0:
+            for port in ports:
+                if port["public"] not in http_ports:
+                    raise serializers.ValidationError(
+                        {
+                            "urls": [
+                                f"Cannot specify both a custom URL and a public port other than HTTP"
+                            ]
+                        }
+                    )
 
         return data
 
     def validate_credentials(self, value: dict):
         try:
             login_to_docker_registry(
-                username=value['username'],
-                password=value['password'],
+                username=value["username"],
+                password=value["password"],
                 registry_url=value.get("registry_url"),
             )
         except docker.errors.APIError:
@@ -86,7 +121,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         http_ports = [80, 443]
         public_ports_seen = set()
         for port in ports:
-            public_port = port['public']
+            public_port = port["public"]
 
             # Check for only 1 http port
             if public_port in http_ports:
@@ -96,17 +131,24 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
             # Check for duplicate public ports
             if public_port in public_ports_seen:
-                raise serializers.ValidationError("Duplicate public port values are not allowed.")
+                raise serializers.ValidationError(
+                    "Duplicate public port values are not allowed."
+                )
             if public_port not in http_ports:
                 public_ports_seen.add(public_port)
 
             # check if port is available
             is_port_available = check_if_port_is_available(public_port)
             if not is_port_available:
-                raise serializers.ValidationError(f"Port {public_port} is not available on the host machine.")
+                raise serializers.ValidationError(
+                    f"Port {public_port} is not available on the host machine."
+                )
 
         already_existing_ports = [
-            str(port.host) for port in PortConfiguration.objects.filter(host__in=list(public_ports_seen))
+            str(port.host)
+            for port in PortConfiguration.objects.filter(
+                host__in=list(public_ports_seen)
+            )
         ]
 
         if len(already_existing_ports) > 0:
@@ -124,9 +166,11 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         # Check for duplicate public ports
         urls_seen = set()
         for url in value:
-            new_url = (url['domain'], url['base_path'])
+            new_url = (url["domain"], url["base_path"])
             if new_url in urls_seen:
-                raise serializers.ValidationError("Duplicate urls values are not allowed.")
+                raise serializers.ValidationError(
+                    "Duplicate urls values are not allowed."
+                )
             urls_seen.add(new_url)
         return value
 
@@ -161,7 +205,7 @@ class CreateDockerServiceAPIView(APIView):
             404: error_serializer_class,
             409: error_serializer_class,
             201: serializer_class,
-            403: serializers.ForbiddenResponseSerializer
+            403: serializers.ForbiddenResponseSerializer,
         },
         operation_id="createDockerService",
     )
@@ -173,7 +217,9 @@ class CreateDockerServiceAPIView(APIView):
             response = self.error_serializer_class(
                 {
                     "errors": {
-                        "root": [f"A project with the slug `{project_slug}` does not exist"],
+                        "root": [
+                            f"A project with the slug `{project_slug}` does not exist"
+                        ],
                     }
                 }
             )
@@ -184,19 +230,25 @@ class CreateDockerServiceAPIView(APIView):
                 data = form.data
 
                 # Create service in DB
-                docker_credentials: dict | None = data.get('credentials')
+                docker_credentials: dict | None = data.get("credentials")
                 service_slug = slugify(data["name"])
                 try:
                     service = DockerRegistryService.objects.create(
-                        name=data['name'],
+                        name=data["name"],
                         slug=service_slug,
                         project=project,
-                        image=data['image'],
-                        command=data.get('command'),
-                        docker_credentials_username=docker_credentials.get(
-                            'username') if docker_credentials is not None else None,
-                        docker_credentials_password=docker_credentials.get(
-                            'password') if docker_credentials is not None else None,
+                        image=data["image"],
+                        command=data.get("command"),
+                        docker_credentials_username=(
+                            docker_credentials.get("username")
+                            if docker_credentials is not None
+                            else None
+                        ),
+                        docker_credentials_password=(
+                            docker_credentials.get("password")
+                            if docker_credentials is not None
+                            else None
+                        ),
                     )
                 except IntegrityError:
                     response = self.error_serializer_class(
@@ -213,83 +265,115 @@ class CreateDockerServiceAPIView(APIView):
 
                 # Create volumes if exists
                 fake = Faker()
-                volumes_request = data.get('volumes', [])
-                created_volumes = Volume.objects.bulk_create([
-                    Volume(
-                        name=volume['name'],
-                        slug=f"{service.slug}-{fake.slug()}",
-                        project=project,
-                        containerPath=volume['mount_path'],
-                    ) for volume in volumes_request
-                ])
+                volumes_request = data.get("volumes", [])
+                created_volumes = Volume.objects.bulk_create(
+                    [
+                        Volume(
+                            name=volume["name"],
+                            slug=f"{service.slug}-{fake.slug()}",
+                            project=project,
+                            containerPath=volume["mount_path"],
+                        )
+                        for volume in volumes_request
+                    ]
+                )
 
                 service.volumes.add(*created_volumes)
 
-                # Create envs if exists
-                envs_from_request: dict[str, str] = data.get('env', {})
-
-                created_envs = EnvVariable.objects.bulk_create([
-                    EnvVariable(
-                        key=key,
-                        value=value,
-                        project=project,
-                    ) for key, value in envs_from_request.items()
-                ])
-
-                service.env_variables.add(*created_envs)
-
                 # create ports configuration
-                ports_from_request = data.get('ports', [])
+                service_urls_from_request = data.get("urls", [])
+                ports_from_request = data.get("ports", [])
+                http_ports = [80, 443]
 
-                created_ports = PortConfiguration.objects.bulk_create([
-                    PortConfiguration(
-                        project=project,
-                        host=port['public'],
-                        forwarded=port['forwarded'],
-                    ) for port in ports_from_request
-                ])
+                if len(service_urls_from_request) > 0:
+                    has_at_least_one_http_port = False
+                    for port in ports_from_request:
+                        if port["public"] in http_ports:
+                            has_at_least_one_http_port = True
+                            break
+
+                    if not has_at_least_one_http_port:
+                        ports_from_request.append(
+                            {
+                                "public": 80,
+                                "forwarded": 80,
+                            }
+                        )
+
+                created_ports = PortConfiguration.objects.bulk_create(
+                    [
+                        PortConfiguration(
+                            project=project,
+                            host=(
+                                port["public"]
+                                if port["public"] not in http_ports
+                                else None
+                            ),
+                            forwarded=port["forwarded"],
+                        )
+                        for port in ports_from_request
+                    ]
+                )
 
                 service.port_config.add(*created_ports)
 
                 # Create urls to route the service to
-                http_ports = [80, 443]
-
-                can_create_urls = False
-                for port in ports_from_request:
-                    public_port = port['public']
-                    if public_port in http_ports:
-                        can_create_urls = True
-                        break
+                can_create_urls = len(service_urls_from_request) > 0
+                if not can_create_urls:
+                    for port in ports_from_request:
+                        public_port = port["public"]
+                        if public_port in http_ports:
+                            can_create_urls = True
+                            break
 
                 if can_create_urls:
-                    service_urls = data.get("urls", [])
-                    if len(service_urls) == 0:
+                    if len(service_urls_from_request) == 0:
                         default_url = URL.objects.create(
                             domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
-                            base_path="/"
+                            base_path="/",
                         )
                         service.urls.add(default_url)
                     else:
-                        created_urls = URL.objects.bulk_create([
-                            URL(domain=url['domain'], base_path=url['base_path']) for url in service_urls
-                        ])
+                        created_urls = URL.objects.bulk_create(
+                            [
+                                URL(domain=url["domain"], base_path=url["base_path"])
+                                for url in service_urls_from_request
+                            ]
+                        )
                         service.urls.add(*created_urls)
 
                 # Create first deployment
-                DockerDeployment.objects.create(
-                    service=service
+                first_deployment = DockerDeployment.objects.create(service=service)
+
+                # Create envs if exists
+                envs_from_request: dict[str, str] = data.get("env", {})
+
+                created_envs = EnvVariable.objects.bulk_create(
+                    [
+                        EnvVariable(
+                            key=key,
+                            value=value,
+                            project=project,
+                        )
+                        for key, value in envs_from_request.items()
+                    ]
                 )
 
+                first_deployment.env_variables.add(*created_envs)
+
+                # TODO move to a celery task (in #44)
                 # Create resources in docker
                 for volume in created_volumes:
                     create_docker_volume(volume)
-                create_service_from_docker_registry(service)
+                create_service_from_docker_registry(service, first_deployment)
 
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
             response = self.error_serializer_class({"errors": form.errors})
-            return Response(data=response.data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response(
+                data=response.data, status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
 
 
 class GetDockerServiceAPIView(APIView):
@@ -301,7 +385,7 @@ class GetDockerServiceAPIView(APIView):
         responses={
             404: error_serializer_class,
             200: serializer_class,
-            403: serializers.ForbiddenResponseSerializer
+            403: serializers.ForbiddenResponseSerializer,
         },
         operation_id="getDockerService",
     )
@@ -312,24 +396,30 @@ class GetDockerServiceAPIView(APIView):
             response = self.error_serializer_class(
                 {
                     "errors": {
-                        "root": [f"A project with the slug `{project_slug}` does not exist"],
+                        "root": [
+                            f"A project with the slug `{project_slug}` does not exist"
+                        ],
                     }
                 }
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
-        service = ((DockerRegistryService.objects.filter(
-            Q(slug=service_slug) & Q(project=project))
-                    .select_related("project")
-                    .prefetch_related("volumes", "port_config", "env_variables", "urls"))
-                   .first())
+        service = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "port_config", "urls")
+        ).first()
 
         if service is None:
             response = self.error_serializer_class(
                 {
                     "errors": {
-                        "root": [f"A service with the slug `{service_slug}`"
-                                 f" does not exist within the project `{project_slug}`"],
+                        "root": [
+                            f"A service with the slug `{service_slug}`"
+                            f" does not exist within the project `{project_slug}`"
+                        ],
                     }
                 }
             )

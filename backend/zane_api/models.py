@@ -36,7 +36,9 @@ class Project(TimestampedModel):
 
 
 class URL(models.Model):
-    domain = models.CharField(max_length=1000, null=True, blank=True, validators=[validate_url_domain])
+    domain = models.CharField(
+        max_length=1000, null=True, blank=True, validators=[validate_url_domain]
+    )
     base_path = models.CharField(default="/")
 
     class Meta:
@@ -51,7 +53,6 @@ class BaseService(TimestampedModel):
     archived = models.BooleanField(default=False)
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
-    env_variables = models.ManyToManyField(to="EnvVariable")
     volumes = models.ManyToManyField(to="Volume")
     port_config = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
@@ -68,15 +69,17 @@ class BaseService(TimestampedModel):
 
 
 class PortConfiguration(models.Model):
-    host = models.PositiveIntegerField(default=80, unique=True)
+    host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
-    project = models.ForeignKey(to='Project', on_delete=models.CASCADE)
+    project = models.ForeignKey(to="Project", on_delete=models.CASCADE)
 
 
 class DockerRegistryService(BaseService):
     image = models.CharField(max_length=510)
     command = models.TextField(null=True, blank=True)
-    docker_credentials_username = models.CharField(max_length=255, null=True, blank=True)
+    docker_credentials_username = models.CharField(
+        max_length=255, null=True, blank=True
+    )
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
@@ -131,17 +134,20 @@ class Volume(TimestampedModel):
 
 class BaseDeployment(models.Model):
     class DeploymentStatus(models.TextChoices):
+        OFFLINE = "OFFLINE", _("Offline")
         ERROR = "ERROR", _("Error")
-        SUCCESS = "SUCCESS", _("Success")
+        LIVE = "LIVE", _("Live")
         PENDING = "PENDING", _("Pending")
 
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_production = models.BooleanField(default=True)
-    status = models.CharField(
+    deployment_status = models.CharField(
         max_length=10,
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.PENDING,
     )
+    env_variables = models.ManyToManyField(to="EnvVariable")
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
 
@@ -155,6 +161,17 @@ class DockerDeployment(BaseDeployment):
 
 
 class GitDeployment(BaseDeployment):
+    class BuildStatus(models.TextChoices):
+        ERROR = "ERROR", _("Error")
+        SUCCESS = "SUCCESS", _("Success")
+        PENDING = "PENDING", _("Pending")
+        QUEUED = "QUEUED", _("Queued")
+
+    build_status = models.CharField(
+        max_length=10,
+        choices=BuildStatus.choices,
+        default=BuildStatus.QUEUED,
+    )
     commit_hash = models.CharField(
         max_length=40
     )  # Typical length of a Git commit hash, but we will use the short version
@@ -187,7 +204,7 @@ class GitDeployment(BaseDeployment):
     #     return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
 
     def __str__(self):
-        return f"{self.branch} - {self.commit_hash[:7]} - {self.status}"
+        return f"{self.branch} - {self.commit_hash[:7]} - {self.build_status}"
 
 
 class Log(models.Model):
