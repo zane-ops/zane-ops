@@ -241,10 +241,12 @@ class CreateDockerServiceAPIView(APIView):
                 # create ports configuration
                 ports_from_request = data.get('ports', [])
 
+                http_ports = [80, 443]
+
                 created_ports = PortConfiguration.objects.bulk_create([
                     PortConfiguration(
                         project=project,
-                        host=port['public'],
+                        host=port['public'] if port['public'] not in http_ports else None,
                         forwarded=port['forwarded'],
                     ) for port in ports_from_request
                 ])
@@ -252,7 +254,6 @@ class CreateDockerServiceAPIView(APIView):
                 service.port_config.add(*created_ports)
 
                 # Create urls to route the service to
-                http_ports = [80, 443]
 
                 can_create_urls = False
                 for port in ports_from_request:

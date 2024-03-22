@@ -354,7 +354,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         port: PortConfiguration = created_service.port_config.first()
 
         self.assertIsNotNone(port)
-        self.assertEqual(80, port.host)
+        self.assertIsNone(port.host)
         self.assertEqual(8080, port.forwarded)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value

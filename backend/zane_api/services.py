@@ -187,7 +187,7 @@ def create_service_from_docker_registry(service: DockerRegistryService):
     # We don't expose HTTP ports with docker because they will be handled by caddy directly
     http_ports = [80, 443]
     for port in service.port_config.all():
-        if port.host not in http_ports:
+        if port.host not in http_ports and port.host is not None:
             exposed_ports[port.host] = port.forwarded
 
     if len(exposed_ports) > 0:
