@@ -8,8 +8,8 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
+from ..docker_utils import get_network_resource_name
 from ..models import Project
-from ..services import get_network_resource_name
 
 
 class FakeDockerClientWithNetworks:

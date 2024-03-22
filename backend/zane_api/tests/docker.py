@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..services import DockerImageResultFromRegistry
+from ..docker_utils import DockerImageResultFromRegistry
 
 
 class FakeDockerClient:

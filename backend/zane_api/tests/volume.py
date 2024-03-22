@@ -7,8 +7,8 @@ from rest_framework import status
 
 from . import AuthAPITestCase
 from .base import APITestCase
+from ..docker_utils import create_docker_volume, remove_docker_volume
 from ..models import Project, Volume
-from ..services import create_docker_volume, remove_docker_volume
 
 
 class FakeDockerClient:

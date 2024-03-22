@@ -10,13 +10,19 @@ from docker.types import EndpointSpec
 from rest_framework import status
 
 from . import AuthAPITestCase
-from ..models import Project, DockerRegistryService, DockerDeployment, PortConfiguration, URL
-from ..services import get_service_resource_name, get_volume_resource_name
+from ..docker_utils import get_service_resource_name, get_volume_resource_name
+from ..models import (
+    Project,
+    DockerRegistryService,
+    DockerDeployment,
+    PortConfiguration,
+    URL,
+)
 
 
 class FakeDockerClient:
     class FakeVolume:
-        def __init__(self, parent: 'FakeDockerClient', name: str):
+        def __init__(self, parent: "FakeDockerClient", name: str):
             self.name = name
             self.parent = parent
 
@@ -26,8 +32,14 @@ class FakeDockerClient:
             self.parent.volume_map.pop(self.name)
 
     class FakeService:
-        def __init__(self, parent: 'FakeDockerClient', name: str, volumes: dict[str, str] = None,
-                     env: dict[str, str] = None, endpoint: EndpointSpec = None):
+        def __init__(
+            self,
+            parent: "FakeDockerClient",
+            name: str,
+            volumes: dict[str, str] = None,
+            env: dict[str, str] = None,
+            endpoint: EndpointSpec = None,
+        ):
             self.name = name
             self.parent = parent
             self.attached_volumes = {} if volumes is None else volumes
@@ -54,7 +66,9 @@ class FakeDockerClient:
         self.service_map = {}  # type: dict[str, FakeDockerClient.FakeService]
 
     @staticmethod
-    def containers_run(image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool):
+    def containers_run(
+        image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
+    ):
         _, port = list(ports.values())[0]
         if port == 8080:
             raise docker.errors.APIError(f"Port {port} is already used")
@@ -72,11 +86,19 @@ class FakeDockerClient:
             raise docker.errors.NotFound("Volume Not found")
         return self.service_map[name]
 
-    def services_create(self, name: str, mounts: list[str], env: list[str],
-                        endpoint_spec: Any,
-                        networks: list[str], image: str,
-                        restart_policy: Any, update_config: Any, command: str | None,
-                        labels: dict[str, str]):
+    def services_create(
+        self,
+        name: str,
+        mounts: list[str],
+        env: list[str],
+        endpoint_spec: Any,
+        networks: list[str],
+        image: str,
+        restart_policy: Any,
+        update_config: Any,
+        command: str | None,
+        labels: dict[str, str],
+    ):
         volumes: dict[str, str] = {}
         for mount in mounts:
             volume_name, mount_path, _ = mount.split(":")
@@ -90,15 +112,15 @@ class FakeDockerClient:
             envs[key] = value
 
         self.service_map[name] = FakeDockerClient.FakeService(
-            parent=self,
-            name=name,
-            volumes=volumes,
-            env=envs,
-            endpoint=endpoint_spec
+            parent=self, name=name, volumes=volumes, env=envs, endpoint=endpoint_spec
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):
-        if username != 'fredkiss3' or password != 's3cret' or registry != 'https://dcr.fredkiss.dev/':
+        if (
+            username != "fredkiss3"
+            or password != "s3cret"
+            or registry != "https://dcr.fredkiss.dev/"
+        ):
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
         self.is_logged_in = True
@@ -112,7 +134,7 @@ class FakeDockerClient:
                 raise docker.errors.NotFound("This image does not exist")
             self.downloaded_images.append(image)
         else:
-            if image == 'nonexistent':
+            if image == "nonexistent":
                 raise docker.errors.ImageNotFound("This image does not exist")
 
 
@@ -128,11 +150,11 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
-            data=create_service_payload
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        data = response.json().get('service')
+        data = response.json().get("service")
         self.assertIsNotNone(data)
 
         created_service = DockerRegistryService.objects.filter(slug="cache-db").first()
@@ -151,22 +173,19 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "name": "cache db",
             "image": "redis:alpine",
-            "volumes": [
-                {
-                    "name": "REDIS Data volume",
-                    "mount_path": "/data"
-                }
-            ]
+            "volumes": [{"name": "REDIS Data volume", "mount_path": "/data"}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="cache-db").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
         self.assertIsNotNone(created_service)
         self.assertEqual(1, created_service.volumes.count())
 
@@ -175,9 +194,13 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(1, len(fake_docker_client.volume_map))
 
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
+        fake_service = fake_docker_client.service_map[
+            get_service_resource_name(created_service, "docker")
+        ]
         self.assertEqual(1, len(fake_service.attached_volumes))
-        self.assertIsNotNone(fake_service.attached_volumes.get(get_volume_resource_name(created_volume)))
+        self.assertIsNotNone(
+            fake_service.attached_volumes.get(get_volume_resource_name(created_volume))
+        )
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_env_and_command(self, mock_fake_docker: Mock):
@@ -188,26 +211,28 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "name": "cache db",
             "image": "redis:alpine",
             "command": "redis-server --requirepass ${REDIS_PASSWORD}",
-            "env": {
-                "REDIS_PASSWORD": "strongPassword123"
-            },
+            "env": {"REDIS_PASSWORD": "strongPassword123"},
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="cache-db").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
         env = created_service.env_variables.first()
 
         self.assertIsNotNone(created_service.command)
         self.assertIsNotNone(env)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
+        fake_service = fake_docker_client.service_map[
+            get_service_resource_name(created_service, "docker")
+        ]
         self.assertEqual(1, len(fake_service.env))
         self.assertEqual("strongPassword123", fake_service.env.get("REDIS_PASSWORD"))
 
@@ -219,22 +244,19 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "name": "noSQL db",
             "image": "redis:alpine",
-            "ports": [
-                {
-                    "public": 6383,
-                    "forwarded": 6379
-                }
-            ]
+            "ports": [{"public": 6383, "forwarded": 6379}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="nosql-db").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="nosql-db"
+        ).first()
         port: PortConfiguration = created_service.port_config.first()
 
         self.assertIsNotNone(port)
@@ -242,16 +264,20 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(6379, port.forwarded)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
+        fake_service = fake_docker_client.service_map[
+            get_service_resource_name(created_service, "docker")
+        ]
 
         self.assertIsNotNone(fake_service.endpoint)
 
-        port_in_docker = fake_service.endpoint.get('Ports')[0]
+        port_in_docker = fake_service.endpoint.get("Ports")[0]
         self.assertEqual(6383, port_in_docker["PublishedPort"])
         self.assertEqual(6379, port_in_docker["TargetPort"])
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_should_not_work_with_unavailable_host_port(self, mock_fake_docker: Mock):
+    def test_create_service_should_not_work_with_unavailable_host_port(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -259,41 +285,36 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "name": "noSQL db",
             "image": "redis:alpine",
             "ports": [
-                {
-                    "public": 8080,
-                    "forwarded": 6379
-                },
-                {
-                    "public": 8085,
-                    "forwarded": 6379
-                },
-            ]
+                {"public": 8080, "forwarded": 6379},
+                {"public": 8085, "forwarded": 6379},
+            ],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
         errors = response.json().get("errors")
         self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get('ports'))
+        self.assertIsNotNone(errors.get("ports"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="nosql-db").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="nosql-db"
+        ).first()
         self.assertIsNone(created_service)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_should_not_work_with_port_already_used_by_other_services(self, mock_fake_docker: Mock):
+    def test_create_service_should_not_work_with_port_already_used_by_other_services(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            name="cache db2",
-            slug="cache-db",
-            image="redis:alpine",
-            project=p
+            name="cache db2", slug="cache-db", image="redis:alpine", project=p
         )
 
         used_port = PortConfiguration(
@@ -307,25 +328,22 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "name": "Adminer",
             "image": "adminer:latest",
-            "ports": [
-                {
-                    "public": used_port.host,
-                    "forwarded": 8080
-                }
-            ]
+            "ports": [{"public": used_port.host, "forwarded": 8080}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
         errors = response.json().get("errors")
         self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get('ports'))
+        self.assertIsNotNone(errors.get("ports"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="adminer").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="adminer"
+        ).first()
         self.assertIsNone(created_service)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
@@ -336,21 +354,19 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "name": "Adminer UI",
             "image": "adminer:latest",
-            "ports": [
-                {
-                    "forwarded": 8080
-                }
-            ]
+            "ports": [{"forwarded": 8080}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="adminer-ui").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="adminer-ui"
+        ).first()
         port: PortConfiguration = created_service.port_config.first()
 
         self.assertIsNotNone(port)
@@ -358,7 +374,9 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(8080, port.forwarded)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[get_service_resource_name(created_service, 'docker')]
+        fake_service = fake_docker_client.service_map[
+            get_service_resource_name(created_service, "docker")
+        ]
 
         self.assertIsNone(fake_service.endpoint)
 
@@ -370,25 +388,26 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "name": "Adminer UI",
             "image": "adminer:latest",
-            "ports": [
-                {
-                    "forwarded": 8080
-                }
-            ]
+            "ports": [{"forwarded": 8080}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="adminer-ui").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="adminer-ui"
+        ).first()
 
         default_url: URL = created_service.urls.first()
         self.assertIsNotNone(default_url)
-        self.assertEqual(f"{p.slug}-{created_service.slug}.{settings.ROOT_DOMAIN}", default_url.domain)
+        self.assertEqual(
+            f"{p.slug}-{created_service.slug}.{settings.ROOT_DOMAIN}",
+            default_url.domain,
+        )
         self.assertEqual("/", default_url.base_path)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
@@ -399,27 +418,20 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "name": "Portainer UI",
             "image": "portainer/portainer-ce:latest",
-            "urls": [
-                {
-                    "domain": "dcr.fredkiss.dev",
-                    "base_path": "/portainer"
-                }
-            ],
-            "ports": [
-                {
-                    "forwarded": 8000
-                }
-            ]
+            "urls": [{"domain": "dcr.fredkiss.dev", "base_path": "/portainer"}],
+            "ports": [{"forwarded": 8000}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="portainer-ui").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="portainer-ui"
+        ).first()
 
         self.assertEqual(1, created_service.urls.count())
         url: URL = created_service.urls.first()
@@ -428,7 +440,9 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual("/portainer", url.base_path)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_without_port_does_not_create_a_domain(self, mock_fake_docker: Mock):
+    def test_create_service_without_port_does_not_create_a_domain(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -438,69 +452,71 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-database").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-database"
+        ).first()
         self.assertEqual(0, created_service.urls.count())
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_with_no_http_public_port_does_not_create_a_domain(self, mock_fake_docker: Mock):
+    def test_create_service_with_no_http_public_port_does_not_create_a_domain(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Public Database",
             "image": "postgres:12-alpine",
-            "ports": [
-                {
-                    "public": 5433,
-                    "forwarded": 5432
-                }
-            ]
+            "ports": [{"public": 5433, "forwarded": 5432}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="public-database").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="public-database"
+        ).first()
         self.assertEqual(0, created_service.urls.count())
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_create_a_domain_if_public_port_is_80_or_443(self, mock_fake_docker: Mock):
+    def test_create_service_create_a_domain_if_public_port_is_80_or_443(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
             "image": "adminer:latest",
-            "ports": [
-                {
-                    "public": random.choice([443, 80]),
-                    "forwarded": 8080
-                }
-            ]
+            "ports": [{"public": random.choice([443, 80]), "forwarded": 8080}],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="adminer-ui").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="adminer-ui"
+        ).first()
         self.assertEqual(1, created_service.urls.count())
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_can_only_specify_one_http_port(self, mock_fake_docker: Mock):
+    def test_create_service_can_only_specify_one_http_port(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -508,29 +524,25 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "name": "Adminer UI",
             "image": "adminer:latest",
             "ports": [
-                {
-                    "public": 443,
-                    "forwarded": 8080
-                },
-                {
-                    "public": 80,
-                    "forwarded": 8080
-                },
-            ]
+                {"public": 443, "forwarded": 8080},
+                {"public": 80, "forwarded": 8080},
+            ],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('ports'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("ports"))
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_cannot_specify_the_same_public_port_twice(self, mock_fake_docker: Mock):
+    def test_create_service_cannot_specify_the_same_public_port_twice(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -538,29 +550,25 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "name": "Adminer UI",
             "image": "adminer:latest",
             "ports": [
-                {
-                    "public": 8080,
-                    "forwarded": 8080
-                },
-                {
-                    "public": 8080,
-                    "forwarded": 8080
-                },
-            ]
+                {"public": 8080, "forwarded": 8080},
+                {"public": 8080, "forwarded": 8080},
+            ],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('ports'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("ports"))
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
-    def test_create_service_cannot_specify_the_same_url_twice(self, mock_fake_docker: Mock):
+    def test_create_service_cannot_specify_the_same_url_twice(
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -568,31 +576,23 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "name": "Adminer UI",
             "image": "adminer:latest",
             "urls": [
-                {
-                    "domain": "dcr.fredkiss.dev",
-                    "base_path": "/portainer"
-                },
-                {
-                    "domain": "dcr.fredkiss.dev",
-                    "base_path": "/portainer"
-                },
+                {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
+                {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
             ],
             "ports": [
-                {
-                    "forwarded": 8080
-                },
-            ]
+                {"forwarded": 8080},
+            ],
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('urls'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("urls"))
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry(self, mock_fake_docker: Mock):
@@ -605,18 +605,20 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/"
+                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNotNone(created_service)
         self.assertEqual("fredkiss3", created_service.docker_credentials_username)
         self.assertEqual("s3cret", created_service.docker_credentials_password)
@@ -628,8 +630,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry_does_not_create_service_if_bad_image_credentials(
-            self,
-            mock_fake_docker: Mock):
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
 
@@ -639,21 +641,23 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "bad",
-                "registry_url": "https://dcr.fredkiss.dev/"
+                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('credentials'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("credentials"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNone(created_service)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
@@ -662,9 +666,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
-            self,
-            mock_fake_docker: Mock):
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
+
         p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
 
         create_service_payload = {
@@ -673,21 +678,23 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/"
+                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('image'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("image"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNone(created_service)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
@@ -696,8 +703,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_credentials_do_not_correspond_to_image(
-            self,
-            mock_fake_docker: Mock):
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
 
@@ -707,21 +714,23 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/"
+                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('image'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("image"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNone(created_service)
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
@@ -730,8 +739,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_service_if_nonexistent_dockerhub_image(
-            self,
-            mock_fake_docker: Mock):
+        self, mock_fake_docker: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
 
@@ -741,16 +750,18 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('image'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("image"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNone(created_service)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
@@ -759,16 +770,18 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=json.dumps({}),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-        errors = response.json().get('errors')
+        errors = response.json().get("errors")
         self.assertIsNotNone(errors)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNone(created_service)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
@@ -780,17 +793,21 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": "gh-clone"}),
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": "gh-clone"}
+            ),
             data=json.dumps(create_service_payload),
-            content_type='application/json'
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-        errors = response.json().get('errors')
+        errors = response.json().get("errors")
         self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get('root'))
+        self.assertIsNotNone(errors.get("root"))
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(slug="main-app").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
         self.assertIsNone(created_service)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
@@ -799,10 +816,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
         DockerRegistryService.objects.create(
-            name="cache db2",
-            slug="cache-db",
-            image="redis:alpine",
-            project=p
+            name="cache db2", slug="cache-db", image="redis:alpine", project=p
         )
 
         create_service_payload = {
@@ -811,13 +825,13 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse('zane_api:services.docker.create', kwargs={"project_slug": p.slug}),
-            data=create_service_payload
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-        errors = response.json()['errors']
-        self.assertIsNotNone(errors.get('root'))
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("root"))
 
 
 class DockerGetServiceViewTest(AuthAPITestCase):
@@ -827,20 +841,17 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            name="cache db",
-            slug="cache-db",
-            image="redis:alpine",
-            project=p
+            name="cache db", slug="cache-db", image="redis:alpine", project=p
         )
 
         response = self.client.get(
             reverse(
-                'zane_api:services.docker.details',
-                kwargs={"project_slug": p.slug, "service_slug": service.slug}
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        data = response.json().get('service')
+        data = response.json().get("service")
         self.assertIsNotNone(data)
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
@@ -850,35 +861,34 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                'zane_api:services.docker.details',
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"}
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
             ),
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        errors = response.json().get('errors')
+        errors = response.json().get("errors")
         self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get('root'))
+        self.assertIsNotNone(errors.get("root"))
 
     @patch("zane_api.services.get_docker_client", return_value=FakeDockerClient())
     def test_get_service_not_in_the_correct_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
         p1 = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
-        p2 = Project.objects.create(name="CAMLY (the better kisscam)", slug="camly", owner=owner)
+        p2 = Project.objects.create(
+            name="CAMLY (the better kisscam)", slug="camly", owner=owner
+        )
 
         service = DockerRegistryService.objects.create(
-            name="cache db",
-            slug="cache-db",
-            image="redis:alpine",
-            project=p1
+            name="cache db", slug="cache-db", image="redis:alpine", project=p1
         )
 
         response = self.client.get(
             reverse(
-                'zane_api:services.docker.details',
-                kwargs={"project_slug": p2.slug, "service_slug": service.slug}
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p2.slug, "service_slug": service.slug},
             ),
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        errors = response.json().get('errors')
+        errors = response.json().get("errors")
         self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get('root'))
+        self.assertIsNotNone(errors.get("root"))

@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..services import (
+from ..docker_utils import (
     search_docker_registry,
     check_if_port_is_available,
     login_to_docker_registry
