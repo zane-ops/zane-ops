@@ -65,27 +65,34 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials = data.get("credentials")
         image = data.get("image")
 
-        try:
-            do_image_exists = check_if_docker_image_exists(
-                image,
-                credentials=dict(credentials) if credentials is not None else None,
-            )
-        except docker.errors.APIError:
-            raise serializers.ValidationError(
-                {"credentials": [f"Invalid credentials for the specified registry"]}
-            )
-        else:
-            if not do_image_exists:
-                registry_url = (
-                    credentials.get("registry_url") if credentials is not None else None
-                )
-                if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
-                    registry_str = "on Docker Hub"
-                else:
-                    registry_str = f"in the specified registry"
+        if credentials is not None:
+            try:
+                login_to_docker_registry(**dict(credentials))
+            except docker.errors.APIError:
                 raise serializers.ValidationError(
-                    {"image": [f"the image `{image}` does not exist {registry_str}"]}
+                    {"credentials": [f"Invalid credentials for the specified registry"]}
                 )
+
+        do_image_exists = check_if_docker_image_exists(
+            image,
+            credentials=dict(credentials) if credentials is not None else None,
+        )
+        if not do_image_exists:
+            registry_url = (
+                credentials.get("registry_url") if credentials is not None else None
+            )
+            if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
+                registry_str = "on Docker Hub"
+            else:
+                registry_str = f"in the specified registry"
+            raise serializers.ValidationError(
+                {
+                    "image": [
+                        f"Either the image `{image}` does not exist {registry_str}"
+                        f" or the credentials are invalid for this image."
+                    ]
+                }
+            )
 
         urls = data.get("urls", [])
         ports = data.get("ports", [])

@@ -720,9 +720,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNone(created_service)
 
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        self.assertFalse(fake_docker_client.is_logged_in)
-
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
         self, mock_fake_docker: Mock
@@ -784,7 +781,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
         errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("credentials"))
+        self.assertIsNotNone(errors.get("image"))
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
