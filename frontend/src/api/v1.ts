@@ -34,12 +34,6 @@ export interface paths {
     get: operations["getProjectList"];
     post: operations["createProject"];
   };
-  "/api/projects/{project_slug}/create-service/docker/": {
-    post: operations["createDockerService"];
-  };
-  "/api/projects/{project_slug}/service-details/docker/{service_slug}/": {
-    get: operations["getDockerService"];
-  };
   "/api/projects/{slug}/": {
     get: operations["getSingleProject"];
     delete: operations["archiveSingleProject"];
@@ -65,15 +59,6 @@ export interface components {
     };
     CSRF: {
       details: string;
-    };
-    DockerCredentialsRequest: {
-      username: string;
-      password: string;
-      /**
-       * Format: uri
-       * @default registry-1.docker.io/v2
-       */
-      registry_url?: string;
     };
     DockerImage: {
       full_image: string;
@@ -117,49 +102,6 @@ export interface components {
     DockerPortCheckSuccessResponse: {
       available: boolean;
     };
-    DockerService: {
-      image: string;
-      slug: string;
-      urls: readonly components["schemas"]["URLModel"][];
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-      volumes: readonly components["schemas"]["Volume"][];
-      name: string;
-      archived?: boolean;
-      command?: string | null;
-      ports: readonly components["schemas"]["PortConfiguration"][];
-    };
-    DockerServiceCreateError: {
-      root?: string[];
-      name?: string[];
-      image?: string[];
-      credentials?: string[];
-      urls?: string[];
-      command?: string[];
-      ports?: string[];
-      env?: string[];
-      volumes?: string[];
-    };
-    DockerServiceCreateErrorResponse: {
-      errors: components["schemas"]["DockerServiceCreateError"];
-    };
-    DockerServiceCreateRequest: {
-      name: string;
-      image: string;
-      credentials?: components["schemas"]["DockerCredentialsRequest"];
-      urls?: components["schemas"]["URLRequest"][];
-      command?: string;
-      ports?: components["schemas"]["ServicePortsRequest"][];
-      env?: {
-        [key: string]: string;
-      };
-      volumes?: components["schemas"]["VolumeRequest"][];
-    };
-    DockerServiceCreateSuccessResponse: {
-      service: components["schemas"]["DockerService"];
-    };
     DockerSuccessResponse: {
       images: components["schemas"]["DockerImage"][];
     };
@@ -186,10 +128,6 @@ export interface components {
     };
     PatchedProjectUpdateRequest: {
       name?: string;
-    };
-    PortConfiguration: {
-      host?: number | null;
-      forwarded: number;
     };
     Project: {
       name: string;
@@ -221,23 +159,8 @@ export interface components {
       root?: string[];
       name?: string[];
     };
-    ServicePortsRequest: {
-      /** @default 80 */
-      public?: number;
-      forwarded: number;
-    };
     SingleProjectSuccessResponse: {
       project: components["schemas"]["Project"];
-    };
-    URLModel: {
-      domain: string | null;
-      /** @default / */
-      base_path?: string;
-    };
-    URLRequest: {
-      domain: string;
-      /** @default / */
-      base_path?: string;
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -250,21 +173,8 @@ export interface components {
        */
       is_staff?: boolean;
     };
-    Volume: {
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-      slug: string;
-      name: string;
-      containerPath: string;
-    };
     VolumeGetSizeSuccessResponse: {
       size: number;
-    };
-    VolumeRequest: {
-      name: string;
-      mount_path: string;
     };
   };
   responses: never;
@@ -510,72 +420,6 @@ export interface operations {
       500: {
         content: {
           "application/json": components["schemas"]["ProjetCreateErrorResponse"];
-        };
-      };
-    };
-  };
-  createDockerService: {
-    parameters: {
-      path: {
-        project_slug: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DockerServiceCreateRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceCreateRequest"];
-        "multipart/form-data": components["schemas"]["DockerServiceCreateRequest"];
-      };
-    };
-    responses: {
-      201: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceCreateSuccessResponse"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ForbiddenResponse"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceCreateErrorResponse"];
-        };
-      };
-      409: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceCreateErrorResponse"];
-        };
-      };
-      422: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceCreateErrorResponse"];
-        };
-      };
-    };
-  };
-  getDockerService: {
-    parameters: {
-      path: {
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceCreateSuccessResponse"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ForbiddenResponse"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["BaseErrorResponse"];
         };
       };
     };
