@@ -48,7 +48,7 @@ class DockerImageResult(TypedDict):
     description: str
 
 
-def search_docker_registry(term: str) -> List[DockerImageResult]:
+def search_images_docker_hub(term: str) -> List[DockerImageResult]:
     """
     List all images in registry starting with a certain term.
     """
@@ -86,6 +86,24 @@ class DockerAuthConfig(TypedDict):
 def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client = get_docker_client()
     client.images.pull(image, auth_config=auth)
+
+
+def strip_slash_if_exists(url: str):
+    if url.endswith("/"):
+        return url[:-1]
+    return url
+
+
+def check_if_docker_image_exists(
+    image: str, credentials: DockerAuthConfig = None
+) -> bool:
+    client = get_docker_client()
+    try:
+        client.images.get_registry_data(image, auth_config=credentials)
+    except docker.errors.NotFound:
+        return False
+    else:
+        return True
 
 
 def cleanup_project_resources(project: Project):

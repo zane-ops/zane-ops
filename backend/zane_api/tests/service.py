@@ -53,11 +53,10 @@ class FakeDockerClient:
         self.containers = MagicMock()
         self.raise_error = raise_error
         self.is_logged_in = False
-        self.downloaded_images: list[str] = []
         self.credentials = {}
 
         self.containers.run = self.containers_run
-        self.images.pull = self.images_pull
+        self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
         self.services.get = self.services_get
         self.volumes.create = self.volumes_create
@@ -125,14 +124,13 @@ class FakeDockerClient:
         self.credentials = dict(username=username, password=password)
         self.is_logged_in = True
 
-    def images_pull(self, image: str, auth_config: dict):
-        if auth_config:
+    def image_get_registry_data(self, image: str, auth_config: dict):
+        if auth_config is not None:
             if not image.startswith("dcr.fredkiss.dev"):
                 raise docker.errors.APIError("Invalid credentials")
 
             if not image.startswith("dcr.fredkiss.dev/gh-next"):
                 raise docker.errors.NotFound("This image does not exist")
-            self.downloaded_images.append(image)
         else:
             if image == "nonexistent":
                 raise docker.errors.ImageNotFound("This image does not exist")
@@ -689,7 +687,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         self.assertTrue(fake_docker_client.is_logged_in)
-        self.assertEqual(1, len(fake_docker_client.downloaded_images))
 
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry_does_not_create_service_if_bad_image_credentials(
@@ -725,7 +722,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertFalse(fake_docker_client.is_logged_in)
-        self.assertEqual(0, len(fake_docker_client.downloaded_images))
 
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
@@ -762,7 +758,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertTrue(fake_docker_client.is_logged_in)
-        self.assertEqual(0, len(fake_docker_client.downloaded_images))
 
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_credentials_do_not_correspond_to_image(
@@ -789,16 +784,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
         errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("image"))
+        self.assertIsNotNone(errors.get("credentials"))
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
         ).first()
         self.assertIsNone(created_service)
-
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        self.assertTrue(fake_docker_client.is_logged_in)
-        self.assertEqual(0, len(fake_docker_client.downloaded_images))
 
     @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
     def test_create_service_with_service_if_nonexistent_dockerhub_image(

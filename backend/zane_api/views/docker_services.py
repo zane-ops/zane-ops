@@ -15,8 +15,9 @@ from ..docker_utils import (
     create_service_from_docker_registry,
     create_docker_volume,
     login_to_docker_registry,
-    pull_docker_image,
     check_if_port_is_available,
+    check_if_docker_image_exists,
+    DOCKER_HUB_REGISTRY_URL,
 )
 from ..models import (
     Project,
@@ -32,7 +33,7 @@ from ..models import (
 class DockerCredentialsRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=100)
     password = serializers.CharField(max_length=100)
-    registry_url = serializers.URLField(required=False)
+    registry_url = serializers.URLField(required=False, default=DOCKER_HUB_REGISTRY_URL)
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
@@ -65,28 +66,26 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         image = data.get("image")
 
         try:
-            pull_docker_image(
-                image, auth=dict(credentials) if credentials is not None else None
-            )
-        except docker.errors.NotFound:
-            registry = (
-                credentials.get("registry_url") if credentials is not None else None
-            )
-            if registry is None:
-                registry = "Docker Hub's Registry"
-            else:
-                registry = f"the registry at {registry}"
-            raise serializers.ValidationError(
-                {"image": [f"The image `{image}` does not exist on {registry}"]}
+            do_image_exists = check_if_docker_image_exists(
+                image,
+                credentials=dict(credentials) if credentials is not None else None,
             )
         except docker.errors.APIError:
             raise serializers.ValidationError(
-                {
-                    "image": [
-                        f"This image does not correspond to the credentials provided"
-                    ]
-                }
+                {"credentials": [f"Invalid credentials for the specified registry"]}
             )
+        else:
+            if not do_image_exists:
+                registry_url = (
+                    credentials.get("registry_url") if credentials is not None else None
+                )
+                if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
+                    registry_str = "on Docker Hub"
+                else:
+                    registry_str = f"in the specified registry"
+                raise serializers.ValidationError(
+                    {"image": [f"the image `{image}` does not exist {registry_str}"]}
+                )
 
         urls = data.get("urls", [])
         ports = data.get("ports", [])
