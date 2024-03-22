@@ -11,6 +11,7 @@ import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 import { AlertCircle } from "lucide-react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { userKeys } from "~/key-factories";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -32,7 +33,7 @@ function Login() {
       }
       if (data?.success) {
         queryClient.removeQueries({
-          queryKey: ["AUTHED_USER"]
+          queryKey: userKeys.user
         });
         navigate({ to: "/" });
         return;

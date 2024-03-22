@@ -4,6 +4,7 @@ import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { apiClient } from "../api/client";
 import { deleteCookie, getCookie } from "../utils";
+import { userKeys } from "~/key-factories";
 
 export const Route = createLazyFileRoute("/")({
   component: withAuthRedirect(AuthedView)
@@ -30,7 +31,7 @@ function AuthedView() {
       }
 
       queryClient.removeQueries({
-        queryKey: ["AUTHED_USER"]
+        queryKey: userKeys.user
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });
