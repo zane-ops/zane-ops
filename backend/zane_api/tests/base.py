@@ -10,9 +10,10 @@ from rest_framework.test import APIClient
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
+    CELERY_TASK_ALWAYS_EAGER=True,
 )
 class APITestCase(TestCase):
-    client = APIClient(enforce_csrf_checks=True, content_type='application/json')
+    client = APIClient(enforce_csrf_checks=True, content_type="application/json")
 
     def tearDown(self):
         cache.clear()

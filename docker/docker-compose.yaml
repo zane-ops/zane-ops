@@ -1,6 +1,50 @@
 version: "3.4"
 
 services:
+  celery-worker:
+    build:
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
+    command: celery -A backend worker -l info
+    volumes:
+      - ../backend:/code
+    depends_on:
+      - db
+      - redis
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+  celery-beat:
+    build:
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
+    command: celery -A backend beat -l info
+    volumes:
+      - ../backend:/code
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+      - redis
+  celery-flower:
+    build:
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
+    command: celery -A backend flower -l info
+    volumes:
+      - ../backend:/code
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - 5555:5555
+    depends_on:
+      - db
+      - redis
   registry:
     image: registry:2
     container_name: zane-registry

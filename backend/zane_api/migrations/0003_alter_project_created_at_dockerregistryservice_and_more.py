@@ -7,62 +7,108 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('zane_api', '0002_alter_project_created_at'),
+        ("zane_api", "0002_alter_project_created_at"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='project',
-            name='created_at',
+            model_name="project",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True),
         ),
         migrations.CreateModel(
-            name='DockerRegistryService',
+            name="DockerRegistryService",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('name', models.CharField(max_length=255)),
-                ('slug', models.SlugField(blank=True, max_length=255)),
-                ('archived', models.BooleanField(default=False)),
-                ('is_public', models.BooleanField(default=False)),
-                ('base_domain', models.URLField(blank=True, max_length=1000, null=True)),
-                ('base_docker_image', models.CharField(max_length=510)),
-                ('docker_credentials_email', models.CharField(blank=True, max_length=255, null=True)),
-                ('docker_credentials_password', models.CharField(blank=True, max_length=255, null=True)),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='zane_api.project')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("name", models.CharField(max_length=255)),
+                ("slug", models.SlugField(blank=True, max_length=255)),
+                ("archived", models.BooleanField(default=False)),
+                ("is_public", models.BooleanField(default=False)),
+                (
+                    "base_domain",
+                    models.URLField(blank=True, max_length=1000, null=True),
+                ),
+                ("base_docker_image", models.CharField(max_length=510)),
+                (
+                    "docker_credentials_email",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                (
+                    "docker_credentials_password",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                (
+                    "project",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="zane_api.project",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
-                'unique_together': {('slug', 'project')},
+                "abstract": False,
+                "unique_together": {("slug", "project")},
             },
         ),
         migrations.CreateModel(
-            name='GitRepositoryService',
+            name="GitRepositoryService",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('name', models.CharField(max_length=255)),
-                ('slug', models.SlugField(blank=True, max_length=255)),
-                ('archived', models.BooleanField(default=False)),
-                ('is_public', models.BooleanField(default=False)),
-                ('base_domain', models.URLField(blank=True, max_length=1000, null=True)),
-                ('previews_enabled', models.BooleanField(default=True)),
-                ('auto_deploy', models.BooleanField(default=True)),
-                ('preview_protected', models.BooleanField(default=True)),
-                ('delete_preview_after_merge', models.BooleanField(default=True)),
-                ('production_branch_name', models.CharField(max_length=255)),
-                ('repository_url', models.URLField(max_length=1000)),
-                ('build_success_webhook_url', models.URLField(blank=True, null=True)),
-                ('dockerfile_path', models.CharField(default='./Dockerfile', max_length=255)),
-                ('docker_build_context_dir', models.CharField(default='.', max_length=255)),
-                ('docker_cmd', models.CharField(blank=True, max_length=255, null=True)),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='zane_api.project')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("name", models.CharField(max_length=255)),
+                ("slug", models.SlugField(blank=True, max_length=255)),
+                ("archived", models.BooleanField(default=False)),
+                ("is_public", models.BooleanField(default=False)),
+                (
+                    "base_domain",
+                    models.URLField(blank=True, max_length=1000, null=True),
+                ),
+                ("previews_enabled", models.BooleanField(default=True)),
+                ("auto_deploy", models.BooleanField(default=True)),
+                ("preview_protected", models.BooleanField(default=True)),
+                ("delete_preview_after_merge", models.BooleanField(default=True)),
+                ("production_branch_name", models.CharField(max_length=255)),
+                ("repository_url", models.URLField(max_length=1000)),
+                ("build_success_webhook_url", models.URLField(blank=True, null=True)),
+                (
+                    "dockerfile_path",
+                    models.CharField(default="./Dockerfile.dev", max_length=255),
+                ),
+                (
+                    "docker_build_context_dir",
+                    models.CharField(default=".", max_length=255),
+                ),
+                ("docker_cmd", models.CharField(blank=True, max_length=255, null=True)),
+                (
+                    "project",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="zane_api.project",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
-                'unique_together': {('slug', 'project')},
+                "abstract": False,
+                "unique_together": {("slug", "project")},
             },
         ),
     ]

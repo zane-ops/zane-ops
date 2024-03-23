@@ -1,3 +1,5 @@
+source ./venv/bin/activate && yes | python manage.py flush
+
 # Delete services
 docker service rm $(docker service ls -q --filter label=zane-managed=true)
 

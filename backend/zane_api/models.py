@@ -1,14 +1,12 @@
 import uuid
 from typing import List
 
-from crontab import CronTab
 from django.conf import settings
 from django.db import models
-from django.forms import ValidationError
 from django.utils.translation import gettext_lazy as _
 from shortuuid.django_fields import ShortUUIDField
 
-from .helpers import validate_url_domain
+from .validators import validate_url_domain, validate_crontab
 
 
 class TimestampedModel(models.Model):
@@ -249,16 +247,6 @@ class HttpLog(Log):
     response_headers = models.JSONField()
     ip = models.GenericIPAddressField()
     path = models.CharField(max_length=2000)
-
-
-def validate_crontab(value: str):
-    try:
-        _ = CronTab(value)
-    except ValueError:
-        raise ValidationError(
-            _("%(value)s is not a valid CRONTAB expression"),
-            params={"value": value},
-        )
 
 
 class CRON(models.Model):
