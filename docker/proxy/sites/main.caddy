@@ -1,0 +1,10 @@
+zane.local {
+	handle /api/* {
+		reverse_proxy http://host.docker.internal:8000
+	}
+
+	handle {
+		reverse_proxy http://host.docker.internal:5678
+	}
+	log
+}

@@ -1,15 +1,30 @@
 version: "3.4"
 
 services:
+  registry:
+    image: registry:2
+    container_name: zane-registry
+    restart: always
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    volumes:
+      - ./registry/auth:/auth
+      - ./registry/data:/data
+      - registry-lib-data:/var/lib/registry
+    ports:
+      - "9989:5000"
   redis:
-    container_name: zane-redis
     image: redis
+    container_name: zane-redis
     ports:
       - "6381:6379"
   db:
     image: postgres:12-alpine
     container_name: zane-db
-    restart: always
+    restart: unless-stopped
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
@@ -33,6 +48,17 @@ services:
       - "8089:5540"
     volumes:
       - redisinsight:/data
+  sablier:
+    image: acouvreur/sablier:1.6.0
+    container_name: zane-sablier
+    restart: unless-stopped
+    command:
+      - start
+      - --provider.name=swarm
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
 volumes:
   db-data:
   redisinsight:
+  caddy-data:
+  registry-lib-data:
