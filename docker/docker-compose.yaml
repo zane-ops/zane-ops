@@ -6,8 +6,6 @@ services:
     image: redis
     ports:
       - "6381:6379"
-    networks:
-      - zane-out
   db:
     image: postgres:12-alpine
     container_name: zane-db
@@ -35,11 +33,6 @@ services:
       - "8089:5540"
     volumes:
       - redisinsight:/data
-    networks:
-      - zane-out
 volumes:
   db-data:
   redisinsight:
-networks:
-  zane-out:
-    external: true

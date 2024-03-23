@@ -1,7 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { RequestInput, apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
@@ -11,6 +11,7 @@ import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 import { AlertCircle } from "lucide-react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { userKeys } from "~/key-factories";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -32,7 +33,7 @@ function Login() {
       }
       if (data?.success) {
         queryClient.removeQueries({
-          queryKey: ["AUTHED_USER"]
+          queryKey: userKeys.authedUser
         });
         navigate({ to: "/" });
         return;
