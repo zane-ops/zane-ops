@@ -289,14 +289,17 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
 
         self.register_default_responses_for_url(
-            URL(domain=f"kiss-cam-adminer-ui.{settings.ROOT_DOMAIN}", base_path="/")
+            URL(
+                domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
+                base_path="/",
+            )
         )
         create_service_payload = {
-            "name": "Adminer UI",
-            "image": "adminer:latest",
+            "name": "Basic HTTP webserver",
+            "image": "nginx:latest",
             "ports": [{"forwarded": 8080}],
         }
 
@@ -307,7 +310,9 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        first_deployment = DockerDeployment.objects.get(service__slug="adminer-ui")
+        first_deployment = DockerDeployment.objects.get(
+            service__slug="basic-http-webserver"
+        )
         deploy_task_result = AsyncResult(first_deployment.get_task_id())
         self.assertEqual("SUCCESS", deploy_task_result.status)
         self.assertEqual(6, len(responses.calls))
