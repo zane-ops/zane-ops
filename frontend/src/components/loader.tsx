@@ -2,7 +2,7 @@ export function Loader() {
   return (
     <div className="flex h-screen items-center justify-center">
       <svg
-        className="loader-svg w-36"
+        className="loader-svg w-52"
         data-name="Layer 1"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 820.25 778.36"
