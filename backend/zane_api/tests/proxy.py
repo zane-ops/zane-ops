@@ -308,7 +308,6 @@ class ZaneProxyTestCases(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         first_deployment = DockerDeployment.objects.get(service__slug="adminer-ui")
-        print(first_deployment.get_task_id())
         deploy_task_result = AsyncResult(first_deployment.get_task_id())
         self.assertEqual("SUCCESS", deploy_task_result.status)
         self.assertEqual(6, len(responses.calls))
