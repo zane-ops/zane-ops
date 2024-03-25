@@ -184,6 +184,17 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             urls_seen.add(new_url)
         return value
 
+    def validate_volumes(self, value: list[dict[str, str]]):
+        mount_paths_seen = set()
+        for volume in value:
+            mount_path = volume["mount_path"]
+            if mount_path in mount_paths_seen:
+                raise serializers.ValidationError(
+                    "Cannot specify the same mount_path twice or more."
+                )
+            mount_paths_seen.add(mount_path)
+        return value
+
 
 class DockerServiceCreateSuccessResponseSerializer(serializers.Serializer):
     service = serializers.DockerServiceSerializer(read_only=True)
