@@ -10,7 +10,7 @@ docker network rm $(docker network ls -q --filter label=zane-managed=true)
 docker volume rm $(docker volume ls -q --filter label=zane-managed=true)
 
 # Reset caddy config
-sed -i .bak "s#{{ZANE_HOST}}#$ZANE_HOST#g" ./docker/proxy/default-caddy-config.json
+sed -i .bak "s#{{ZANE_HOST}}#zane.local#g" ./docker/proxy/default-caddy-config.json
 
 curl "http://localhost:2019/load" \
 	-H "Content-Type: application/json" \
