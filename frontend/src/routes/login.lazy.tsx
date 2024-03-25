@@ -10,6 +10,7 @@ import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 
 import { AlertCircle } from "lucide-react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
+import { Loader } from "~/components/loader";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userKeys } from "~/key-factories";
 
@@ -42,7 +43,7 @@ function Login() {
   });
 
   if (query.isLoading) {
-    return <div className="text-3xl font-bold">Loading... with tailwind</div>;
+    return <Loader />;
   }
 
   if (user) {

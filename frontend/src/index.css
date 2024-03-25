@@ -1,10 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
 
 :root {
-  color: theme('colors.card.foreground')
+  color: theme("colors.card.foreground");
 }
 
 @layer base {
@@ -15,7 +14,7 @@
     --muted-foreground: 164 0% 26%;
     --popover: 164 62% 99%;
     --popover-foreground: 164 67% 0%;
-    --card:  219, 40%, 18%;
+    --card: 219, 40%, 18%;
     --card-foreground: 164 67% 0%;
     --border: 164 9% 90%;
     --input: 164 9% 90%;
@@ -29,6 +28,7 @@
     --destructive-foreground: 11 98% 91%;
     --ring: 164 61% 70%;
     --radius: 0.5rem;
+    --loader: #003c57;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -52,6 +52,34 @@
       --destructive: 11 98% 56%;
       --destructive-foreground: 0 0% 100%;
       --ring: 164 61% 70%;
+      --loader: white;
     }
+  }
+
+  
+}
+
+/** Loader **/
+
+.loader-svg path {
+  fill: none;
+  stroke: var(--loader);
+  stroke-width: 10px;
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  animation: drawLoaderSVG 2.5s linear infinite;
+}
+
+
+
+@keyframes drawLoaderSVG {
+  0% {
+    stroke-dashoffset: 1400; 
+  }
+  50% {
+    stroke-dashoffset: 0; 
+  }
+  100% {
+    stroke-dashoffset: -1400;
   }
 }
