@@ -2,5 +2,4 @@ packages:
   - "frontend/"
   - "backend/"
   - "cli/"
-  - "server/"
   - "docker/"
