@@ -5,9 +5,7 @@
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [
-            ":443"
-          ],
+          "listen": [":443"],
           "logs": {
             "logger_names": {
               "{{ZANE_HOST}}": ""
@@ -43,9 +41,7 @@
                       ],
                       "match": [
                         {
-                          "path": [
-                            "/api/*"
-                          ]
+                          "path": ["/api/*"]
                         }
                       ]
                     },
@@ -76,9 +72,7 @@
               ],
               "match": [
                 {
-                  "host": [
-                    "{{ZANE_HOST}}"
-                  ]
+                  "host": ["{{ZANE_HOST}}"]
                 }
               ],
               "terminal": true
