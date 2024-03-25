@@ -1,8 +1,12 @@
+import json
 from typing import List, TypedDict, Literal
 
 import docker
 import docker.errors
+import requests
+from django.conf import settings
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
+from rest_framework import status
 
 from .models import (
     Project,
@@ -11,6 +15,7 @@ from .models import (
     BaseService,
     DockerDeployment,
     PortConfiguration,
+    URL,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -89,10 +94,23 @@ def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client.images.pull(image, auth_config=auth)
 
 
-def strip_slash_if_exists(url: str):
-    if url.endswith("/"):
-        return url[:-1]
-    return url
+def strip_slash_if_exists(
+    url: str,
+    strip_end: bool = False,
+    strip_start: bool = True,
+):
+    final_url = url
+    if strip_start and url.startswith("/"):
+        final_url = final_url[1:]
+    if strip_end and url.endswith("/"):
+        final_url = final_url[:-1]
+    return final_url
+
+
+if __name__ == "__main__":
+    print(strip_slash_if_exists("/bash"))
+    print(strip_slash_if_exists("bash/", strip_end=True))
+    print(strip_slash_if_exists("/bash/", strip_start=True, strip_end=True))
 
 
 def check_if_docker_image_exists(
@@ -263,18 +281,101 @@ def create_service_from_docker_registry(
     )
 
 
-def creat_caddy_config_for_docker(service: DockerRegistryService) -> str:
-    caddy_file_contents = ""
+def get_caddy_request_for_domain(domain: str):
+    return {
+        "@id": domain,
+        "match": [{"host": [domain]}],
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [],
+            }
+        ],
+        "terminal": True,
+    }
+
+
+def get_caddy_id_for_url(url: URL):
+    normalized_path = strip_slash_if_exists(
+        url.base_path, strip_end=True, strip_start=True
+    ).replace("/", "-")
+
+    return f"{url.domain}-{normalized_path}"
+
+
+def get_caddy_request_for_url(
+    url: URL, service: DockerRegistryService, http_port: PortConfiguration
+):
+    service_name = get_service_resource_name(service, service_type="docker")
+
+    return {
+        "@id": get_caddy_id_for_url(url),
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [
+                    {
+                        "handle": [
+                            {
+                                "flush_interval": -1,
+                                "handler": "reverse_proxy",
+                                "upstreams": [
+                                    {"dial": f"{service_name}:{http_port.forwarded}"}
+                                ],
+                            }
+                        ]
+                    }
+                ],
+            }
+        ],
+        "match": [
+            {
+                "path": [f"{strip_slash_if_exists(url.base_path, strip_end=True)}/*"],
+            }
+        ],
+    }
+
+
+def expose_docker_service_to_http(service: DockerRegistryService) -> None:
     http_port: PortConfiguration = service.port_config.filter(host__isnull=True).first()
+    if http_port is None:
+        raise Exception(
+            f"Cannot expose service `{service.slug}` without a HTTP port exposed."
+        )
+
     for url in service.urls.all():
-        base_path = "" if url.base_path == "/" else url.base_path + " "
-        caddy_file_contents += f"""
-{url.domain} {{
-    handle {base_path}{{
-        reverse_proxy http://{get_service_resource_name(service, 'docker')}:{http_port.forwarded}
-    }}
-    log
-}}
-"""
-    print(caddy_file_contents)
-    return caddy_file_contents
+        response = requests.get(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
+
+        # if the domain doesn't exist we create the config for the domain
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
+                headers={"content-type": "application/json"},
+                json=get_caddy_request_for_domain(url.domain),
+            )
+
+        # add logger if not exists
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+            headers={"content-type": "application/json", "accept": "application/json"},
+        )
+        if response.json() is None:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                data=json.dumps(""),
+                headers={
+                    "content-type": "application/json",
+                    "accept": "application/json",
+                },
+            )
+
+        # now we create the config for the URL
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+        )
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+                headers={"content-type": "application/json"},
+                json=get_caddy_request_for_url(url, service, http_port),
+            )

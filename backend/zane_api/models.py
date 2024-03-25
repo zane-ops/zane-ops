@@ -70,6 +70,7 @@ class PortConfiguration(models.Model):
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
 
+
 class DockerRegistryService(BaseService):
     image = models.CharField(max_length=510)
     command = models.TextField(null=True, blank=True)
@@ -154,6 +155,9 @@ class BaseDeployment(models.Model):
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
     hash = ShortUUIDField(length=11, max_length=11, unique=True)
+
+    def get_task_id(self):
+        return f"dpl-docker-{self.hash}-{self.service.slug}-{self.service.project.slug}"
 
 
 class GitDeployment(BaseDeployment):

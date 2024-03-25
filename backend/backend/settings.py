@@ -36,7 +36,9 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 ## We will only support one root domain on production
 ## And it will be in the format domain.com (without `http://` or `https://`)
 root_domain = os.environ.get("ROOT_DOMAIN")
+zane_app_domain = os.environ.get("ZANE_APP_DOMAIN")
 ROOT_DOMAIN = "zane.local" if root_domain is None else root_domain
+ZANE_APP_DOMAIN = ROOT_DOMAIN if zane_app_domain is None else zane_app_domain
 ALLOWED_HOSTS = (
     ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
 )

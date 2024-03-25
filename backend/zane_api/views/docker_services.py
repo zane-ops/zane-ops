@@ -12,8 +12,6 @@ from rest_framework.views import APIView
 
 from .. import serializers
 from ..docker_operations import (
-    create_service_from_docker_registry,
-    create_docker_volume,
     login_to_docker_registry,
     check_if_port_is_available,
     check_if_docker_image_exists,
@@ -28,6 +26,7 @@ from ..models import (
     URL,
     EnvVariable,
 )
+from ..tasks import deploy_docker_service
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
@@ -172,7 +171,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     def validate_urls(self, value: list[dict[str, str]]):
         urls_seen = set()
         for url in value:
-            if url["domain"] == settings.ROOT_DOMAIN:
+            if url["domain"] == settings.ZANE_APP_DOMAIN:
                 raise serializers.ValidationError(
                     "Using the domain where zaneOps is installed is not allowed."
                 )
@@ -370,11 +369,11 @@ class CreateDockerServiceAPIView(APIView):
 
                 first_deployment.env_variables.add(*created_envs)
 
-                # TODO move to a celery task (in #44)
-                # Create resources in docker
-                for volume in created_volumes:
-                    create_docker_volume(volume)
-                create_service_from_docker_registry(service, first_deployment)
+                # Run celery deployment task
+                deploy_docker_service.apply_async(
+                    kwargs=dict(deployment_hash=first_deployment.hash),
+                    task_id=first_deployment.get_task_id(),
+                )
 
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
