@@ -16,6 +16,7 @@ class FakeDockerClientWithNetworks:
     @dataclass
     class FakeNetwork:
         name: str
+        id: str
         parent: "FakeDockerClientWithNetworks"
 
         def remove(self):
@@ -23,10 +24,26 @@ class FakeDockerClientWithNetworks:
                 raise docker.errors.APIError("Unknow error when deleting network")
             self.parent.remove(self.name)
 
+    class FakeService:
+        def __init__(self):
+            self.attrs = {
+                "Spec": {
+                    "TaskTemplate": {
+                        "Networks": [],
+                    },
+                }
+            }
+
+        def update(self, networks: list):
+            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
+                {"Target": network} for network in networks
+            ]
+
     def __init__(
         self, raise_error_on_create: bool = False, raise_error_on_delete: bool = False
     ):
         self.networks = MagicMock()
+        self.services = MagicMock()
         self.network_map = (
             {}
         )  # type: dict[str, FakeDockerClientWithNetworks.FakeNetwork]
@@ -36,11 +53,16 @@ class FakeDockerClientWithNetworks:
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
+        self.proxy_service = FakeDockerClientWithNetworks.FakeService()
+        self.services.get.return_value = self.proxy_service
+
     def docker_create_network(self, name: str, **kwargs):
         if self.raise_error_on_create:
             raise docker.errors.APIError("Unknown error when creating a network")
 
-        created_network = FakeDockerClientWithNetworks.FakeNetwork(name, parent=self)
+        created_network = FakeDockerClientWithNetworks.FakeNetwork(
+            name=name, id=name, parent=self
+        )
         self.network_map[name] = created_network
         return created_network
 
@@ -373,10 +395,11 @@ class DockerAddNetworkTest(AuthAPITestCase):
     def test_network_is_created_on_new_project(self, mock_fake_docker: Mock):
         self.loginUser()
         # Create a new project
-        self.client.post(
+        response = self.client.post(
             reverse("zane_api:projects.list"),
             data={"name": "Zane Ops"},
         )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         p: Project | None = Project.objects.filter(slug="zane-ops").first()
         self.assertIsNotNone(mock_fake_docker.return_value.get_network(p))
