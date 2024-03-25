@@ -5,7 +5,9 @@
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [":443"],
+          "listen": [
+            ":443"
+          ],
           "logs": {
             "logger_names": {
               "{{ZANE_HOST}}": ""
@@ -30,7 +32,7 @@
                                   "handler": "reverse_proxy",
                                   "upstreams": [
                                     {
-                                      "dial": "127.0.0.1:8000"
+                                      "dial": "host.docker.internal:8000"
                                     }
                                   ]
                                 }
@@ -41,7 +43,9 @@
                       ],
                       "match": [
                         {
-                          "path": ["/api/*"]
+                          "path": [
+                            "/api/*"
+                          ]
                         }
                       ]
                     },
@@ -57,7 +61,7 @@
                                   "handler": "reverse_proxy",
                                   "upstreams": [
                                     {
-                                      "dial": "127.0.0.1:5678"
+                                      "dial": "host.docker.internal:5678"
                                     }
                                   ]
                                 }
@@ -72,7 +76,9 @@
               ],
               "match": [
                 {
-                  "host": ["{{ZANE_HOST}}"]
+                  "host": [
+                    "{{ZANE_HOST}}"
+                  ]
                 }
               ],
               "terminal": true
