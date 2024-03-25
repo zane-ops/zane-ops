@@ -331,7 +331,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
 
         used_port = PortConfiguration(
-            project=p,
             host=8082,
             forwarded=5540,
         )
