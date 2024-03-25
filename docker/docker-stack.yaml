@@ -4,6 +4,21 @@ services:
   zane-proxy:
     image: localhost:9989/caddy:2.7.6-with-sablier
     command: caddy run --resume
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
     ports:
       - "80:80"
       - "443:443"

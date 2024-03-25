@@ -151,6 +151,14 @@ def cleanup_project_resources(project: Project):
         # We will assume the network has been deleted before
         pass
     else:
+        service = client.services.get(settings.CADDY_PROXY_SERVICE)
+        service_spec = service.attrs["Spec"]
+        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
+        network_ids = set(net["Target"] for net in current_networks)
+        if network_associated_to_project.id in network_ids:
+            network_ids.remove(network_associated_to_project.id)
+            service.update(networks=list(network_ids))
+
         network_associated_to_project.remove()
 
 
@@ -159,13 +167,20 @@ def create_project_resources(project: Project):
     Create the resources for the project, here it is mainly the project shared network
     """
     client = get_docker_client()
-    client.networks.create(
+    network = client.networks.create(
         name=get_network_resource_name(project),
         scope="swarm",
         driver="overlay",
         labels=get_resource_labels(project),
         attachable=True,
     )
+
+    service = client.services.get(settings.CADDY_PROXY_SERVICE)
+    service_spec = service.attrs["Spec"]
+    current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
+    network_ids = set(net["Target"] for net in current_networks)
+    network_ids.add(network.id)
+    service.update(networks=list(network_ids))
 
 
 def check_if_port_is_available(port: int) -> bool:

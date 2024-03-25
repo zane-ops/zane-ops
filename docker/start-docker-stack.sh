@@ -3,7 +3,7 @@
 # Function to undeploy the stack
 cleanup() {
   echo "Undeploying the stack..."
-  docker stack rm zane
+  docker service scale zane_zane-proxy=0
   docker-compose down --remove-orphans
   exit 0
 }
