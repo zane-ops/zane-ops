@@ -28,6 +28,7 @@
     --destructive-foreground: 11 98% 91%;
     --ring: 164 61% 70%;
     --radius: 0.5rem;
+    --loader: #003c57;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -51,25 +52,27 @@
       --destructive: 11 98% 56%;
       --destructive-foreground: 0 0% 100%;
       --ring: 164 61% 70%;
+      --loader: white;
     }
   }
+
+  
 }
 
 /** Loader **/
 
-.cls-1 {
+.loader-svg path {
   fill: none;
-  stroke: #003c57;
+  stroke: var(--loader);
   stroke-width: 10px;
   stroke-dasharray: 1400;
   stroke-dashoffset: 1400;
-  animation: draw 2.5s linear infinite;
-}
-svg {
-  width: 200px;
+  animation: drawLoaderSVG 2.5s linear infinite;
 }
 
-@keyframes draw {
+
+
+@keyframes drawLoaderSVG {
   0% {
     stroke-dashoffset: 1400; 
   }
