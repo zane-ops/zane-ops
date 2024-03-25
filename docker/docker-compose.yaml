@@ -5,7 +5,7 @@ services:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
-    command: celery -A backend worker -l info
+    command: celery -A backend worker -E -l info
     volumes:
       - ../backend:/code
     depends_on:

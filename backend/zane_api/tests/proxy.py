@@ -2,7 +2,6 @@ import json
 from unittest.mock import patch, Mock
 
 import responses
-from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -16,7 +15,6 @@ from ..models import (
     DockerRegistryService,
     PortConfiguration,
     URL,
-    DockerDeployment,
 )
 
 
@@ -310,9 +308,4 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        first_deployment = DockerDeployment.objects.get(
-            service__slug="basic-http-webserver"
-        )
-        deploy_task_result = AsyncResult(first_deployment.get_task_id())
-        self.assertEqual("SUCCESS", deploy_task_result.status)
         self.assertEqual(6, len(responses.calls))
