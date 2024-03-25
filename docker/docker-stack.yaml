@@ -1,13 +1,24 @@
 version: "3.4"
 
 services:
-  proxy:
+  zane-proxy:
     image: localhost:9989/caddy:2.7.6-with-sablier
-    ports:
-      - "80:80"
-      - "443:443"
+    command: caddy run --resume
+    #    keep this in production
+    #    ports:
+    #      - "80:80"
+    #      - "443:443"
     volumes:
-      - ./proxy/sites:/etc/caddy
       - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - host
+#    keep this in production
+#    environment:
+#      CADDY_ADMIN: 0.0.0.0:2019
 volumes:
   caddy-data:
+  caddy-config:
+networks:
+  host:
+    external: true

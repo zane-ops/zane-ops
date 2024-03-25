@@ -21,9 +21,7 @@ echo "Building zane-proxy..."
 docker buildx install
 docker buildx create --name zane_builder --config ./buildkit/buildkitd.toml --driver=docker-container
 echo password | docker login  --username=zane --password-stdin localhost:9989
-docker buildx build --load https://github.com/acouvreur/sablier.git#v1.6.0:plugins/caddy \
-    --build-arg=CADDY_VERSION=2.7.6 \
-    -t localhost:9989/caddy:2.7.6-with-sablier
+docker buildx build  --load -t localhost:9989/caddy:2.7.6-with-sablier ./proxy
 
 docker push localhost:9989/caddy:2.7.6-with-sablier
 
