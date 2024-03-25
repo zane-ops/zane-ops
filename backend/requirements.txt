@@ -23,6 +23,7 @@ docker==7.0.0
 drf-spectacular==0.27.1
 faker==24.2.0
 flower==2.0.1
+gunicorn==21.2.0
 humanize==4.9.0
 idna==3.6
 inflection==0.5.1
@@ -47,6 +48,7 @@ redgreenunittest==0.1.1
 redis==5.0.1
 referencing==0.33.0
 requests==2.31.0
+responses==0.25.0
 rpds-py==0.18.0
 shortuuid==1.0.13
 six==1.16.0

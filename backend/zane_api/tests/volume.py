@@ -7,7 +7,7 @@ from rest_framework import status
 
 from . import AuthAPITestCase
 from .base import APITestCase
-from ..docker_utils import create_docker_volume, remove_docker_volume
+from ..docker_operations import create_docker_volume, remove_docker_volume
 from ..models import Project, Volume
 
 
@@ -54,7 +54,7 @@ class DockerVolumeTests(APITestCase):
         owner = User.objects.create_user(username="Fredkiss3", password="password")
         Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_create_volume_successful(self, mock_fake_docker: Mock):
         volume = Volume.objects.create(name="postgres DB Data", slug="postgres-db-data",
                                        project=Project.objects.first())
@@ -62,7 +62,7 @@ class DockerVolumeTests(APITestCase):
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(1, len(fake_docker_client.volume_map))
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_remove_volume_successful(self, mock_fake_docker: Mock):
         volume = Volume.objects.create(
             name="postgres DB Data",
@@ -75,7 +75,7 @@ class DockerVolumeTests(APITestCase):
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(0, len(fake_docker_client.volume_map))
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_remove_non_existent_volume_doesnt_throw_error(self, mock_fake_docker: Mock):
         volume = Volume.objects.create(
             name="postgres DB Data",
@@ -94,7 +94,7 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.create(name="Zane Ops", slug="zane-ops", owner=owner)
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_get_volume_size(self, _: Mock):
         volume = Volume.objects.create(
             name="postgres DB Data",
@@ -106,7 +106,7 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
         data = response.json()
         self.assertIsNotNone(data.get('size'))
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_non_existant_volume(self, _: Mock):
         response = self.client.get(reverse('zane_api:volume.size', kwargs={"slug": 'postgres-db-data'}))
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

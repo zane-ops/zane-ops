@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..docker_utils import DockerImageResultFromRegistry
+from ..docker_operations import DockerImageResultFromRegistry
 
 
 class FakeDockerClient:
@@ -18,7 +18,9 @@ class FakeDockerClient:
         self.images.search = self.images_search
 
     @staticmethod
-    def containers_run(image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool):
+    def containers_run(
+        image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
+    ):
         _, port = list(ports.values())[0]
         if port == 90:
             raise docker.errors.APIError("Port 90 is already used")
@@ -31,7 +33,7 @@ class FakeDockerClient:
                 "is_official": True,
                 "is_automated": True,
                 "description": "Caddy 2 is a powerful, enterprise-ready,"
-                               " open source web server with automatic HTTPS written in Go",
+                " open source web server with automatic HTTPS written in Go",
             },
             {
                 "description": "caddy webserver optimized for usage within the SIWECOS project",
@@ -44,7 +46,7 @@ class FakeDockerClient:
 
     @staticmethod
     def login(username: str, password: str, **kwargs):
-        if username != 'user' or password != 'password':
+        if username != "user" or password != "password":
             raise docker.errors.APIError("Bad Credentials")
 
 
@@ -53,7 +55,7 @@ class DockerViewTests(AuthAPITestCase):
         super().setUp()
         self.loginUser()
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_search_docker_images(self, mock_fake_docker: Mock):
         response = self.client.get(
             reverse("zane_api:docker.image_search"), QUERY_STRING="q=caddy"
@@ -65,12 +67,12 @@ class DockerViewTests(AuthAPITestCase):
         self.assertEqual(images[0]["full_image"], "library/caddy:latest")
         self.assertEqual(images[1]["full_image"], "siwecos/caddy:latest")
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_search_query_empty(self, _: Mock):
         response = self.client.get(reverse("zane_api:docker.image_search"))
         self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_success_validate_credentials(self, _: Mock):
         response = self.client.post(
             reverse("zane_api:docker.login"),
@@ -82,7 +84,7 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_bad_credentials(self, _: Mock):
         response = self.client.post(
             reverse("zane_api:docker.login"),
@@ -94,7 +96,7 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_bad_request_for_credentials(self, _: Mock):
         response = self.client.post(
             reverse("zane_api:docker.login"),
@@ -107,7 +109,7 @@ class DockerViewTests(AuthAPITestCase):
 
 
 class DockerPortMappingViewTests(AuthAPITestCase):
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_successfull(self, _: Mock):
         self.loginUser()
         response = self.client.post(
@@ -119,7 +121,7 @@ class DockerPortMappingViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(response.json().get("available"), True)
 
-    @patch("zane_api.docker_utils.get_docker_client", return_value=FakeDockerClient())
+    @patch("zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient())
     def test_unavailable_port(self, _: Mock):
         self.loginUser()
         response = self.client.post(

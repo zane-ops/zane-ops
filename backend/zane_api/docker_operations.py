@@ -10,6 +10,7 @@ from .models import (
     DockerRegistryService,
     BaseService,
     DockerDeployment,
+    PortConfiguration,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -260,3 +261,20 @@ def create_service_from_docker_registry(
             failure_action="rollback",
         ),
     )
+
+
+def creat_caddy_config_for_docker(service: DockerRegistryService) -> str:
+    caddy_file_contents = ""
+    http_port: PortConfiguration = service.port_config.filter(host__isnull=True).first()
+    for url in service.urls.all():
+        base_path = "" if url.base_path == "/" else url.base_path + " "
+        caddy_file_contents += f"""
+{url.domain} {{
+    handle {base_path}{{
+        reverse_proxy http://{get_service_resource_name(service, 'docker')}:{http_port.forwarded}
+    }}
+    log
+}}
+"""
+    print(caddy_file_contents)
+    return caddy_file_contents

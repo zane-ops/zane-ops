@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..docker_utils import get_docker_volume_size
+from ..docker_operations import get_docker_volume_size
 from ..models import Volume
 
 

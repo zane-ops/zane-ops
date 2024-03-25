@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from . import EMPTY_RESPONSE
 from .. import serializers
-from ..docker_utils import create_project_resources, cleanup_project_resources
+from ..docker_operations import create_project_resources, cleanup_project_resources
 from ..models import Project
 
 

@@ -180,7 +180,7 @@ LOGGING = {
     },
 }
 
-## Django Rest framework
+# Django Rest framework
 
 REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
 
@@ -202,7 +202,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-## DRF SPECTACULAR, for OpenAPI schema generation
+# DRF SPECTACULAR, for OpenAPI schema generation
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
@@ -224,3 +224,8 @@ CELERY_CACHE_BACKEND = "default"
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+
+# Zane proxy config
+CADDY_PROXY_ADMIN_HOST = os.environ.get(
+    "CADDY_PROXY_ADMIN_HOST", "http://localhost:2019"
+)

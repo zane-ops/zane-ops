@@ -69,8 +69,6 @@ class BaseService(TimestampedModel):
 class PortConfiguration(models.Model):
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
-    project = models.ForeignKey(to="Project", on_delete=models.CASCADE)
-
 
 class DockerRegistryService(BaseService):
     image = models.CharField(max_length=510)

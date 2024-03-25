@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..docker_utils import (
+from ..docker_operations import (
     create_service_from_docker_registry,
     create_docker_volume,
     login_to_docker_registry,
@@ -170,9 +170,12 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         return ports
 
     def validate_urls(self, value: list[dict[str, str]]):
-        # Check for duplicate public ports
         urls_seen = set()
         for url in value:
+            if url["domain"] == settings.ROOT_DOMAIN:
+                raise serializers.ValidationError(
+                    "Using the domain where zaneOps is installed is not allowed."
+                )
             new_url = (url["domain"], url["base_path"])
             if new_url in urls_seen:
                 raise serializers.ValidationError(
@@ -310,7 +313,6 @@ class CreateDockerServiceAPIView(APIView):
                 created_ports = PortConfiguration.objects.bulk_create(
                     [
                         PortConfiguration(
-                            project=project,
                             host=(
                                 port["public"]
                                 if port["public"] not in http_ports
