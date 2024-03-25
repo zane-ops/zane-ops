@@ -8,6 +8,7 @@ services:
     command: celery -A backend worker -E -l info
     volumes:
       - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - db
       - redis
@@ -15,6 +16,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       DB_HOST: db
       DB_PORT: 5432
+      CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
   celery-beat:
     build:
       context: ../backend
@@ -22,10 +24,12 @@ services:
     command: celery -A backend beat -l info
     volumes:
       - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       REDIS_URL: redis://redis:6379/0
       DB_HOST: db
       DB_PORT: 5432
+      CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
     depends_on:
       - db
       - redis
@@ -63,6 +67,8 @@ services:
   redis:
     image: redis
     container_name: zane-redis
+    volumes:
+      - redis-data:/data
     ports:
       - "6381:6379"
   db:
@@ -103,6 +109,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
 volumes:
   db-data:
+  redis-data:
   redisinsight:
   caddy-data:
   registry-lib-data:

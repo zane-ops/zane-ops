@@ -144,11 +144,12 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                 public_ports_seen.add(public_port)
 
             # check if port is available
-            is_port_available = check_if_port_is_available(public_port)
-            if not is_port_available:
-                raise serializers.ValidationError(
-                    f"Port {public_port} is not available on the host machine."
-                )
+            if public_port not in http_ports:
+                is_port_available = check_if_port_is_available(public_port)
+                if not is_port_available:
+                    raise serializers.ValidationError(
+                        f"Port {public_port} is not available on the host machine."
+                    )
 
         already_existing_ports = [
             str(port.host)
