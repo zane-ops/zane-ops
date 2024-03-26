@@ -2,6 +2,7 @@
   "name": "@zane-ops/docker",
   "version": "0.0.0",
   "scripts": {
-    "dev": "chmod a+x ./start-docker-stack.sh && chmod a+x ./stop-docker-stack.sh && chmod a+x ./attach-proxy-networks.sh &&  ./start-docker-stack.sh"
+    "predev": "chmod a+x ./start-docker-stack.sh && chmod a+x ./stop-docker-stack.sh && chmod a+x ./attach-proxy-networks.sh",
+    "dev": "./start-docker-stack.sh && ./stop-docker-stack.sh"
   }
 }
