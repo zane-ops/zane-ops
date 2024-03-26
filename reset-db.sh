@@ -1,9 +1,10 @@
+echo "Flushing the database..."
 source ./backend/venv/bin/activate && echo yes | python ./backend/manage.py flush
 
 echo "Scaling down all zane-ops services..."
 services=$(docker service ls --filter label=zane-managed=true --format "{{.Name}}")
 for service in $services; do
-  docker service scale --detach $service=0
+  docker service scale $service=0
 done
 
 echo "Deleting services..."
@@ -24,3 +25,6 @@ curl "http://localhost:2019/load" \
 
 rm ./docker/proxy/default-caddy-config.json
 mv ./docker/proxy/default-caddy-config.json.bak ./docker/proxy/default-caddy-config.json
+
+echo "Recreating the superuser..."
+source ./backend/venv/bin/activate && python ./backend/manage.py createsuperuser
