@@ -144,6 +144,7 @@ class BaseDeployment(models.Model):
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.PENDING,
     )
+    hash = ShortUUIDField(length=11, max_length=11, unique=True)
     env_variables = models.ManyToManyField(to="EnvVariable")
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
@@ -154,7 +155,6 @@ class BaseDeployment(models.Model):
 
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
-    hash = ShortUUIDField(length=11, max_length=11, unique=True)
 
     def get_task_id(self):
         return f"dpl-docker-{self.hash}-{self.service.slug}-{self.service.project.slug}"
