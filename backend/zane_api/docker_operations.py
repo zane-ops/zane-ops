@@ -5,6 +5,7 @@ import docker
 import docker.errors
 import requests
 from django.conf import settings
+from docker.models.networks import Network
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 from rest_framework import status
 
@@ -145,15 +146,7 @@ def cleanup_project_resources(project: Project):
         # We will assume the network has been deleted before
         pass
     else:
-        service = client.services.get(settings.CADDY_PROXY_SERVICE)
-        service_spec = service.attrs["Spec"]
-        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
-        network_ids = set(net["Target"] for net in current_networks)
-        if network_associated_to_project.id in network_ids:
-            network_ids.remove(network_associated_to_project.id)
-            service.update(networks=list(network_ids))
-
-        network_associated_to_project.remove()
+        detach_network_from_proxy(network_associated_to_project)
 
 
 def create_project_resources(project: Project):
@@ -168,13 +161,30 @@ def create_project_resources(project: Project):
         labels=get_resource_labels(project),
         attachable=True,
     )
+    attach_network_to_proxy(network)
 
+
+def attach_network_to_proxy(network: Network):
+    client = get_docker_client()
     service = client.services.get(settings.CADDY_PROXY_SERVICE)
     service_spec = service.attrs["Spec"]
     current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
     network_ids = set(net["Target"] for net in current_networks)
     network_ids.add(network.id)
     service.update(networks=list(network_ids))
+
+
+def detach_network_from_proxy(network: Network):
+    client = get_docker_client()
+    service = client.services.get(settings.CADDY_PROXY_SERVICE)
+    service_spec = service.attrs["Spec"]
+    current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
+    network_ids = set(net["Target"] for net in current_networks)
+    if network.id in network_ids:
+        network_ids.remove(network.id)
+        service.update(networks=list(network_ids))
+
+    network.remove()
 
 
 def check_if_port_is_available(port: int) -> bool:
