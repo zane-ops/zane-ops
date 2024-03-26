@@ -3,6 +3,6 @@
   "version": "0.0.0",
   "scripts": {
     "predev": "chmod a+x ./start-docker-stack.sh && chmod a+x ./stop-docker-stack.sh && chmod a+x ./attach-proxy-networks.sh",
-    "dev": "./start-docker-stack.sh && ./stop-docker-stack.sh"
+    "dev": "./start-docker-stack.sh"
   }
 }
