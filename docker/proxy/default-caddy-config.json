@@ -1,0 +1,85 @@
+{
+  "@id": "root",
+  "apps": {
+    "http": {
+      "servers": {
+        "zane": {
+          "@id": "zane-server",
+          "listen": [":443", ":80"],
+          "logs": {
+            "logger_names": {
+              "{{ZANE_HOST}}": ""
+            }
+          },
+          "routes": [
+            {
+              "@id": "{{ZANE_HOST}}",
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "@id": "{{ZANE_HOST}}-api",
+                      "handle": [
+                        {
+                          "handler": "subroute",
+                          "routes": [
+                            {
+                              "handle": [
+                                {
+                                  "handler": "reverse_proxy",
+                                  "upstreams": [
+                                    {
+                                      "dial": "host.docker.internal:8000"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "match": [
+                        {
+                          "path": ["/api/*"]
+                        }
+                      ]
+                    },
+                    {
+                      "@id": "{{ZANE_HOST}}-front",
+                      "handle": [
+                        {
+                          "handler": "subroute",
+                          "routes": [
+                            {
+                              "handle": [
+                                {
+                                  "handler": "reverse_proxy",
+                                  "upstreams": [
+                                    {
+                                      "dial": "host.docker.internal:5678"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "match": [
+                {
+                  "host": ["{{ZANE_HOST}}"]
+                }
+              ],
+              "terminal": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
-
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,11 +31,14 @@ PRODUCTION_ENV = "PRODUCTION"
 DEBUG = not env == PRODUCTION_ENV
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
+REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 
 ## We will only support one root domain on production
 ## And it will be in the format domain.com (without `http://` or `https://`)
 root_domain = os.environ.get("ROOT_DOMAIN")
+zane_app_domain = os.environ.get("ZANE_APP_DOMAIN")
 ROOT_DOMAIN = "zane.local" if root_domain is None else root_domain
+ZANE_APP_DOMAIN = ROOT_DOMAIN if zane_app_domain is None else zane_app_domain
 ALLOWED_HOSTS = (
     ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
 )
@@ -51,7 +53,7 @@ CSRF_TRUSTED_ORIGINS = (
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6381"),
+        "LOCATION": REDIS_URL,
     }
 }
 
@@ -69,6 +71,8 @@ INSTALLED_APPS = [
     "zane_api.apps.ZaneApiConfig",
     "rest_framework",
     "drf_spectacular",
+    "django_celery_results",
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -178,14 +182,14 @@ LOGGING = {
     },
 }
 
-## Django Rest framework
+# Django Rest framework
 
 REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
 
 if DEBUG:
     REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = (
-            REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES
-            + ("rest_framework.renderers.BrowsableAPIRenderer",)
+        REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES
+        + ("rest_framework.renderers.BrowsableAPIRenderer",)
     )
 
 REST_FRAMEWORK = {
@@ -200,7 +204,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-## DRF SPECTACULAR, for OpenAPI schema generation
+# DRF SPECTACULAR, for OpenAPI schema generation
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
@@ -211,3 +215,20 @@ SPECTACULAR_SETTINGS = {
 
 # For having colorized output in tests
 TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
+
+# Celery config
+CELERY_BROKER_URL = REDIS_URL
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_CACHE_BACKEND = "default"
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+# Zane proxy config
+CADDY_PROXY_ADMIN_HOST = os.environ.get(
+    "CADDY_PROXY_ADMIN_HOST", "http://localhost:2019"
+)
+CADDY_PROXY_SERVICE = "zane_zane-proxy"

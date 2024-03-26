@@ -1,8 +1,13 @@
+import json
 from typing import List, TypedDict, Literal
 
 import docker
 import docker.errors
+import requests
+from django.conf import settings
+from docker.models.networks import Network
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
+from rest_framework import status
 
 from .models import (
     Project,
@@ -10,6 +15,8 @@ from .models import (
     DockerRegistryService,
     BaseService,
     DockerDeployment,
+    PortConfiguration,
+    URL,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -88,10 +95,17 @@ def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client.images.pull(image, auth_config=auth)
 
 
-def strip_slash_if_exists(url: str):
-    if url.endswith("/"):
-        return url[:-1]
-    return url
+def strip_slash_if_exists(
+    url: str,
+    strip_end: bool = False,
+    strip_start: bool = True,
+):
+    final_url = url
+    if strip_start and url.startswith("/"):
+        final_url = final_url[1:]
+    if strip_end and url.endswith("/"):
+        final_url = final_url[:-1]
+    return final_url
 
 
 def check_if_docker_image_exists(
@@ -100,7 +114,7 @@ def check_if_docker_image_exists(
     client = get_docker_client()
     try:
         client.images.get_registry_data(image, auth_config=credentials)
-    except docker.errors.NotFound:
+    except docker.errors.APIError:
         return False
     else:
         return True
@@ -132,6 +146,7 @@ def cleanup_project_resources(project: Project):
         # We will assume the network has been deleted before
         pass
     else:
+        detach_network_from_proxy(network_associated_to_project)
         network_associated_to_project.remove()
 
 
@@ -140,13 +155,35 @@ def create_project_resources(project: Project):
     Create the resources for the project, here it is mainly the project shared network
     """
     client = get_docker_client()
-    client.networks.create(
+    network = client.networks.create(
         name=get_network_resource_name(project),
         scope="swarm",
         driver="overlay",
         labels=get_resource_labels(project),
         attachable=True,
     )
+    attach_network_to_proxy(network)
+
+
+def attach_network_to_proxy(network: Network):
+    client = get_docker_client()
+    service = client.services.get(settings.CADDY_PROXY_SERVICE)
+    service_spec = service.attrs["Spec"]
+    current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
+    network_ids = set(net["Target"] for net in current_networks)
+    network_ids.add(network.id)
+    service.update(networks=list(network_ids))
+
+
+def detach_network_from_proxy(network: Network):
+    client = get_docker_client()
+    service = client.services.get(settings.CADDY_PROXY_SERVICE)
+    service_spec = service.attrs["Spec"]
+    current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
+    network_ids = set(net["Target"] for net in current_networks)
+    if network.id in network_ids:
+        network_ids.remove(network.id)
+        service.update(networks=list(network_ids))
 
 
 def check_if_port_is_available(port: int) -> bool:
@@ -215,6 +252,7 @@ def get_service_resource_name(
 def create_service_from_docker_registry(
     service: DockerRegistryService, deployment: DockerDeployment
 ):
+    # TODO: Pull Image Tag (#44)
     client = get_docker_client()
 
     exposed_ports: dict[int, int] = {}
@@ -260,3 +298,103 @@ def create_service_from_docker_registry(
             failure_action="rollback",
         ),
     )
+
+
+def get_caddy_request_for_domain(domain: str):
+    return {
+        "@id": domain,
+        "match": [{"host": [domain]}],
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [],
+            }
+        ],
+        "terminal": True,
+    }
+
+
+def get_caddy_id_for_url(url: URL):
+    normalized_path = strip_slash_if_exists(
+        url.base_path, strip_end=True, strip_start=True
+    ).replace("/", "-")
+
+    return f"{url.domain}-{normalized_path}"
+
+
+def get_caddy_request_for_url(
+    url: URL, service: DockerRegistryService, http_port: PortConfiguration
+):
+    service_name = get_service_resource_name(service, service_type="docker")
+
+    return {
+        "@id": get_caddy_id_for_url(url),
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [
+                    {
+                        "handle": [
+                            {
+                                "flush_interval": -1,
+                                "handler": "reverse_proxy",
+                                "upstreams": [
+                                    {"dial": f"{service_name}:{http_port.forwarded}"}
+                                ],
+                            }
+                        ]
+                    }
+                ],
+            }
+        ],
+        "match": [
+            {
+                "path": [f"{strip_slash_if_exists(url.base_path, strip_end=True)}/*"],
+            }
+        ],
+    }
+
+
+def expose_docker_service_to_http(service: DockerRegistryService) -> None:
+    http_port: PortConfiguration = service.port_config.filter(host__isnull=True).first()
+    if http_port is None:
+        raise Exception(
+            f"Cannot expose service `{service.slug}` without a HTTP port exposed."
+        )
+
+    for url in service.urls.all():
+        response = requests.get(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
+
+        # if the domain doesn't exist we create the config for the domain
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
+                headers={"content-type": "application/json"},
+                json=get_caddy_request_for_domain(url.domain),
+            )
+
+        # add logger if not exists
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+            headers={"content-type": "application/json", "accept": "application/json"},
+        )
+        if response.json() is None:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                data=json.dumps(""),
+                headers={
+                    "content-type": "application/json",
+                    "accept": "application/json",
+                },
+            )
+
+        # now we create the config for the URL
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+        )
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+                headers={"content-type": "application/json"},
+                json=get_caddy_request_for_url(url, service, http_port),
+            )

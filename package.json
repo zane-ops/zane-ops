@@ -7,15 +7,12 @@
   },
   "description": "A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.",
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
     "format": "biome check ./frontend --apply",
-    "test": "turbo run test"
+    "test": "pnpm -r run test"
   },
   "keywords": [],
   "license": "MIT",
   "devDependencies": {
-    "@biomejs/biome": "^1.6.1",
-    "turbo": "^1.12.5"
+    "@biomejs/biome": "^1.6.1"
   }
 }

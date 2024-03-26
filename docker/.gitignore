@@ -1,0 +1,3 @@
+registry/data/
+.proxy_attached_networks
+proxy/*.bak

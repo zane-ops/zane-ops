@@ -11,9 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..docker_utils import (
-    create_service_from_docker_registry,
-    create_docker_volume,
+from ..docker_operations import (
     login_to_docker_registry,
     check_if_port_is_available,
     check_if_docker_image_exists,
@@ -28,6 +26,7 @@ from ..models import (
     URL,
     EnvVariable,
 )
+from ..tasks import deploy_docker_service
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
@@ -65,27 +64,34 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials = data.get("credentials")
         image = data.get("image")
 
-        try:
-            do_image_exists = check_if_docker_image_exists(
-                image,
-                credentials=dict(credentials) if credentials is not None else None,
-            )
-        except docker.errors.APIError:
-            raise serializers.ValidationError(
-                {"credentials": [f"Invalid credentials for the specified registry"]}
-            )
-        else:
-            if not do_image_exists:
-                registry_url = (
-                    credentials.get("registry_url") if credentials is not None else None
-                )
-                if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
-                    registry_str = "on Docker Hub"
-                else:
-                    registry_str = f"in the specified registry"
+        if credentials is not None:
+            try:
+                login_to_docker_registry(**dict(credentials))
+            except docker.errors.APIError:
                 raise serializers.ValidationError(
-                    {"image": [f"the image `{image}` does not exist {registry_str}"]}
+                    {"credentials": [f"Invalid credentials for the specified registry"]}
                 )
+
+        do_image_exists = check_if_docker_image_exists(
+            image,
+            credentials=dict(credentials) if credentials is not None else None,
+        )
+        if not do_image_exists:
+            registry_url = (
+                credentials.get("registry_url") if credentials is not None else None
+            )
+            if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
+                registry_str = "on Docker Hub"
+            else:
+                registry_str = f"in the specified registry"
+            raise serializers.ValidationError(
+                {
+                    "image": [
+                        f"Either the image `{image}` does not exist {registry_str}"
+                        f" or the credentials are invalid for this image."
+                    ]
+                }
+            )
 
         urls = data.get("urls", [])
         ports = data.get("ports", [])
@@ -138,11 +144,12 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                 public_ports_seen.add(public_port)
 
             # check if port is available
-            is_port_available = check_if_port_is_available(public_port)
-            if not is_port_available:
-                raise serializers.ValidationError(
-                    f"Port {public_port} is not available on the host machine."
-                )
+            if public_port not in http_ports:
+                is_port_available = check_if_port_is_available(public_port)
+                if not is_port_available:
+                    raise serializers.ValidationError(
+                        f"Port {public_port} is not available on the host machine."
+                    )
 
         already_existing_ports = [
             str(port.host)
@@ -163,15 +170,29 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         return ports
 
     def validate_urls(self, value: list[dict[str, str]]):
-        # Check for duplicate public ports
         urls_seen = set()
         for url in value:
+            if url["domain"] == settings.ZANE_APP_DOMAIN:
+                raise serializers.ValidationError(
+                    "Using the domain where zaneOps is installed is not allowed."
+                )
             new_url = (url["domain"], url["base_path"])
             if new_url in urls_seen:
                 raise serializers.ValidationError(
                     "Duplicate urls values are not allowed."
                 )
             urls_seen.add(new_url)
+        return value
+
+    def validate_volumes(self, value: list[dict[str, str]]):
+        mount_paths_seen = set()
+        for volume in value:
+            mount_path = volume["mount_path"]
+            if mount_path in mount_paths_seen:
+                raise serializers.ValidationError(
+                    "Cannot specify the same mount_path twice or more."
+                )
+            mount_paths_seen.add(mount_path)
         return value
 
 
@@ -303,7 +324,6 @@ class CreateDockerServiceAPIView(APIView):
                 created_ports = PortConfiguration.objects.bulk_create(
                     [
                         PortConfiguration(
-                            project=project,
                             host=(
                                 port["public"]
                                 if port["public"] not in http_ports
@@ -361,11 +381,11 @@ class CreateDockerServiceAPIView(APIView):
 
                 first_deployment.env_variables.add(*created_envs)
 
-                # TODO move to a celery task (in #44)
-                # Create resources in docker
-                for volume in created_volumes:
-                    create_docker_volume(volume)
-                create_service_from_docker_registry(service, first_deployment)
+                # Run celery deployment task
+                deploy_docker_service.apply_async(
+                    (first_deployment.hash,),
+                    task_id=first_deployment.get_task_id(),
+                )
 
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)

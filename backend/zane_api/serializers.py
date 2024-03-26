@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from rest_framework.serializers import *
 
 from . import models
-from .helpers import validate_url_path, validate_url_domain
+from .validators import validate_url_path, validate_url_domain
 
 
 class StringListField(ListField):
