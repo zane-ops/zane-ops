@@ -7,6 +7,11 @@ service_name="zane_zane-proxy"
 # File containing the new network IDs
 file=".proxy_attached_networks"
 
+if [ ! -f $file ]; then
+    echo "No saved network found."
+    exit 0
+fi
+
 # Read and prepare network IDs from the file
 network_options=""
 while read p; do
