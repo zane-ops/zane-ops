@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
+import { Loader } from "~/components/loader";
 
 export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
   return function AuthRedirectWrapper(props: any) {
@@ -9,7 +10,7 @@ export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
     const query = useAuthUser();
 
     if (query.isLoading) {
-      return <div className="text-3xl font-bold">Loading... with tailwind</div>;
+      return <Loader />;
     }
 
     const user = query.data?.data?.user;
