@@ -64,8 +64,7 @@ You can open a new issue with this [issue form](https://github.com/fredkiss3/zan
 
    From the root
     ```bash
-    chmod a+x ./start.sh
-    ./start.sh
+    make dev
     ```
 
 4. **Run DB migrations :**
