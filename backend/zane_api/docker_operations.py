@@ -147,6 +147,7 @@ def cleanup_project_resources(project: Project):
         pass
     else:
         detach_network_from_proxy(network_associated_to_project)
+        network_associated_to_project.remove()
 
 
 def create_project_resources(project: Project):
@@ -183,8 +184,6 @@ def detach_network_from_proxy(network: Network):
     if network.id in network_ids:
         network_ids.remove(network.id)
         service.update(networks=list(network_ids))
-
-    network.remove()
 
 
 def check_if_port_is_available(port: int) -> bool:
