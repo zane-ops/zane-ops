@@ -107,12 +107,6 @@ def strip_slash_if_exists(
     return final_url
 
 
-if __name__ == "__main__":
-    print(strip_slash_if_exists("/bash"))
-    print(strip_slash_if_exists("bash/", strip_end=True))
-    print(strip_slash_if_exists("/bash/", strip_start=True, strip_end=True))
-
-
 def check_if_docker_image_exists(
     image: str, credentials: DockerAuthConfig = None
 ) -> bool:
