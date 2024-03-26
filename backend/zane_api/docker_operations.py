@@ -249,6 +249,7 @@ def get_service_resource_name(
 def create_service_from_docker_registry(
     service: DockerRegistryService, deployment: DockerDeployment
 ):
+    # TODO: Pull Image Tag (#44)
     client = get_docker_client()
 
     exposed_ports: dict[int, int] = {}

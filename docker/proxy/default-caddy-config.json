@@ -5,7 +5,7 @@
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [":443"],
+          "listen": [":443", ":80"],
           "logs": {
             "logger_names": {
               "{{ZANE_HOST}}": ""

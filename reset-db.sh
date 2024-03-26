@@ -1,13 +1,19 @@
-source ./backend/venv/bin/activate && yes | python ./backend/manage.py flush
+source ./backend/venv/bin/activate && echo yes | python ./backend/manage.py flush
 
-# Delete services
-docker service rm $(docker service ls -q --filter label=zane-managed=true)
+echo "Scaling down all zane-ops services..."
+services=$(docker service ls --filter label=zane-managed=true --format "{{.Name}}")
+for service in $services; do
+  docker service scale --detach $service=0
+done
 
-# Delete networks
-docker network rm $(docker network ls -q --filter label=zane-managed=true)
+echo "Deleting services..."
+docker service rm $(docker service ls -q --filter label=zane-managed=true)  2>/dev/null
 
-# Delete volumes
-docker volume rm $(docker volume ls -q --filter label=zane-managed=true)
+echo "Deleting volumes..."
+docker volume rm $(docker volume ls -q --filter label=zane-managed=true) 2>/dev/null
+
+echo "Deleting networks..."
+docker network rm $(docker network ls -q --filter label=zane-managed=true) 2>/dev/null
 
 # Reset caddy config
 sed -i .bak "s#{{ZANE_HOST}}#zane.local#g" ./docker/proxy/default-caddy-config.json
