@@ -327,7 +327,7 @@ def get_caddy_request_for_url(
 ):
     service_name = get_service_resource_name(service, service_type="docker")
 
-    return {
+    request_data = {
         "@id": get_caddy_id_for_url(url),
         "handle": [
             {
@@ -347,12 +347,15 @@ def get_caddy_request_for_url(
                 ],
             }
         ],
-        "match": [
+    }
+
+    if url.base_path.strip() != "/":
+        request_data["match"] = [
             {
                 "path": [f"{strip_slash_if_exists(url.base_path, strip_end=True)}/*"],
             }
-        ],
-    }
+        ]
+    return request_data
 
 
 def expose_docker_service_to_http(service: DockerRegistryService) -> None:

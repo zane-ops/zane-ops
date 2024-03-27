@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from unittest.mock import patch, Mock, MagicMock
 
@@ -7,15 +8,15 @@ import responses
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.urls import reverse
+from requests import Request
 from rest_framework import status
 
 from .base import AuthAPITestCase
 from .service import FakeDockerClientWithServices
-from ..docker_operations import expose_docker_service_to_http
+from ..docker_operations import get_caddy_id_for_url
 from ..models import (
     Project,
     DockerRegistryService,
-    PortConfiguration,
     URL,
 )
 
@@ -77,8 +78,71 @@ class ProxyFakeDockerClient(FakeDockerClientWithServices):
             raise docker.errors.NotFound("network not found")
 
 
+class ProxyResponseStub:
+    ADD_ROUTE_URL = (
+        f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes"
+    )
+
+    def __init__(self):
+        self.ids = {}  # type: dict[str, dict]
+        self.loggers = set()  # type: set[str]
+
+    @staticmethod
+    def get_next_path_segment(url: str) -> str:
+        match = re.search(r"/id/([^/]+)", url)
+        return match.group(1) if match else None
+
+    def response_callback(self, request: Request):
+        if request.method.upper() == "GET":
+            if "/id/zane-server/logs/logger_names/" in request.url:
+                splitted = request.url.split("/")
+                if len(splitted[-1]) == 0:
+                    logger = splitted[-2]
+                else:
+                    logger = splitted[-1]
+                if logger in self.loggers:
+                    return 200, {}, json.dumps("")
+                else:
+                    return 200, {}, json.dumps(None)
+            _id = self.get_next_path_segment(request.url)
+            if _id is not None:
+                item = self.ids.get(_id)
+                if item:
+                    return 200, {}, json.dumps(item)
+                else:
+                    return 404, {}, json.dumps("")
+
+        if request.method.upper() == "POST":
+            payload = json.loads(request.body)
+            if "/id/zane-server/logs/logger_names/" in request.url:
+                splitted = request.url.split("/")
+                if len(splitted[-1]) == 0:
+                    logger = splitted[-2]
+                else:
+                    logger = splitted[-1]
+                self.loggers.add(logger)
+                return 200, {}, json.dumps("")
+
+            if request.url == ProxyResponseStub.ADD_ROUTE_URL:
+                domain_id = payload.get("@id")
+                self.ids[domain_id] = payload
+                return 200, {}, json.dumps("")
+
+            if "/handle/0/routes" in request.url:
+                route_id = payload.get("@id")
+                self.ids[route_id] = payload
+                return 200, {}, json.dumps("")
+
+            _id = self.get_next_path_segment(request.url)
+            if _id is not None:
+                self.ids[_id] = payload
+                return 200, {}, json.dumps("")
+            return 200, {}, json.dumps("")
+
+
 class ZaneProxyTestCases(AuthAPITestCase):
-    def create_service(self):
+    @staticmethod
+    def create_service():
         owner = User.objects.get(username="Fredkiss3")
         project = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -92,269 +156,38 @@ class ZaneProxyTestCases(AuthAPITestCase):
 
     @staticmethod
     def register_default_responses_for_url(url: URL):
-        # Domain config
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-        responses.add(
+        response_stub = ProxyResponseStub()
+        responses.add_callback(
             responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
-            status=status.HTTP_200_OK,
+            re.compile(f"{settings.CADDY_PROXY_ADMIN_HOST}/\\w+"),
+            callback=response_stub.response_callback,
+            content_type="application/json",
         )
-
-        # logs
-        responses.add(
+        responses.add_callback(
             responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-            body=json.dumps(None),
-            headers={"content-type": "application/json"},
+            re.compile(f"{settings.CADDY_PROXY_ADMIN_HOST}/\\w+"),
+            callback=response_stub.response_callback,
+            content_type="application/json",
         )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-            status=status.HTTP_200_OK,
-        )
-
-        # Base path config
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}-",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    @responses.activate
-    def test_expose_service_to_http_with_default_url(self):
-        service, project = self.create_service()
-
-        service.port_config.add(PortConfiguration.objects.create(forwarded=8080))
-        default_url = URL.objects.create(
-            domain=f"{project.slug}-{service.slug}.{settings.ROOT_DOMAIN}",
-            base_path="/",
-        )
-        service.urls.add(default_url)
-
-        # Domain config
-        self.register_default_responses_for_url(default_url)
-
-        expose_docker_service_to_http(service)
-        self.assertEqual(6, len(responses.calls))
-
-    @responses.activate
-    def test_caddy_config_for_service_with_custom_url(self):
-        service, project = self.create_service()
-
-        service.port_config.add(PortConfiguration.objects.create(forwarded=8080))
-        custom_url = URL.objects.create(
-            domain=f"dcr.fredkiss.dev",
-            base_path="/",
-        )
-        service.urls.add(custom_url)
-
-        self.register_default_responses_for_url(custom_url)
-
-        expose_docker_service_to_http(service)
-        self.assertEqual(6, len(responses.calls))
-
-    @responses.activate
-    def test_caddy_config_for_service_with_multiple_domains(self):
-        service, project = self.create_service()
-
-        service.port_config.add(PortConfiguration.objects.create(forwarded=8080))
-        urls = URL.objects.bulk_create(
-            [
-                URL(
-                    domain=f"dcr.fredkiss.dev",
-                    base_path="/",
-                ),
-                URL(
-                    domain=f"dcr.zane.dev",
-                    base_path="/registry",
-                ),
-            ]
-        )
-        service.urls.add(*urls)
-
-        # 1st URL
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
-            status=status.HTTP_200_OK,
-        )
-
-        # logs
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.fredkiss.dev",
-            body=json.dumps(None),
-            headers={"content-type": "application/json"},
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.fredkiss.dev",
-            status=status.HTTP_200_OK,
-        )
-
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev-",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev/handle/0/routes",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-        # 2nd URL
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.zane.dev",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
-            status=status.HTTP_200_OK,
-        )
-
-        # logs
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.zane.dev",
-            body=json.dumps(None),
-            headers={"content-type": "application/json"},
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.zane.dev",
-            status=status.HTTP_200_OK,
-        )
-
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.zane.dev-registry",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.zane.dev/handle/0/routes",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-        expose_docker_service_to_http(service)
-        self.assertEqual(12, len(responses.calls))
-
-    @responses.activate
-    def test_caddy_config_for_service_with_multiple_urls_but_not_same_domain(self):
-        service, project = self.create_service()
-
-        service.port_config.add(PortConfiguration.objects.create(forwarded=8080))
-        urls = URL.objects.bulk_create(
-            [
-                URL(
-                    domain=f"dcr.fredkiss.dev",
-                    base_path="/",
-                ),
-                URL(
-                    domain=f"dcr.fredkiss.dev",
-                    base_path="/registry",
-                ),
-            ]
-        )
-        service.urls.add(*urls)
-
-        # 1st URL
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
-            status=status.HTTP_200_OK,
-        )
-
-        # logs
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.fredkiss.dev",
-            body=json.dumps(None),
-            headers={"content-type": "application/json"},
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.fredkiss.dev",
-            status=status.HTTP_200_OK,
-        )
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/dcr.fredkiss.dev",
-            body=json.dumps(""),
-            headers={"content-type": "application/json"},
-        )
-
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev-",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev/handle/0/routes",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        # 2nd URL
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev",
-            status=status.HTTP_200_OK,
-        )
-        responses.add(
-            responses.GET,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev-registry",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-        responses.add(
-            responses.POST,
-            url=f"{settings.CADDY_PROXY_ADMIN_HOST}/id/dcr.fredkiss.dev/handle/0/routes",
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-        expose_docker_service_to_http(service)
-        self.assertEqual(10, len(responses.calls))
+        return response_stub
 
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=ProxyFakeDockerClient(),
     )
-    def test_api_expose_service_to_http(
+    def test_api_expose_service_successfull(
         self,
         _: Mock,
     ):
         owner = self.loginUser()
         p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
 
-        self.register_default_responses_for_url(
-            URL(
-                domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
-                base_path="/",
-            )
+        default_service_url = URL(
+            domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
+            base_path="/",
         )
+        stub = self.register_default_responses_for_url(default_service_url)
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
@@ -367,8 +200,88 @@ class ZaneProxyTestCases(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
+        self.assertTrue(default_service_url.domain in stub.ids)
+        self.assertTrue(get_caddy_id_for_url(default_service_url) in stub.ids)
         self.assertEqual(6, len(responses.calls))
+
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=ProxyFakeDockerClient(),
+    )
+    def test_api_expose_service_to_http_default_base_path(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+
+        default_service_url = URL(
+            domain=f"site.com",
+            base_path="/",
+        )
+        stub = self.register_default_responses_for_url(default_service_url)
+        create_service_payload = {
+            "name": "Basic HTTP webserver",
+            "image": "nginx:latest",
+            "urls": [
+                {
+                    "domain": default_service_url.domain,
+                    "base_path": default_service_url.base_path,
+                }
+            ],
+            "ports": [{"forwarded": 8080}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        print(stub.ids[get_caddy_id_for_url(default_service_url)])
+        self.assertIsNone(
+            stub.ids[get_caddy_id_for_url(default_service_url)].get("match")
+        )
+
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=ProxyFakeDockerClient(),
+    )
+    def test_api_expose_service_to_http_with_custom_path(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+
+        default_service_url = URL(
+            domain=f"site.com",
+            base_path="/api",
+        )
+        stub = self.register_default_responses_for_url(default_service_url)
+        create_service_payload = {
+            "name": "Basic HTTP webserver",
+            "image": "nginx:latest",
+            "urls": [
+                {
+                    "domain": default_service_url.domain,
+                    "base_path": default_service_url.base_path,
+                }
+            ],
+            "ports": [{"forwarded": 8080}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertIsNotNone(
+            stub.ids[get_caddy_id_for_url(default_service_url)].get("match")
+        )
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
