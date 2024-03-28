@@ -487,6 +487,48 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClientWithServices(),
     )
+    def test_create_service_with_explicit_domain_and_strip_prefix(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "name": "Portainer UI",
+            "image": "portainer/portainer-ce:latest",
+            "urls": [
+                {
+                    "domain": "dcr.fredkiss.dev",
+                    "base_path": "/portainer",
+                    "strip_prefix": False,
+                }
+            ],
+            "ports": [{"forwarded": 8000}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="portainer-ui"
+        ).first()
+
+        self.assertEqual(1, created_service.urls.count())
+        url: URL = created_service.urls.first()
+        self.assertIsNotNone(url)
+        self.assertEqual("dcr.fredkiss.dev", url.domain)
+        self.assertEqual("/portainer", url.base_path)
+        self.assertEqual(False, url.strip_prefix)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
     def test_create_service_without_port_does_not_create_a_domain(
         self, mock_fake_docker: Mock, _: Mock
     ):

@@ -170,7 +170,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         return service, project
 
     @staticmethod
-    def register_default_responses_for_url():
+    def register_responses():
         response_stub = ProxyResponseStub()
         responses.add_callback(
             responses.POST,
@@ -208,7 +208,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
             base_path="/",
         )
-        stub = self.register_default_responses_for_url()
+        stub = self.register_responses()
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
@@ -240,7 +240,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"site.com",
             base_path="/",
         )
-        stub = self.register_default_responses_for_url()
+        stub = self.register_responses()
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
@@ -283,7 +283,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"thullo.zane.local",
             base_path="/api",
         )
-        stub = self.register_default_responses_for_url()
+        stub = self.register_responses()
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
@@ -322,10 +322,10 @@ class ZaneProxyTestCases(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
 
-        stub = self.register_default_responses_for_url()
+        stub = self.register_responses()
         create_service1_payload = {
             "name": "thullo front",
-            "image": "dc.fredkiss.dev/thullo-front:latest",
+            "image": "dcr.fredkiss.dev/thullo-front:latest",
             "urls": [
                 {
                     "domain": f"thullo.zane.local",
@@ -341,7 +341,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
 
         create_service2_payload = {
             "name": "thullo api",
-            "image": "dc.fredkiss.dev/thullo-api:latest",
+            "image": "dcr.fredkiss.dev/thullo-api:latest",
             "urls": [
                 {
                     "domain": f"thullo.zane.local",
@@ -363,6 +363,96 @@ class ZaneProxyTestCases(AuthAPITestCase):
         actual_paths = [route["match"][0]["path"][0] for route in stub_routes]
         self.assertIsNotNone(stub.ids.get("thullo.zane.local"))
         self.assertEqual(expected_path_order, actual_paths)
+
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=ProxyFakeDockerClient(),
+    )
+    def test_api_expose_service_to_http_includes_strip_prefix_if_true(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+
+        stub = self.register_responses()
+        custom_url = URL(
+            domain="thullo.zane.local",
+            base_path="/api",
+            strip_prefix=True,
+        )
+        create_service_payload = {
+            "name": "thullo api",
+            "image": "dcr.fredkiss.dev/thullo-api:latest",
+            "urls": [
+                {
+                    "domain": custom_url.domain,
+                    "base_path": custom_url.base_path,
+                    "strip_prefix": custom_url.strip_prefix,
+                }
+            ],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertIsNotNone(stub.ids.get(get_caddy_id_for_url(custom_url)))
+        url_config = stub.ids.get(get_caddy_id_for_url(custom_url))
+
+        url_config_handle = url_config["handle"][0]["routes"][0]["handle"]
+        self.assertEqual(2, len(url_config_handle))
+        self.assertEqual(
+            {"handler": "rewrite", "strip_path_prefix": "/api"}, url_config_handle[0]
+        )
+
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=ProxyFakeDockerClient(),
+    )
+    def test_api_expose_service_to_http_does_not_includes_strip_prefix_if_false(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+
+        stub = self.register_responses()
+        custom_url = URL(
+            domain="thullo.zane.local",
+            base_path="/api",
+            strip_prefix=False,
+        )
+        create_service_payload = {
+            "name": "thullo api",
+            "image": "dcr.fredkiss.dev/thullo-api:latest",
+            "urls": [
+                {
+                    "domain": custom_url.domain,
+                    "base_path": custom_url.base_path,
+                    "strip_prefix": custom_url.strip_prefix,
+                }
+            ],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertIsNotNone(stub.ids.get(get_caddy_id_for_url(custom_url)))
+        url_config = stub.ids.get(get_caddy_id_for_url(custom_url))
+
+        url_config_handle = url_config["handle"][0]["routes"][0]["handle"]
+        self.assertEqual(1, len(url_config_handle))
+        self.assertIsNone(url_config_handle[0].get("strip_path_prefix"))
 
     @patch(
         "zane_api.docker_operations.get_docker_client",

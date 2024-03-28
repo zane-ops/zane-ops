@@ -39,6 +39,7 @@ class URL(models.Model):
         max_length=1000, null=True, blank=True, validators=[validate_url_domain]
     )
     base_path = models.CharField(default="/", validators=[validate_url_path])
+    strip_prefix = models.BooleanField(default=True)
 
     def __str__(self):
         base_path = (

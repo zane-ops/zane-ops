@@ -338,24 +338,31 @@ def get_caddy_request_for_url(
 ):
     service_name = get_service_resource_name(service, service_type="docker")
 
+    proxy_handlers = []
+
+    if url.strip_prefix:
+        proxy_handlers.append(
+            {
+                "handler": "rewrite",
+                "strip_path_prefix": strip_slash_if_exists(
+                    url.base_path, strip_end=True, strip_start=False
+                ),
+            }
+        )
+
+    proxy_handlers.append(
+        {
+            "flush_interval": -1,
+            "handler": "reverse_proxy",
+            "upstreams": [{"dial": f"{service_name}:{http_port.forwarded}"}],
+        }
+    )
     return {
         "@id": get_caddy_id_for_url(url),
         "handle": [
             {
                 "handler": "subroute",
-                "routes": [
-                    {
-                        "handle": [
-                            {
-                                "flush_interval": -1,
-                                "handler": "reverse_proxy",
-                                "upstreams": [
-                                    {"dial": f"{service_name}:{http_port.forwarded}"}
-                                ],
-                            }
-                        ]
-                    }
-                ],
+                "routes": [{"handle": proxy_handlers}],
             }
         ],
         "match": [
