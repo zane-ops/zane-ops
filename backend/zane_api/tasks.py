@@ -13,7 +13,7 @@ def deploy_docker_service(deployment_hash: str):
     deployment: DockerDeployment | None = (
         DockerDeployment.objects.filter(hash=deployment_hash)
         .select_related("service", "service__project")
-        .prefetch_related("service__volumes", "service__urls", "service__port_config")
+        .prefetch_related("service__volumes", "service__urls", "service__ports")
         .first()
     )
     if deployment is None:
@@ -24,6 +24,6 @@ def deploy_docker_service(deployment_hash: str):
         create_docker_volume(volume)
     create_service_from_docker_registry(service, deployment)
 
-    http_port: PortConfiguration = service.port_config.filter(host__isnull=True).first()
+    http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is not None:
         expose_docker_service_to_http(service)

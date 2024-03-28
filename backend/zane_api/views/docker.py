@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from .. import serializers
 from ..docker_operations import (
     search_images_docker_hub,
-    check_if_port_is_available,
+    check_if_port_is_available_on_host,
     login_to_docker_registry,
 )
 
@@ -159,7 +159,7 @@ class DockerPortCheckView(APIView):
 
         if form.is_valid():
             data = form.data
-            result = check_if_port_is_available(port=data["port"])
+            result = check_if_port_is_available_on_host(port=data["port"])
 
             response = self.serializer_class({"available": result})
             return Response(

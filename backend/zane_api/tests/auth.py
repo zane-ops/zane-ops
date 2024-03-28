@@ -56,7 +56,7 @@ class AuthMeViewTests(AuthAPITestCase):
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
 
 class AuthLogoutViewTests(AuthAPITestCase):
@@ -70,7 +70,7 @@ class AuthLogoutViewTests(AuthAPITestCase):
 
     def test_unsucessful_logout(self):
         response = self.client.delete(reverse("zane_api:auth.logout"))
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
 
 class CSRFViewTests(APITestCase):

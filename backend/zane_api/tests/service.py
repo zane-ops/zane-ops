@@ -279,7 +279,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="nosql-db"
         ).first()
-        port: PortConfiguration = created_service.port_config.first()
+        port: PortConfiguration = created_service.ports.first()
 
         self.assertIsNotNone(port)
         self.assertEqual(6383, port.host)
@@ -352,7 +352,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             forwarded=5540,
         )
         used_port.save()
-        service.port_config.add(used_port)
+        service.ports.add(used_port)
 
         create_service_payload = {
             "name": "Adminer",
@@ -400,7 +400,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="adminer-ui"
         ).first()
-        port: PortConfiguration = created_service.port_config.first()
+        port: PortConfiguration = created_service.ports.first()
 
         self.assertIsNotNone(port)
         self.assertIsNone(port.host)
@@ -787,8 +787,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
 
         self.assertEqual(1, created_service.urls.count())
-        self.assertEqual(1, created_service.port_config.count())
-        create_port: PortConfiguration = created_service.port_config.first()
+        self.assertEqual(1, created_service.ports.count())
+        create_port: PortConfiguration = created_service.ports.first()
         self.assertEqual(80, create_port.forwarded)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
@@ -1032,7 +1032,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClientWithServices(),
     )
-    def test_create_service_conflict(self, mock_fake_docker: Mock, _: Mock):
+    def test_create_service_conflict_with_slug(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
         p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
 
@@ -1047,12 +1047,50 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
         errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("root"))
+        self.assertIsNotNone(errors.get("name"))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_create_service_with_urls_already_used_by_other_services(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+
+        existing_service = DockerRegistryService.objects.create(
+            name="caddy", slug="other-service", image="redis:alpine", project=p
+        )
+        url = URL.objects.bulk_create(
+            [
+                URL(domain="thullo.zane.local", base_path="/"),
+            ]
+        )
+        existing_service.urls.add(*url)
+
+        create_service_payload = {
+            "name": "Adminer UI",
+            "image": "adminer:latest",
+            "urls": [{"domain": "thullo.zane.local"}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
+
+        errors = response.json()["errors"]
+        self.assertIsNotNone(errors.get("urls"))
 
 
 class DockerGetServiceViewTest(AuthAPITestCase):

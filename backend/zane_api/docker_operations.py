@@ -18,6 +18,7 @@ from .models import (
     PortConfiguration,
     URL,
 )
+from .utils import strip_slash_if_exists
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
@@ -93,19 +94,6 @@ class DockerAuthConfig(TypedDict):
 def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client = get_docker_client()
     client.images.pull(image, auth_config=auth)
-
-
-def strip_slash_if_exists(
-    url: str,
-    strip_end: bool = False,
-    strip_start: bool = True,
-):
-    final_url = url
-    if strip_start and url.startswith("/"):
-        final_url = final_url[1:]
-    if strip_end and url.endswith("/"):
-        final_url = final_url[:-1]
-    return final_url
 
 
 def check_if_docker_image_exists(
@@ -186,7 +174,7 @@ def detach_network_from_proxy(network: Network):
         service.update(networks=list(network_ids))
 
 
-def check_if_port_is_available(port: int) -> bool:
+def check_if_port_is_available_on_host(port: int) -> bool:
     client = get_docker_client()
     try:
         client.containers.run(
@@ -260,7 +248,7 @@ def create_service_from_docker_registry(
 
     # We don't expose HTTP ports with docker because they will be handled by caddy directly
     http_ports = [80, 443]
-    for port in service.port_config.all():
+    for port in service.ports.all():
         if port.host not in http_ports and port.host is not None:
             exposed_ports[port.host] = port.forwarded
 
@@ -298,6 +286,29 @@ def create_service_from_docker_registry(
             failure_action="rollback",
         ),
     )
+
+
+def sort_proxy_routes(routes: list[dict[str, list[dict[str, list[str]]]]]):
+    """
+    This function implement the same ordering as caddy to pass to the caddy proxy API
+    reference: https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
+    This code is adapated from caddy source code : https://github.com/caddyserver/caddy/blob/ddb1d2c2b11b860f1e91b43d830d283d1e1363b2/caddyconfig/httpcaddyfile/directives.go#L495-L513
+    """
+
+    def path_specificity(route: dict[str, list[dict[str, list[str]]]]):
+        path = route["match"][0]["path"][0]
+        # Removing trailing '*' for comparison and determining the "real" length
+        normalized_path = path.rstrip("*")
+        path_length = len(normalized_path)
+
+        # Using a tuple for comparison: first by the normalized length (longest first),
+        # then by whether the original path ends with '*' (no wildcard is more specific),
+        # and finally by the original path length in case of identical paths except for the wildcard
+        return -path_length, path.endswith("*"), -len(path)
+
+    # Sort the paths based on the specified criteria
+    sorted_paths = sorted(routes, key=path_specificity)
+    return sorted_paths
 
 
 def get_caddy_request_for_domain(domain: str):
@@ -349,14 +360,16 @@ def get_caddy_request_for_url(
         ],
         "match": [
             {
-                "path": [f"{strip_slash_if_exists(url.base_path, strip_end=True)}/*"],
+                "path": [
+                    f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}/*"
+                ],
             }
         ],
     }
 
 
 def expose_docker_service_to_http(service: DockerRegistryService) -> None:
-    http_port: PortConfiguration = service.port_config.filter(host__isnull=True).first()
+    http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is None:
         raise Exception(
             f"Cannot expose service `{service.slug}` without a HTTP port exposed."
@@ -393,8 +406,16 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
         )
         if response.status_code == status.HTTP_404_NOT_FOUND:
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}"
+            )
+            domain_config = response.json()
+            routes: list[dict] = domain_config["handle"][0]["routes"]
+            routes.append(get_caddy_request_for_url(url, service, http_port))
+            domain_config["handle"][0]["routes"] = sort_proxy_routes(routes)
+
             requests.post(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
                 headers={"content-type": "application/json"},
-                json=get_caddy_request_for_url(url, service, http_port),
+                json=domain_config,
             )

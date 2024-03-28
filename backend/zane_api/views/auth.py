@@ -7,6 +7,7 @@ from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, permissions
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,6 +31,28 @@ def custom_exception_handler(exception: Any, context: Any) -> Response:
             status=status.HTTP_429_TOO_MANY_REQUESTS,
         )
 
+    if isinstance(exception, NotAuthenticated):
+        response = serializers.ForbiddenResponseSerializer(
+            {
+                "errors": {
+                    "root": [
+                        "Authentication required. Please log in to access this resource."
+                    ]
+                }
+            }
+        )
+        return Response(
+            response.data,
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    if isinstance(exception, PermissionDenied):
+        response = serializers.ForbiddenResponseSerializer(
+            {"errors": {"root": [exception.detail]}}
+        )
+        return Response(
+            response.data,
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
     # Call REST framework's default exception handler first,
     # to get the standard error exception.
     return exception_handler(exception, context)
@@ -85,13 +108,15 @@ class LoginView(APIView):
                 if response.is_valid():
                     return Response(response.data, status=status.HTTP_201_CREATED)
             else:
-                response = self.error_serializer_class({
-                    "errors": {
-                        "root": [
-                            "Invalid username or password",
-                        ]
-                    },
-                })
+                response = self.error_serializer_class(
+                    {
+                        "errors": {
+                            "root": [
+                                "Invalid username or password",
+                            ]
+                        },
+                    }
+                )
                 return Response(
                     response.data,
                     status=status.HTTP_401_UNAUTHORIZED,

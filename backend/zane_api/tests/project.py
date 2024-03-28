@@ -215,7 +215,7 @@ class ProjectListViewTests(AuthAPITestCase):
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:projects.list"))
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
 
 class ProjectCreateViewTests(AuthAPITestCase):
