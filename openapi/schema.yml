@@ -1084,6 +1084,8 @@ components:
         base_path:
           type: string
           default: /
+        strip_prefix:
+          type: boolean
       required:
       - domain
     URLRequest:
@@ -1094,6 +1096,9 @@ components:
         base_path:
           type: string
           default: /
+        strip_prefix:
+          type: boolean
+          default: true
       required:
       - domain
     URLsError:
