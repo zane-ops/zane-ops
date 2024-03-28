@@ -414,8 +414,8 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
             routes.append(get_caddy_request_for_url(url, service, http_port))
             domain_config["handle"][0]["routes"] = sort_proxy_routes(routes)
 
-            requests.post(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
+            requests.patch(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
                 headers={"content-type": "application/json"},
                 json=domain_config,
             )

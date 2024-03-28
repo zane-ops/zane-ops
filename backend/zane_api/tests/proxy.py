@@ -112,8 +112,10 @@ class ProxyResponseStub:
                 else:
                     return 404, {}, json.dumps("")
 
-        if request.method.upper() == "POST":
+        if request.method.upper() == "POST" or request.method.upper() == "PATCH":
             payload = json.loads(request.body)
+            print(request.url, payload)
+
             if "/id/zane-server/logs/logger_names/" in request.url:
                 splitted = request.url.split("/")
                 if len(splitted[-1]) == 0:
@@ -141,6 +143,14 @@ class ProxyResponseStub:
             _id = self.get_next_path_segment(request.url)
             if _id is not None:
                 self.ids[_id] = payload
+
+                if (
+                    payload.get("match") is not None
+                    and payload.get("match")[0].get("host") is not None
+                ):
+                    routes = payload["handle"][0]["routes"]
+                    for route in routes:
+                        self.ids[route.get("@id")] = route
                 return 200, {}, json.dumps("")
             return 200, {}, json.dumps("")
 
@@ -164,6 +174,12 @@ class ZaneProxyTestCases(AuthAPITestCase):
         response_stub = ProxyResponseStub()
         responses.add_callback(
             responses.POST,
+            re.compile(f"{settings.CADDY_PROXY_ADMIN_HOST}/\\w+"),
+            callback=response_stub.response_callback,
+            content_type="application/json",
+        )
+        responses.add_callback(
+            responses.PATCH,
             re.compile(f"{settings.CADDY_PROXY_ADMIN_HOST}/\\w+"),
             callback=response_stub.response_callback,
             content_type="application/json",
