@@ -257,7 +257,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
 
         default_service_url = URL(
-            domain=f"site.com",
+            domain=f"thullo.zane.local",
             base_path="/api",
         )
         stub = self.register_default_responses_for_url(default_service_url)
@@ -282,6 +282,10 @@ class ZaneProxyTestCases(AuthAPITestCase):
         self.assertIsNotNone(
             stub.ids[get_caddy_id_for_url(default_service_url)].get("match")
         )
+        matched_path = stub.ids[get_caddy_id_for_url(default_service_url)].get("match")[
+            0
+        ]["path"][0]
+        self.assertEqual("/api/*", matched_path)
 
     @patch(
         "zane_api.docker_operations.get_docker_client",

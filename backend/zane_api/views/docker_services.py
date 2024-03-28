@@ -200,10 +200,16 @@ class DockerServiceCreateSuccessResponseSerializer(serializers.Serializer):
     service = serializers.DockerServiceSerializer(read_only=True)
 
 
+class CredentialErrorSerializer(serializers.Serializer):
+    username = serializers.StringListField(required=False)
+    password = serializers.StringListField(required=False)
+    registry_url = serializers.StringListField(required=False)
+
+
 class DockerServiceCreateErrorSerializer(serializers.BaseErrorSerializer):
+    credentials = CredentialErrorSerializer(required=False)
     name = serializers.StringListField(required=False)
     image = serializers.StringListField(required=False)
-    credentials = serializers.StringListField(required=False)
     urls = serializers.StringListField(required=False)
     command = serializers.StringListField(required=False)
     ports = serializers.StringListField(required=False)

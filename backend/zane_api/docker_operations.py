@@ -352,7 +352,9 @@ def get_caddy_request_for_url(
     if url.base_path.strip() != "/":
         request_data["match"] = [
             {
-                "path": [f"{strip_slash_if_exists(url.base_path, strip_end=True)}/*"],
+                "path": [
+                    f"/{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=True)}/*"
+                ],
             }
         ]
     return request_data
