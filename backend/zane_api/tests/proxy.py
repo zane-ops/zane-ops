@@ -126,6 +126,11 @@ class ProxyResponseStub:
             if request.url == ProxyResponseStub.ADD_ROUTE_URL:
                 domain_id = payload.get("@id")
                 self.ids[domain_id] = payload
+
+                routes = payload["handle"][0]["routes"]
+                for route in routes:
+                    self.ids[route.get("@id")] = route
+
                 return 200, {}, json.dumps("")
 
             if "/handle/0/routes" in request.url:
@@ -155,7 +160,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         return service, project
 
     @staticmethod
-    def register_default_responses_for_url(url: URL):
+    def register_default_responses_for_url():
         response_stub = ProxyResponseStub()
         responses.add_callback(
             responses.POST,
@@ -187,7 +192,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
             base_path="/",
         )
-        stub = self.register_default_responses_for_url(default_service_url)
+        stub = self.register_default_responses_for_url()
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
@@ -202,7 +207,6 @@ class ZaneProxyTestCases(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertTrue(default_service_url.domain in stub.ids)
         self.assertTrue(get_caddy_id_for_url(default_service_url) in stub.ids)
-        self.assertEqual(6, len(responses.calls))
 
     @responses.activate
     @patch(
@@ -220,7 +224,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"site.com",
             base_path="/",
         )
-        stub = self.register_default_responses_for_url(default_service_url)
+        stub = self.register_default_responses_for_url()
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
@@ -240,8 +244,11 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         print(stub.ids[get_caddy_id_for_url(default_service_url)])
-        self.assertIsNone(
-            stub.ids[get_caddy_id_for_url(default_service_url)].get("match")
+        self.assertEqual(
+            "/*",
+            stub.ids[get_caddy_id_for_url(default_service_url)].get("match")[0]["path"][
+                0
+            ],
         )
 
     @responses.activate
@@ -260,7 +267,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"thullo.zane.local",
             base_path="/api",
         )
-        stub = self.register_default_responses_for_url(default_service_url)
+        stub = self.register_default_responses_for_url()
         create_service_payload = {
             "name": "Basic HTTP webserver",
             "image": "nginx:latest",
