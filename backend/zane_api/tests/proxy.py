@@ -294,6 +294,60 @@ class ZaneProxyTestCases(AuthAPITestCase):
         ]["path"][0]
         self.assertEqual("/api/*", matched_path)
 
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=ProxyFakeDockerClient(),
+    )
+    def test_api_expose_service_to_http_path_order_by_path_length(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+
+        stub = self.register_default_responses_for_url()
+        create_service1_payload = {
+            "name": "thullo front",
+            "image": "dc.fredkiss.dev/thullo-front:latest",
+            "urls": [
+                {
+                    "domain": f"thullo.zane.local",
+                }
+            ],
+        }
+
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service1_payload),
+            content_type="application/json",
+        )
+
+        create_service2_payload = {
+            "name": "thullo api",
+            "image": "dc.fredkiss.dev/thullo-api:latest",
+            "urls": [
+                {
+                    "domain": f"thullo.zane.local",
+                    "base_path": "/api",
+                }
+            ],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service2_payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertIsNotNone(stub.ids.get("thullo.zane.local"))
+        expected_path_order = ["/api/*", "/*"]
+        stub_routes = stub.ids.get("thullo.zane.local")["handle"][0]["routes"]
+        actual_paths = [route["match"][0]["path"][0] for route in stub_routes]
+        self.assertIsNotNone(stub.ids.get("thullo.zane.local"))
+        self.assertEqual(expected_path_order, actual_paths)
+
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=ProxyFakeDockerClient(),
