@@ -9,5 +9,10 @@ export const Route = createRootRoute({
       <TailwindIndicator />
       <TanStackRouterDevtools />
     </main>
+  ),
+  notFoundComponent: () => (
+    <p className="flex text-3xl h-screen items-center justify-center">
+      404 You're lost what are you finding here thief
+    </p>
   )
 });
