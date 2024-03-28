@@ -1135,6 +1135,16 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(errors.get("urls"))
 
 
+class DockerServiceDeleteViewTest(AuthAPITestCase):
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_delete_service_succesful(self):
+        pass
+
+
 class DockerGetServiceViewTest(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
