@@ -49,6 +49,7 @@ class VolumeRequestSerializer(serializers.Serializer):
 class URLRequestSerializer(serializers.Serializer):
     domain = serializers.URLDomainField(required=True)
     base_path = serializers.URLPathField(required=False, default="/")
+    strip_prefix = serializers.BooleanField(required=False, default=True)
 
     def validate(self, url: dict[str, str]):
         existing_urls = URL.objects.filter(
@@ -398,6 +399,7 @@ class CreateDockerServiceAPIView(APIView):
                                 URL(
                                     domain=url["domain"],
                                     base_path=base_path,
+                                    strip_prefix=url["strip_prefix"],
                                 )
                             )
 
