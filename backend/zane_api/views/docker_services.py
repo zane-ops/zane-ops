@@ -13,9 +13,9 @@ from rest_framework.views import APIView
 from .. import serializers
 from ..docker_operations import (
     login_to_docker_registry,
-    check_if_port_is_available,
-    check_if_docker_image_exists,
+    check_if_port_is_available_on_host,
     DOCKER_HUB_REGISTRY_URL,
+    check_if_docker_image_exists,
 )
 from ..models import (
     Project,
@@ -27,6 +27,7 @@ from ..models import (
     EnvVariable,
 )
 from ..tasks import deploy_docker_service
+from ..utils import strip_slash_if_exists
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
@@ -37,7 +38,7 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
 
 class ServicePortsRequestSerializer(serializers.Serializer):
     public = serializers.IntegerField(required=False, default=80)
-    forwarded = serializers.IntegerField()
+    forwarded = serializers.IntegerField(required=True)
 
 
 class VolumeRequestSerializer(serializers.Serializer):
@@ -49,16 +50,31 @@ class URLRequestSerializer(serializers.Serializer):
     domain = serializers.URLDomainField(required=True)
     base_path = serializers.URLPathField(required=False, default="/")
 
+    def validate(self, url: dict[str, str]):
+        existing_urls = URL.objects.filter(
+            domain=url["domain"].lower(), base_path=url["base_path"].lower()
+        ).distinct()
+        if len(existing_urls) > 0:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"""URL with domain "{url['domain']}" and base path "{url['base_path']}" """
+                        f"is already assigned to another service."
+                    ]
+                }
+            )
+        return url
+
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     image = serializers.CharField(required=True)
-    credentials = DockerCredentialsRequestSerializer(required=False)
-    urls = URLRequestSerializer(many=True, required=False)
     command = serializers.CharField(required=False)
-    ports = ServicePortsRequestSerializer(required=False, many=True)
+    credentials = DockerCredentialsRequestSerializer(required=False)
+    urls = URLRequestSerializer(many=True, required=False, default=[])
+    ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
     env = serializers.DictField(child=serializers.CharField(), required=False)
-    volumes = VolumeRequestSerializer(many=True, required=False)
+    volumes = VolumeRequestSerializer(many=True, required=False, default=[])
 
     def validate(self, data: dict):
         credentials = data.get("credentials")
@@ -145,7 +161,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
             # check if port is available
             if public_port not in http_ports:
-                is_port_available = check_if_port_is_available(public_port)
+                is_port_available = check_if_port_is_available_on_host(public_port)
                 if not is_port_available:
                     raise serializers.ValidationError(
                         f"Port {public_port} is not available on the host machine."
@@ -206,12 +222,17 @@ class CredentialErrorSerializer(serializers.Serializer):
     registry_url = serializers.StringListField(required=False)
 
 
+class URLsErrorSerializer(serializers.Serializer):
+    domain = serializers.StringListField(required=False)
+    base_path = serializers.StringListField(required=False)
+
+
 class DockerServiceCreateErrorSerializer(serializers.BaseErrorSerializer):
-    credentials = CredentialErrorSerializer(required=False)
     name = serializers.StringListField(required=False)
     image = serializers.StringListField(required=False)
-    urls = serializers.StringListField(required=False)
     command = serializers.StringListField(required=False)
+    credentials = CredentialErrorSerializer(required=False)
+    urls = URLsErrorSerializer(required=False, many=True)
     ports = serializers.StringListField(required=False)
     env = serializers.StringListField(required=False)
     volumes = serializers.StringListField(required=False)
@@ -228,7 +249,8 @@ class CreateDockerServiceAPIView(APIView):
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
-            422: error_serializer_class,
+            # TODO
+            # 422: DockerServiceCreateErrorResponseSerializer,
             404: error_serializer_class,
             409: error_serializer_class,
             201: serializer_class,
@@ -281,7 +303,7 @@ class CreateDockerServiceAPIView(APIView):
                     response = self.error_serializer_class(
                         {
                             "errors": {
-                                "root": [
+                                "name": [
                                     "A service with a similar slug already exist in this project,"
                                     " please use another name for this service"
                                 ]
@@ -341,7 +363,7 @@ class CreateDockerServiceAPIView(APIView):
                     ]
                 )
 
-                service.port_config.add(*created_ports)
+                service.ports.add(*created_ports)
 
                 # Create urls to route the service to
                 can_create_urls = len(service_urls_from_request) > 0
@@ -360,12 +382,26 @@ class CreateDockerServiceAPIView(APIView):
                         )
                         service.urls.add(default_url)
                     else:
-                        created_urls = URL.objects.bulk_create(
-                            [
-                                URL(domain=url["domain"], base_path=url["base_path"])
-                                for url in service_urls_from_request
-                            ]
-                        )
+                        urls_to_create: list[URL] = []
+
+                        for url in service_urls_from_request:
+                            base_path = (
+                                "/"
+                                if url["base_path"] == "/"
+                                else strip_slash_if_exists(
+                                    url["base_path"],
+                                    strip_end=True,
+                                    strip_start=False,
+                                )
+                            )
+                            urls_to_create.append(
+                                URL(
+                                    domain=url["domain"],
+                                    base_path=base_path,
+                                )
+                            )
+
+                        created_urls = URL.objects.bulk_create(urls_to_create)
                         service.urls.add(*created_urls)
 
                 # Create first deployment
@@ -396,9 +432,11 @@ class CreateDockerServiceAPIView(APIView):
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
+            # TODO: format errors correctly using `DRF Standardized Errors`
             response = self.error_serializer_class({"errors": form.errors})
             return Response(
-                data=response.data, status=status.HTTP_422_UNPROCESSABLE_ENTITY
+                data={"errors": form.errors},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
 
@@ -435,7 +473,7 @@ class GetDockerServiceAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "port_config", "urls")
+            .prefetch_related("volumes", "ports", "urls")
         ).first()
 
         if service is None:

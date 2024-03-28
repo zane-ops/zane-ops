@@ -367,12 +367,6 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerServiceCreateErrorResponse'
-          description: ''
         '404':
           content:
             application/json:
@@ -617,6 +611,21 @@ components:
           type: string
       required:
       - details
+    CredentialError:
+      type: object
+      properties:
+        username:
+          type: array
+          items:
+            type: string
+        password:
+          type: array
+          items:
+            type: string
+        registry_url:
+          type: array
+          items:
+            type: string
     DockerCredentialsRequest:
       type: object
       properties:
@@ -808,18 +817,16 @@ components:
           type: array
           items:
             type: string
-        credentials:
-          type: array
-          items:
-            type: string
-        urls:
-          type: array
-          items:
-            type: string
         command:
           type: array
           items:
             type: string
+        credentials:
+          $ref: '#/components/schemas/CredentialError'
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLsError'
         ports:
           type: array
           items:
@@ -847,18 +854,20 @@ components:
           maxLength: 255
         image:
           type: string
+        command:
+          type: string
         credentials:
           $ref: '#/components/schemas/DockerCredentialsRequest'
         urls:
           type: array
           items:
             $ref: '#/components/schemas/URLRequest'
-        command:
-          type: string
+          default: []
         ports:
           type: array
           items:
             $ref: '#/components/schemas/ServicePortsRequest'
+          default: []
         env:
           type: object
           additionalProperties:
@@ -867,6 +876,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VolumeRequest'
+          default: []
       required:
       - image
       - name
@@ -891,10 +901,10 @@ components:
     ForbiddenResponse:
       type: object
       properties:
-        detail:
-          type: string
+        errors:
+          $ref: '#/components/schemas/BaseError'
       required:
-      - detail
+      - errors
     GetRootDomain:
       type: object
       properties:
@@ -1086,6 +1096,17 @@ components:
           default: /
       required:
       - domain
+    URLsError:
+      type: object
+      properties:
+        domain:
+          type: array
+          items:
+            type: string
+        base_path:
+          type: array
+          items:
+            type: string
     User:
       type: object
       properties:

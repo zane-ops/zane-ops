@@ -29,21 +29,5 @@ def test_recorder():
     pass
 
 
-def strip_slash_if_exists(
-    url: str,
-    strip_end: bool = False,
-    strip_start: bool = True,
-):
-    final_url = url
-    if strip_start and url.startswith("/"):
-        final_url = final_url[1:]
-    if strip_end and url.endswith("/"):
-        final_url = final_url[:-1]
-    return final_url
-
-
 if __name__ == "__main__":
     test_recorder()
-    # print(strip_slash_if_exists("/bash"))
-    # print(strip_slash_if_exists("bash/", strip_end=True))
-    # print(strip_slash_if_exists("/bash/", strip_start=True, strip_end=True))

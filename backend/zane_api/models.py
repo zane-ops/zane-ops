@@ -6,7 +6,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from shortuuid.django_fields import ShortUUIDField
 
-from .validators import validate_url_domain, validate_crontab
+from .utils import strip_slash_if_exists
+from .validators import validate_url_domain, validate_crontab, validate_url_path
 
 
 class TimestampedModel(models.Model):
@@ -37,7 +38,17 @@ class URL(models.Model):
     domain = models.CharField(
         max_length=1000, null=True, blank=True, validators=[validate_url_domain]
     )
-    base_path = models.CharField(default="/")
+    base_path = models.CharField(default="/", validators=[validate_url_path])
+
+    def __str__(self):
+        base_path = (
+            "/"
+            if self.base_path == "/"
+            else strip_slash_if_exists(
+                self.base_path, strip_start=False, strip_end=True
+            )
+        )
+        return f'URL(domain="{self.domain}"), base_path="{base_path}")'
 
     class Meta:
         unique_together = (
@@ -52,7 +63,7 @@ class BaseService(TimestampedModel):
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     volumes = models.ManyToManyField(to="Volume")
-    port_config = models.ManyToManyField(to="PortConfiguration")
+    ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
 
     class Meta:

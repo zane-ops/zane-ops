@@ -72,3 +72,7 @@ class BasePathValidatorsTestCase(TestCase):
             validate_url_path("/hello/*")
         except ValidationError:
             self.fail("ValidationError raised unexpectedly!")
+
+    def test_validate_base_path_without_slash(self):
+        with self.assertRaises(ValidationError):
+            validate_url_path("hello/*")

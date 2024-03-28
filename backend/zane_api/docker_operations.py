@@ -18,6 +18,7 @@ from .models import (
     PortConfiguration,
     URL,
 )
+from .utils import strip_slash_if_exists
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
@@ -93,19 +94,6 @@ class DockerAuthConfig(TypedDict):
 def pull_docker_image(image: str, auth: DockerAuthConfig = None):
     client = get_docker_client()
     client.images.pull(image, auth_config=auth)
-
-
-def strip_slash_if_exists(
-    url: str,
-    strip_end: bool = False,
-    strip_start: bool = True,
-):
-    final_url = url
-    if strip_start and url.startswith("/"):
-        final_url = final_url[1:]
-    if strip_end and url.endswith("/"):
-        final_url = final_url[:-1]
-    return final_url
 
 
 def check_if_docker_image_exists(
@@ -186,7 +174,7 @@ def detach_network_from_proxy(network: Network):
         service.update(networks=list(network_ids))
 
 
-def check_if_port_is_available(port: int) -> bool:
+def check_if_port_is_available_on_host(port: int) -> bool:
     client = get_docker_client()
     try:
         client.containers.run(
@@ -260,7 +248,7 @@ def create_service_from_docker_registry(
 
     # We don't expose HTTP ports with docker because they will be handled by caddy directly
     http_ports = [80, 443]
-    for port in service.port_config.all():
+    for port in service.ports.all():
         if port.host not in http_ports and port.host is not None:
             exposed_ports[port.host] = port.forwarded
 
@@ -361,7 +349,7 @@ def get_caddy_request_for_url(
 
 
 def expose_docker_service_to_http(service: DockerRegistryService) -> None:
-    http_port: PortConfiguration = service.port_config.filter(host__isnull=True).first()
+    http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is None:
         raise Exception(
             f"Cannot expose service `{service.slug}` without a HTTP port exposed."

@@ -200,7 +200,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
-    "EXCEPTION_HANDLER": "zane_api.views.custom_exception_handler",
+    "EXCEPTION_HANDLER": "zane_api.views.auth.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 

@@ -35,4 +35,4 @@ def validate_url_path(value: str):
         if not parsed.path == value or ".." in value:
             raise ValidationError("Invalid Path")
     except ValidationError:
-        raise ValidationError("should be a valid url segment")
+        raise ValidationError("should be a valid url segment starting with `/`")

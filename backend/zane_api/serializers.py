@@ -90,5 +90,5 @@ class DockerServiceSerializer(ModelSerializer):
         ]
 
 
-class ForbiddenResponseSerializer(Serializer):
-    detail = CharField()
+class ForbiddenResponseSerializer(BaseErrorResponseSerializer):
+    pass
