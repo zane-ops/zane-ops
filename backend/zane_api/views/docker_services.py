@@ -1,3 +1,5 @@
+import time
+
 import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
@@ -67,7 +69,7 @@ class URLRequestSerializer(serializers.Serializer):
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255)
+    slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
     command = serializers.CharField(required=False)
     credentials = DockerCredentialsRequestSerializer(required=False)
@@ -274,14 +276,15 @@ class CreateDockerServiceAPIView(APIView):
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         else:
-            fake = Faker()
             form = DockerServiceCreateRequestSerializer(data=request.data)
             if form.is_valid():
                 data = form.data
 
                 # Create service in DB
                 docker_credentials: dict | None = data.get("credentials")
-                service_slug = data.get("slug")
+                fake = Faker()
+                Faker.seed(time.monotonic())
+                service_slug = data.get("slug", fake.slug()).lower()
                 try:
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
@@ -446,7 +449,7 @@ class GetDockerServiceAPIView(APIView):
     )
     def get(self, request: Request, project_slug: str, service_slug: str):
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(slug=project_slug.lower())
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {

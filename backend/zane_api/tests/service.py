@@ -1131,6 +1131,54 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         errors = response.json()["errors"]
         self.assertIsNotNone(errors.get("urls"))
 
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_create_service_slug_is_created_if_not_specified(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service = DockerRegistryService.objects.filter().first()
+        self.assertIsNotNone(created_service)
+        self.assertIsNotNone(created_service.slug)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_create_service_slug_is_lowercased(self, mock_fake_docker: Mock, _: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zane-ops", owner=owner)
+
+        create_service_payload = {
+            "slug": "Zane-Ops-fronT",
+            "image": "ghcr.io/zane-ops-front:latest",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service = DockerRegistryService.objects.filter(
+            slug="zane-ops-front"
+        ).first()
+        self.assertIsNotNone(created_service)
+
 
 class DockerGetServiceViewTest(AuthAPITestCase):
     @patch(

@@ -301,7 +301,7 @@ class ProjectDetailsView(APIView):
     )
     def get(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = Project.objects.get(slug=slug.lower())
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -325,7 +325,7 @@ class ProjectDetailsView(APIView):
     )
     def delete(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug, owner=request.user)
+            project = Project.objects.get(slug=slug.lower(), owner=request.user)
             delete_docker_resources_for_project.apply_async(
                 (project.id, project.created_at.timestamp()),
                 task_id=project.archive_task_id,
