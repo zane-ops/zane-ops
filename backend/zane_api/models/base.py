@@ -6,8 +6,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from shortuuid.django_fields import ShortUUIDField
 
-from .utils import strip_slash_if_exists
-from .validators import validate_url_domain, validate_crontab, validate_url_path
+from ..utils import strip_slash_if_exists
+from ..validators import validate_url_domain, validate_crontab, validate_url_path
 
 
 class TimestampedModel(models.Model):
@@ -23,12 +23,25 @@ class Project(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, blank=True, unique=True)
-    archived = models.BooleanField(default=False)
+    slug = models.SlugField(max_length=255, unique=True)
+    id = ShortUUIDField(
+        length=11,
+        max_length=11,
+        primary_key=True,
+    )
+
+    @property
+    def create_task_id(self):
+        timestamp_to_full = str(self.updated_at.timestamp()).replace(".", "")
+        return f"create-prj-{self.slug}-{self.id}-{timestamp_to_full}"
+
+    @property
+    def archive_task_id(self):
+        timestamp_to_full = str(self.updated_at.timestamp()).replace(".", "")
+        return f"archive-prj-{self.slug}-{self.id}-{timestamp_to_full}"
 
     def __str__(self):
-        return self.name
+        return f"Project({self.slug})"
 
     class Meta:
         ordering = ["-updated_at"]

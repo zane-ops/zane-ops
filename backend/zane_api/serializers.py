@@ -38,11 +38,15 @@ class UserSerializer(ModelSerializer):
 
 
 class ProjectSerializer(ModelSerializer):
-    owner = UserSerializer(many=False, read_only=True)
-
     class Meta:
         model = models.Project
-        fields = ["name", "slug", "archived", "owner", "created_at", "updated_at"]
+        fields = ["slug", "created_at", "updated_at"]
+
+
+class ArchivedProjectSerializer(ModelSerializer):
+    class Meta:
+        model = models.ArchivedProject
+        fields = ["slug", "archived_at"]
 
 
 class VolumeSerializer(ModelSerializer):

@@ -1,8 +1,11 @@
+import time
+
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema
+from faker import Faker
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -10,12 +13,26 @@ from rest_framework.views import APIView
 
 from . import EMPTY_RESPONSE
 from .. import serializers
-from ..docker_operations import create_project_resources, cleanup_project_resources
-from ..models import Project
+from ..models import Project, ArchivedProject
+from ..tasks import (
+    create_docker_resources_for_project,
+    delete_docker_resources_for_project,
+)
+
+
+class ActiveProjectPaginatedSerializer(serializers.Serializer):
+    projects = serializers.ProjectSerializer(many=True)
+    total_count = serializers.IntegerField()
+
+
+class ArchivedProjectPaginatedSerializer(serializers.Serializer):
+    projects = serializers.ArchivedProjectSerializer(many=True)
+    total_count = serializers.IntegerField()
 
 
 class ProjectSuccessResponseSerializer(serializers.Serializer):
-    projects = serializers.ProjectSerializer(many=True)
+    active = ActiveProjectPaginatedSerializer()
+    archived = ArchivedProjectPaginatedSerializer()
 
 
 class SingleProjectSuccessResponseSerializer(serializers.Serializer):
@@ -24,16 +41,26 @@ class SingleProjectSuccessResponseSerializer(serializers.Serializer):
 
 class ProjectListSearchFiltersSerializer(serializers.Serializer):
     SORT_CHOICES = (
-        ("name_asc", _("name ascending")),
+        ("slug_asc", _("slug ascending")),
         ("updated_at_desc", _("updated_at in descending order")),
     )
-    include_archived = serializers.BooleanField(required=False, default=False)
+
+    STATUS_CHOICES = (
+        ("archived", _("archived")),
+        ("active", _("active")),
+    )
+
+    status = serializers.ChoiceField(
+        choices=STATUS_CHOICES, required=False, default="active"
+    )
     query = serializers.CharField(
         required=False, allow_blank=True, default="", trim_whitespace=True
     )
     sort = serializers.ChoiceField(
         choices=SORT_CHOICES, required=False, default="updated_at_desc"
     )
+    page = serializers.IntegerField(required=False, default=1)
+    per_page = serializers.IntegerField(required=False, default=30)
 
     def validate_include_archived(self, value: str | bool):
         if isinstance(value, str):
@@ -49,11 +76,11 @@ class ProjectListSearchFiltersSerializer(serializers.Serializer):
 
 
 class ProjectCreateRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255)
+    slug = serializers.SlugField(max_length=255, required=False)
 
 
 class ProjetCreateErrorSerializer(serializers.BaseErrorSerializer):
-    name = serializers.StringListField(required=False)
+    slug = serializers.StringListField(required=False)
 
 
 class ProjetCreateErrorResponseSerializer(serializers.Serializer):
@@ -84,23 +111,50 @@ class ProjectsListView(APIView):
             params = form.data
 
             sort_by_map_to_fields = {
-                "name_asc": "name",
+                "slug_asc": "slug",
                 "updated_at_desc": "-updated_at",
             }
 
-            response = self.serializer_class(
-                {
-                    "projects": Project.objects.filter(
-                        Q(owner=request.user, archived=params["include_archived"])
-                        & (
-                            Q(name__istartswith=params["query"])
-                            | Q(slug__startswith=params["query"].lower())
-                        )
-                    )
-                    .select_related("owner")
-                    .order_by(sort_by_map_to_fields.get(params["sort"]))[:30],
-                }
-            )
+            query_status = params.get("status")
+            per_page = params.get("per_page")
+
+            if query_status == "active":
+                paginator = Paginator(
+                    Project.objects.filter(
+                        Q(owner=request.user)
+                        & (Q(slug__startswith=params["query"].lower()))
+                    ).order_by(sort_by_map_to_fields.get(params["sort"])),
+                    per_page,
+                )
+
+                page = paginator.get_page(params["page"])
+                response = self.serializer_class(
+                    {
+                        "active": {
+                            "projects": list(page),
+                            "total_count": page.paginator.count,
+                        },
+                        "archived": {"projects": [], "total_count": 0},
+                    }
+                )
+            else:
+                paginator = Paginator(
+                    ArchivedProject.objects.filter(
+                        (Q(owner=request.user) | Q(owner__isnull=True))
+                        & (Q(slug__startswith=params["query"].lower()))
+                    ).order_by("-archived_at"),
+                    per_page,
+                )
+                page = paginator.get_page(params["page"])
+                response = self.serializer_class(
+                    {
+                        "archived": {
+                            "projects": list(page),
+                            "total_count": page.paginator.count,
+                        },
+                        "active": {"projects": [], "total_count": 0},
+                    }
+                )
             return Response(response.data)
 
         # This should be unreachable
@@ -124,21 +178,21 @@ class ProjectsListView(APIView):
         form = ProjectCreateRequestSerializer(data=request.data)
         if form.is_valid():
             data = form.data
-            slug = slugify(data["name"])
+
+            # To prevent collisions
+            Faker.seed(time.monotonic())
+            fake = Faker()
+            slug = data.get("slug", fake.slug()).lower()
             try:
                 with transaction.atomic():
-                    new_project = Project.objects.create(
-                        name=data["name"], slug=slug, owner=request.user
-                    )
-                create_project_resources(project=new_project)
-                response = self.single_serializer_class({"project": new_project})
-                return Response(response.data, status=status.HTTP_201_CREATED)
+                    new_project = Project.objects.create(slug=slug, owner=request.user)
             except IntegrityError:
                 response = self.error_serializer_class(
                     {
                         "errors": {
                             "name": [
-                                "A project with a similar slug already exist, please use another name for this project"
+                                f"A project with the slug '{slug}' already exist,"
+                                f" please use another one for this project."
                             ]
                         }
                     }
@@ -159,17 +213,23 @@ class ProjectsListView(APIView):
                 return Response(
                     response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
+            else:
+                create_docker_resources_for_project.apply_async(
+                    (slug,), task_id=new_project.create_task_id
+                )
+                response = self.single_serializer_class({"project": new_project})
+                return Response(response.data, status=status.HTTP_201_CREATED)
         return Response(
             {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
 
 
 class ProjectUpdateRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255)
+    slug = serializers.SlugField(max_length=255)
 
 
 class ProjetUpdateErrorSerializer(serializers.BaseErrorSerializer):
-    name = serializers.StringListField(required=False)
+    slug = serializers.StringListField(required=False)
 
 
 class ProjectUpdateErrorResponseSerializer(serializers.Serializer):
@@ -202,7 +262,7 @@ class ProjectDetailsView(APIView):
             response = self.error_serializer_class(
                 {
                     "errors": {
-                        "root": [f"A project with the slug `{slug}` does not exist"],
+                        "slug": [f"A project with the slug `{slug}` does not exist"],
                     }
                 }
             )
@@ -210,14 +270,26 @@ class ProjectDetailsView(APIView):
 
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid():
-            project.name = form.data["name"]
-            project.save()
-            response = self.serializer_class({"project": project})
-            return Response(response.data)
+            try:
+                project.slug = form.data["slug"]
+                project.save()
+            except IntegrityError:
+                response = self.error_serializer_class(
+                    {
+                        "errors": {
+                            "slug": [
+                                f"The slug `{slug}` is already used by another project"
+                            ]
+                        }
+                    }
+                )
+                return Response(response.data, status=status.HTTP_409_CONFLICT)
+            else:
+                response = self.serializer_class({"project": project})
+                return Response(response.data)
 
-        return Response(
-            {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
+        response = self.error_serializer_class({"errors": form.errors})
+        return Response(response.data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
     @extend_schema(
         responses={
@@ -253,16 +325,20 @@ class ProjectDetailsView(APIView):
     )
     def delete(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug, archived=False)
-            cleanup_project_resources(project)
-            project.archived = True
-            project.save()
+            project = Project.objects.get(slug=slug, owner=request.user)
+            delete_docker_resources_for_project.apply_async(
+                (project.id, project.created_at.timestamp()),
+                task_id=project.archive_task_id,
+            )
+
+            ArchivedProject.objects.create(slug=project.slug, owner=project.owner)
+            project.delete()
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
                     "errors": {
                         "root": [
-                            f"A project with the slug `{slug}` does not exist or have already been archived"
+                            f"A project with the slug `{slug}` does not exist or has already been archived"
                         ],
                     }
                 }

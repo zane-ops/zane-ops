@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "source ./venv/bin/activate && python manage.py runserver 0.0.0.0:8000",
     "test": "source ./venv/bin/activate && python manage.py test --parallel",
-    "test:filter": "source ./venv/bin/activate && python manage.py test -k",
+    "test:filter": "source ./venv/bin/activate && python manage.py test --parallel -k",
     "makemigration": "source ./venv/bin/activate && python manage.py makemigrations",
     "migrate": "source ./venv/bin/activate && python manage.py migrate",
     "openapi": "source ./venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",

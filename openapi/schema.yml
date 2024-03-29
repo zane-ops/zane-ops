@@ -247,10 +247,15 @@ paths:
       operationId: getProjectList
       parameters:
       - in: query
-        name: include_archived
+        name: page
         schema:
-          type: boolean
-          default: false
+          type: integer
+          default: 1
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          default: 30
       - in: query
         name: query
         schema:
@@ -260,14 +265,26 @@ paths:
         name: sort
         schema:
           enum:
-          - name_asc
+          - slug_asc
           - updated_at_desc
           type: string
           default: updated_at_desc
           minLength: 1
         description: |-
-          * `name_asc` - name ascending
+          * `slug_asc` - slug ascending
           * `updated_at_desc` - updated_at in descending order
+      - in: query
+        name: status
+        schema:
+          enum:
+          - archived
+          - active
+          type: string
+          default: active
+          minLength: 1
+        description: |-
+          * `archived` - archived
+          * `active` - active
       tags:
       - projects
       security:
@@ -306,7 +323,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/ProjectCreateRequest'
-        required: true
       security:
       - cookieAuth: []
       responses:
@@ -581,6 +597,43 @@ paths:
           description: ''
 components:
   schemas:
+    ActiveProjectPaginated:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        total_count:
+          type: integer
+      required:
+      - projects
+      - total_count
+    ArchivedProject:
+      type: object
+      properties:
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - archived_at
+    ArchivedProjectPaginated:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivedProject'
+        total_count:
+          type: integer
+      required:
+      - projects
+      - total_count
     AuthedSuccessResponse:
       type: object
       properties:
@@ -958,9 +1011,10 @@ components:
     PatchedProjectUpdateRequest:
       type: object
       properties:
-        name:
+        slug:
           type: string
           maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PortConfiguration:
       type: object
       properties:
@@ -978,19 +1032,10 @@ components:
     Project:
       type: object
       properties:
-        name:
-          type: string
-          maxLength: 255
         slug:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-        archived:
-          type: boolean
-        owner:
-          allOf:
-          - $ref: '#/components/schemas/User'
-          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -1001,26 +1046,25 @@ components:
           readOnly: true
       required:
       - created_at
-      - name
-      - owner
+      - slug
       - updated_at
     ProjectCreateRequest:
       type: object
       properties:
-        name:
+        slug:
           type: string
           maxLength: 255
-      required:
-      - name
+          pattern: ^[-a-zA-Z0-9_]+$
     ProjectSuccessResponse:
       type: object
       properties:
-        projects:
-          type: array
-          items:
-            $ref: '#/components/schemas/Project'
+        active:
+          $ref: '#/components/schemas/ActiveProjectPaginated'
+        archived:
+          $ref: '#/components/schemas/ArchivedProjectPaginated'
       required:
-      - projects
+      - active
+      - archived
     ProjectUpdateErrorResponse:
       type: object
       properties:
@@ -1035,7 +1079,7 @@ components:
           type: array
           items:
             type: string
-        name:
+        slug:
           type: array
           items:
             type: string
@@ -1053,7 +1097,7 @@ components:
           type: array
           items:
             type: string
-        name:
+        slug:
           type: array
           items:
             type: string
@@ -1084,6 +1128,8 @@ components:
         base_path:
           type: string
           default: /
+        strip_prefix:
+          type: boolean
       required:
       - domain
     URLRequest:
@@ -1094,6 +1140,9 @@ components:
         base_path:
           type: string
           default: /
+        strip_prefix:
+          type: boolean
+          default: true
       required:
       - domain
     URLsError:

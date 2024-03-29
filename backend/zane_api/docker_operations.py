@@ -35,9 +35,9 @@ def get_docker_client():
     return docker_client
 
 
-def get_network_resource_name(project: Project) -> str:
-    ts_to_full_number = str(project.created_at.timestamp()).replace(".", "")
-    return f"net-{project.slug}-{ts_to_full_number}"
+def get_network_resource_name(project_id: str, project_created_at_ts: float) -> str:
+    ts_to_full_number = str(project_created_at_ts).replace(".", "")
+    return f"net-{project_id}-{ts_to_full_number}"
 
 
 def get_resource_labels(project: Project):
@@ -108,7 +108,7 @@ def check_if_docker_image_exists(
         return True
 
 
-def cleanup_project_resources(project: Project):
+def cleanup_project_resources(project_id: str, project_created_at_ts: float):
     """
     Cleanup all resources attached to a project after it has been archived, which means :
     - cleaning up volumes (and deleting them in the DB & docker)
@@ -128,7 +128,7 @@ def cleanup_project_resources(project: Project):
 
     try:
         network_associated_to_project = client.networks.get(
-            get_network_resource_name(project)
+            get_network_resource_name(project_id, project_created_at_ts)
         )
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
@@ -139,12 +139,9 @@ def cleanup_project_resources(project: Project):
 
 
 def create_project_resources(project: Project):
-    """
-    Create the resources for the project, here it is mainly the project shared network
-    """
     client = get_docker_client()
     network = client.networks.create(
-        name=get_network_resource_name(project),
+        name=get_network_resource_name(project.id, project.created_at.timestamp()),
         scope="swarm",
         driver="overlay",
         labels=get_resource_labels(project),
@@ -272,7 +269,11 @@ def create_service_from_docker_registry(
         env=envs,
         labels=get_resource_labels(service.project),
         command=service.command,
-        networks=[get_network_resource_name(service.project)],
+        networks=[
+            get_network_resource_name(
+                service.project.id, service.project.created_at.timestamp()
+            )
+        ],
         restart_policy=RestartPolicy(
             condition="on-failure",
             max_attempts=3,
