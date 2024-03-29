@@ -52,7 +52,7 @@ class ArchivedProjectSerializer(ModelSerializer):
 class VolumeSerializer(ModelSerializer):
     class Meta:
         model = models.Volume
-        fields = ["created_at", "updated_at", "slug", "name", "containerPath"]
+        fields = ["created_at", "updated_at", "id", "name", "containerPath"]
 
 
 class URLModelSerializer(ModelSerializer):
@@ -61,10 +61,10 @@ class URLModelSerializer(ModelSerializer):
         fields = ["domain", "base_path", "strip_prefix"]
 
 
-class EnvVariableSerializer(ModelSerializer):
+class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
-        model = models.EnvVariable
-        fields = ["key", "value", "is_for_production"]
+        model = models.DockerEnvVariable
+        fields = ["key", "value"]
 
 
 class PortConfigurationSerializer(ModelSerializer):
@@ -77,6 +77,7 @@ class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True, source="port_config")
+    env_variables = DockerEnvVariableSerializer(many=True)
 
     class Meta:
         model = models.DockerRegistryService
@@ -87,10 +88,9 @@ class DockerServiceSerializer(ModelSerializer):
             "created_at",
             "updated_at",
             "volumes",
-            "name",
-            "archived",
             "command",
             "ports",
+            "env_variables",
         ]
 
 

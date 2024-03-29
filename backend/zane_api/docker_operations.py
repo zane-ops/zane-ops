@@ -14,7 +14,6 @@ from .models import (
     Volume,
     DockerRegistryService,
     BaseService,
-    DockerDeployment,
     PortConfiguration,
     URL,
 )
@@ -41,7 +40,7 @@ def get_network_resource_name(project_id: str, project_created_at_ts: float) -> 
 
 
 def get_resource_labels(project: Project):
-    return {"zane-managed": "true", "zane-project": project.slug}
+    return {"zane-managed": "true", "zane-project": project.id}
 
 
 class DockerImageResultFromRegistry(TypedDict):
@@ -188,16 +187,16 @@ def check_if_port_is_available_on_host(port: int) -> bool:
 
 def get_volume_resource_name(volume: Volume):
     ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
-    return f"vol-{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
+    return f"vol-{volume.id}-{ts_to_full_number}"
 
 
-def create_docker_volume(volume: Volume):
+def create_docker_volume(volume: Volume, service: BaseService):
     client = get_docker_client()
 
     client.volumes.create(
         name=get_volume_resource_name(volume),
         driver="local",
-        labels=get_resource_labels(volume.project),
+        labels=get_resource_labels(service.project),
     )
 
 
@@ -234,9 +233,7 @@ def get_service_resource_name(
     return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
 
 
-def create_service_from_docker_registry(
-    service: DockerRegistryService, deployment: DockerDeployment
-):
+def create_service_from_docker_registry(service: DockerRegistryService):
     # TODO: Pull Image Tag (#44)
     client = get_docker_client()
 
@@ -257,9 +254,7 @@ def create_service_from_docker_registry(
         docker_volume = client.volumes.get(get_volume_resource_name(volume))
         mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
 
-    envs: list[str] = [
-        f"{env.key}={env.value}" for env in deployment.env_variables.all()
-    ]
+    envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
     client.services.create(
         image=service.image,

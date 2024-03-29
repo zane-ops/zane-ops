@@ -24,7 +24,7 @@ from ..models import (
     Volume,
     PortConfiguration,
     URL,
-    EnvVariable,
+    DockerEnvVariable,
 )
 from ..tasks import deploy_docker_service
 from ..utils import strip_slash_if_exists
@@ -412,18 +412,17 @@ class CreateDockerServiceAPIView(APIView):
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get("env", {})
 
-                created_envs = EnvVariable.objects.bulk_create(
+                created_envs = DockerEnvVariable.objects.bulk_create(
                     [
-                        EnvVariable(
+                        DockerEnvVariable(
                             key=key,
                             value=value,
-                            project=project,
                         )
                         for key, value in envs_from_request.items()
                     ]
                 )
 
-                first_deployment.env_variables.add(*created_envs)
+                service.env_variables.add(*created_envs)
 
                 # Run celery deployment task
                 deploy_docker_service.apply_async(

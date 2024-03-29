@@ -72,13 +72,16 @@ class URL(models.Model):
 
 
 class BaseService(TimestampedModel):
-    name = models.CharField(max_length=255)
-    archived = models.BooleanField(default=False)
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
+    id = ShortUUIDField(
+        length=11,
+        max_length=11,
+        primary_key=True,
+    )
 
     class Meta:
         abstract = True
@@ -87,13 +90,29 @@ class BaseService(TimestampedModel):
             "project",
         )
 
-    def __str__(self):
-        return f"{self.name} ({self.slug})"
-
 
 class PortConfiguration(models.Model):
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
+
+
+class BaseEnvVariable(models.Model):
+    key = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+
+    class Meta:
+        abstract = True
+
+
+class DockerEnvVariable(BaseEnvVariable):
+    service = models.ForeignKey(
+        to="DockerRegistryService",
+        on_delete=models.CASCADE,
+        related_name="env_variables",
+    )
+
+    def __str__(self):
+        return f"DockerEnvVariable({self.key})"
 
 
 class DockerRegistryService(BaseService):
@@ -105,6 +124,9 @@ class DockerRegistryService(BaseService):
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
+
+    def __str__(self):
+        return f"DockerRegistryService({self.slug})"
 
 
 class GitRepositoryService(BaseService):
@@ -122,36 +144,26 @@ class GitRepositoryService(BaseService):
     docker_cmd = models.CharField(max_length=255, null=True, blank=True)
 
 
-class EnvVariable(models.Model):
-    key = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
-    is_for_production = models.BooleanField(default=True)
-    project = models.ForeignKey(
-        to=Project,
-        on_delete=models.CASCADE,
+class GitEnvVariable(BaseEnvVariable):
+    service = models.ForeignKey(
+        to="GitRepositoryService", on_delete=models.CASCADE, related_name="env_variables"
     )
 
     def __str__(self):
-        return f"EnvVariable ({self.key})"
+        return f"GitEnvVariable({self.key})"
 
 
 class Volume(TimestampedModel):
     name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255)
-    project = models.ForeignKey(
-        to=Project,
-        on_delete=models.CASCADE,
-    )
     containerPath = models.CharField(max_length=255)
-
-    class Meta:
-        unique_together = (
-            "slug",
-            "project",
-        )
+    id = ShortUUIDField(
+        length=11,
+        max_length=11,
+        primary_key=True,
+    )
 
     def __str__(self):
-        return f"Volume ({self.slug})"
+        return f"Volume({self.name})"
 
 
 class BaseDeployment(models.Model):
@@ -170,7 +182,6 @@ class BaseDeployment(models.Model):
         default=DeploymentStatus.PENDING,
     )
     hash = ShortUUIDField(length=11, max_length=11, unique=True)
-    env_variables = models.ManyToManyField(to="EnvVariable")
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
 
@@ -333,7 +344,8 @@ class Worker(models.Model):
         to=Project,
         on_delete=models.CASCADE,
     )
-    env_variables = models.ManyToManyField(to=EnvVariable)
+    # TODO : when working with workers
+    # env_variables = models.ManyToManyField(to=EnvVariable)
 
     class Meta:
         abstract = True
