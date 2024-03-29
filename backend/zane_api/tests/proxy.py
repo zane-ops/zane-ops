@@ -159,7 +159,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @staticmethod
     def create_service():
         owner = User.objects.get(username="Fredkiss3")
-        project = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        project = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
             name="sample webserver",
@@ -202,7 +202,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+        p = Project.objects.create(slug="sandbox", owner=owner)
 
         default_service_url = URL(
             domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
@@ -234,7 +234,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+        p = Project.objects.create(slug="sandbox", owner=owner)
 
         default_service_url = URL(
             domain=f"site.com",
@@ -277,7 +277,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+        p = Project.objects.create(slug="sandbox", owner=owner)
 
         default_service_url = URL(
             domain=f"thullo.zane.local",
@@ -320,7 +320,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+        p = Project.objects.create(slug="sandbox", owner=owner)
 
         stub = self.register_responses()
         create_service1_payload = {
@@ -374,7 +374,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+        p = Project.objects.create(slug="sandbox", owner=owner)
 
         stub = self.register_responses()
         custom_url = URL(
@@ -420,7 +420,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         _: Mock,
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Sandbox", slug="sandbox", owner=owner)
+        p = Project.objects.create(slug="sandbox", owner=owner)
 
         stub = self.register_responses()
         custom_url = URL(
@@ -465,7 +465,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:projects.list"),
             data={
-                "name": "Zane Ops",
+                "slug": "zane-ops",
             },
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -491,7 +491,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         self.client.post(
             reverse("zane_api:projects.list"),
             data={
-                "name": "Zane Ops",
+                "slug": "zane-ops",
             },
         )
         response = self.client.delete(

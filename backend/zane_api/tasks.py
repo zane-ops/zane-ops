@@ -1,11 +1,14 @@
+import docker.errors
 from celery import shared_task
 
 from .docker_operations import (
     expose_docker_service_to_http,
     create_docker_volume,
     create_service_from_docker_registry,
+    create_project_resources,
+    cleanup_project_resources,
 )
-from .models import DockerDeployment, PortConfiguration
+from .models import DockerDeployment, PortConfiguration, Project
 
 
 @shared_task
@@ -27,3 +30,19 @@ def deploy_docker_service(deployment_hash: str):
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is not None:
         expose_docker_service_to_http(service)
+
+
+@shared_task(
+    autoretry_for=(docker.errors.APIError,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def create_docker_resources_for_project(project_slug: str):
+    create_project_resources(project=Project.objects.get(slug=project_slug))
+
+
+@shared_task(
+    autoretry_for=(docker.errors.APIError,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def delete_docker_resources_for_project(project_id: str, created_at_ts: float):
+    cleanup_project_resources(project_id, created_at_ts)

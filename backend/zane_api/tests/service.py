@@ -149,7 +149,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_simple_service(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "cache db",
@@ -179,7 +179,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_with_volume(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "cache db",
@@ -220,7 +220,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_with_env_and_command(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "cache db",
@@ -261,7 +261,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_with_port(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "noSQL db",
@@ -305,7 +305,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "noSQL db",
@@ -341,7 +341,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
             name="cache db2", slug="cache-db", image="redis:alpine", project=p
@@ -382,7 +382,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_with_http_port(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -422,7 +422,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -456,7 +456,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_with_explicit_domain(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Portainer UI",
@@ -491,7 +491,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Portainer UI",
@@ -533,7 +533,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Main Database",
@@ -561,7 +561,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Public Database",
@@ -591,7 +591,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -620,7 +620,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -650,7 +650,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -680,7 +680,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -713,7 +713,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Gitea",
@@ -743,7 +743,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -775,7 +775,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -807,7 +807,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
             "name": "Adminer UI",
@@ -840,7 +840,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_with_custom_registry(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
+        p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
             "name": "main app",
@@ -879,7 +879,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
+        p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
             "name": "main app",
@@ -916,7 +916,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     ):
         owner = self.loginUser()
 
-        p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
+        p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
             "name": "main app",
@@ -955,7 +955,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
+        p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
             "name": "main app",
@@ -991,7 +991,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
+        p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
             "name": "main app",
@@ -1020,7 +1020,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_bad_request(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="Gh clone", slug="gh-clone", owner=owner)
+        p = Project.objects.create(slug="gh-clone", owner=owner)
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
@@ -1076,7 +1076,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     )
     def test_create_service_conflict_with_slug(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         DockerRegistryService.objects.create(
             name="cache db2", slug="cache-db", image="redis:alpine", project=p
@@ -1106,7 +1106,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         existing_service = DockerRegistryService.objects.create(
             name="caddy", slug="other-service", image="redis:alpine", project=p
@@ -1135,16 +1135,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(errors.get("urls"))
 
 
-class DockerServiceDeleteViewTest(AuthAPITestCase):
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch(
-        "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
-    )
-    def test_delete_service_succesful(self):
-        pass
-
-
 class DockerGetServiceViewTest(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -1152,7 +1142,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
     )
     def test_get_service_succesful(self, mock_fake_docker: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
             name="cache db", slug="cache-db", image="redis:alpine", project=p
@@ -1174,7 +1164,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
     )
     def test_get_service_non_existing(self, mock_fake_docker: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         response = self.client.get(
             reverse(
@@ -1193,10 +1183,8 @@ class DockerGetServiceViewTest(AuthAPITestCase):
     )
     def test_get_service_not_in_the_correct_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
-        p1 = Project.objects.create(name="KISS CAM", slug="kiss-cam", owner=owner)
-        p2 = Project.objects.create(
-            name="CAMLY (the better kisscam)", slug="camly", owner=owner
-        )
+        p1 = Project.objects.create(slug="kiss-cam", owner=owner)
+        p2 = Project.objects.create(slug="camly", owner=owner)
 
         service = DockerRegistryService.objects.create(
             name="cache db", slug="cache-db", image="redis:alpine", project=p1
