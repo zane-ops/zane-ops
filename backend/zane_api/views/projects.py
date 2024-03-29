@@ -338,7 +338,7 @@ class ProjectDetailsView(APIView):
                 {
                     "errors": {
                         "root": [
-                            f"A project with the slug `{slug}` does not exist or have already been archived"
+                            f"A project with the slug `{slug}` does not exist or has already been archived"
                         ],
                     }
                 }
