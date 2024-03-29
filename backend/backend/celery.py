@@ -16,20 +16,24 @@ app.autodiscover_tasks()
 
 @task_postrun.connect
 def after_task_run(signal, sender, retval, task_id, state, args, kwargs, **other):
+    print(f"==============================")
     print(f"AFTER TASK RUN ({task_id})")
     print(f"retval={retval}")
     print(f"task_id={task_id}")
     print(f"args={args}")
     print(f"kwargs={kwargs}")
     print(f"state={state}")
+    print(f"==============================\n")
 
 
 @task_prerun.connect
 def before_task_run(signal, sender, task_id, args, kwargs, **other):
+    print(f"==============================")
     print(f"BEFORE TASK RUN ({task_id})")
     print(f"task_id={task_id}")
     print(f"args={args}")
     print(f"kwargs={kwargs}")
+    print(f"==============================\n")
 
 
 @app.task(bind=True, ignore_result=True)
