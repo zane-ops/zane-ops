@@ -210,7 +210,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         stub = self.register_responses()
         create_service_payload = {
-            "name": "Basic HTTP webserver",
+            "slug": "basic-http-webserver",
             "image": "nginx:latest",
             "ports": [{"forwarded": 8080}],
         }
@@ -242,7 +242,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         stub = self.register_responses()
         create_service_payload = {
-            "name": "Basic HTTP webserver",
+            "slug": "basic-http-webserver",
             "image": "nginx:latest",
             "urls": [
                 {
@@ -285,7 +285,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         stub = self.register_responses()
         create_service_payload = {
-            "name": "Basic HTTP webserver",
+            "slug": "basic-http-webserver",
             "image": "nginx:latest",
             "urls": [
                 {
@@ -324,7 +324,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
 
         stub = self.register_responses()
         create_service1_payload = {
-            "name": "thullo front",
+            "slug": "thullo-front",
             "image": "dcr.fredkiss.dev/thullo-front:latest",
             "urls": [
                 {
@@ -340,7 +340,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
 
         create_service2_payload = {
-            "name": "thullo api",
+            "slug": "thullo-api",
             "image": "dcr.fredkiss.dev/thullo-api:latest",
             "urls": [
                 {
@@ -383,7 +383,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             strip_prefix=True,
         )
         create_service_payload = {
-            "name": "thullo api",
+            "slug": "thullo-api",
             "image": "dcr.fredkiss.dev/thullo-api:latest",
             "urls": [
                 {
@@ -429,7 +429,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
             strip_prefix=False,
         )
         create_service_payload = {
-            "name": "thullo api",
+            "slug": "thullo-api",
             "image": "dcr.fredkiss.dev/thullo-api:latest",
             "urls": [
                 {

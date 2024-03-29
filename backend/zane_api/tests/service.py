@@ -152,7 +152,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "cache db",
+            "slug": "cache-db",
             "image": "redis:alpine",
         }
 
@@ -182,7 +182,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "cache db",
+            "slug": "cache-db",
             "image": "redis:alpine",
             "volumes": [{"name": "REDIS Data volume", "mount_path": "/data"}],
         }
@@ -223,7 +223,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "cache db",
+            "slug": "cache-db",
             "image": "redis:alpine",
             "command": "redis-server --requirepass ${REDIS_PASSWORD}",
             "env": {"REDIS_PASSWORD": "strongPassword123"},
@@ -239,10 +239,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="cache-db"
         ).first()
-        first_deployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
-        env = first_deployment.env_variables.first()
+        env = created_service.env_variables.first()
 
         self.assertIsNotNone(created_service.command)
         self.assertIsNotNone(env)
@@ -264,7 +261,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "noSQL db",
+            "slug": "nosql-db",
             "image": "redis:alpine",
             "ports": [{"public": 6383, "forwarded": 6379}],
         }
@@ -308,7 +305,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "noSQL db",
+            "slug": "nosql-db",
             "image": "redis:alpine",
             "ports": [
                 {"public": 8080, "forwarded": 6379},
@@ -344,7 +341,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            name="cache db2", slug="cache-db", image="redis:alpine", project=p
+            slug="cache-db", image="redis:alpine", project=p
         )
 
         used_port = PortConfiguration(
@@ -355,7 +352,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         service.ports.add(used_port)
 
         create_service_payload = {
-            "name": "Adminer",
+            "slug": "adminer",
             "image": "adminer:latest",
             "ports": [{"public": used_port.host, "forwarded": 8080}],
         }
@@ -385,7 +382,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "ports": [{"forwarded": 8080}],
         }
@@ -425,7 +422,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "ports": [{"forwarded": 8080}],
         }
@@ -459,7 +456,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Portainer UI",
+            "slug": "portainer-ui",
             "image": "portainer/portainer-ce:latest",
             "urls": [{"domain": "dcr.fredkiss.dev", "base_path": "/portainer"}],
             "ports": [{"forwarded": 8000}],
@@ -494,7 +491,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Portainer UI",
+            "slug": "portainer-ui",
             "image": "portainer/portainer-ce:latest",
             "urls": [
                 {
@@ -536,7 +533,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Main Database",
+            "slug": "main-database",
             "image": "postgres:12-alpine",
         }
 
@@ -564,7 +561,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Public Database",
+            "slug": "public-database",
             "image": "postgres:12-alpine",
             "ports": [{"public": 5433, "forwarded": 5432}],
         }
@@ -594,7 +591,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "ports": [{"public": random.choice([443, 80]), "forwarded": 8080}],
         }
@@ -623,7 +620,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "ports": [
                 {"public": 443, "forwarded": 8080},
@@ -653,7 +650,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "ports": [
                 {"public": 8080, "forwarded": 8080},
@@ -683,7 +680,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "urls": [
                 {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
@@ -716,7 +713,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Gitea",
+            "slug": "gitea",
             "image": "gitea/gitea:latest",
             "volumes": [
                 {"name": "gitea data", "mount_path": "/data"},
@@ -746,7 +743,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "urls": [
                 {"domain": settings.ZANE_APP_DOMAIN},
@@ -778,7 +775,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "portainer-ce:latest",
             "urls": [
                 {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
@@ -810,7 +807,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "portainer-ce:latest",
             "urls": [
                 {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
@@ -843,7 +840,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
-            "name": "main app",
+            "slug": "main-app",
             "image": "dcr.fredkiss.dev/gh-next:latest",
             "credentials": {
                 "username": "fredkiss3",
@@ -882,7 +879,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
-            "name": "main app",
+            "slug": "main-app",
             "image": "dcr.fredkiss.dev/gh-next:latest",
             "credentials": {
                 "username": "fredkiss3",
@@ -919,7 +916,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
-            "name": "main app",
+            "slug": "main-app",
             "image": "dcr.fredkiss.dev/nonexistent:latest",
             "credentials": {
                 "username": "fredkiss3",
@@ -958,7 +955,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
-            "name": "main app",
+            "slug": "main-app",
             "image": "gcr.io/redis:latest",
             "credentials": {
                 "username": "fredkiss3",
@@ -994,7 +991,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="gh-clone", owner=owner)
 
         create_service_payload = {
-            "name": "main app",
+            "slug": "main-app",
             "image": "nonexistent",
         }
 
@@ -1047,7 +1044,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     ):
         self.loginUser()
         create_service_payload = {
-            "name": "cache db",
+            "slug": "cache-db",
             "image": "redis:alpine",
         }
 
@@ -1079,11 +1076,11 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         DockerRegistryService.objects.create(
-            name="cache db2", slug="cache-db", image="redis:alpine", project=p
+            slug="cache-db", image="redis:alpine", project=p
         )
 
         create_service_payload = {
-            "name": "cache db",
+            "slug": "cache-db",
             "image": "redis:alpine",
         }
 
@@ -1095,7 +1092,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
         errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("name"))
+        self.assertIsNotNone(errors.get("slug"))
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -1109,7 +1106,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         existing_service = DockerRegistryService.objects.create(
-            name="caddy", slug="other-service", image="redis:alpine", project=p
+            slug="redis", image="redis:alpine", project=p
         )
         url = URL.objects.bulk_create(
             [
@@ -1119,7 +1116,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         existing_service.urls.add(*url)
 
         create_service_payload = {
-            "name": "Adminer UI",
+            "slug": "adminer-ui",
             "image": "adminer:latest",
             "urls": [{"domain": "thullo.zane.local"}],
         }
@@ -1145,7 +1142,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            name="cache db", slug="cache-db", image="redis:alpine", project=p
+            slug="cache-db", image="redis:alpine", project=p
         )
 
         response = self.client.get(
@@ -1187,7 +1184,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p2 = Project.objects.create(slug="camly", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            name="cache db", slug="cache-db", image="redis:alpine", project=p1
+            slug="cache-db", image="redis:alpine", project=p1
         )
 
         response = self.client.get(

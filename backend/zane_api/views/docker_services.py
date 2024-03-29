@@ -2,7 +2,6 @@ import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.db.models import Q
-from django.utils.text import slugify
 from drf_spectacular.utils import extend_schema
 from faker import Faker
 from rest_framework import status
@@ -68,7 +67,7 @@ class URLRequestSerializer(serializers.Serializer):
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255)
+    slug = serializers.SlugField(max_length=255)
     image = serializers.CharField(required=True)
     command = serializers.CharField(required=False)
     credentials = DockerCredentialsRequestSerializer(required=False)
@@ -229,7 +228,7 @@ class URLsErrorSerializer(serializers.Serializer):
 
 
 class DockerServiceCreateErrorSerializer(serializers.BaseErrorSerializer):
-    name = serializers.StringListField(required=False)
+    slug = serializers.StringListField(required=False)
     image = serializers.StringListField(required=False)
     command = serializers.StringListField(required=False)
     credentials = CredentialErrorSerializer(required=False)
@@ -275,16 +274,16 @@ class CreateDockerServiceAPIView(APIView):
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         else:
+            fake = Faker()
             form = DockerServiceCreateRequestSerializer(data=request.data)
             if form.is_valid():
                 data = form.data
 
                 # Create service in DB
                 docker_credentials: dict | None = data.get("credentials")
-                service_slug = slugify(data["name"])
+                service_slug = data.get("slug")
                 try:
                     service = DockerRegistryService.objects.create(
-                        name=data["name"],
                         slug=service_slug,
                         project=project,
                         image=data["image"],
@@ -304,9 +303,8 @@ class CreateDockerServiceAPIView(APIView):
                     response = self.error_serializer_class(
                         {
                             "errors": {
-                                "name": [
-                                    "A service with a similar slug already exist in this project,"
-                                    " please use another name for this service"
+                                "slug": [
+                                    f"A service with the slug `{service_slug}` already exists."
                                 ]
                             }
                         }
@@ -314,14 +312,11 @@ class CreateDockerServiceAPIView(APIView):
                     return Response(response.data, status=status.HTTP_409_CONFLICT)
 
                 # Create volumes if exists
-                fake = Faker()
                 volumes_request = data.get("volumes", [])
                 created_volumes = Volume.objects.bulk_create(
                     [
                         Volume(
                             name=volume["name"],
-                            slug=f"{service.slug}-{fake.slug()}",
-                            project=project,
                             containerPath=volume["mount_path"],
                         )
                         for volume in volumes_request
@@ -412,17 +407,12 @@ class CreateDockerServiceAPIView(APIView):
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get("env", {})
 
-                created_envs = DockerEnvVariable.objects.bulk_create(
+                DockerEnvVariable.objects.bulk_create(
                     [
-                        DockerEnvVariable(
-                            key=key,
-                            value=value,
-                        )
+                        DockerEnvVariable(key=key, value=value, service=service)
                         for key, value in envs_from_request.items()
                     ]
                 )
-
-                service.env_variables.add(*created_envs)
 
                 # Run celery deployment task
                 deploy_docker_service.apply_async(
@@ -434,7 +424,7 @@ class CreateDockerServiceAPIView(APIView):
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
             # TODO: format errors correctly using `DRF Standardized Errors`
-            response = self.error_serializer_class({"errors": form.errors})
+            # response = self.error_serializer_class({"errors": form.errors})
             return Response(
                 data={"errors": form.errors},
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
