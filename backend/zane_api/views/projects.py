@@ -331,7 +331,10 @@ class ProjectDetailsView(APIView):
                 task_id=project.archive_task_id,
             )
 
-            ArchivedProject.objects.create(slug=project.slug, owner=project.owner)
+            archived_version = project.archived_version
+            if archived_version is None:
+                ArchivedProject.objects.create(slug=project.slug, owner=project.owner)
+
             project.delete()
         except Project.DoesNotExist:
             response = self.error_serializer_class(

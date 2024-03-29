@@ -445,6 +445,27 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithNetworks(),
+    )
+    def test_cannot_reuse_archived_version_if_it_exists(self, _: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="gh-clone", owner=owner)
+        ArchivedProject.objects.create(slug=p.slug, owner=p.owner, active_version=p)
+
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        updated_project = Project.objects.filter(slug="gh-clone").first()
+        self.assertIsNone(updated_project)
+
+        archived_projects = ArchivedProject.objects.filter(slug="gh-clone")
+        self.assertEqual(1, len(archived_projects))
+        self.assertIsNone(archived_projects.first().active_version)
+
 
 class DockerAddNetworkTest(AuthAPITestCase):
     @patch(

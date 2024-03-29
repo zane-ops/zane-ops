@@ -107,6 +107,29 @@ def check_if_docker_image_exists(
         return True
 
 
+def cleanup_service_resources(
+    service_id: str,
+    project_id: str,
+    service_created_at_timestamp: float,
+    service_type: Literal["docker"] | Literal["git"],
+):
+    client = get_docker_client()
+    service_name = get_docker_service_resource_name(
+        service_id,
+        project_id,
+        service_created_at_timestamp,
+        service_type,
+    )
+
+    try:
+        service = client.services.get(service_name)
+    except docker.errors.NotFound:
+        # we will assume the service has already been deleted
+        pass
+    else:
+        service.remove()
+
+
 def cleanup_project_resources(project_id: str, project_created_at_ts: float):
     """
     Cleanup all resources attached to a project after it has been archived, which means :
@@ -225,12 +248,14 @@ def get_docker_volume_size(volume: Volume) -> int:
     return int(size_string)
 
 
-def get_service_resource_name(
-    service: BaseService, service_type: Literal["docker"] | Literal["git"]
+def get_docker_service_resource_name(
+    service_id: str,
+    project_id: str,
+    service_created_at_timestamp: float,
+    service_type: Literal["docker"] | Literal["git"],
 ):
-    ts_to_full_number = str(service.created_at.timestamp()).replace(".", "")
-    abbreviated_type = "dk" if service_type == "docker" else "git"
-    return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
+    ts_to_full_number = str(service_created_at_timestamp).replace(".", "")
+    return f"srv-{service_type}-{project_id}-{service_id}-{ts_to_full_number}"
 
 
 def create_service_from_docker_registry(service: DockerRegistryService):
@@ -258,7 +283,12 @@ def create_service_from_docker_registry(service: DockerRegistryService):
 
     client.services.create(
         image=service.image,
-        name=get_service_resource_name(service, "docker"),
+        name=get_docker_service_resource_name(
+            service_id=service.id,
+            project_id=service.project.id,
+            service_created_at_timestamp=service.created_at.timestamp(),
+            service_type="docker",
+        ),
         mounts=mounts,
         endpoint_spec=endpoint_spec,
         env=envs,
@@ -332,7 +362,12 @@ def get_caddy_id_for_url(url: URL):
 def get_caddy_request_for_url(
     url: URL, service: DockerRegistryService, http_port: PortConfiguration
 ):
-    service_name = get_service_resource_name(service, service_type="docker")
+    service_name = get_docker_service_resource_name(
+        service_id=service.id,
+        project_id=service.project.id,
+        service_type="docker",
+        service_created_at_timestamp=service.created_at.timestamp(),
+    )
 
     proxy_handlers = []
 

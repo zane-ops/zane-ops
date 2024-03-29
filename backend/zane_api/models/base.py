@@ -6,7 +6,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from shortuuid.django_fields import ShortUUIDField
 
-from ..utils import strip_slash_if_exists
+from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
 from ..validators import validate_url_domain, validate_crontab, validate_url_path
 
 
@@ -32,13 +32,11 @@ class Project(TimestampedModel):
 
     @property
     def create_task_id(self):
-        timestamp_to_full = str(self.updated_at.timestamp()).replace(".", "")
-        return f"create-prj-{self.slug}-{self.id}-{timestamp_to_full}"
+        return f"create-prj-{self.slug}-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
 
     @property
     def archive_task_id(self):
-        timestamp_to_full = str(self.updated_at.timestamp()).replace(".", "")
-        return f"archive-prj-{self.slug}-{self.id}-{timestamp_to_full}"
+        return f"archive-prj-{self.slug}-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
     def __str__(self):
         return f"Project({self.slug})"
@@ -128,6 +126,10 @@ class DockerRegistryService(BaseService):
     def __str__(self):
         return f"DockerRegistryService({self.slug})"
 
+    @property
+    def archive_task_id(self):
+        return f"archive-srv-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
+
 
 class GitRepositoryService(BaseService):
     previews_enabled = models.BooleanField(default=True)
@@ -146,7 +148,9 @@ class GitRepositoryService(BaseService):
 
 class GitEnvVariable(BaseEnvVariable):
     service = models.ForeignKey(
-        to="GitRepositoryService", on_delete=models.CASCADE, related_name="env_variables"
+        to="GitRepositoryService",
+        on_delete=models.CASCADE,
+        related_name="env_variables",
     )
 
     def __str__(self):

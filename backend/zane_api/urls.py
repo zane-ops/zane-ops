@@ -44,6 +44,12 @@ urlpatterns = [
         name="services.docker.create",
     ),
     re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker/?(?P<service_slug>[a-z0-9]+(?:-["
+        r"a-z0-9]+)*)/?$",
+        views.ArchiveDockerServiceAPIView.as_view(),
+        name="services.docker.archive",
+    ),
+    re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker/(?P<service_slug>[a-z0-9]+(?:-["
         r"a-z0-9]+)*)/?$",
         views.GetDockerServiceAPIView.as_view(),

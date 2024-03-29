@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from .base import Project
 from ..utils import strip_slash_if_exists
 
 
@@ -18,6 +19,12 @@ class ArchivedProject(TimestampArchivedModel):
         null=True,
     )
     slug = models.SlugField(max_length=255, blank=True)
+    active_version = models.OneToOneField(
+        to=Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="archived_version",
+    )
 
     def __str__(self):
         return f"ArchivedProject({self.slug})"

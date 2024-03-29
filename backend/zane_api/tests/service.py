@@ -10,13 +10,17 @@ from docker.types import EndpointSpec
 from rest_framework import status
 
 from . import AuthAPITestCase
-from ..docker_operations import get_service_resource_name, get_volume_resource_name
+from ..docker_operations import (
+    get_docker_service_resource_name,
+    get_volume_resource_name,
+)
 from ..models import (
     Project,
     DockerRegistryService,
     DockerDeployment,
     PortConfiguration,
     URL,
+    ArchivedDockerService,
 )
 
 
@@ -45,6 +49,9 @@ class FakeDockerClientWithServices:
             self.attached_volumes = {} if volumes is None else volumes
             self.env = {} if env is None else env
             self.endpoint = endpoint
+
+        def remove(self):
+            self.parent.services_remove(self.name)
 
     def __init__(self, raise_error: bool = False):
         self.volumes = MagicMock()
@@ -88,6 +95,11 @@ class FakeDockerClientWithServices:
         if name not in self.service_map:
             raise docker.errors.NotFound("Volume Not found")
         return self.service_map[name]
+
+    def services_remove(self, name: str):
+        if name not in self.service_map:
+            raise docker.errors.NotFound("Volume Not found")
+        self.service_map.pop(name)
 
     def services_create(
         self,
@@ -206,7 +218,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(1, len(fake_docker_client.volume_map))
 
         fake_service = fake_docker_client.service_map[
-            get_service_resource_name(created_service, "docker")
+            get_docker_service_resource_name(
+                service_id=created_service.id,
+                project_id=created_service.project.id,
+                service_created_at_timestamp=created_service.created_at.timestamp(),
+                service_type="docker",
+            )
         ]
         self.assertEqual(1, len(fake_service.attached_volumes))
         self.assertIsNotNone(
@@ -246,7 +263,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
         fake_service = fake_docker_client.service_map[
-            get_service_resource_name(created_service, "docker")
+            get_docker_service_resource_name(
+                service_id=created_service.id,
+                project_id=created_service.project.id,
+                service_created_at_timestamp=created_service.created_at.timestamp(),
+                service_type="docker",
+            )
         ]
         self.assertEqual(1, len(fake_service.env))
         self.assertEqual("strongPassword123", fake_service.env.get("REDIS_PASSWORD"))
@@ -284,7 +306,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
         fake_service = fake_docker_client.service_map[
-            get_service_resource_name(created_service, "docker")
+            get_docker_service_resource_name(
+                service_id=created_service.id,
+                project_id=created_service.project.id,
+                service_created_at_timestamp=created_service.created_at.timestamp(),
+                service_type="docker",
+            )
         ]
 
         self.assertIsNotNone(fake_service.endpoint)
@@ -405,7 +432,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
         fake_service = fake_docker_client.service_map[
-            get_service_resource_name(created_service, "docker")
+            get_docker_service_resource_name(
+                service_id=created_service.id,
+                project_id=created_service.project.id,
+                service_created_at_timestamp=created_service.created_at.timestamp(),
+                service_type="docker",
+            )
         ]
 
         self.assertIsNone(fake_service.endpoint)
@@ -1245,3 +1277,47 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         errors = response.json().get("errors")
         self.assertIsNotNone(errors)
         self.assertIsNotNone(errors.get("root"))
+
+
+class DockerServiceArchiveViewTest(AuthAPITestCase):
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_simple_project(self, mock_fake_docker: Mock, _: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_service = DockerRegistryService.objects.filter(slug="cache-db").first()
+        self.assertIsNone(deleted_service)
+
+        archived_service = ArchivedDockerService.objects.filter(slug="cache-db").first()
+        self.assertIsNotNone(archived_service)
+
+        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.service_map))
+
+        deployments = DockerDeployment.objects.filter(service__slug="cache-db")
+        self.assertEqual(0, len(deployments))
