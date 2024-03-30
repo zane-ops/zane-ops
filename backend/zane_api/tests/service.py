@@ -1285,7 +1285,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClientWithServices(),
     )
-    def test_archive_simple_project(self, mock_fake_docker: Mock, _: Mock):
+    def test_archive_simple_service(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
@@ -1321,3 +1321,42 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         deployments = DockerDeployment.objects.filter(service__slug="cache-db")
         self.assertEqual(0, len(deployments))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_service_with_volume(self, mock_fake_docker: Mock, _: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+            "volumes": [{"name": "REDIS Data volume", "mount_path": "/data"}],
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
+            slug="cache-db"
+        ).first()
+        self.assertEqual(1, len(archived_service.volumes.all()))
+
+        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.volume_map))

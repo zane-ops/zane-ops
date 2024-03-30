@@ -266,7 +266,7 @@ class CreateDockerServiceAPIView(APIView):
     @transaction.atomic()
     def post(self, request: Request, project_slug: str):
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(slug=project_slug, owner=request.user)
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -452,7 +452,7 @@ class GetDockerServiceAPIView(APIView):
     )
     def get(self, request: Request, project_slug: str, service_slug: str):
         try:
-            project = Project.objects.get(slug=project_slug.lower())
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -501,7 +501,7 @@ class ArchiveDockerServiceAPIView(APIView):
     )
     def delete(self, request: Request, project_slug: str, service_slug: str):
         project = (
-            Project.objects.filter(slug=project_slug.lower()).select_related(
+            Project.objects.filter(slug=project_slug.lower(), owner=request.user).select_related(
                 "archived_version"
             )
         ).first()
