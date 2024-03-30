@@ -10,6 +10,7 @@ import { AlertCircle } from "lucide-react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
+import { MetaTitle } from "~/components/meta-title";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userKeys } from "~/key-factories";
 
@@ -52,9 +53,9 @@ function Login() {
 
   return (
     <>
-      <title>Login | ZaneOps</title>
+      <MetaTitle title="Login" />
       <div className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
-        <Logo className="hidden" />
+        <Logo className="md:hidden" />
         <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"

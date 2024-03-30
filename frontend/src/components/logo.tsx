@@ -1,10 +1,14 @@
+import { cn } from "~/lib/utils";
 import logoSymbolBlack from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";
 
-export function Logo({ className = "hidden" }: { className: string }) {
+export function Logo({ className }: { className?: string }) {
   return (
     <picture
-      className={`md:${className} w-[100px] h-[100px] flex justify-center items-center`}
+      className={cn(
+        "flex justify-center items-center w-[100px] h-[100px]",
+        className
+      )}
     >
       <source media="(prefers-color-scheme: dark)" srcSet={logoSymbolWhite} />
       <source media="(prefers-color-scheme: light)" srcSet={logoSymbolBlack} />
