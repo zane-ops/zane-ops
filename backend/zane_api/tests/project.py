@@ -79,13 +79,11 @@ class FakeDockerClientWithNetworks:
             raise docker.errors.NotFound("network not found")
 
     def get_network(self, p: Project):
-        return self.network_map.get(
-            get_network_resource_name(p.id, p.created_at.timestamp())
-        )
+        return self.network_map.get(get_network_resource_name(p.id))
 
     def create_network(self, p: Project):
         return self.docker_create_network(
-            get_network_resource_name(p.id, p.created_at.timestamp()),
+            get_network_resource_name(p.id),
             scope="swarm",
             driver="overlay",
         )
@@ -419,8 +417,11 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         updated_project = Project.objects.filter(slug="gh-clone").first()
         self.assertIsNone(updated_project)
 
-        archived_project = ArchivedProject.objects.filter(slug="gh-clone").first()
+        archived_project: ArchivedProject = ArchivedProject.objects.filter(
+            slug="gh-clone"
+        ).first()
         self.assertIsNotNone(archived_project)
+        self.assertNotEquals("", archived_project.original_id)
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -452,7 +453,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
     def test_cannot_reuse_archived_version_if_it_exists(self, _: Mock):
         owner = self.loginUser()
         p = Project.objects.create(slug="gh-clone", owner=owner)
-        ArchivedProject.objects.create(slug=p.slug, owner=p.owner, active_version=p)
+        ArchivedProject.create_from_project(p)
 
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})

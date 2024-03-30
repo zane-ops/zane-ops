@@ -1,5 +1,5 @@
 import json
-from typing import List, TypedDict, Literal
+from typing import List, TypedDict
 
 import docker
 import docker.errors
@@ -16,6 +16,8 @@ from .models import (
     BaseService,
     PortConfiguration,
     URL,
+    ArchivedProject,
+    ArchivedDockerService,
 )
 from .utils import strip_slash_if_exists
 
@@ -34,13 +36,12 @@ def get_docker_client():
     return docker_client
 
 
-def get_network_resource_name(project_id: str, project_created_at_ts: float) -> str:
-    ts_to_full_number = str(project_created_at_ts).replace(".", "")
-    return f"net-{project_id}-{ts_to_full_number}"
+def get_network_resource_name(project_id: str) -> str:
+    return f"net-{project_id}"
 
 
-def get_resource_labels(project: Project):
-    return {"zane-managed": "true", "zane-project": project.id}
+def get_resource_labels(project_id: str, **kwargs):
+    return {"zane-managed": "true", "zane-project": project_id, **kwargs}
 
 
 class DockerImageResultFromRegistry(TypedDict):
@@ -107,18 +108,11 @@ def check_if_docker_image_exists(
         return True
 
 
-def cleanup_service_resources(
-    service_id: str,
-    project_id: str,
-    service_created_at_timestamp: float,
-    service_type: Literal["docker"] | Literal["git"],
-):
+def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
     client = get_docker_client()
     service_name = get_docker_service_resource_name(
-        service_id,
-        project_id,
-        service_created_at_timestamp,
-        service_type,
+        archived_service.original_id,
+        archived_service.project.original_id,
     )
 
     try:
@@ -128,9 +122,17 @@ def cleanup_service_resources(
         pass
     else:
         service.remove()
+        docker_volume_list = client.volumes.list(
+            labels=get_resource_labels(
+                archived_service.project.original_id,
+                parent=archived_service.original_id,
+            )
+        )
+        for volume in docker_volume_list:
+            volume.remove(force=True)
 
 
-def cleanup_project_resources(project_id: str, project_created_at_ts: float):
+def cleanup_project_resources(archived_project: ArchivedProject):
     """
     Cleanup all resources attached to a project after it has been archived, which means :
     - cleaning up volumes (and deleting them in the DB & docker)
@@ -150,7 +152,7 @@ def cleanup_project_resources(project_id: str, project_created_at_ts: float):
 
     try:
         network_associated_to_project = client.networks.get(
-            get_network_resource_name(project_id, project_created_at_ts)
+            get_network_resource_name(archived_project.original_id)
         )
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
@@ -163,10 +165,10 @@ def cleanup_project_resources(project_id: str, project_created_at_ts: float):
 def create_project_resources(project: Project):
     client = get_docker_client()
     network = client.networks.create(
-        name=get_network_resource_name(project.id, project.created_at.timestamp()),
+        name=get_network_resource_name(project.id),
         scope="swarm",
         driver="overlay",
-        labels=get_resource_labels(project),
+        labels=get_resource_labels(project.id),
         attachable=True,
     )
     attach_network_to_proxy(network)
@@ -219,7 +221,7 @@ def create_docker_volume(volume: Volume, service: BaseService):
     client.volumes.create(
         name=get_volume_resource_name(volume),
         driver="local",
-        labels=get_resource_labels(service.project),
+        labels=get_resource_labels(service.project.id, parent=service.id),
     )
 
 
@@ -248,14 +250,8 @@ def get_docker_volume_size(volume: Volume) -> int:
     return int(size_string)
 
 
-def get_docker_service_resource_name(
-    service_id: str,
-    project_id: str,
-    service_created_at_timestamp: float,
-    service_type: Literal["docker"] | Literal["git"],
-):
-    ts_to_full_number = str(service_created_at_timestamp).replace(".", "")
-    return f"srv-{service_type}-{project_id}-{service_id}-{ts_to_full_number}"
+def get_docker_service_resource_name(service_id: str, project_id: str):
+    return f"srv-docker-{project_id}-{service_id}"
 
 
 def create_service_from_docker_registry(service: DockerRegistryService):
@@ -275,8 +271,10 @@ def create_service_from_docker_registry(service: DockerRegistryService):
         endpoint_spec = EndpointSpec(ports=exposed_ports)
 
     mounts: list[str] = []
-    for volume in service.volumes.all():
-        docker_volume = client.volumes.get(get_volume_resource_name(volume))
+    docker_volume_list = client.volumes.list(
+        labels=get_resource_labels(service.project.id, parent=service.id)
+    )
+    for docker_volume, volume in zip(docker_volume_list, service.volumes.all()):
         mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
 
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
@@ -286,19 +284,13 @@ def create_service_from_docker_registry(service: DockerRegistryService):
         name=get_docker_service_resource_name(
             service_id=service.id,
             project_id=service.project.id,
-            service_created_at_timestamp=service.created_at.timestamp(),
-            service_type="docker",
         ),
         mounts=mounts,
         endpoint_spec=endpoint_spec,
         env=envs,
-        labels=get_resource_labels(service.project),
+        labels=get_resource_labels(service.project.id),
         command=service.command,
-        networks=[
-            get_network_resource_name(
-                service.project.id, service.project.created_at.timestamp()
-            )
-        ],
+        networks=[get_network_resource_name(service.project.id)],
         restart_policy=RestartPolicy(
             condition="on-failure",
             max_attempts=3,
@@ -365,8 +357,6 @@ def get_caddy_request_for_url(
     service_name = get_docker_service_resource_name(
         service_id=service.id,
         project_id=service.project.id,
-        service_type="docker",
-        service_created_at_timestamp=service.created_at.timestamp(),
     )
 
     proxy_handlers = []

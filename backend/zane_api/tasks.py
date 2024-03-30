@@ -1,5 +1,3 @@
-from typing import Literal
-
 import docker.errors
 from celery import shared_task
 
@@ -9,9 +7,15 @@ from .docker_operations import (
     create_service_from_docker_registry,
     create_project_resources,
     cleanup_project_resources,
-    cleanup_service_resources,
+    cleanup_docker_service_resources,
 )
-from .models import DockerDeployment, PortConfiguration, Project
+from .models import (
+    DockerDeployment,
+    PortConfiguration,
+    Project,
+    ArchivedProject,
+    ArchivedDockerService,
+)
 
 
 @shared_task
@@ -52,23 +56,23 @@ def create_docker_resources_for_project(project_slug: str):
     autoretry_for=(docker.errors.APIError,),
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
-def delete_docker_resources_for_project(project_id: str, created_at_ts: float):
-    cleanup_project_resources(project_id, created_at_ts)
+def delete_docker_resources_for_project(archived_project_id: int):
+    archived_project = ArchivedProject.objects.get(pk=archived_project_id)
+    cleanup_project_resources(archived_project)
 
 
 @shared_task(
     autoretry_for=(docker.errors.APIError,),
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
-def delete_docker_resources_for_service(
-    service_id: str,
-    project_id: str,
-    service_created_at_timestamp: float,
-    service_type: Literal["docker"] | Literal["git"],
-):
-    cleanup_service_resources(
-        service_id,
-        project_id,
-        service_created_at_timestamp,
-        service_type,
-    )
+def delete_resources_for_docker_service(archived_service_id: id):
+    archived_service = (
+        ArchivedDockerService.objects.filter(id=archived_service_id)
+        .select_related('project')
+        .prefetch_related(
+            "volumes"
+        )
+    ).first()
+    if archived_service is None:
+        raise Exception(f"Cannot execute a deploy a non existent archived service with id={archived_service_id}.")
+    cleanup_docker_service_resources(archived_service)

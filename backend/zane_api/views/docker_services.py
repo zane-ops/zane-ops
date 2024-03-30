@@ -30,7 +30,7 @@ from ..models import (
     ArchivedProject,
     ArchivedDockerService,
 )
-from ..tasks import deploy_docker_service, delete_docker_resources_for_service
+from ..tasks import deploy_docker_service, delete_resources_for_docker_service
 from ..utils import strip_slash_if_exists
 
 
@@ -490,21 +490,40 @@ class GetDockerServiceAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
+class AchiveDockerServiveSuccessResponse(serializers.Serializer):
+    pass
+
+
 class ArchiveDockerServiceAPIView(APIView):
+    error_serializer = serializers.BaseErrorResponseSerializer
+
     @extend_schema(
         responses={
-            # 404: error_serializer_class,
-            # 204: serializer_class,
+            204: AchiveDockerServiveSuccessResponse,
+            404: error_serializer,
             403: serializers.ForbiddenResponseSerializer,
         },
         operation_id="archiveDockerService",
     )
     def delete(self, request: Request, project_slug: str, service_slug: str):
         project = (
-            Project.objects.filter(slug=project_slug.lower(), owner=request.user).select_related(
-                "archived_version"
-            )
+            Project.objects.filter(
+                slug=project_slug.lower(), owner=request.user
+            ).select_related("archived_version")
         ).first()
+
+        if project is None:
+            response = self.error_serializer(
+                {
+                    "errors": {
+                        "root": [
+                            f"A project with the slug `{project_slug}` does not exist."
+                        ]
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+
         service: DockerRegistryService = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
@@ -513,32 +532,34 @@ class ArchiveDockerServiceAPIView(APIView):
             .prefetch_related("volumes", "ports", "urls", "env_variables")
         ).first()
 
+        if service is None:
+            response = self.error_serializer(
+                {
+                    "errors": {
+                        "root": [
+                            f"A service with the slug `{service_slug}` does not exist in this project"
+                        ]
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+
         archived_project = (
             project.archived_version if hasattr(project, "archived_version") else None
         )
         if archived_project is None:
-            archived_project = ArchivedProject.objects.create(
-                slug=project.slug, owner=project.owner
-            )
+            archived_project = ArchivedProject.create_from_project(project)
 
-        ArchivedDockerService.objects.create(
-            slug=service.slug,
-            project=archived_project,
-            command=service.command,
-            docker_credentials_username=service.docker_credentials_username,
-            docker_credentials_password=service.docker_credentials_password,
+        archived_service = ArchivedDockerService.create_from_service(
+            service, archived_project
         )
-
-        delete_docker_resources_for_service.apply_async(
-            kwargs=dict(
-                service_id=service.id,
-                project_id=project.id,
-                service_created_at_timestamp=service.created_at.timestamp(),
-                service_type="docker",
-            ),
+        delete_resources_for_docker_service.apply_async(
+            kwargs=dict(archived_service_id=archived_service.id),
             task_id=service.archive_task_id,
         )
 
+        service.ports.filter().delete()
+        service.urls.filter().delete()
         service.delete()
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

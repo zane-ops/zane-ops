@@ -21,14 +21,18 @@ from ..models import (
     PortConfiguration,
     URL,
     ArchivedDockerService,
+    DockerEnvVariable,
 )
 
 
 class FakeDockerClientWithServices:
     class FakeVolume:
-        def __init__(self, parent: "FakeDockerClientWithServices", name: str):
+        def __init__(
+            self, parent: "FakeDockerClientWithServices", name: str, labels: dict = None
+        ):
             self.name = name
             self.parent = parent
+            self.labels = labels if labels is not None else {}
 
         def remove(self, force: bool):
             if self.parent.raise_error:
@@ -68,6 +72,7 @@ class FakeDockerClientWithServices:
         self.services.get = self.services_get
         self.volumes.create = self.volumes_create
         self.volumes.get = self.volumes_get
+        self.volumes.list = self.volumes_list
         self.volume_map = {}  # type: dict[str, FakeDockerClientWithServices.FakeVolume]
         self.service_map = (
             {}
@@ -81,15 +86,20 @@ class FakeDockerClientWithServices:
         if port == 8080:
             raise docker.errors.APIError(f"Port {port} is already used")
 
-    def volumes_create(self, name: str, **kwargs):
+    def volumes_create(self, name: str, labels: dict, **kwargs):
         self.volume_map[name] = FakeDockerClientWithServices.FakeVolume(
-            parent=self, name=name
+            parent=self, name=name, labels=labels
         )
 
     def volumes_get(self, name: str):
         if name not in self.volume_map:
             raise docker.errors.NotFound("Volume Not found")
         return self.volume_map[name]
+
+    def volumes_list(self, labels: dict):
+        return [
+            volume for volume in self.volume_map.values() if volume.labels == labels
+        ]
 
     def services_get(self, name: str):
         if name not in self.service_map:
@@ -221,8 +231,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
-                service_created_at_timestamp=created_service.created_at.timestamp(),
-                service_type="docker",
             )
         ]
         self.assertEqual(1, len(fake_service.attached_volumes))
@@ -266,8 +274,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
-                service_created_at_timestamp=created_service.created_at.timestamp(),
-                service_type="docker",
             )
         ]
         self.assertEqual(1, len(fake_service.env))
@@ -309,8 +315,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
-                service_created_at_timestamp=created_service.created_at.timestamp(),
-                service_type="docker",
             )
         ]
 
@@ -435,8 +439,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
-                service_created_at_timestamp=created_service.created_at.timestamp(),
-                service_type="docker",
             )
         ]
 
@@ -1313,7 +1315,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         deleted_service = DockerRegistryService.objects.filter(slug="cache-db").first()
         self.assertIsNone(deleted_service)
 
-        archived_service = ArchivedDockerService.objects.filter(slug="cache-db").first()
+        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
+            slug="cache-db"
+        ).first()
         self.assertIsNotNone(archived_service)
 
         fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
@@ -1340,7 +1344,8 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         # create
         self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
         )
 
         # then delete
@@ -1353,10 +1358,189 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug="cache-db"
+        archived_service: ArchivedDockerService = (
+            ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
+                "volumes"
+            )
         ).first()
         self.assertEqual(1, len(archived_service.volumes.all()))
 
         fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.service_map))
         self.assertEqual(0, len(fake_docker_client.volume_map))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_service_with_env_and_command(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+            "command": "redis-server --requirepass ${REDIS_PASSWORD}",
+            "env": {"REDIS_PASSWORD": "strongPassword123"},
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_envs = DockerEnvVariable.objects.filter(service__slug="cache-db")
+        self.assertEqual(0, len(deleted_envs))
+
+        archived_service: ArchivedDockerService = (
+            ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
+                "env_variables"
+            )
+        ).first()
+        self.assertEqual(1, len(archived_service.env_variables.all()))
+
+        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.service_map))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_service_with_port(self, mock_fake_docker: Mock, _: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+            "ports": [{"public": 6383, "forwarded": 6379}],
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_ports = PortConfiguration.objects.filter(host=6383)
+        self.assertEqual(0, len(deleted_ports))
+
+        archived_service: ArchivedDockerService = (
+            ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
+                "ports"
+            )
+        ).first()
+        self.assertEqual(1, len(archived_service.ports.all()))
+
+        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.service_map))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_service_with_urls(self, mock_fake_docker: Mock, _: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="thullo", owner=owner)
+
+        create_service_payload = {
+            "slug": "thullo-api",
+            "image": "dcr.fredkiss.dev/thullo-api:latest",
+            "urls": [{"domain": "thullo.fredkiss.dev", "base_path": "/api"}],
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "thullo-api"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_urls = URL.objects.filter(
+            domain="thullo.fredkiss.dev", base_path="/api"
+        )
+        self.assertEqual(0, len(deleted_urls))
+
+        archived_service: ArchivedDockerService = (
+            ArchivedDockerService.objects.filter(slug="thullo-api").prefetch_related(
+                "urls"
+            )
+        ).first()
+        self.assertEqual(1, len(archived_service.urls.all()))
+
+        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        self.assertEqual(0, len(fake_docker_client.service_map))
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_service_non_existing(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        errors = response.json().get("errors")
+        self.assertIsNotNone(errors)
+        self.assertIsNotNone(errors.get("root"))
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClientWithServices(),
+    )
+    def test_archive_service_for_non_existing_project(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": "zane-ops", "service_slug": "cache-db"},
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        errors = response.json().get("errors")
+        self.assertIsNotNone(errors)
+        self.assertIsNotNone(errors.get("root"))

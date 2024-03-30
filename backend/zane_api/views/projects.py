@@ -334,15 +334,22 @@ class ProjectDetailsView(APIView):
             if project is None:
                 raise Project.DoesNotExist(f"A Project with slug {slug} doesn't exit")
 
+            archived_version = (
+                project.archived_version
+                if hasattr(project, "archived_version")
+                else None
+            )
+            if archived_version is None:
+                ArchivedProject.objects.create(
+                    slug=project.slug,
+                    owner=project.owner,
+                    original_id=project.id,
+                )
+
             delete_docker_resources_for_project.apply_async(
-                (project.id, project.created_at.timestamp()),
+                kwargs=dict(archived_project_id=archived_version.id),
                 task_id=project.archive_task_id,
             )
-
-            archived_version = project.archived_version if hasattr(project, "archived_version") else None
-            if archived_version is None:
-                ArchivedProject.objects.create(slug=project.slug, owner=project.owner)
-
             project.delete()
         except Project.DoesNotExist:
             response = self.error_serializer_class(
