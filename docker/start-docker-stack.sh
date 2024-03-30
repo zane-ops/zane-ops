@@ -36,7 +36,8 @@ for service in $services; do
 done
 
 # Wait until Ctrl+C is pressed
-echo "Press Ctrl+C to undeploy the stack..."
+echo "Server launched at http://zane.local"
+echo "Press Ctrl+C to stop everything..."
 while true; do
   sleep 1
 done
