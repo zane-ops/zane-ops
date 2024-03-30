@@ -31,8 +31,9 @@ class ProxyFakeDockerClient(FakeDockerClientWithServices):
         def remove(self):
             self.parent.remove_network(self.name)
 
-    class FakeService:
-        def __init__(self):
+    class FakeService(FakeDockerClientWithServices.FakeService):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
             self.attrs = {
                 "Spec": {
                     "TaskTemplate": {
@@ -55,7 +56,9 @@ class ProxyFakeDockerClient(FakeDockerClientWithServices):
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
-        self.proxy_service = ProxyFakeDockerClient.FakeService()
+        self.proxy_service = ProxyFakeDockerClient.FakeService(
+            name="zane_zane-proxy", parent=self
+        )
         self.services.get.return_value = self.proxy_service
 
     def docker_create_network(self, name: str, **kwargs):
@@ -93,6 +96,7 @@ class ProxyResponseStub:
         return match.group(1) if match else None
 
     def response_callback(self, request: Request):
+        print(request.method.upper(), request.body)
         if request.method.upper() == "GET":
             if "/id/zane-server/logs/logger_names/" in request.url:
                 splitted = request.url.split("/")
@@ -114,7 +118,6 @@ class ProxyResponseStub:
 
         if request.method.upper() == "POST" or request.method.upper() == "PATCH":
             payload = json.loads(request.body)
-            print(request.url, payload)
 
             if "/id/zane-server/logs/logger_names/" in request.url:
                 splitted = request.url.split("/")
@@ -154,6 +157,31 @@ class ProxyResponseStub:
                 return 200, {}, json.dumps("")
             return 200, {}, json.dumps("")
 
+        if request.method.upper() == "DELETE":
+            if "/id/zane-server/logs/logger_names/" in request.url:
+                splitted = request.url.split("/")
+                if len(splitted[-1]) == 0:
+                    logger = splitted[-2]
+                else:
+                    logger = splitted[-1]
+
+                if logger in self.loggers:
+                    self.loggers.remove(logger)
+                    return 200, {}, json.dumps("")
+                return 404, {}, json.dumps("")
+
+            _id = self.get_next_path_segment(request.url)
+            if _id is not None:
+                item = self.ids.get(_id)
+
+                if item is None:
+                    return 404, {}, json.dumps("")
+
+                for key in self.ids.keys():
+                    if key.startswith(_id):
+                        self.ids.pop(key)
+                return 200, {}, json.dumps("")
+
 
 class ZaneProxyTestCases(AuthAPITestCase):
     @staticmethod
@@ -186,6 +214,12 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         responses.add_callback(
             responses.GET,
+            re.compile(f"{settings.CADDY_PROXY_ADMIN_HOST}/\\w+"),
+            callback=response_stub.response_callback,
+            content_type="application/json",
+        )
+        responses.add_callback(
+            responses.DELETE,
             re.compile(f"{settings.CADDY_PROXY_ADMIN_HOST}/\\w+"),
             callback=response_stub.response_callback,
             content_type="application/json",
@@ -508,3 +542,55 @@ class ZaneProxyTestCases(AuthAPITestCase):
                 ]
             ),
         )
+
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=ProxyFakeDockerClient(),
+    )
+    def test_api_unexpose_service_when_archiving(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="thullo", owner=owner)
+        stub = self.register_responses()
+
+        custom_service_url = URL(
+            domain=f"thullo.fredkiss.dev",
+            base_path="/api",
+        )
+        create_service_payload = {
+            "slug": "thullo-api",
+            "image": "dcr.fredkiss.dev/thullo-api:latest",
+            "urls": [
+                {
+                    "domain": custom_service_url.domain,
+                    "base_path": custom_service_url.base_path,
+                }
+            ],
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "thullo-api"},
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        for id in stub.ids:
+            print(f"@id={id}")
+        for logger in stub.loggers:
+            print(f"logger={logger}")
+        self.assertFalse(get_caddy_id_for_url(custom_service_url) in stub.ids)
+        self.assertFalse(custom_service_url.domain in stub.ids)
+        self.assertFalse(custom_service_url.domain in stub.loggers)

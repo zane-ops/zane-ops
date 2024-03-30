@@ -42,8 +42,8 @@ class FakeDockerClientWithNetworks:
     def __init__(
         self, raise_error_on_create: bool = False, raise_error_on_delete: bool = False
     ):
-        self.networks = MagicMock()
         self.services = MagicMock()
+        self.networks = MagicMock()
         self.network_map = (
             {}
         )  # type: dict[str, FakeDockerClientWithNetworks.FakeNetwork]

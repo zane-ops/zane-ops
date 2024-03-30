@@ -1,7 +1,7 @@
 import os
 
 from celery import Celery
-from celery.signals import task_postrun, task_prerun
+from celery.signals import task_postrun, task_prerun, setup_logging
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
@@ -34,6 +34,14 @@ def before_task_run(signal, sender, task_id, args, kwargs, **other):
     print(f"args={args}")
     print(f"kwargs={kwargs}")
     print(f"==============================\n")
+
+
+@setup_logging.connect
+def config_loggers(*args, **kwargs):
+    from logging.config import dictConfig  # noqa
+    from django.conf import settings  # noqa
+
+    dictConfig(settings.LOGGING)
 
 
 @app.task(bind=True, ignore_result=True)

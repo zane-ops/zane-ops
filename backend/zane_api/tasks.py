@@ -8,6 +8,7 @@ from .docker_operations import (
     create_project_resources,
     cleanup_project_resources,
     cleanup_docker_service_resources,
+    unexpose_docker_service_from_http,
 )
 from .models import (
     DockerDeployment,
@@ -68,11 +69,12 @@ def delete_docker_resources_for_project(archived_project_id: int):
 def delete_resources_for_docker_service(archived_service_id: id):
     archived_service = (
         ArchivedDockerService.objects.filter(id=archived_service_id)
-        .select_related('project')
-        .prefetch_related(
-            "volumes"
-        )
+        .select_related("project")
+        .prefetch_related("volumes", "urls")
     ).first()
     if archived_service is None:
-        raise Exception(f"Cannot execute a deploy a non existent archived service with id={archived_service_id}.")
+        raise Exception(
+            f"Cannot execute a deploy a non existent archived service with id={archived_service_id}."
+        )
     cleanup_docker_service_resources(archived_service)
+    unexpose_docker_service_from_http(archived_service)

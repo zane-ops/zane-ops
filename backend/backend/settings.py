@@ -182,6 +182,17 @@ LOGGING = {
     },
 }
 
+if DEBUG:
+    LOGGING["loggers"].update(
+        {
+            "celery": {
+                "handlers": ["console"],
+                "level": "DEBUG",
+                "propagate": True,
+            }
+        }
+    )
+
 # Django Rest framework
 
 REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)

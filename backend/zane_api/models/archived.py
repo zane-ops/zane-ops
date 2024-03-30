@@ -158,7 +158,11 @@ class ArchivedDockerService(ArchivedBaseService):
 
         archived_urls = ArchivedURL.objects.bulk_create(
             [
-                ArchivedURL(domain=url.domain, base_path=url.base_path)
+                ArchivedURL(
+                    domain=url.domain,
+                    base_path=url.base_path,
+                    strip_prefix=url.strip_prefix,
+                )
                 for url in service.urls.all()
             ]
         )

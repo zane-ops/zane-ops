@@ -553,6 +553,7 @@ class ArchiveDockerServiceAPIView(APIView):
         archived_service = ArchivedDockerService.create_from_service(
             service, archived_project
         )
+        print("Executiong delete_resources_for_docker_service")
         delete_resources_for_docker_service.apply_async(
             kwargs=dict(archived_service_id=archived_service.id),
             task_id=service.archive_task_id,

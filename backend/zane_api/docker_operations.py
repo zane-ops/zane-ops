@@ -18,6 +18,7 @@ from .models import (
     URL,
     ArchivedProject,
     ArchivedDockerService,
+    ArchivedURL,
 )
 from .utils import strip_slash_if_exists
 
@@ -343,7 +344,7 @@ def get_caddy_request_for_domain(domain: str):
     }
 
 
-def get_caddy_id_for_url(url: URL):
+def get_caddy_id_for_url(url: URL | ArchivedURL):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
     ).replace("/", "-")
@@ -447,3 +448,43 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
                 headers={"content-type": "application/json"},
                 json=domain_config,
             )
+
+
+def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
+    for url in service.urls.all():
+        # delete domain config
+        response = requests.delete(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
+
+        # delete logger if it exists
+        response = requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+            headers={"content-type": "application/json", "accept": "application/json"},
+        )
+    #     if response.json() is None:
+    #         requests.post(
+    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+    #             data=json.dumps(""),
+    #             headers={
+    #                 "content-type": "application/json",
+    #                 "accept": "application/json",
+    #             },
+    #         )
+    #
+    #     # now we create the config for the URL
+    #     response = requests.get(
+    #         f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+    #     )
+    #     if response.status_code == status.HTTP_404_NOT_FOUND:
+    #         response = requests.get(
+    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}"
+    #         )
+    #         domain_config = response.json()
+    #         routes: list[dict] = domain_config["handle"][0]["routes"]
+    #         routes.append(get_caddy_request_for_url(url, service, http_port))
+    #         domain_config["handle"][0]["routes"] = sort_proxy_routes(routes)
+    #
+    #         requests.patch(
+    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+    #             headers={"content-type": "application/json"},
+    #             json=domain_config,
+    #         )
