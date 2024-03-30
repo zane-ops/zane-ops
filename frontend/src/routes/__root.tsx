@@ -1,6 +1,5 @@
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
