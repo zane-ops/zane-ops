@@ -22,9 +22,9 @@ function NotFound() {
       <MetaTitle title="404 - page not found" />
       <div className="flex flex-col gap-5 h-screen items-center justify-center">
         <Logo className="md:flex" />
-        <div className="flex-col flex items-center">
+        <div className="flex-col flex gap-3 items-center">
           <h1 className="text-3xl font-bold">Error 404</h1>
-          <p>Looks like you're lost 😛</p>
+          <p className="text-lg">Looks like you're lost 😛</p>
         </div>
         <a href="/">
           <Button>Go home</Button>
