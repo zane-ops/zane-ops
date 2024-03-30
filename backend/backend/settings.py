@@ -29,8 +29,8 @@ PRODUCTION_ENV = "PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not env == PRODUCTION_ENV
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
+SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 
 ## We will only support one root domain on production
