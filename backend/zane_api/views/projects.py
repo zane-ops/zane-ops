@@ -257,7 +257,7 @@ class ProjectDetailsView(APIView):
     )
     def patch(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = Project.objects.get(slug=slug, owner=request.user)
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -325,13 +325,21 @@ class ProjectDetailsView(APIView):
     )
     def delete(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower(), owner=request.user)
+            project: Project = (
+                Project.objects.filter(
+                    slug=slug.lower(), owner=request.user
+                ).select_related("archived_version")
+            ).first()
+
+            if project is None:
+                raise Project.DoesNotExist(f"A Project with slug {slug} doesn't exit")
+
             delete_docker_resources_for_project.apply_async(
                 (project.id, project.created_at.timestamp()),
                 task_id=project.archive_task_id,
             )
 
-            archived_version = project.archived_version
+            archived_version = project.archived_version if hasattr(project, "archived_version") else None
             if archived_version is None:
                 ArchivedProject.objects.create(slug=project.slug, owner=project.owner)
 
