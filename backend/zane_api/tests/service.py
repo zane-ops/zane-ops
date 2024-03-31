@@ -1149,7 +1149,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
 
 class DockerServiceArchiveViewTest(AuthAPITestCase):
-    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
@@ -1198,7 +1198,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         deployments = DockerDeployment.objects.filter(service__slug="cache-db")
         self.assertEqual(0, len(deployments))
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
@@ -1246,7 +1246,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertIsNone(deleted_docker_service)
         self.assertEqual(0, len(fake_docker_client.volume_map))
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
@@ -1299,7 +1299,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertIsNone(deleted_docker_service)
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
@@ -1349,7 +1349,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertIsNone(deleted_docker_service)
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
