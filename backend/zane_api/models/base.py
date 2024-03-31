@@ -26,8 +26,9 @@ class Project(TimestampedModel):
     slug = models.SlugField(max_length=255, unique=True)
     id = ShortUUIDField(
         length=11,
-        max_length=11,
+        max_length=255,
         primary_key=True,
+        prefix="prj_",
     )
 
     @property
@@ -75,11 +76,6 @@ class BaseService(TimestampedModel):
     volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
-    id = ShortUUIDField(
-        length=11,
-        max_length=11,
-        primary_key=True,
-    )
 
     class Meta:
         abstract = True
@@ -122,6 +118,12 @@ class DockerRegistryService(BaseService):
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="srv_dkr_",
+    )
 
     def __str__(self):
         return f"DockerRegistryService({self.slug})"
@@ -144,6 +146,12 @@ class GitRepositoryService(BaseService):
     dockerfile_path = models.CharField(max_length=255, default="./Dockerfile")
     docker_build_context_dir = models.CharField(max_length=255, default=".")
     docker_cmd = models.CharField(max_length=255, null=True, blank=True)
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="srv_git_",
+    )
 
 
 class GitEnvVariable(BaseEnvVariable):
@@ -160,11 +168,7 @@ class GitEnvVariable(BaseEnvVariable):
 class Volume(TimestampedModel):
     name = models.CharField(max_length=255)
     containerPath = models.CharField(max_length=255)
-    id = ShortUUIDField(
-        length=11,
-        max_length=11,
-        primary_key=True,
-    )
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix="vol_")
 
     def __str__(self):
         return f"Volume({self.name})"
@@ -185,7 +189,6 @@ class BaseDeployment(models.Model):
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.PENDING,
     )
-    hash = ShortUUIDField(length=11, max_length=11, unique=True)
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
 
@@ -195,6 +198,7 @@ class BaseDeployment(models.Model):
 
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
 
     def get_task_id(self):
         return f"dpl-docker-{self.hash}-{self.service.slug}-{self.service.project.slug}"
@@ -221,6 +225,7 @@ class GitDeployment(BaseDeployment):
     service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
     commit_author_username = models.CharField(max_length=255)
     commit_author_avatar_url = models.URLField(null=True)
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_git_")
 
     @property
     def image_tags(self) -> List[str]:
