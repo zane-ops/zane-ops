@@ -1,95 +1,11 @@
 import datetime
-from dataclasses import dataclass
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 
-import docker
-import docker.errors
 from django.urls import reverse
 from rest_framework import status
 
-from .base import AuthAPITestCase
-from ..docker_operations import get_network_resource_name
+from .base import AuthAPITestCase, FakeDockerClient
 from ..models import Project, ArchivedProject
-
-
-class FakeDockerClientWithNetworks:
-    @dataclass
-    class FakeNetwork:
-        name: str
-        id: str
-        parent: "FakeDockerClientWithNetworks"
-
-        def remove(self):
-            if self.parent.raise_error_on_delete:
-                raise docker.errors.APIError("Unknow error when deleting network")
-            self.parent.remove(self.name)
-
-    class FakeService:
-        def __init__(self):
-            self.attrs = {
-                "Spec": {
-                    "TaskTemplate": {
-                        "Networks": [],
-                    },
-                }
-            }
-
-        def update(self, networks: list):
-            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
-                {"Target": network} for network in networks
-            ]
-
-    def __init__(
-        self, raise_error_on_create: bool = False, raise_error_on_delete: bool = False
-    ):
-        self.services = MagicMock()
-        self.networks = MagicMock()
-        self.network_map = (
-            {}
-        )  # type: dict[str, FakeDockerClientWithNetworks.FakeNetwork]
-        self.raise_error_on_create = raise_error_on_create
-        self.raise_error_on_delete = raise_error_on_delete
-
-        self.networks.create = self.docker_create_network
-        self.networks.get = self.docker_get_network
-
-        self.proxy_service = FakeDockerClientWithNetworks.FakeService()
-        self.services.get.return_value = self.proxy_service
-
-    def docker_create_network(self, name: str, **kwargs):
-        if self.raise_error_on_create:
-            raise docker.errors.APIError("Unknown error when creating a network")
-
-        created_network = FakeDockerClientWithNetworks.FakeNetwork(
-            name=name, id=name, parent=self
-        )
-        self.network_map[name] = created_network
-        return created_network
-
-    def docker_get_network(self, name: str):
-        network = self.network_map.get(name)
-
-        if network is None:
-            raise docker.errors.NotFound("network not found")
-        return network
-
-    def remove(self, name: str):
-        network = self.network_map.pop(name)
-        if network is None:
-            raise docker.errors.NotFound("network not found")
-
-    def get_network(self, p: Project):
-        return self.network_map.get(get_network_resource_name(p.id))
-
-    def create_network(self, p: Project):
-        return self.docker_create_network(
-            get_network_resource_name(p.id),
-            scope="swarm",
-            driver="overlay",
-        )
-
-    def get_networks(self):
-        return self.network_map
 
 
 class ProjectListViewTests(AuthAPITestCase):
@@ -242,7 +158,7 @@ class ProjectListViewTests(AuthAPITestCase):
 class ProjectCreateViewTests(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_sucessfully_create_project(self, _: Mock):
         self.loginUser()
@@ -255,7 +171,7 @@ class ProjectCreateViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_generate_slug_if_not_specified(self, _: Mock):
         self.loginUser()
@@ -266,7 +182,7 @@ class ProjectCreateViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_unique_slug(self, _: Mock):
         owner = self.loginUser()
@@ -281,7 +197,7 @@ class ProjectCreateViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_invalid_slug(self, _: Mock):
         self.loginUser()
@@ -295,7 +211,7 @@ class ProjectCreateViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_slug_is_always_lowercase(self, _: Mock):
         self.loginUser()
@@ -404,7 +320,7 @@ class ProjectGetViewTests(AuthAPITestCase):
 class ProjectArchiveViewTests(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_sucessfully_archive_project(self, _: Mock):
         owner = self.loginUser()
@@ -425,7 +341,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_non_existent(self, _: Mock):
         self.loginUser()
@@ -436,7 +352,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_cannot_archive_already_archived_project(self, _: Mock):
         owner = self.loginUser()
@@ -448,7 +364,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_cannot_reuse_archived_version_if_it_exists(self, _: Mock):
         owner = self.loginUser()
@@ -471,7 +387,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 class DockerAddNetworkTest(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_network_is_created_on_new_project(self, mock_fake_docker: Mock):
         self.loginUser()
@@ -489,11 +405,11 @@ class DockerAddNetworkTest(AuthAPITestCase):
 class DockerRemoveNetworkTest(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_network_is_deleted_on_archived_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
-        fake_docker_client: FakeDockerClientWithNetworks = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         p = Project.objects.create(slug="gh-clone", owner=owner)
         fake_docker_client.create_network(p)
 
@@ -506,11 +422,11 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithNetworks(),
+        return_value=FakeDockerClient(),
     )
     def test_with_nonexistent_network(self, mock_fake_docker: Mock):
         owner = self.loginUser()
-        fake_docker_client: FakeDockerClientWithNetworks = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         p = Project.objects.create(slug="gh-clone", owner=owner)
 
         response = self.client.delete(

@@ -1,9 +1,7 @@
 import json
 import re
-from dataclasses import dataclass
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 
-import docker.errors
 import responses
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -11,74 +9,13 @@ from django.urls import reverse
 from requests import Request
 from rest_framework import status
 
-from .base import AuthAPITestCase
-from .service import FakeDockerClientWithServices
+from .base import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import get_caddy_id_for_url
 from ..models import (
     Project,
     DockerRegistryService,
     URL,
 )
-
-
-class ProxyFakeDockerClient(FakeDockerClientWithServices):
-    @dataclass
-    class FakeNetwork:
-        name: str
-        id: str
-        parent: "ProxyFakeDockerClient"
-
-        def remove(self):
-            self.parent.remove_network(self.name)
-
-    class FakeService(FakeDockerClientWithServices.FakeService):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.attrs = {
-                "Spec": {
-                    "TaskTemplate": {
-                        "Networks": [],
-                    },
-                }
-            }
-
-        def update(self, networks: list):
-            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
-                {"Target": network} for network in networks
-            ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.networks = MagicMock()
-        self.services = MagicMock()
-
-        self.network_map = {}  # type: dict[str, ProxyFakeDockerClient.FakeNetwork]
-        self.networks.create = self.docker_create_network
-        self.networks.get = self.docker_get_network
-
-        self.proxy_service = ProxyFakeDockerClient.FakeService(
-            name="zane_zane-proxy", parent=self
-        )
-        self.services.get.return_value = self.proxy_service
-
-    def docker_create_network(self, name: str, **kwargs):
-        created_network = ProxyFakeDockerClient.FakeNetwork(
-            name=name, id=name, parent=self
-        )
-        self.network_map[name] = created_network
-        return created_network
-
-    def docker_get_network(self, name: str):
-        network = self.network_map.get(name)
-
-        if network is None:
-            raise docker.errors.NotFound("network not found")
-        return network
-
-    def remove_network(self, name: str):
-        network = self.network_map.pop(name)
-        if network is None:
-            raise docker.errors.NotFound("network not found")
 
 
 class ProxyResponseStub:
@@ -229,7 +166,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_expose_service_successfull(
         self,
@@ -261,7 +198,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_expose_service_to_http_default_base_path(
         self,
@@ -304,7 +241,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_expose_service_to_http_with_custom_path(
         self,
@@ -347,7 +284,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_expose_service_to_http_path_order_by_path_length(
         self,
@@ -401,7 +338,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_expose_service_to_http_includes_strip_prefix_if_true(
         self,
@@ -447,7 +384,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_expose_service_to_http_does_not_includes_strip_prefix_if_false(
         self,
@@ -490,7 +427,7 @@ class ZaneProxyTestCases(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_attach_network_to_proxy_when_creating_project(
         self, mock_fake_docker_client: Mock
@@ -504,19 +441,19 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        fake_docker_client: ProxyFakeDockerClient = mock_fake_docker_client.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker_client.return_value
+
+        fake_proxy_service = fake_docker_client.service_map[
+            settings.CADDY_PROXY_SERVICE
+        ]
         self.assertEqual(
             1,
-            len(
-                fake_docker_client.proxy_service.attrs["Spec"]["TaskTemplate"][
-                    "Networks"
-                ]
-            ),
+            len(fake_proxy_service.attrs["Spec"]["TaskTemplate"]["Networks"]),
         )
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_detach_network_to_proxy_when_archiving_project(
         self, mock_fake_docker_client: Mock
@@ -533,20 +470,19 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        fake_docker_client: ProxyFakeDockerClient = mock_fake_docker_client.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker_client.return_value
+        fake_proxy_service = fake_docker_client.service_map[
+            settings.CADDY_PROXY_SERVICE
+        ]
         self.assertEqual(
             0,
-            len(
-                fake_docker_client.proxy_service.attrs["Spec"]["TaskTemplate"][
-                    "Networks"
-                ]
-            ),
+            len(fake_proxy_service.attrs["Spec"]["TaskTemplate"]["Networks"]),
         )
 
     @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=ProxyFakeDockerClient(),
+        return_value=FakeDockerClient(),
     )
     def test_api_unexpose_service_when_archiving(
         self,

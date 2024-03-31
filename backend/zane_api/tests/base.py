@@ -10,8 +10,8 @@ from django.test import TestCase, override_settings
 from docker.types import EndpointSpec
 from rest_framework.test import APIClient
 
-from backend.zane_api.docker_operations import get_network_resource_name
-from backend.zane_api.models import Project
+from ..docker_operations import get_network_resource_name
+from ..models import Project
 
 
 @override_settings(
@@ -20,7 +20,6 @@ from backend.zane_api.models import Project
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    DEBUG=True,
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -50,9 +49,7 @@ class FakeDockerClient:
         parent: "FakeDockerClient"
 
         def remove(self):
-            if self.parent.raise_error_on_delete:
-                raise docker.errors.APIError("Unknow error when deleting network")
-            self.parent.remove(self.name)
+            self.parent.network_remove(self.name)
 
     class FakeVolume:
         def __init__(self, parent: "FakeDockerClient", name: str, labels: dict = None):
@@ -61,8 +58,6 @@ class FakeDockerClient:
             self.labels = labels if labels is not None else {}
 
         def remove(self, force: bool):
-            if self.parent.raise_error:
-                raise docker.errors.APIError("Unknown error")
             self.parent.volume_map.pop(self.name)
 
     class FakeService:
@@ -95,12 +90,13 @@ class FakeDockerClient:
                 {"Target": network} for network in networks
             ]
 
-    def __init__(self, raise_error: bool = False):
+    PORT_USED_BY_HOST = 8080
+
+    def __init__(self):
         self.volumes = MagicMock()
         self.services = MagicMock()
         self.images = MagicMock()
         self.containers = MagicMock()
-        self.raise_error = raise_error
         self.is_logged_in = False
         self.credentials = {}
 
@@ -124,12 +120,11 @@ class FakeDockerClient:
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
-    @staticmethod
     def containers_run(
-        image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
+        self, image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
     ):
         _, port = list(ports.values())[0]
-        if port == 8080:
+        if port == self.PORT_USED_BY_HOST:
             raise docker.errors.APIError(f"Port {port} is already used")
 
     def volumes_create(self, name: str, labels: dict, **kwargs):
@@ -219,7 +214,7 @@ class FakeDockerClient:
             raise docker.errors.NotFound("network not found")
         return network
 
-    def remove(self, name: str):
+    def network_remove(self, name: str):
         network = self.network_map.pop(name)
         if network is None:
             raise docker.errors.NotFound("network not found")

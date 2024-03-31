@@ -1,15 +1,12 @@
 import json
 import random
-from typing import Any
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 
-import docker.errors
 from django.conf import settings
 from django.urls import reverse
-from docker.types import EndpointSpec
 from rest_framework import status
 
-from . import AuthAPITestCase
+from .base import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import (
     get_docker_service_resource_name,
     get_volume_resource_name,
@@ -25,149 +22,12 @@ from ..models import (
 )
 
 
-class FakeDockerClientWithServices:
-    class FakeVolume:
-        def __init__(
-            self, parent: "FakeDockerClientWithServices", name: str, labels: dict = None
-        ):
-            self.name = name
-            self.parent = parent
-            self.labels = labels if labels is not None else {}
-
-        def remove(self, force: bool):
-            if self.parent.raise_error:
-                raise docker.errors.APIError("Unknown error")
-            self.parent.volume_map.pop(self.name)
-
-    class FakeService:
-        def __init__(
-            self,
-            parent: "FakeDockerClientWithServices",
-            name: str,
-            volumes: dict[str, str] = None,
-            env: dict[str, str] = None,
-            endpoint: EndpointSpec = None,
-        ):
-            self.name = name
-            self.parent = parent
-            self.attached_volumes = {} if volumes is None else volumes
-            self.env = {} if env is None else env
-            self.endpoint = endpoint
-
-        def remove(self):
-            self.parent.services_remove(self.name)
-
-    def __init__(self, raise_error: bool = False):
-        self.volumes = MagicMock()
-        self.services = MagicMock()
-        self.images = MagicMock()
-        self.containers = MagicMock()
-        self.raise_error = raise_error
-        self.is_logged_in = False
-        self.credentials = {}
-
-        self.containers.run = self.containers_run
-        self.images.get_registry_data = self.image_get_registry_data
-        self.services.create = self.services_create
-        self.services.get = self.services_get
-        self.volumes.create = self.volumes_create
-        self.volumes.get = self.volumes_get
-        self.volumes.list = self.volumes_list
-        self.volume_map = {}  # type: dict[str, FakeDockerClientWithServices.FakeVolume]
-        self.service_map = (
-            {}
-        )  # type: dict[str, FakeDockerClientWithServices.FakeService]
-
-    @staticmethod
-    def containers_run(
-        image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
-    ):
-        _, port = list(ports.values())[0]
-        if port == 8080:
-            raise docker.errors.APIError(f"Port {port} is already used")
-
-    def volumes_create(self, name: str, labels: dict, **kwargs):
-        self.volume_map[name] = FakeDockerClientWithServices.FakeVolume(
-            parent=self, name=name, labels=labels
-        )
-
-    def volumes_get(self, name: str):
-        if name not in self.volume_map:
-            raise docker.errors.NotFound("Volume Not found")
-        return self.volume_map[name]
-
-    def volumes_list(self, labels: dict):
-        return [
-            volume for volume in self.volume_map.values() if volume.labels == labels
-        ]
-
-    def services_get(self, name: str):
-        if name not in self.service_map:
-            raise docker.errors.NotFound("Volume Not found")
-        return self.service_map[name]
-
-    def services_remove(self, name: str):
-        if name not in self.service_map:
-            raise docker.errors.NotFound("Service Not found")
-        self.service_map.pop(name)
-
-    def services_create(
-        self,
-        name: str,
-        mounts: list[str],
-        env: list[str],
-        endpoint_spec: Any,
-        networks: list[str],
-        image: str,
-        restart_policy: Any,
-        update_config: Any,
-        command: str | None,
-        labels: dict[str, str],
-    ):
-        volumes: dict[str, str] = {}
-        for mount in mounts:
-            volume_name, mount_path, _ = mount.split(":")
-            if volume_name not in self.volume_map:
-                raise docker.errors.NotFound("Volume not created")
-            volumes[volume_name] = mount_path
-
-        envs: dict[str, str] = {}
-        for var in env:
-            key, value = var.split("=")
-            envs[key] = value
-
-        self.service_map[name] = FakeDockerClientWithServices.FakeService(
-            parent=self, name=name, volumes=volumes, env=envs, endpoint=endpoint_spec
-        )
-
-    def login(self, username: str, password: str, registry: str, **kwargs):
-        if (
-            username != "fredkiss3"
-            or password != "s3cret"
-            or registry != "https://dcr.fredkiss.dev/"
-        ):
-            raise docker.errors.APIError("Bad Credentials")
-        self.credentials = dict(username=username, password=password)
-        self.is_logged_in = True
-
-    def image_get_registry_data(self, image: str, auth_config: dict):
-        if auth_config is not None:
-            if not image.startswith("dcr.fredkiss.dev"):
-                raise docker.errors.APIError("Invalid credentials")
-
-            if not image.startswith("dcr.fredkiss.dev/gh-next"):
-                raise docker.errors.NotFound("This image does not exist")
-        else:
-            if image == "nonexistent":
-                raise docker.errors.ImageNotFound("This image does not exist")
-
-
 class DockerServiceCreateViewTest(AuthAPITestCase):
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_simple_service(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -186,10 +46,17 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         data = response.json().get("service")
         self.assertIsNotNone(data)
 
-        created_service = DockerRegistryService.objects.filter(slug="cache-db").first()
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
         self.assertIsNotNone(created_service)
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
-        self.assertEqual(1, len(fake_docker_client.service_map))
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        self.assertTrue(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=created_service.id
+            )
+            in fake_docker_client.service_map
+        )
 
         deployment = DockerDeployment.objects.filter(service=created_service).first()
         self.assertIsNotNone(deployment)
@@ -197,7 +64,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_volume(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -224,7 +91,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         created_volume = created_service.volumes.first()
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(1, len(fake_docker_client.volume_map))
 
         fake_service = fake_docker_client.service_map[
@@ -241,7 +108,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_env_and_command(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -269,7 +136,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(created_service.command)
         self.assertIsNotNone(env)
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         fake_service = fake_docker_client.service_map[
             get_docker_service_resource_name(
                 service_id=created_service.id,
@@ -282,7 +149,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_port(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -310,7 +177,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(6383, port.host)
         self.assertEqual(6379, port.forwarded)
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         fake_service = fake_docker_client.service_map[
             get_docker_service_resource_name(
                 service_id=created_service.id,
@@ -327,7 +194,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_should_not_work_with_unavailable_host_port(
         self, mock_fake_docker: Mock, _: Mock
@@ -363,7 +230,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_should_not_work_with_port_already_used_by_other_services(
         self, mock_fake_docker: Mock, _: Mock
@@ -406,7 +273,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_http_port(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -434,7 +301,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNone(port.host)
         self.assertEqual(8080, port.forwarded)
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         fake_service = fake_docker_client.service_map[
             get_docker_service_resource_name(
                 service_id=created_service.id,
@@ -447,7 +314,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_port_create_a_domain(
         self, mock_fake_docker: Mock, _: Mock
@@ -483,7 +350,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_explicit_domain(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -516,7 +383,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_explicit_domain_and_strip_prefix(
         self, mock_fake_docker: Mock, _: Mock
@@ -558,7 +425,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_without_port_does_not_create_a_domain(
         self, mock_fake_docker: Mock, _: Mock
@@ -586,7 +453,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_no_http_public_port_does_not_create_a_domain(
         self, mock_fake_docker: Mock, _: Mock
@@ -616,7 +483,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_create_a_domain_if_public_port_is_80_or_443(
         self, mock_fake_docker: Mock, _: Mock
@@ -645,7 +512,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_can_only_specify_one_http_port(
         self, mock_fake_docker: Mock, _: Mock
@@ -675,7 +542,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_cannot_specify_the_same_public_port_twice(
         self, mock_fake_docker: Mock, _: Mock
@@ -705,7 +572,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_cannot_specify_the_same_url_twice(
         self, mock_fake_docker: Mock, _: Mock
@@ -738,7 +605,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_cannot_specify_the_same_volume_mount_path_twice(
         self, mock_fake_docker: Mock, _: Mock
@@ -768,7 +635,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_cannot_create_service_with_zane_domain(
         self, mock_fake_docker: Mock, _: Mock
@@ -800,7 +667,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_cannot_specify_custom_url_and_public_port_at_the_same_time(
         self, mock_fake_docker: Mock, _: Mock
@@ -832,7 +699,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_create_implicit_port_if_custom_url_is_specified(
         self, mock_fake_docker: Mock, _: Mock
@@ -867,7 +734,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_custom_registry(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -897,14 +764,14 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual("fredkiss3", created_service.docker_credentials_username)
         self.assertEqual("s3cret", created_service.docker_credentials_password)
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         self.assertTrue(fake_docker_client.is_logged_in)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_custom_registry_does_not_create_service_if_bad_image_credentials(
         self, mock_fake_docker: Mock, _: Mock
@@ -940,7 +807,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
         self, mock_fake_docker: Mock, _: Mock
@@ -974,13 +841,13 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNone(created_service)
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertTrue(fake_docker_client.is_logged_in)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_credentials_do_not_correspond_to_image(
         self, mock_fake_docker: Mock, _: Mock
@@ -1016,7 +883,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_service_if_nonexistent_dockerhub_image(
         self, mock_fake_docker: Mock, _: Mock
@@ -1047,7 +914,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_bad_request(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1071,7 +938,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_for_nonexistent_project(
         self, mock_fake_docker: Mock, _: Mock
@@ -1103,7 +970,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_conflict_with_slug(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1131,7 +998,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_with_urls_already_used_by_other_services(
         self, mock_fake_docker: Mock, _: Mock
@@ -1168,7 +1035,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_slug_is_created_if_not_specified(
         self, mock_fake_docker: Mock, _: Mock
@@ -1192,7 +1059,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_create_service_slug_is_lowercased(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1217,7 +1084,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 class DockerGetServiceViewTest(AuthAPITestCase):
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_get_service_succesful(self, mock_fake_docker: Mock):
         owner = self.loginUser()
@@ -1239,7 +1106,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_get_service_non_existing(self, mock_fake_docker: Mock):
         owner = self.loginUser()
@@ -1258,7 +1125,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_get_service_not_in_the_correct_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
@@ -1285,7 +1152,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_simple_service(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1320,8 +1187,13 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(archived_service)
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
-        self.assertEqual(0, len(fake_docker_client.service_map))
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        deleted_docker_service = fake_docker_client.service_map.get(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=archived_service.original_id
+            )
+        )
+        self.assertIsNone(deleted_docker_service)
 
         deployments = DockerDeployment.objects.filter(service__slug="cache-db")
         self.assertEqual(0, len(deployments))
@@ -1329,7 +1201,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_service_with_volume(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1365,14 +1237,19 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         ).first()
         self.assertEqual(1, len(archived_service.volumes.all()))
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
-        self.assertEqual(0, len(fake_docker_client.service_map))
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        deleted_docker_service = fake_docker_client.service_map.get(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=archived_service.original_id
+            )
+        )
+        self.assertIsNone(deleted_docker_service)
         self.assertEqual(0, len(fake_docker_client.volume_map))
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_service_with_env_and_command(
         self, mock_fake_docker: Mock, _: Mock
@@ -1414,13 +1291,18 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         ).first()
         self.assertEqual(1, len(archived_service.env_variables.all()))
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
-        self.assertEqual(0, len(fake_docker_client.service_map))
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        deleted_docker_service = fake_docker_client.service_map.get(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=archived_service.original_id
+            )
+        )
+        self.assertIsNone(deleted_docker_service)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_service_with_port(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1459,13 +1341,18 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         ).first()
         self.assertEqual(1, len(archived_service.ports.all()))
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
-        self.assertEqual(0, len(fake_docker_client.service_map))
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        deleted_docker_service = fake_docker_client.service_map.get(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=archived_service.original_id
+            )
+        )
+        self.assertIsNone(deleted_docker_service)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_service_with_urls(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
@@ -1506,12 +1393,17 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         ).first()
         self.assertEqual(1, len(archived_service.urls.all()))
 
-        fake_docker_client: FakeDockerClientWithServices = mock_fake_docker.return_value
-        self.assertEqual(0, len(fake_docker_client.service_map))
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        deleted_docker_service = fake_docker_client.service_map.get(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=archived_service.original_id
+            )
+        )
+        self.assertIsNone(deleted_docker_service)
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_service_non_existing(self, mock_fake_docker: Mock):
         owner = self.loginUser()
@@ -1530,7 +1422,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClientWithServices(),
+        return_value=FakeDockerClient(),
     )
     def test_archive_service_for_non_existing_project(self, mock_fake_docker: Mock):
         owner = self.loginUser()
