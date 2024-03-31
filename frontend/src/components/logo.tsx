@@ -6,7 +6,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <picture
       className={cn(
-        "flex justify-center items-center w-[100px] h-[100px]",
+        "flex justify-center items-center w-[60px] h-[60px]",
         className
       )}
     >
