@@ -20,6 +20,7 @@ from ..models import Project
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
+    DEBUG=True,
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",

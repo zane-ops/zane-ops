@@ -114,9 +114,9 @@ class ProxyResponseStub:
                 if item is None:
                     return 404, {}, json.dumps("")
 
-                for key in self.ids.keys():
-                    if key.startswith(_id):
-                        self.ids.pop(key)
+                found_keys = [key for key in self.ids.keys() if key.startswith(_id)]
+                for key in found_keys:
+                    self.ids.pop(key)
                 return 200, {}, json.dumps("")
 
 
