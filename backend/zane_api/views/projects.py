@@ -340,7 +340,7 @@ class ProjectDetailsView(APIView):
                 else None
             )
             if archived_version is None:
-                ArchivedProject.objects.create(
+                archived_version = ArchivedProject.objects.create(
                     slug=project.slug,
                     owner=project.owner,
                     original_id=project.id,
@@ -362,13 +362,4 @@ class ProjectDetailsView(APIView):
                 }
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [str(e)],
-                    }
-                }
-            )
-            return Response(response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
