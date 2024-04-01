@@ -1,8 +1,10 @@
+import json
 from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 
 import docker.errors
+import requests
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -20,21 +22,50 @@ from ..models import Project
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    DEBUG=True,
+    # DEBUG=True,
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
     CELERY_TASK_STORE_EAGER_RESULT=True,
+    CADDY_PROXY_ADMIN_HOST="http://localhost:2020",
 )
 class APITestCase(TestCase):
     client = APIClient(enforce_csrf_checks=True, content_type="application/json")
+    INITIAL_CADDY_CONFIG = {
+        "@id": "root",
+        "apps": {
+            "http": {
+                "servers": {
+                    "zane": {
+                        "@id": "zane-server",
+                        "listen": [":443", ":80"],
+                        "logs": {"logger_names": {}},
+                        "routes": [{"terminal": True}],
+                    }
+                }
+            }
+        },
+    }
+
+    def setUp(self):
+        requests.post(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
+            data=json.dumps(self.INITIAL_CADDY_CONFIG),
+            headers={"content-type": "application/json"},
+        )
 
     def tearDown(self):
+        requests.post(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
+            data=json.dumps(self.INITIAL_CADDY_CONFIG),
+            headers={"content-type": "application/json"},
+        )
         cache.clear()
 
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
+        super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
 
     def loginUser(self):

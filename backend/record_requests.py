@@ -28,33 +28,127 @@
 #     pass
 
 
-def sort_paths(paths: list[str]):
-    """
-    This function implement the same ordering as caddy to pass to the caddy proxy API
-    reference: https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
-    This code is adapated from caddy source code : https://github.com/caddyserver/caddy/blob/ddb1d2c2b11b860f1e91b43d830d283d1e1363b2/caddyconfig/httpcaddyfile/directives.go#L495-L513
-    """
+# def sort_paths(paths: list[str]):
+#     """
+#     This function implement the same ordering as caddy to pass to the caddy proxy API
+#     reference: https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
+#     This code is adapated from caddy source code : https://github.com/caddyserver/caddy/blob/ddb1d2c2b11b860f1e91b43d830d283d1e1363b2/caddyconfig/httpcaddyfile/directives.go#L495-L513
+#     """
+#
+#     def path_specificity(path: str):
+#         # Removing trailing '*' for comparison and determining the "real" length
+#         normalized_path = path.rstrip("*")
+#         path_length = len(normalized_path)
+#
+#         # Using a tuple for comparison: first by the normalized length (longest first),
+#         # then by whether the original path ends with '*' (no wildcard is more specific),
+#         # and finally by the original path length in case of identical paths except for the wildcard
+#         return -path_length, path.endswith("*"), -len(path)
+#
+#     # Sort the paths based on the specified criteria
+#     sorted_paths = sorted(paths, key=path_specificity)
+#     return sorted_paths
+#
+#
+# if __name__ == "__main__":
+#     # Example paths
+#     paths = ["/foo", "/foo*", "/foobar", "/foo/*"]
+#     paths = ["/*", "/api/*"]
+#
+#     sorted_paths = sort_paths(paths)
+#     print(sorted_paths)
+#     assert sorted_paths == ["/foobar", "/foo/*", "/foo", "/foo*"]
 
-    def path_specificity(path: str):
-        # Removing trailing '*' for comparison and determining the "real" length
-        normalized_path = path.rstrip("*")
-        path_length = len(normalized_path)
 
-        # Using a tuple for comparison: first by the normalized length (longest first),
-        # then by whether the original path ends with '*' (no wildcard is more specific),
-        # and finally by the original path length in case of identical paths except for the wildcard
-        return -path_length, path.endswith("*"), -len(path)
+class ConfigAPI:
+    def __init__(self):
+        self.config = {}
 
-    # Sort the paths based on the specified criteria
-    sorted_paths = sorted(paths, key=path_specificity)
-    return sorted_paths
+    def _resolve_path(self, path):
+        """Resolve path to dict and key."""
+        parts = path.split("/")
+        return (
+            eval(f"self.config" + "".join([f'["{part}"]' for part in parts[:-1]])),
+            parts[-1],
+        )
+
+    def get(self, path):
+        """GET /id/[path] - Exports the config at the named path"""
+        try:
+            parent, key = self._resolve_path(path)
+            return parent[key]
+        except KeyError:
+            return None
+
+    def post(self, path, value):
+        """POST /id/[path] - Sets or replaces object; appends to array"""
+        parent, key = self._resolve_path(path)
+        if key in parent:
+            if isinstance(parent[key], list):
+                parent[key].append(value)
+            else:
+                parent[key] = value
+        else:
+            parent[key] = value
+
+    def put(self, path, value):
+        """PUT /id/[path] - Creates new object; inserts into array"""
+        parent, key = self._resolve_path(path)
+        if isinstance(parent.get(key, None), list):
+            parent[key].insert(0, value)  # Example: inserts at the beginning
+        else:
+            parent[key] = value
+
+    def patch(self, path, value):
+        """PATCH /id/[path] - Replaces an existing object or array element"""
+        self.post(path, value)  # For simplicity, PATCH behaves like POST here
+
+    def delete(self, path):
+        """DELETE /id/[path] - Deletes the value at the named path"""
+        parent, key = self._resolve_path(path)
+        if key in parent:
+            del parent[key]
 
 
 if __name__ == "__main__":
-    # Example paths
-    paths = ["/foo", "/foo*", "/foobar", "/foo/*"]
-    paths = ["/*", "/api/*"]
+    # Example usage
+    api = ConfigAPI()
 
-    sorted_paths = sort_paths(paths)
-    print(sorted_paths)
-    assert sorted_paths == ["/foobar", "/foo/*", "/foo", "/foo*"]
+    # Adding and retrieving a configuration
+    api.post(
+        "zane.local",
+        {
+            "@id": "zane.local",
+            "handle": [{"handler": "subroute", "routes": []}],
+            "match": [{"host": "zane.local"}],
+            "terminal": True,
+        },
+    )
+
+    api.post(
+        "zane.local/handle/0/routes",
+        {
+            "@id": "zane.local-api",
+            "handle": [
+                {
+                    "handler": "subroute",
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "reverse_proxy",
+                                    "upstreams": [
+                                        {"dial": "host.docker.internal:8000"}
+                                    ],
+                                }
+                            ]
+                        }
+                    ],
+                }
+            ],
+            "match": [{"path": ["/api/*"]}],
+        },
+    )
+
+    print(api.get("zane.local"))
+    print(api.get("zane.local-api"))

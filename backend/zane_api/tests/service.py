@@ -206,8 +206,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "slug": "nosql-db",
             "image": "redis:alpine",
             "ports": [
-                {"public": 8080, "forwarded": 6379},
-                {"public": 8085, "forwarded": 6379},
+                {"public": FakeDockerClient.PORT_USED_BY_HOST, "forwarded": 6379},
             ],
         }
 

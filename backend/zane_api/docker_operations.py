@@ -436,23 +436,32 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
         )
         if response.status_code == status.HTTP_404_NOT_FOUND:
             response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}"
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
             )
-            domain_config = response.json()
-            routes: list[dict] = domain_config["handle"][0]["routes"]
+            routes = response.json()
+            # routes: list[dict] = domain_config["handle"][0]["routes"]
             routes.append(get_caddy_request_for_url(url, service, http_port))
-            domain_config["handle"][0]["routes"] = sort_proxy_routes(routes)
+            routes = sort_proxy_routes(routes)
+            print(routes)
 
             requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
                 headers={"content-type": "application/json"},
-                json=domain_config,
+                json=routes,
             )
 
 
 def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
     for url in service.urls.all():
-        # delete domain config
+        # get all the routes of the domain
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+        )
+
+        if response.status_code != 404:
+            current_routes = response.json()
+            # routes = filter(lambda route:, iterable)
+
         response = requests.delete(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
 
         # delete logger if it exists

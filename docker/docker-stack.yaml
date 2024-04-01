@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   zane-proxy:
-    image: localhost:9989/caddy:2.7.6-with-sablier
+    image: fredkiss3/caddy-with-sablier
     command: caddy run --resume
     deploy:
       replicas: 1
@@ -28,6 +28,13 @@ services:
       - caddy-config:/config
     environment:
       CADDY_ADMIN: 0.0.0.0:2019
+  zane-proxy-test:
+    image: fredkiss3/caddy-with-sablier
+    command: caddy run --resume
+    ports:
+      - "2020:2020"
+    environment:
+      CADDY_ADMIN: 0.0.0.0:2020
 volumes:
   caddy-data:
   caddy-config:

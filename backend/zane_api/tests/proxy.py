@@ -2,6 +2,7 @@ import json
 import re
 from unittest.mock import patch, Mock
 
+import requests
 import responses
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -48,7 +49,13 @@ class ProxyResponseStub:
             _id = self.get_next_path_segment(request.url)
             if _id is not None:
                 item = self.ids.get(_id)
-                if item:
+
+                if item is not None:
+                    if "/handle/0/routes" in request.url:
+                        print(f"@id={_id}")
+                        print(f"body={json.dumps(item, indent=2)}")
+                        return 200, {}, json.dumps(item["handle"][0]["routes"])
+
                     return 200, {}, json.dumps(item)
                 else:
                     return 404, {}, json.dumps("")
@@ -163,7 +170,6 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         return response_stub
 
-    @responses.activate
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
@@ -179,7 +185,6 @@ class ZaneProxyTestCases(AuthAPITestCase):
             domain=f"sandbox-basic-http-webserver.{settings.ROOT_DOMAIN}",
             base_path="/",
         )
-        stub = self.register_responses()
         create_service_payload = {
             "slug": "basic-http-webserver",
             "image": "nginx:latest",
@@ -192,10 +197,17 @@ class ZaneProxyTestCases(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertTrue(default_service_url.domain in stub.ids)
-        self.assertTrue(get_caddy_id_for_url(default_service_url) in stub.ids)
 
-    @responses.activate
+        caddy_response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{default_service_url.domain}"
+        )
+        self.assertEqual(status.HTTP_200_OK, caddy_response.status_code)
+
+        caddy_response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(default_service_url)}"
+        )
+        self.assertEqual(status.HTTP_200_OK, caddy_response.status_code)
+
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
@@ -230,13 +242,20 @@ class ZaneProxyTestCases(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        print(stub.ids[get_caddy_id_for_url(default_service_url)])
-        self.assertEqual(
-            "/*",
-            stub.ids[get_caddy_id_for_url(default_service_url)].get("match")[0]["path"][
-                0
-            ],
+        caddy_response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(default_service_url)}"
         )
+        self.assertEqual(status.HTTP_200_OK, caddy_response.status_code)
+
+        response_data = caddy_response.json().get("match")[0]["path"][0]
+        self.assertEqual("/*", response_data)
+        # print(stub.ids[get_caddy_id_for_url(default_service_url)])
+        # self.assertEqual(
+        #     "/*",
+        #     stub.ids[get_caddy_id_for_url(default_service_url)].get("match")[0]["path"][
+        #         0
+        #     ],
+        # )
 
     @responses.activate
     @patch(
@@ -523,10 +542,69 @@ class ZaneProxyTestCases(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        for id in stub.ids:
-            print(f"@id={id}")
-        for logger in stub.loggers:
-            print(f"logger={logger}")
         self.assertFalse(get_caddy_id_for_url(custom_service_url) in stub.ids)
         self.assertFalse(custom_service_url.domain in stub.ids)
         self.assertFalse(custom_service_url.domain in stub.loggers)
+
+    @responses.activate
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_api_do_not_delete_the_domain_config_when_archiving_a_service(
+        self,
+        _: Mock,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="thullo", owner=owner)
+
+        stub = self.register_responses()
+        create_service1_payload = {
+            "slug": "thullo-front",
+            "image": "dcr.fredkiss.dev/thullo-front:latest",
+            "urls": [
+                {
+                    "domain": f"thullo.zane.local",
+                }
+            ],
+        }
+
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service1_payload),
+            content_type="application/json",
+        )
+
+        custom_service_url = URL(
+            domain="thullo.zane.local",
+            base_path="/api",
+        )
+        create_service2_payload = {
+            "slug": "thullo-api",
+            "image": "dcr.fredkiss.dev/thullo-api:latest",
+            "urls": [
+                {
+                    "domain": custom_service_url.domain,
+                    "base_path": custom_service_url.base_path,
+                }
+            ],
+        }
+
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service2_payload),
+            content_type="application/json",
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "thullo-api"},
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertFalse(get_caddy_id_for_url(custom_service_url) in stub.ids)
+        self.assertTrue(custom_service_url.domain in stub.ids)
+        self.assertTrue(custom_service_url.domain in stub.loggers)
