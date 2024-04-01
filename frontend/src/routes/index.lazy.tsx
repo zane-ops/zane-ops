@@ -35,6 +35,7 @@ function AuthedView() {
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });
+      window.location.reload();
       return null;
     }
   });
