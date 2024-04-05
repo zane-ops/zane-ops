@@ -13,12 +13,12 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as LayoutImport } from './routes/_layout'
 
 // Create Virtual Routes
 
 const LoginLazyImport = createFileRoute('/login')()
-const DashboardLazyImport = createFileRoute('/dashboard')()
-const IndexLazyImport = createFileRoute('/')()
+const LayoutIndexLazyImport = createFileRoute('/_layout/')()
 
 // Create/Update Routes
 
@@ -27,31 +27,31 @@ const LoginLazyRoute = LoginLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
 
-const DashboardLazyRoute = DashboardLazyImport.update({
-  path: '/dashboard',
+const LayoutRoute = LayoutImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/dashboard.lazy').then((d) => d.Route))
+} as any)
 
-const IndexLazyRoute = IndexLazyImport.update({
+const LayoutIndexLazyRoute = LayoutIndexLazyImport.update({
   path: '/',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+  getParentRoute: () => LayoutRoute,
+} as any).lazy(() => import('./routes/_layout.index.lazy').then((d) => d.Route))
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      preLoaderRoute: typeof IndexLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/dashboard': {
-      preLoaderRoute: typeof DashboardLazyImport
+    '/_layout': {
+      preLoaderRoute: typeof LayoutImport
       parentRoute: typeof rootRoute
     }
     '/login': {
       preLoaderRoute: typeof LoginLazyImport
       parentRoute: typeof rootRoute
+    }
+    '/_layout/': {
+      preLoaderRoute: typeof LayoutIndexLazyImport
+      parentRoute: typeof LayoutImport
     }
   }
 }
@@ -59,8 +59,7 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 export const routeTree = rootRoute.addChildren([
-  IndexLazyRoute,
-  DashboardLazyRoute,
+  LayoutRoute.addChildren([LayoutIndexLazyRoute]),
   LoginLazyRoute,
 ])
 

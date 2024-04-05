@@ -37,7 +37,6 @@ function Login() {
           queryKey: userKeys.authedUser
         });
         navigate({ to: "/" });
-        window.location.reload();
         return;
       }
     }

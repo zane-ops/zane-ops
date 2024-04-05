@@ -6,7 +6,7 @@ import { userKeys } from "~/key-factories";
 import { apiClient } from "../api/client";
 import { deleteCookie, getCookie } from "../utils";
 
-export const Route = createLazyFileRoute("/")({
+export const Route = createLazyFileRoute("/_layout/")({
   component: withAuthRedirect(AuthedView)
 });
 
@@ -35,7 +35,6 @@ function AuthedView() {
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });
-      window.location.reload();
       return null;
     }
   });
@@ -54,8 +53,6 @@ function AuthedView() {
         <button disabled={isPending}>
           {isPending ? "Logging out..." : "Logout"}
         </button>
-
-        {data?.detail && <div style={{ color: "red" }}>{data.detail}</div>}
       </form>
     </dl>
   );
