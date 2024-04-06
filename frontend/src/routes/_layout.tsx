@@ -1,4 +1,5 @@
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlarmCheck,
   BookOpen,
@@ -16,6 +17,7 @@ import {
   Settings,
   Twitter
 } from "lucide-react";
+import { apiClient } from "~/api/client";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
@@ -26,7 +28,9 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
+import { userKeys } from "~/key-factories";
 import { cn } from "~/lib/utils";
+import { deleteCookie, getCookie } from "~/utils";
 
 export const Route = createFileRoute("/_layout")({
   component: () => (
@@ -42,7 +46,32 @@ export const Route = createFileRoute("/_layout")({
 
 function Header() {
   const query = useAuthUser();
+  const navigate = useNavigate();
   const user = query.data?.data?.user;
+  const queryClient = useQueryClient();
+  const { data, isPending, mutate } = useMutation({
+    mutationFn: async () => {
+      // set csrf cookie token
+      await apiClient.GET("/api/csrf/");
+      const csrfToken = getCookie("csrftoken");
+      const { error } = await apiClient.DELETE("/api/auth/logout/", {
+        headers: {
+          "X-CSRFToken": csrfToken
+        }
+      });
+      if (error) {
+        return error;
+      }
+
+      queryClient.removeQueries({
+        queryKey: userKeys.authedUser
+      });
+      deleteCookie("csrftoken");
+      navigate({ to: "/login" });
+      return null;
+    }
+  });
+
   if (!user) {
     return null;
   }
@@ -57,7 +86,7 @@ function Header() {
                 Create
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
-              <MenubarContent className="border pr-4 min-w-6 border-border">
+              <MenubarContent className="border min-w-6 border-border">
                 <MenubarContentItem icon={Folder} text="Project" />
                 <MenubarContentItem icon={Globe} text="Web Service" />
                 <MenubarContentItem icon={Hammer} text="Worker" />
@@ -82,9 +111,20 @@ function Header() {
               <p>{user.username}</p>
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
-            <MenubarContent className="border pr-4 min-w-0 mx-9  border-border">
+            <MenubarContent className="border min-w-0 mx-9  border-border">
               <MenubarContentItem icon={Settings} text="Settings" />
-              <MenubarContentItem icon={LogOut} text="Logout" />
+              <button
+                onClick={() => mutate()}
+                type="submit"
+                className="w-full"
+                disabled={isPending}
+              >
+                {isPending ? (
+                  "Logging out..."
+                ) : (
+                  <MenubarContentItem icon={LogOut} text="Logout" />
+                )}
+              </button>
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
@@ -137,7 +177,7 @@ function MenubarContentItem({
   className
 }: MenubarContentItemProps) {
   return (
-    <MenubarItem className={cn("flex gap-2", className)}>
+    <MenubarItem className={cn("flex pr-4 w-full gap-2", className)}>
       {Icon && <Icon className={cn("w-4 opacity-50", className)} />}
       {text}
     </MenubarItem>
