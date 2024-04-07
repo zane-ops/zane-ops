@@ -25,6 +25,7 @@ import {
 import { apiClient } from "~/api/client";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Logo } from "~/components/logo";
+import { MetaTitle } from "~/components/meta-title";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -40,6 +41,7 @@ import { deleteCookie, getCookie } from "~/utils";
 export const Route = createFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
+      <MetaTitle title="Dashboard" />
       <Header />
       <main className="flex-grow container p-6">
         <Outlet />
@@ -128,7 +130,6 @@ function Header() {
               <MenubarContentItem icon={Settings} text="Settings" />
               <button
                 onClick={() => mutate()}
-                type="submit"
                 className="w-full"
                 disabled={isPending}
               >
@@ -150,7 +151,7 @@ const linksIconWidth = 15;
 const links = [
   {
     name: "Feedback",
-    url: " https://github.com/zane-ops/zane-ops/discusssions",
+    url: " https://github.com/zane-ops/zane-ops/discussions",
     icon: <Send width={linksIconWidth} />
   },
   {
