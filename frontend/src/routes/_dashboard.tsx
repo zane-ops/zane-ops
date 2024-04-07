@@ -25,7 +25,6 @@ import {
 import { apiClient } from "~/api/client";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Logo } from "~/components/logo";
-import { MetaTitle } from "~/components/meta-title";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
