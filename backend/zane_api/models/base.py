@@ -33,11 +33,11 @@ class Project(TimestampedModel):
 
     @property
     def create_task_id(self):
-        return f"create-prj-{self.slug}-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
+        return f"create-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
 
     @property
     def archive_task_id(self):
-        return f"archive-prj-{self.slug}-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
+        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
     def __str__(self):
         return f"Project({self.slug})"
@@ -130,7 +130,7 @@ class DockerRegistryService(BaseService):
 
     @property
     def archive_task_id(self):
-        return f"archive-srv-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
+        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
 
 class GitRepositoryService(BaseService):
@@ -200,8 +200,9 @@ class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
 
-    def get_task_id(self):
-        return f"dpl-docker-{self.hash}-{self.service.slug}-{self.service.project.slug}"
+    @property
+    def task_id(self):
+        return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
 
 
 class GitDeployment(BaseDeployment):
