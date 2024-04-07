@@ -178,7 +178,7 @@ function Footer() {
           <a
             key={link.name}
             className="flex underline items-center gap-2"
-            href=""
+            href={link.url}
           >
             {link.icon}
             {link.name}
