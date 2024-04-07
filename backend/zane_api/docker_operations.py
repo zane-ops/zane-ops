@@ -349,6 +349,9 @@ def get_caddy_id_for_url(url: URL | ArchivedURL):
         url.base_path, strip_end=True, strip_start=True
     ).replace("/", "-")
 
+    if len(normalized_path) == 0:
+        normalized_path = "*"
+
     return f"{url.domain}-{normalized_path}"
 
 
@@ -459,41 +462,26 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
         )
 
         if response.status_code != 404:
-            current_routes = response.json()
-            # routes = filter(lambda route:, iterable)
+            current_routes: list[dict[str, dict]] = response.json()
+            routes = list(
+                filter(
+                    lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                    current_routes,
+                )
+            )
 
-        response = requests.delete(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
-
-        # delete logger if it exists
-        response = requests.delete(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-            headers={"content-type": "application/json", "accept": "application/json"},
-        )
-    #     if response.json() is None:
-    #         requests.post(
-    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-    #             data=json.dumps(""),
-    #             headers={
-    #                 "content-type": "application/json",
-    #                 "accept": "application/json",
-    #             },
-    #         )
-    #
-    #     # now we create the config for the URL
-    #     response = requests.get(
-    #         f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
-    #     )
-    #     if response.status_code == status.HTTP_404_NOT_FOUND:
-    #         response = requests.get(
-    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}"
-    #         )
-    #         domain_config = response.json()
-    #         routes: list[dict] = domain_config["handle"][0]["routes"]
-    #         routes.append(get_caddy_request_for_url(url, service, http_port))
-    #         domain_config["handle"][0]["routes"] = sort_proxy_routes(routes)
-    #
-    #         requests.patch(
-    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
-    #             headers={"content-type": "application/json"},
-    #             json=domain_config,
-    #         )
+            # delete the domain and logger config when there are no routes for the domain anymore
+            if len(routes) == 0:
+                requests.delete(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                    headers={
+                        "content-type": "application/json",
+                        "accept": "application/json",
+                    },
+                )
+            else:
+                # in the other case, we just delete the caddy config
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+                )
