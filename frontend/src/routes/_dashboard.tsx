@@ -1,5 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  createFileRoute,
+  useNavigate
+} from "@tanstack/react-router";
 import {
   AlarmCheck,
   BookOpen,
@@ -32,11 +37,11 @@ import { userKeys } from "~/key-factories";
 import { cn } from "~/lib/utils";
 import { deleteCookie, getCookie } from "~/utils";
 
-export const Route = createFileRoute("/_layout")({
+export const Route = createFileRoute("/_dashboard")({
   component: () => (
-    <div>
+    <div className="min-h-screen flex flex-col justify-between">
       <Header />
-      <main>
+      <main className="flex-grow">
         <Outlet />
       </main>
       <Footer />
@@ -78,7 +83,9 @@ function Header() {
   return (
     <>
       <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toogle t justify-between gap-4">
-        <Logo className="w-10 flex-none h-10 mr-8" />
+        <Link href="/">
+          <Logo className="w-10 flex-none h-10 mr-8" />
+        </Link>
         <div className="flex  w-full items-center">
           <Menubar className="border-none w-fit text-black bg-primary">
             <MenubarMenu>
@@ -101,7 +108,13 @@ function Header() {
               placeholder="Search for Service, Worker, CRON, etc..."
             />
           </div>
-          <HelpCircle className="w-16 stroke-[1.5px] opacity-70" />
+          <a
+            href="https://github.com/zane-ops/zane-ops"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <HelpCircle className="w-16 stroke-[1.5px] opacity-70" />
+          </a>
         </div>
 
         <Menubar className="border-none w-fit">
@@ -135,20 +148,31 @@ function Header() {
 
 const linksIconWidth = 15;
 const links = [
-  { name: "Feedback", url: "", icon: <Send width={linksIconWidth} /> },
-  { name: "Docs", url: "", icon: <BookOpen width={linksIconWidth} /> },
+  {
+    name: "Feedback",
+    url: " https://github.com/zane-ops/zane-ops/discusssions",
+    icon: <Send width={linksIconWidth} />
+  },
+  {
+    name: "Docs",
+    url: "https://github.com/zane-ops/zane-ops/blob/main/docs.md",
+    icon: <BookOpen width={linksIconWidth} />
+  },
   {
     name: "Contribute",
-    url: "",
+    url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
     icon: <HeartHandshake width={linksIconWidth} />
   },
-  { name: "Twitter", url: "", icon: <Twitter width={linksIconWidth} /> }
+  {
+    name: "Twitter",
+    url: "https://twitter.com/zaneopsdev",
+    icon: <Twitter width={linksIconWidth} />
+  }
 ];
 
 function Footer() {
   return (
     <>
-      <div className="h-[84vh]"></div>
       <div className="flex border-t border-opacity-65 border-border bg-toogle p-8 text-sm items-center gap-10">
         {links.map((link) => (
           <a

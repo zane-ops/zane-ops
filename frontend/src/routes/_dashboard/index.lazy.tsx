@@ -2,7 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 
-export const Route = createLazyFileRoute("/_layout/")({
+export const Route = createLazyFileRoute("/_dashboard/")({
   component: withAuthRedirect(AuthedView)
 });
 

@@ -13,12 +13,12 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as LayoutImport } from './routes/_layout'
+import { Route as DashboardImport } from './routes/_dashboard'
 
 // Create Virtual Routes
 
 const LoginLazyImport = createFileRoute('/login')()
-const LayoutIndexLazyImport = createFileRoute('/_layout/')()
+const DashboardIndexLazyImport = createFileRoute('/_dashboard/')()
 
 // Create/Update Routes
 
@@ -27,31 +27,33 @@ const LoginLazyRoute = LoginLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
 
-const LayoutRoute = LayoutImport.update({
-  id: '/_layout',
+const DashboardRoute = DashboardImport.update({
+  id: '/_dashboard',
   getParentRoute: () => rootRoute,
 } as any)
 
-const LayoutIndexLazyRoute = LayoutIndexLazyImport.update({
+const DashboardIndexLazyRoute = DashboardIndexLazyImport.update({
   path: '/',
-  getParentRoute: () => LayoutRoute,
-} as any).lazy(() => import('./routes/_layout.index.lazy').then((d) => d.Route))
+  getParentRoute: () => DashboardRoute,
+} as any).lazy(() =>
+  import('./routes/_dashboard/index.lazy').then((d) => d.Route),
+)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_layout': {
-      preLoaderRoute: typeof LayoutImport
+    '/_dashboard': {
+      preLoaderRoute: typeof DashboardImport
       parentRoute: typeof rootRoute
     }
     '/login': {
       preLoaderRoute: typeof LoginLazyImport
       parentRoute: typeof rootRoute
     }
-    '/_layout/': {
-      preLoaderRoute: typeof LayoutIndexLazyImport
-      parentRoute: typeof LayoutImport
+    '/_dashboard/': {
+      preLoaderRoute: typeof DashboardIndexLazyImport
+      parentRoute: typeof DashboardImport
     }
   }
 }
@@ -59,7 +61,7 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 export const routeTree = rootRoute.addChildren([
-  LayoutRoute.addChildren([LayoutIndexLazyRoute]),
+  DashboardRoute.addChildren([DashboardIndexLazyRoute]),
   LoginLazyRoute,
 ])
 

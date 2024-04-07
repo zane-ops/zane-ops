@@ -69,7 +69,6 @@ function Login() {
         </div>
 
         <Form.Root
-          autoComplete="off"
           action={(formData) =>
             mutate({
               username: formData.get("username")!.toString(),
