@@ -21,7 +21,7 @@ const Menubar = React.forwardRef<
   <MenubarPrimitive.Root
     ref={ref}
     className={cn(
-      "flex h-10 items-center space-x-1 rounded-md border  p-1",
+      "flex h-10 items-center space-x-1 outline-transparent rounded-md border  p-1",
       className
     )}
     {...props}
@@ -36,7 +36,7 @@ const MenubarTrigger = React.forwardRef<
   <MenubarPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-sm px-3 py-1.5 text-sm font-medium outline-none",
+      "flex cursor-default select-none items-center  rounded-sm px-3 py-1.5 text-sm font-medium outline-none  data-[state=open]:ring-2 ring-primary ring-offset-toggle  ring-offset-2",
       className
     )}
     {...props}

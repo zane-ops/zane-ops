@@ -89,11 +89,11 @@ function Header() {
         <div className="flex  w-full items-center">
           <Menubar className="border-none w-fit text-black bg-primary">
             <MenubarMenu>
-              <MenubarTrigger className="flex justify-center text-sm items-center gap-1">
+              <MenubarTrigger className="flex  justify-center text-sm items-center gap-1">
                 Create
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
-              <MenubarContent className="border min-w-6 border-border">
+              <MenubarContent className=" min-w-6 ">
                 <MenubarContentItem icon={Folder} text="Project" />
                 <MenubarContentItem icon={Globe} text="Web Service" />
                 <MenubarContentItem icon={Hammer} text="Worker" />
