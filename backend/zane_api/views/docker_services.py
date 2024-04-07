@@ -561,6 +561,7 @@ class ArchiveDockerServiceAPIView(APIView):
 
         service.ports.filter().delete()
         service.urls.filter().delete()
+        service.volumes.filter().delete()
         service.delete()
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

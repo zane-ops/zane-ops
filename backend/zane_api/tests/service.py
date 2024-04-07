@@ -19,6 +19,7 @@ from ..models import (
     URL,
     ArchivedDockerService,
     DockerEnvVariable,
+    Volume,
 )
 
 
@@ -1228,6 +1229,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_volumes = Volume.objects.filter(name="REDIS Data volume")
+        self.assertEqual(0, len(deleted_volumes))
 
         archived_service: ArchivedDockerService = (
             ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
