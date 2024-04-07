@@ -32,7 +32,7 @@
     --popover: 164 62% 99%;
     --popover-foreground: 164 67% 0%;
     --card: 219, 40%, 18%;
-    --toogle: 164 62% 99%;
+    --toggle: 164 62% 99%;
     --card-foreground: 164 67% 0%;
     --border: 164 9% 90%;
     --input: 164 9% 90%;
@@ -69,7 +69,7 @@
       --accent-foreground: 164 18% 81%;
       --destructive: 11 98% 56%;
       --destructive-foreground: 0 0% 100%;
-      --toogle: 164 43% 2%;
+      --toggle: 164 43% 2%;
       --ring: 164 61% 70%;
       --loader: white;
     }

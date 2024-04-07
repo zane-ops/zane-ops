@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
       <Header />
-      <main className="flex-grow">
+      <main className="flex-grow container p-6">
         <Outlet />
       </main>
       <Footer />
@@ -82,7 +82,7 @@ function Header() {
   }
   return (
     <>
-      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toogle t justify-between gap-4">
+      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle t justify-between gap-4">
         <Link href="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
@@ -173,7 +173,7 @@ const links = [
 function Footer() {
   return (
     <>
-      <div className="flex border-t border-opacity-65 border-border bg-toogle p-8 text-sm items-center gap-10">
+      <div className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-10">
         {links.map((link) => (
           <a
             key={link.name}

@@ -52,8 +52,8 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
           light: "hsl(var(--light))"
         },
-        toogle: {
-          DEFAULT: "hsl(var(--toogle))",
+        toggle: {
+          DEFAULT: "hsl(var(--toggle))",
           light: "hsl(var(--light))"
         }
       },
