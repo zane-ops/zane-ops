@@ -17,6 +17,7 @@ function AuthedView() {
   return (
     <dl>
       <h1>
+        <MetaTitle title="Dashboard" />
         Welcome, <span style={{ color: "dodgerblue" }}>{user.username}</span>
       </h1>
     </dl>

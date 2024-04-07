@@ -41,7 +41,6 @@ import { deleteCookie, getCookie } from "~/utils";
 export const Route = createFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
-      <MetaTitle title="Dashboard" />
       <Header />
       <main className="flex-grow container p-6">
         <Outlet />
@@ -181,6 +180,7 @@ function Footer() {
             className="flex underline items-center gap-2"
             href={link.url}
             target="_blank"
+            rel="noopener noreferrer"
           >
             {link.icon}
             {link.name}
