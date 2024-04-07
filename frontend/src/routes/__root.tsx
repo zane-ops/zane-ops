@@ -7,11 +7,11 @@ import { Button } from "~/components/ui/button";
 
 export const Route = createRootRoute({
   component: () => (
-    <main className="bg-background">
+    <div className="bg-background">
       <Outlet />
       <TailwindIndicator />
       <TanStackRouterDevtools />
-    </main>
+    </div>
   ),
   notFoundComponent: NotFound
 });
