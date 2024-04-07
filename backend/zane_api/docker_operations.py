@@ -124,10 +124,15 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
     else:
         service.remove()
         docker_volume_list = client.volumes.list(
-            labels=get_resource_labels(
-                archived_service.project.original_id,
-                parent=archived_service.original_id,
-            )
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        archived_service.project.original_id,
+                        parent=archived_service.original_id,
+                    ).items()
+                ]
+            }
         )
         for volume in docker_volume_list:
             volume.remove(force=True)
@@ -273,7 +278,14 @@ def create_service_from_docker_registry(service: DockerRegistryService):
 
     mounts: list[str] = []
     docker_volume_list = client.volumes.list(
-        labels=get_resource_labels(service.project.id, parent=service.id)
+        filters={
+            "label": [
+                f"{key}={value}"
+                for key, value in get_resource_labels(
+                    service.project.id, parent=service.id
+                ).items()
+            ]
+        }
     )
     for docker_volume, volume in zip(docker_volume_list, service.volumes.all()):
         mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")

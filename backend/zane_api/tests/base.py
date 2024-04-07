@@ -153,7 +153,12 @@ class FakeDockerClient:
             raise docker.errors.NotFound("Volume Not found")
         return self.volume_map[name]
 
-    def volumes_list(self, labels: dict):
+    def volumes_list(self, filters: dict):
+        label_in_filters: list[str] = filters.get("label", [])
+        labels = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
         return [
             volume for volume in self.volume_map.values() if volume.labels == labels
         ]
