@@ -1,9 +1,7 @@
 # from responses import _recorder
-import json
 from io import BytesIO
 
 import pycurl
-import requests
 
 
 # CADDY_PROXY_URL = "http://localhost:2019"
@@ -167,19 +165,19 @@ import requests
 #     return etag, body
 
 
-def fetch_config_and_etag(url):
-    """Fetch configuration and ETag using pycurl."""
+def fetch_etag(url: str):
     buffer = BytesIO()
-    etag = [None]  # Mutable object to capture the ETag
+    etag: str | None = None  # Mutable object to capture the ETag
 
-    def header_function(header_line):
+    def header_function(header_line: bytes):
         """Callback for processing headers, captures ETag."""
+        nonlocal etag
         try:
             header_line = header_line.decode("iso-8859-1")
             if ":" in header_line:
                 name, value = header_line.split(":", 1)
                 if name.strip().lower() == "etag":
-                    etag[0] = value.strip()
+                    etag = value.strip()
         except ValueError:
             pass  # Ignore headers that don't split as expected
 
@@ -192,35 +190,35 @@ def fetch_config_and_etag(url):
     finally:
         c.close()
 
-    body = buffer.getvalue().decode("utf-8")
-    return etag[0], body
+    return etag
 
 
-def apply_config_change(url, data, etag, retry_count=3):
-    """Attempt to apply configuration change using the requests library."""
+def apply_config_changes(
+    url: str, request_function: Callable[[str, dict], Response], retry_count=3
+):
     for attempt in range(retry_count):
+        etag = fetch_etag(url)
+
+        if not etag:
+            raise Exception("Failed to retrieve new ETag. ")
+
         headers = {"If-Match": etag, "Content-Type": "application/json"}
-        response = requests.post(url, json=data, headers=headers)
+        response = request_function(
+            url,
+            headers,
+        )
         if response.status_code == 412:
             print(f"Collision detected, retrying... (Attempt {attempt + 1})")
-            etag, _ = fetch_config_and_etag(url)  # Fetch new ETag and config
-            if not etag:
-                print("Failed to retrieve new ETag. Aborting.")
-                return
-        elif response.ok:
-            print("Change applied successfully.")
-            return
-        else:
-            print(f"Failed to apply changes. Status code: {response.status_code}")
-            return
-    print("Failed to apply changes after several attempts.")
+            continue
+        return response
+    raise Exception("Failed to apply changes after several attempts.")
 
 
 if __name__ == "__main__":
     # fetch_config("apps")
-    etag, body = fetch_config_and_etag(
-        "localhost:2020/config/apps/http/servers/zane/routes"
+    etag, body = fetch_etag(
+        "localhost:2019/config/apps/http/servers/zane/routes"
     )
     print(f"Etag={etag}")
-    print(f"Body={json.dumps(json.loads(body), indent=2)}")
+    # print(f"Body={json.dumps(json.loads(body), indent=2)}")
     pass
