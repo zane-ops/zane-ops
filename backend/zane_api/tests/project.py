@@ -192,7 +192,9 @@ class ProjectCreateViewTests(AuthAPITestCase):
             data={"slug": "zane-ops"},
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-        self.assertIsNotNone(response.json().get("errors"))
+        errors = response.json().get("errors")
+        self.assertIsNotNone(errors)
+        self.assertIsNotNone(errors.get("slug"))
         self.assertEqual(1, Project.objects.count())
 
     @patch(
