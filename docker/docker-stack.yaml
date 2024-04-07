@@ -28,13 +28,6 @@ services:
       - caddy-config:/config
     environment:
       CADDY_ADMIN: 0.0.0.0:2019
-  zane-proxy-test:
-    image: fredkiss3/caddy-with-sablier
-    command: caddy run --resume
-    ports:
-      - "2020:2020"
-    environment:
-      CADDY_ADMIN: 0.0.0.0:2020
 volumes:
   caddy-data:
   caddy-config:

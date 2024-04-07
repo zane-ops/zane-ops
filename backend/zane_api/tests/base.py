@@ -27,7 +27,6 @@ from ..models import Project
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
     CELERY_TASK_STORE_EAGER_RESULT=True,
-    CADDY_PROXY_ADMIN_HOST="http://localhost:2020",
 )
 class APITestCase(TestCase):
     client = APIClient(enforce_csrf_checks=True, content_type="application/json")
