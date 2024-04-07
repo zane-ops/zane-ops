@@ -93,7 +93,7 @@ function Header() {
                 Create
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
-              <MenubarContent className=" min-w-6 ">
+              <MenubarContent className=" min-w-6">
                 <MenubarContentItem icon={Folder} text="Project" />
                 <MenubarContentItem icon={Globe} text="Web Service" />
                 <MenubarContentItem icon={Hammer} text="Worker" />
@@ -202,7 +202,9 @@ function MenubarContentItem({
   className
 }: MenubarContentItemProps) {
   return (
-    <MenubarItem className={cn("flex pr-4 w-full gap-2", className)}>
+    <MenubarItem
+      className={cn("flex pr-4 w-full gap-2 cursor-pointer", className)}
+    >
       {Icon && <Icon className={cn("w-4 opacity-50", className)} />}
       {text}
     </MenubarItem>
