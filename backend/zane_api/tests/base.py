@@ -1,10 +1,8 @@
-import json
 from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 
 import docker.errors
-import requests
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -46,25 +44,12 @@ class APITestCase(TestCase):
         },
     }
 
-    def setUp(self):
-        requests.post(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
-            data=json.dumps(self.INITIAL_CADDY_CONFIG),
-            headers={"content-type": "application/json"},
-        )
-
     def tearDown(self):
-        requests.post(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
-            data=json.dumps(self.INITIAL_CADDY_CONFIG),
-            headers={"content-type": "application/json"},
-        )
         cache.clear()
 
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
-        super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
 
     def loginUser(self):
