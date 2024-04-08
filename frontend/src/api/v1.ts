@@ -54,6 +54,19 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    ActiveProjectPaginated: {
+      projects: components["schemas"]["Project"][];
+      total_count: number;
+    };
+    ArchivedProject: {
+      slug?: string;
+      /** Format: date-time */
+      archived_at: string;
+    };
+    ArchivedProjectPaginated: {
+      projects: components["schemas"]["ArchivedProject"][];
+      total_count: number;
+    };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
     };
@@ -65,6 +78,11 @@ export interface components {
     };
     CSRF: {
       details: string;
+    };
+    CredentialError: {
+      username?: string[];
+      password?: string[];
+      registry_url?: string[];
     };
     DockerCredentialsRequest: {
       username: string;
@@ -135,9 +153,9 @@ export interface components {
       root?: string[];
       name?: string[];
       image?: string[];
-      credentials?: string[];
-      urls?: string[];
       command?: string[];
+      credentials?: components["schemas"]["CredentialError"];
+      urls?: components["schemas"]["URLsError"][];
       ports?: string[];
       env?: string[];
       volumes?: string[];
@@ -148,13 +166,16 @@ export interface components {
     DockerServiceCreateRequest: {
       name: string;
       image: string;
-      credentials?: components["schemas"]["DockerCredentialsRequest"];
-      urls?: components["schemas"]["URLRequest"][];
       command?: string;
+      credentials?: components["schemas"]["DockerCredentialsRequest"];
+      /** @default [] */
+      urls?: components["schemas"]["URLRequest"][];
+      /** @default [] */
       ports?: components["schemas"]["ServicePortsRequest"][];
       env?: {
         [key: string]: string;
       };
+      /** @default [] */
       volumes?: components["schemas"]["VolumeRequest"][];
     };
     DockerServiceCreateSuccessResponse: {
@@ -164,7 +185,7 @@ export interface components {
       images: components["schemas"]["DockerImage"][];
     };
     ForbiddenResponse: {
-      detail: string;
+      errors: components["schemas"]["BaseError"];
     };
     GetRootDomain: {
       domain: string;
@@ -185,41 +206,39 @@ export interface components {
       success: boolean;
     };
     PatchedProjectUpdateRequest: {
-      name?: string;
+      slug?: string;
     };
     PortConfiguration: {
       host?: number | null;
       forwarded: number;
     };
     Project: {
-      name: string;
-      slug?: string;
-      archived?: boolean;
-      owner: components["schemas"]["User"];
+      slug: string;
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
       updated_at: string;
     };
     ProjectCreateRequest: {
-      name: string;
+      slug?: string;
     };
     ProjectSuccessResponse: {
-      projects: components["schemas"]["Project"][];
+      active: components["schemas"]["ActiveProjectPaginated"];
+      archived: components["schemas"]["ArchivedProjectPaginated"];
     };
     ProjectUpdateErrorResponse: {
       errors: components["schemas"]["ProjetUpdateError"];
     };
     ProjetCreateError: {
       root?: string[];
-      name?: string[];
+      slug?: string[];
     };
     ProjetCreateErrorResponse: {
       errors: components["schemas"]["ProjetCreateError"];
     };
     ProjetUpdateError: {
       root?: string[];
-      name?: string[];
+      slug?: string[];
     };
     ServicePortsRequest: {
       /** @default 80 */
@@ -233,11 +252,18 @@ export interface components {
       domain: string | null;
       /** @default / */
       base_path?: string;
+      strip_prefix?: boolean;
     };
     URLRequest: {
       domain: string;
       /** @default / */
       base_path?: string;
+      /** @default true */
+      strip_prefix?: boolean;
+    };
+    URLsError: {
+      domain?: string[];
+      base_path?: string[];
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -451,13 +477,19 @@ export interface operations {
   getProjectList: {
     parameters: {
       query?: {
-        include_archived?: boolean;
+        page?: number;
+        per_page?: number;
         query?: string;
         /**
-         * @description * `name_asc` - name ascending
+         * @description * `slug_asc` - slug ascending
          * * `updated_at_desc` - updated_at in descending order
          */
-        sort?: "name_asc" | "updated_at_desc";
+        sort?: "slug_asc" | "updated_at_desc";
+        /**
+         * @description * `archived` - archived
+         * * `active` - active
+         */
+        status?: "archived" | "active";
       };
     };
     responses: {
@@ -479,7 +511,7 @@ export interface operations {
     };
   };
   createProject: {
-    requestBody: {
+    requestBody?: {
       content: {
         "application/json": components["schemas"]["ProjectCreateRequest"];
         "application/x-www-form-urlencoded": components["schemas"]["ProjectCreateRequest"];
@@ -544,11 +576,6 @@ export interface operations {
         };
       };
       409: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceCreateErrorResponse"];
-        };
-      };
-      422: {
         content: {
           "application/json": components["schemas"]["DockerServiceCreateErrorResponse"];
         };

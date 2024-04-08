@@ -51,6 +51,10 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
           light: "hsl(var(--light))"
+        },
+        toggle: {
+          DEFAULT: "hsl(var(--toggle))",
+          light: "hsl(var(--light))"
         }
       },
       borderRadius: {

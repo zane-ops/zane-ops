@@ -2,8 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+
+@supports (font-variation-settings: normal) {
+  :root {
+    font-optical-sizing: auto;
+  }
+}
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("assets/fonts/variable-woff/GeistVF.woff2") format("woff2");
+}
+
+
+
 :root {
   color: theme("colors.card.foreground");
+  font-family: "Geist";
 }
 
 @layer base {
@@ -15,6 +32,7 @@
     --popover: 164 62% 99%;
     --popover-foreground: 164 67% 0%;
     --card: 219, 40%, 18%;
+    --toggle: 164 62% 99%;
     --card-foreground: 164 67% 0%;
     --border: 164 9% 90%;
     --input: 164 9% 90%;
@@ -51,6 +69,7 @@
       --accent-foreground: 164 18% 81%;
       --destructive: 11 98% 56%;
       --destructive-foreground: 0 0% 100%;
+      --toggle: 164 43% 2%;
       --ring: 164 61% 70%;
       --loader: white;
     }
@@ -60,7 +79,6 @@
 }
 
 /** Loader **/
-
 .loader-svg path {
   fill: none;
   stroke: var(--loader);
@@ -69,9 +87,6 @@
   stroke-dashoffset: 1400;
   animation: drawLoaderSVG 2.5s linear infinite;
 }
-
-
-
 @keyframes drawLoaderSVG {
   0% {
     stroke-dashoffset: 1400; 
