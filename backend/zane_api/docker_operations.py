@@ -133,6 +133,7 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
                 )
             },
         ):
+            print(dict(event=event))
             if event["Type"] == "container" and event["status"] == "destroy":
                 break
 
