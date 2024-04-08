@@ -401,12 +401,13 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNone(archived_projects.first().active_version)
 
     @patch("zane_api.tasks.unexpose_docker_service_from_http")
+    @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
     def test_archive_all_services_when_archiving_a_projects(
-        self, mock_fake_docker: Mock, _: Mock
+        self, mock_fake_docker: Mock, _: Mock, __: Mock
     ):
         owner = self.loginUser()
         p = Project.objects.create(slug="sandbox", owner=owner)
@@ -424,6 +425,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=create_service_payload,
+            content_type="application/json",
         )
         print(response.json())
 
@@ -457,7 +459,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         # env variables are cleaned up
         deleted_envs = DockerEnvVariable.objects.filter(service__slug="cache-db")
         self.assertEqual(0, len(deleted_envs))
-        self.assertEqual(1, len(archived_service.env_variables.all()))
+        self.assertEqual(2, len(archived_service.env_variables.all()))
 
         # ports are cleaned up
         deleted_ports = PortConfiguration.objects.filter(host=6383)
@@ -465,9 +467,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(1, len(archived_service.ports.all()))
 
         # urls are cleaned up
-        deleted_urls = URL.objects.filter(
-            domain="thullo.fredkiss.dev", base_path="/api"
-        )
+        deleted_urls = URL.objects.filter(domain="gitea.zane.local", base_path="/")
         self.assertEqual(0, len(deleted_urls))
         self.assertEqual(1, len(archived_service.urls.all()))
 

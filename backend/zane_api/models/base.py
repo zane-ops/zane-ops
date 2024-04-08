@@ -94,6 +94,10 @@ class PortConfiguration(models.Model):
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
 
+    def __str__(self):
+        host_port = 80 if self.host is None else self.host
+        return f"PortConfiguration({host_port} -> {self.forwarded})"
+
 
 class BaseEnvVariable(models.Model):
     key = models.CharField(max_length=255)

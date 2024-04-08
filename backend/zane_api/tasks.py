@@ -59,6 +59,17 @@ def create_docker_resources_for_project(project_slug: str):
 )
 def delete_docker_resources_for_project(archived_project_id: int):
     archived_project = ArchivedProject.objects.get(pk=archived_project_id)
+
+    archived_docker_services = (
+        ArchivedDockerService.objects.filter(project=archived_project)
+        .select_related("project")
+        .prefetch_related("volumes", "urls")
+    )
+
+    for docker_service in archived_docker_services:
+        cleanup_docker_service_resources(docker_service)
+        unexpose_docker_service_from_http(docker_service)
+
     cleanup_project_resources(archived_project)
 
 

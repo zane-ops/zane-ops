@@ -79,7 +79,6 @@ class ArchivedPortConfiguration(TimestampArchivedModel):
 
 class ArchivedBaseService(TimestampArchivedModel):
     slug = models.SlugField(max_length=255)
-    project = models.ForeignKey(to=ArchivedProject, on_delete=models.CASCADE)
     urls = models.ManyToManyField(to=ArchivedURL)
     volumes = models.ManyToManyField(to=ArchivedVolume)
     ports = models.ManyToManyField(to=ArchivedPortConfiguration)
@@ -107,6 +106,9 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
 
 class ArchivedDockerService(ArchivedBaseService):
     image = models.CharField(max_length=510)
+    project = models.ForeignKey(
+        to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"
+    )
     command = models.TextField(null=True, blank=True)
     docker_credentials_username = models.CharField(
         max_length=255, null=True, blank=True

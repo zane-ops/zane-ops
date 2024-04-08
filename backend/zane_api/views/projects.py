@@ -22,7 +22,6 @@ from ..models import (
 from ..tasks import (
     create_docker_resources_for_project,
     delete_docker_resources_for_project,
-    delete_resources_for_docker_service,
 )
 
 
@@ -368,16 +367,9 @@ class ProjectDetailsView(APIView):
                     )
                 )
 
-                archived_service = ArchivedDockerService.create_from_service(
-                    service, archived_version
-                )
-                delete_resources_for_docker_service.apply_async(
-                    kwargs=dict(archived_service_id=archived_service.id),
-                    task_id=service.archive_task_id,
-                )
-
+                ArchivedDockerService.create_from_service(service, archived_version)
                 service.delete_resources()
-                service.delete()
+            docker_service_list.delete()
 
             delete_docker_resources_for_project.apply_async(
                 kwargs=dict(archived_project_id=archived_version.id),
