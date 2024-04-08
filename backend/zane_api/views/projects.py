@@ -13,10 +13,16 @@ from rest_framework.views import APIView
 
 from . import EMPTY_RESPONSE
 from .. import serializers
-from ..models import Project, ArchivedProject
+from ..models import (
+    Project,
+    ArchivedProject,
+    DockerRegistryService,
+    ArchivedDockerService,
+)
 from ..tasks import (
     create_docker_resources_for_project,
     delete_docker_resources_for_project,
+    delete_resources_for_docker_service,
 )
 
 
@@ -345,6 +351,33 @@ class ProjectDetailsView(APIView):
                     owner=project.owner,
                     original_id=project.id,
                 )
+
+            docker_service_list = (
+                DockerRegistryService.objects.filter(Q(project=project))
+                .select_related("project")
+                .prefetch_related("volumes", "ports", "urls", "env_variables")
+            )
+            for service in docker_service_list:
+                print(
+                    dict(
+                        service=service,
+                        volumes=list(service.volumes.all()),
+                        ports=list(service.ports.all()),
+                        urls=list(service.urls.all()),
+                        env_variables=list(service.env_variables.all()),
+                    )
+                )
+
+                archived_service = ArchivedDockerService.create_from_service(
+                    service, archived_version
+                )
+                delete_resources_for_docker_service.apply_async(
+                    kwargs=dict(archived_service_id=archived_service.id),
+                    task_id=service.archive_task_id,
+                )
+
+                service.delete_resources()
+                service.delete()
 
             delete_docker_resources_for_project.apply_async(
                 kwargs=dict(archived_project_id=archived_version.id),

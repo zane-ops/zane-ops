@@ -84,6 +84,11 @@ class BaseService(TimestampedModel):
             "project",
         )
 
+    def delete_resources(self):
+        self.ports.filter().delete()
+        self.urls.filter().delete()
+        self.volumes.filter().delete()
+
 
 class PortConfiguration(models.Model):
     host = models.PositiveIntegerField(null=True, unique=True)

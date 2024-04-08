@@ -5,7 +5,18 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase, FakeDockerClient
-from ..models import Project, ArchivedProject
+from ..docker_operations import get_docker_service_resource_name
+from ..models import (
+    Project,
+    ArchivedProject,
+    DockerRegistryService,
+    ArchivedDockerService,
+    DockerDeployment,
+    Volume,
+    DockerEnvVariable,
+    PortConfiguration,
+    URL,
+)
 
 
 class ProjectListViewTests(AuthAPITestCase):
@@ -320,11 +331,12 @@ class ProjectGetViewTests(AuthAPITestCase):
 
 
 class ProjectArchiveViewTests(AuthAPITestCase):
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_sucessfully_archive_project(self, _: Mock):
+    def test_sucessfully_archive_project(self, _: Mock, __: Mock):
         owner = self.loginUser()
         Project.objects.create(slug="gh-clone", owner=owner),
         response = self.client.delete(
@@ -341,22 +353,24 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNotNone(archived_project)
         self.assertNotEquals("", archived_project.original_id)
 
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_non_existent(self, _: Mock):
+    def test_non_existent(self, _: Mock, __: Mock):
         self.loginUser()
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_cannot_archive_already_archived_project(self, _: Mock):
+    def test_cannot_archive_already_archived_project(self, _: Mock, __: Mock):
         owner = self.loginUser()
         ArchivedProject.objects.create(slug="zane-ops", owner=owner)
         response = self.client.delete(
@@ -364,11 +378,12 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_cannot_reuse_archived_version_if_it_exists(self, _: Mock):
+    def test_can_reuse_archived_version_if_it_exists(self, _: Mock, __: Mock):
         owner = self.loginUser()
         p = Project.objects.create(slug="gh-clone", owner=owner)
         ArchivedProject.create_from_project(p)
@@ -384,6 +399,90 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         archived_projects = ArchivedProject.objects.filter(slug="gh-clone")
         self.assertEqual(1, len(archived_projects))
         self.assertIsNone(archived_projects.first().active_version)
+
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_archive_all_services_when_archiving_a_projects(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="sandbox", owner=owner)
+
+        create_service_payload = {
+            "slug": "gitea",
+            "image": "gitea/gitea:latest",
+            "urls": [{"domain": "gitea.zane.local", "base_path": "/"}],
+            "ports": [{"forwarded": 3000}],
+            "env": {"USER_UID": "1000", "USER_GID": "1000"},
+            "volumes": [{"name": "gitea", "mount_path": "/data"}],
+        }
+
+        # create the service
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        print(response.json())
+
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "sandbox"})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Service is deleted
+        deleted_service = DockerRegistryService.objects.filter(slug="gitea").first()
+        self.assertIsNone(deleted_service)
+
+        archived_service: ArchivedDockerService = (
+            ArchivedDockerService.objects.filter(slug="gitea")
+            .prefetch_related("volumes")
+            .prefetch_related("env_variables")
+            .prefetch_related("ports")
+            .prefetch_related("urls")
+        ).first()
+        self.assertIsNotNone(archived_service)
+
+        # Deployments are cleaned up
+        deployments = DockerDeployment.objects.filter(service__slug="gitea")
+        self.assertEqual(0, len(deployments))
+
+        # Volumes are cleaned up
+        deleted_volumes = Volume.objects.filter(name="gitea")
+        self.assertEqual(0, len(deleted_volumes))
+        self.assertEqual(1, len(archived_service.volumes.all()))
+
+        # env variables are cleaned up
+        deleted_envs = DockerEnvVariable.objects.filter(service__slug="cache-db")
+        self.assertEqual(0, len(deleted_envs))
+        self.assertEqual(1, len(archived_service.env_variables.all()))
+
+        # ports are cleaned up
+        deleted_ports = PortConfiguration.objects.filter(host=6383)
+        self.assertEqual(0, len(deleted_ports))
+        self.assertEqual(1, len(archived_service.ports.all()))
+
+        # urls are cleaned up
+        deleted_urls = URL.objects.filter(
+            domain="thullo.fredkiss.dev", base_path="/api"
+        )
+        self.assertEqual(0, len(deleted_urls))
+        self.assertEqual(1, len(archived_service.urls.all()))
+
+        # --- Docker Resources ---
+        # service is removed
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        deleted_docker_service = fake_docker_client.service_map.get(
+            get_docker_service_resource_name(
+                project_id=p.id, service_id=archived_service.original_id
+            )
+        )
+        self.assertIsNone(deleted_docker_service)
+
+        # volumes are unmounted
+        self.assertEqual(0, len(fake_docker_client.volume_map))
 
 
 class DockerAddNetworkTest(AuthAPITestCase):
