@@ -136,6 +136,9 @@ class FakeDockerClient:
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
+    def events(self, decode: bool, filters: dict):
+        return []
+
     def containers_run(
         self, image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
     ):

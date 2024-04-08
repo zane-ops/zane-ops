@@ -123,6 +123,19 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
         pass
     else:
         service.remove()
+        # Wait for service to be completely deleted
+        for event in client.events(
+            decode=True,
+            filters={
+                "service": get_docker_service_resource_name(
+                    service_id=archived_service.original_id,
+                    project_id=archived_service.project.original_id,
+                )
+            },
+        ):
+            if event["Type"] == "container" and event["status"] == "destroy":
+                break
+
         docker_volume_list = client.volumes.list(
             filters={
                 "label": [
@@ -134,6 +147,7 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
                 ]
             }
         )
+
         for volume in docker_volume_list:
             volume.remove(force=True)
 
