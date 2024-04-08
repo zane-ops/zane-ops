@@ -180,6 +180,19 @@ def cleanup_project_resources(archived_project: ArchivedProject):
         pass
     else:
         detach_network_from_proxy(network_associated_to_project)
+
+        # Wait for service to finish updating before deleting the network
+        for event in client.events(
+            decode=True, filters={"service": settings.CADDY_PROXY_SERVICE}
+        ):
+            print(dict(event=event))
+            if (
+                event["Type"] == "service"
+                and event.get("Action") == "update"
+                and event.get("Actor", {}).get("Attributes", {}).get("updatestate.new")
+                == "completed"
+            ):
+                break
         network_associated_to_project.remove()
 
 
