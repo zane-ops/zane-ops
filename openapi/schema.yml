@@ -356,6 +356,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjetCreateErrorResponse'
           description: ''
+  /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
+    delete:
+      operationId: archiveDockerService
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: ''
   /api/projects/{project_slug}/create-service/docker/:
     post:
       operationId: createDockerService
@@ -562,15 +597,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/BaseErrorResponse'
           description: ''
-  /api/volumes/{slug}/size/:
+  /api/volumes/{volume_id}/size/:
     get:
       operationId: getVolumeSize
       parameters:
       - in: path
-        name: slug
+        name: volume_id
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[a-zA-Z0-9_]+$
         required: true
       tags:
       - volumes
@@ -695,6 +730,18 @@ components:
       required:
       - password
       - username
+    DockerEnvVariable:
+      type: object
+      properties:
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+          maxLength: 255
+      required:
+      - key
+      - value
     DockerImage:
       type: object
       properties:
@@ -833,11 +880,6 @@ components:
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
-        name:
-          type: string
-          maxLength: 255
-        archived:
-          type: boolean
         command:
           type: string
           nullable: true
@@ -846,10 +888,14 @@ components:
           items:
             $ref: '#/components/schemas/PortConfiguration'
           readOnly: true
+        env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerEnvVariable'
       required:
       - created_at
+      - env_variables
       - image
-      - name
       - ports
       - slug
       - updated_at
@@ -862,7 +908,7 @@ components:
           type: array
           items:
             type: string
-        name:
+        slug:
           type: array
           items:
             type: string
@@ -902,9 +948,10 @@ components:
     DockerServiceCreateRequest:
       type: object
       properties:
-        name:
+        slug:
           type: string
           maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
         image:
           type: string
         command:
@@ -932,7 +979,6 @@ components:
           default: []
       required:
       - image
-      - name
     DockerServiceCreateSuccessResponse:
       type: object
       properties:
@@ -1188,10 +1234,9 @@ components:
           type: string
           format: date-time
           readOnly: true
-        slug:
+        id:
           type: string
           maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
         name:
           type: string
           maxLength: 255
@@ -1202,7 +1247,6 @@ components:
       - containerPath
       - created_at
       - name
-      - slug
       - updated_at
     VolumeGetSizeSuccessResponse:
       type: object
