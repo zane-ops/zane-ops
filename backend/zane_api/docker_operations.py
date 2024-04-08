@@ -482,7 +482,6 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
                 f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
             )
             routes = response.json()
-            # routes: list[dict] = domain_config["handle"][0]["routes"]
             routes.append(get_caddy_request_for_url(url, service, http_port))
             routes = sort_proxy_routes(routes)
             print(routes)
