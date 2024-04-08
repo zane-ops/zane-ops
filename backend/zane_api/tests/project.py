@@ -422,13 +422,13 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         }
 
         # create the service
-        response = self.client.post(
+        self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=create_service_payload,
             content_type="application/json",
         )
-        print(response.json())
 
+        # then archive the project
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "sandbox"})
         )

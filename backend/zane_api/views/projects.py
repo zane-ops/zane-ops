@@ -18,6 +18,9 @@ from ..models import (
     ArchivedProject,
     DockerRegistryService,
     ArchivedDockerService,
+    PortConfiguration,
+    URL,
+    Volume,
 )
 from ..tasks import (
     create_docker_resources_for_project,
@@ -328,6 +331,7 @@ class ProjectDetailsView(APIView):
         },
         operation_id="archiveSingleProject",
     )
+    @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
         try:
             project: Project = (
@@ -339,36 +343,23 @@ class ProjectDetailsView(APIView):
             if project is None:
                 raise Project.DoesNotExist(f"A Project with slug {slug} doesn't exit")
 
-            archived_version = (
-                project.archived_version
-                if hasattr(project, "archived_version")
-                else None
-            )
-            if archived_version is None:
-                archived_version = ArchivedProject.objects.create(
-                    slug=project.slug,
-                    owner=project.owner,
-                    original_id=project.id,
-                )
+            archived_version = ArchivedProject.get_or_create_from_project(project)
 
             docker_service_list = (
                 DockerRegistryService.objects.filter(Q(project=project))
                 .select_related("project")
                 .prefetch_related("volumes", "ports", "urls", "env_variables")
             )
+            id_list = []
             for service in docker_service_list:
-                print(
-                    dict(
-                        service=service,
-                        volumes=list(service.volumes.all()),
-                        ports=list(service.ports.all()),
-                        urls=list(service.urls.all()),
-                        env_variables=list(service.env_variables.all()),
-                    )
-                )
-
                 ArchivedDockerService.create_from_service(service, archived_version)
-                service.delete_resources()
+                id_list.append(service.id)
+
+            PortConfiguration.objects.filter(
+                Q(dockerregistryservice__id__in=id_list)
+            ).delete()
+            URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+            Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
             docker_service_list.delete()
 
             delete_docker_resources_for_project.apply_async(

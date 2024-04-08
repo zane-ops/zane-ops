@@ -36,6 +36,19 @@ class ArchivedProject(TimestampArchivedModel):
             original_id=project.id,
         )
 
+    @classmethod
+    def get_or_create_from_project(cls, project: Project):
+        archived_version = (
+            project.archived_version if hasattr(project, "archived_version") else None
+        )
+        if archived_version is None:
+            archived_version = cls.objects.create(
+                slug=project.slug,
+                owner=project.owner,
+                original_id=project.id,
+            )
+        return archived_version
+
     def __str__(self):
         return f"ArchivedProject({self.slug})"
 
