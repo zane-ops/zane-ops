@@ -4,8 +4,11 @@ FROM python:3.11.7
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+RUN pip install uv
+RUN uv venv /venv
 COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+ENV VIRTUAL_ENV=/venv
+RUN uv pip install -r requirements.txt
 
 COPY . code
 WORKDIR /code
@@ -13,4 +16,4 @@ WORKDIR /code
 EXPOSE 8000
 
 # runs the dev server
-CMD python manage.py runserver
+CMD uv venv /venv && python manage.py runserver

@@ -13,7 +13,15 @@ from rest_framework.views import APIView
 
 from . import EMPTY_RESPONSE
 from .. import serializers
-from ..models import Project, ArchivedProject
+from ..models import (
+    Project,
+    ArchivedProject,
+    DockerRegistryService,
+    ArchivedDockerService,
+    PortConfiguration,
+    URL,
+    Volume,
+)
 from ..tasks import (
     create_docker_resources_for_project,
     delete_docker_resources_for_project,
@@ -190,7 +198,7 @@ class ProjectsListView(APIView):
                 response = self.error_serializer_class(
                     {
                         "errors": {
-                            "name": [
+                            "slug": [
                                 f"A project with the slug '{slug}' already exist,"
                                 f" please use another one for this project."
                             ]
@@ -257,7 +265,7 @@ class ProjectDetailsView(APIView):
     )
     def patch(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = Project.objects.get(slug=slug, owner=request.user)
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -301,7 +309,7 @@ class ProjectDetailsView(APIView):
     )
     def get(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = Project.objects.get(slug=slug.lower())
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -323,15 +331,41 @@ class ProjectDetailsView(APIView):
         },
         operation_id="archiveSingleProject",
     )
+    @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug, owner=request.user)
+            project: Project = (
+                Project.objects.filter(
+                    slug=slug.lower(), owner=request.user
+                ).select_related("archived_version")
+            ).first()
+
+            if project is None:
+                raise Project.DoesNotExist(f"A Project with slug {slug} doesn't exit")
+
+            archived_version = ArchivedProject.get_or_create_from_project(project)
+
+            docker_service_list = (
+                DockerRegistryService.objects.filter(Q(project=project))
+                .select_related("project")
+                .prefetch_related("volumes", "ports", "urls", "env_variables")
+            )
+            id_list = []
+            for service in docker_service_list:
+                ArchivedDockerService.create_from_service(service, archived_version)
+                id_list.append(service.id)
+
+            PortConfiguration.objects.filter(
+                Q(dockerregistryservice__id__in=id_list)
+            ).delete()
+            URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+            Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+            docker_service_list.delete()
+
             delete_docker_resources_for_project.apply_async(
-                (project.id, project.created_at.timestamp()),
+                kwargs=dict(archived_project_id=archived_version.id),
                 task_id=project.archive_task_id,
             )
-
-            ArchivedProject.objects.create(slug=project.slug, owner=project.owner)
             project.delete()
         except Project.DoesNotExist:
             response = self.error_serializer_class(
@@ -344,13 +378,4 @@ class ProjectDetailsView(APIView):
                 }
             )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [str(e)],
-                    }
-                }
-            )
-            return Response(response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

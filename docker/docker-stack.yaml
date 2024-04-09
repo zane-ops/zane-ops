@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   zane-proxy:
-    image: localhost:9989/caddy:2.7.6-with-sablier
+    image: fredkiss3/caddy-with-sablier
     command: caddy run --resume
     deploy:
       replicas: 1

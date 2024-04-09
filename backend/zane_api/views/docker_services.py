@@ -1,8 +1,9 @@
+import time
+
 import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.db.models import Q
-from django.utils.text import slugify
 from drf_spectacular.utils import extend_schema
 from faker import Faker
 from rest_framework import status
@@ -10,6 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import EMPTY_RESPONSE
 from .. import serializers
 from ..docker_operations import (
     login_to_docker_registry,
@@ -24,9 +26,11 @@ from ..models import (
     Volume,
     PortConfiguration,
     URL,
-    EnvVariable,
+    DockerEnvVariable,
+    ArchivedProject,
+    ArchivedDockerService,
 )
-from ..tasks import deploy_docker_service
+from ..tasks import deploy_docker_service, delete_resources_for_docker_service
 from ..utils import strip_slash_if_exists
 
 
@@ -68,7 +72,7 @@ class URLRequestSerializer(serializers.Serializer):
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255)
+    slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
     command = serializers.CharField(required=False)
     credentials = DockerCredentialsRequestSerializer(required=False)
@@ -229,7 +233,7 @@ class URLsErrorSerializer(serializers.Serializer):
 
 
 class DockerServiceCreateErrorSerializer(serializers.BaseErrorSerializer):
-    name = serializers.StringListField(required=False)
+    slug = serializers.StringListField(required=False)
     image = serializers.StringListField(required=False)
     command = serializers.StringListField(required=False)
     credentials = CredentialErrorSerializer(required=False)
@@ -262,7 +266,7 @@ class CreateDockerServiceAPIView(APIView):
     @transaction.atomic()
     def post(self, request: Request, project_slug: str):
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(slug=project_slug, owner=request.user)
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -281,10 +285,11 @@ class CreateDockerServiceAPIView(APIView):
 
                 # Create service in DB
                 docker_credentials: dict | None = data.get("credentials")
-                service_slug = slugify(data["name"])
+                fake = Faker()
+                Faker.seed(time.monotonic())
+                service_slug = data.get("slug", fake.slug()).lower()
                 try:
                     service = DockerRegistryService.objects.create(
-                        name=data["name"],
                         slug=service_slug,
                         project=project,
                         image=data["image"],
@@ -304,9 +309,8 @@ class CreateDockerServiceAPIView(APIView):
                     response = self.error_serializer_class(
                         {
                             "errors": {
-                                "name": [
-                                    "A service with a similar slug already exist in this project,"
-                                    " please use another name for this service"
+                                "slug": [
+                                    f"A service with the slug `{service_slug}` already exists."
                                 ]
                             }
                         }
@@ -314,14 +318,11 @@ class CreateDockerServiceAPIView(APIView):
                     return Response(response.data, status=status.HTTP_409_CONFLICT)
 
                 # Create volumes if exists
-                fake = Faker()
                 volumes_request = data.get("volumes", [])
                 created_volumes = Volume.objects.bulk_create(
                     [
                         Volume(
                             name=volume["name"],
-                            slug=f"{service.slug}-{fake.slug()}",
-                            project=project,
                             containerPath=volume["mount_path"],
                         )
                         for volume in volumes_request
@@ -412,30 +413,24 @@ class CreateDockerServiceAPIView(APIView):
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get("env", {})
 
-                created_envs = EnvVariable.objects.bulk_create(
+                DockerEnvVariable.objects.bulk_create(
                     [
-                        EnvVariable(
-                            key=key,
-                            value=value,
-                            project=project,
-                        )
+                        DockerEnvVariable(key=key, value=value, service=service)
                         for key, value in envs_from_request.items()
                     ]
                 )
 
-                first_deployment.env_variables.add(*created_envs)
-
                 # Run celery deployment task
                 deploy_docker_service.apply_async(
-                    (first_deployment.hash,),
-                    task_id=first_deployment.get_task_id(),
+                    kwargs=dict(deployment_hash=first_deployment.hash),
+                    task_id=first_deployment.task_id,
                 )
 
                 response = self.serializer_class({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
             # TODO: format errors correctly using `DRF Standardized Errors`
-            response = self.error_serializer_class({"errors": form.errors})
+            # response = self.error_serializer_class({"errors": form.errors})
             return Response(
                 data={"errors": form.errors},
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -457,7 +452,7 @@ class GetDockerServiceAPIView(APIView):
     )
     def get(self, request: Request, project_slug: str, service_slug: str):
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
             response = self.error_serializer_class(
                 {
@@ -493,3 +488,78 @@ class GetDockerServiceAPIView(APIView):
 
         response = self.serializer_class({"service": service})
         return Response(response.data, status=status.HTTP_200_OK)
+
+
+class AchiveDockerServiveSuccessResponse(serializers.Serializer):
+    pass
+
+
+class ArchiveDockerServiceAPIView(APIView):
+    error_serializer = serializers.BaseErrorResponseSerializer
+
+    @extend_schema(
+        responses={
+            204: AchiveDockerServiveSuccessResponse,
+            404: error_serializer,
+            403: serializers.ForbiddenResponseSerializer,
+        },
+        operation_id="archiveDockerService",
+    )
+    def delete(self, request: Request, project_slug: str, service_slug: str):
+        project = (
+            Project.objects.filter(
+                slug=project_slug.lower(), owner=request.user
+            ).select_related("archived_version")
+        ).first()
+
+        if project is None:
+            response = self.error_serializer(
+                {
+                    "errors": {
+                        "root": [
+                            f"A project with the slug `{project_slug}` does not exist."
+                        ]
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables")
+        ).first()
+
+        if service is None:
+            response = self.error_serializer(
+                {
+                    "errors": {
+                        "root": [
+                            f"A service with the slug `{service_slug}` does not exist in this project"
+                        ]
+                    }
+                }
+            )
+            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+
+        archived_project = (
+            project.archived_version if hasattr(project, "archived_version") else None
+        )
+        if archived_project is None:
+            archived_project = ArchivedProject.create_from_project(project)
+
+        archived_service = ArchivedDockerService.create_from_service(
+            service, archived_project
+        )
+        print("Executiong delete_resources_for_docker_service")
+        delete_resources_for_docker_service.apply_async(
+            kwargs=dict(archived_service_id=archived_service.id),
+            task_id=service.archive_task_id,
+        )
+
+        service.delete_resources()
+        service.delete()
+
+        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

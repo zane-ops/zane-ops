@@ -1,5 +1,5 @@
 import json
-from typing import List, TypedDict, Literal
+from typing import List, TypedDict
 
 import docker
 import docker.errors
@@ -8,20 +8,24 @@ from django.conf import settings
 from docker.models.networks import Network
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 from rest_framework import status
+from wrapt_timeout_decorator import timeout
 
 from .models import (
     Project,
     Volume,
     DockerRegistryService,
     BaseService,
-    DockerDeployment,
     PortConfiguration,
     URL,
+    ArchivedProject,
+    ArchivedDockerService,
+    ArchivedURL,
 )
 from .utils import strip_slash_if_exists
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
+DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
 
 
 def get_docker_client():
@@ -35,13 +39,12 @@ def get_docker_client():
     return docker_client
 
 
-def get_network_resource_name(project_id: str, project_created_at_ts: float) -> str:
-    ts_to_full_number = str(project_created_at_ts).replace(".", "")
-    return f"net-{project_id}-{ts_to_full_number}"
+def get_network_resource_name(project_id: str) -> str:
+    return f"net-{project_id}"
 
 
-def get_resource_labels(project: Project):
-    return {"zane-managed": "true", "zane-project": project.slug}
+def get_resource_labels(project_id: str, **kwargs):
+    return {"zane-managed": "true", "zane-project": project_id, **kwargs}
 
 
 class DockerImageResultFromRegistry(TypedDict):
@@ -108,7 +111,59 @@ def check_if_docker_image_exists(
         return True
 
 
-def cleanup_project_resources(project_id: str, project_created_at_ts: float):
+def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
+    client = get_docker_client()
+    service_name = get_docker_service_resource_name(
+        archived_service.original_id,
+        archived_service.project.original_id,
+    )
+
+    try:
+        service = client.services.get(service_name)
+    except docker.errors.NotFound:
+        # we will assume the service has already been deleted
+        pass
+    else:
+        service.remove()
+
+        @timeout(
+            DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+            exception_message="Timeout encountered when waiting for service to be down",
+        )
+        def wait_for_service_to_be_down():
+            nonlocal client
+            for event in client.events(
+                decode=True,
+                filters={
+                    "service": get_docker_service_resource_name(
+                        service_id=archived_service.original_id,
+                        project_id=archived_service.project.original_id,
+                    )
+                },
+            ):
+                print(dict(event=event))
+                if event["Type"] == "container" and event["status"] == "destroy":
+                    break
+
+        wait_for_service_to_be_down()
+
+    docker_volume_list = client.volumes.list(
+        filters={
+            "label": [
+                f"{key}={value}"
+                for key, value in get_resource_labels(
+                    archived_service.project.original_id,
+                    parent=archived_service.original_id,
+                ).items()
+            ]
+        }
+    )
+
+    for volume in docker_volume_list:
+        volume.remove(force=True)
+
+
+def cleanup_project_resources(archived_project: ArchivedProject):
     """
     Cleanup all resources attached to a project after it has been archived, which means :
     - cleaning up volumes (and deleting them in the DB & docker)
@@ -128,23 +183,46 @@ def cleanup_project_resources(project_id: str, project_created_at_ts: float):
 
     try:
         network_associated_to_project = client.networks.get(
-            get_network_resource_name(project_id, project_created_at_ts)
+            get_network_resource_name(archived_project.original_id)
         )
     except docker.errors.NotFound:
         # We will assume the network has been deleted before
         pass
     else:
         detach_network_from_proxy(network_associated_to_project)
+
+        # Wait for service to finish updating before deleting the network
+        @timeout(
+            DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+            exception_message="Timeout encountered when waiting for service to be updated",
+        )
+        def wait_for_service_to_update():
+            nonlocal client
+            for event in client.events(
+                decode=True, filters={"service": settings.CADDY_PROXY_SERVICE}
+            ):
+                print(dict(event=event))
+                if (
+                    event["Type"] == "service"
+                    and event.get("Action") == "update"
+                    and event.get("Actor", {})
+                    .get("Attributes", {})
+                    .get("updatestate.new")
+                    == "completed"
+                ):
+                    break
+
+        wait_for_service_to_update()
         network_associated_to_project.remove()
 
 
 def create_project_resources(project: Project):
     client = get_docker_client()
     network = client.networks.create(
-        name=get_network_resource_name(project.id, project.created_at.timestamp()),
+        name=get_network_resource_name(project.id),
         scope="swarm",
         driver="overlay",
-        labels=get_resource_labels(project),
+        labels=get_resource_labels(project.id),
         attachable=True,
     )
     attach_network_to_proxy(network)
@@ -188,16 +266,16 @@ def check_if_port_is_available_on_host(port: int) -> bool:
 
 def get_volume_resource_name(volume: Volume):
     ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
-    return f"vol-{volume.project.slug}-{volume.slug}-{ts_to_full_number}"
+    return f"vol-{volume.id}-{ts_to_full_number}"
 
 
-def create_docker_volume(volume: Volume):
+def create_docker_volume(volume: Volume, service: BaseService):
     client = get_docker_client()
 
     client.volumes.create(
         name=get_volume_resource_name(volume),
         driver="local",
-        labels=get_resource_labels(volume.project),
+        labels=get_resource_labels(service.project.id, parent=service.id),
     )
 
 
@@ -226,17 +304,11 @@ def get_docker_volume_size(volume: Volume) -> int:
     return int(size_string)
 
 
-def get_service_resource_name(
-    service: BaseService, service_type: Literal["docker"] | Literal["git"]
-):
-    ts_to_full_number = str(service.created_at.timestamp()).replace(".", "")
-    abbreviated_type = "dk" if service_type == "docker" else "git"
-    return f"ser-{abbreviated_type}-{service.project.slug}-{service.slug}-{ts_to_full_number}"
+def get_docker_service_resource_name(service_id: str, project_id: str):
+    return f"srv-docker-{project_id}-{service_id}"
 
 
-def create_service_from_docker_registry(
-    service: DockerRegistryService, deployment: DockerDeployment
-):
+def create_service_from_docker_registry(service: DockerRegistryService):
     # TODO: Pull Image Tag (#44)
     client = get_docker_client()
 
@@ -253,27 +325,33 @@ def create_service_from_docker_registry(
         endpoint_spec = EndpointSpec(ports=exposed_ports)
 
     mounts: list[str] = []
-    for volume in service.volumes.all():
-        docker_volume = client.volumes.get(get_volume_resource_name(volume))
+    docker_volume_list = client.volumes.list(
+        filters={
+            "label": [
+                f"{key}={value}"
+                for key, value in get_resource_labels(
+                    service.project.id, parent=service.id
+                ).items()
+            ]
+        }
+    )
+    for docker_volume, volume in zip(docker_volume_list, service.volumes.all()):
         mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
 
-    envs: list[str] = [
-        f"{env.key}={env.value}" for env in deployment.env_variables.all()
-    ]
+    envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
     client.services.create(
         image=service.image,
-        name=get_service_resource_name(service, "docker"),
+        name=get_docker_service_resource_name(
+            service_id=service.id,
+            project_id=service.project.id,
+        ),
         mounts=mounts,
         endpoint_spec=endpoint_spec,
         env=envs,
-        labels=get_resource_labels(service.project),
+        labels=get_resource_labels(service.project.id),
         command=service.command,
-        networks=[
-            get_network_resource_name(
-                service.project.id, service.project.created_at.timestamp()
-            )
-        ],
+        networks=[get_network_resource_name(service.project.id)],
         restart_policy=RestartPolicy(
             condition="on-failure",
             max_attempts=3,
@@ -326,10 +404,13 @@ def get_caddy_request_for_domain(domain: str):
     }
 
 
-def get_caddy_id_for_url(url: URL):
+def get_caddy_id_for_url(url: URL | ArchivedURL):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
     ).replace("/", "-")
+
+    if len(normalized_path) == 0:
+        normalized_path = "*"
 
     return f"{url.domain}-{normalized_path}"
 
@@ -337,7 +418,10 @@ def get_caddy_id_for_url(url: URL):
 def get_caddy_request_for_url(
     url: URL, service: DockerRegistryService, http_port: PortConfiguration
 ):
-    service_name = get_service_resource_name(service, service_type="docker")
+    service_name = get_docker_service_resource_name(
+        service_id=service.id,
+        project_id=service.project.id,
+    )
 
     proxy_handlers = []
 
@@ -415,15 +499,48 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
         )
         if response.status_code == status.HTTP_404_NOT_FOUND:
             response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}"
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
             )
-            domain_config = response.json()
-            routes: list[dict] = domain_config["handle"][0]["routes"]
+            routes = response.json()
             routes.append(get_caddy_request_for_url(url, service, http_port))
-            domain_config["handle"][0]["routes"] = sort_proxy_routes(routes)
+            routes = sort_proxy_routes(routes)
+            print(routes)
 
             requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
                 headers={"content-type": "application/json"},
-                json=domain_config,
+                json=routes,
             )
+
+
+def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
+    for url in service.urls.all():
+        # get all the routes of the domain
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+        )
+
+        if response.status_code != 404:
+            current_routes: list[dict[str, dict]] = response.json()
+            routes = list(
+                filter(
+                    lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                    current_routes,
+                )
+            )
+
+            # delete the domain and logger config when there are no routes for the domain anymore
+            if len(routes) == 0:
+                requests.delete(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                    headers={
+                        "content-type": "application/json",
+                        "accept": "application/json",
+                    },
+                )
+            else:
+                # in the other case, we just delete the caddy config
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+                )

@@ -6,7 +6,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from shortuuid.django_fields import ShortUUIDField
 
-from ..utils import strip_slash_if_exists
+from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
 from ..validators import validate_url_domain, validate_crontab, validate_url_path
 
 
@@ -26,19 +26,18 @@ class Project(TimestampedModel):
     slug = models.SlugField(max_length=255, unique=True)
     id = ShortUUIDField(
         length=11,
-        max_length=11,
+        max_length=255,
         primary_key=True,
+        prefix="prj_",
     )
 
     @property
     def create_task_id(self):
-        timestamp_to_full = str(self.updated_at.timestamp()).replace(".", "")
-        return f"create-prj-{self.slug}-{self.id}-{timestamp_to_full}"
+        return f"create-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
 
     @property
     def archive_task_id(self):
-        timestamp_to_full = str(self.updated_at.timestamp()).replace(".", "")
-        return f"archive-prj-{self.slug}-{self.id}-{timestamp_to_full}"
+        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
     def __str__(self):
         return f"Project({self.slug})"
@@ -72,8 +71,6 @@ class URL(models.Model):
 
 
 class BaseService(TimestampedModel):
-    name = models.CharField(max_length=255)
-    archived = models.BooleanField(default=False)
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     volumes = models.ManyToManyField(to="Volume")
@@ -87,13 +84,38 @@ class BaseService(TimestampedModel):
             "project",
         )
 
-    def __str__(self):
-        return f"{self.name} ({self.slug})"
+    def delete_resources(self):
+        self.ports.filter().delete()
+        self.urls.filter().delete()
+        self.volumes.filter().delete()
 
 
 class PortConfiguration(models.Model):
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
+
+    def __str__(self):
+        host_port = 80 if self.host is None else self.host
+        return f"PortConfiguration({host_port} -> {self.forwarded})"
+
+
+class BaseEnvVariable(models.Model):
+    key = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+
+    class Meta:
+        abstract = True
+
+
+class DockerEnvVariable(BaseEnvVariable):
+    service = models.ForeignKey(
+        to="DockerRegistryService",
+        on_delete=models.CASCADE,
+        related_name="env_variables",
+    )
+
+    def __str__(self):
+        return f"DockerEnvVariable({self.key})"
 
 
 class DockerRegistryService(BaseService):
@@ -105,6 +127,19 @@ class DockerRegistryService(BaseService):
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="srv_dkr_",
+    )
+
+    def __str__(self):
+        return f"DockerRegistryService({self.slug})"
+
+    @property
+    def archive_task_id(self):
+        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
 
 class GitRepositoryService(BaseService):
@@ -120,38 +155,32 @@ class GitRepositoryService(BaseService):
     dockerfile_path = models.CharField(max_length=255, default="./Dockerfile")
     docker_build_context_dir = models.CharField(max_length=255, default=".")
     docker_cmd = models.CharField(max_length=255, null=True, blank=True)
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="srv_git_",
+    )
 
 
-class EnvVariable(models.Model):
-    key = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
-    is_for_production = models.BooleanField(default=True)
-    project = models.ForeignKey(
-        to=Project,
+class GitEnvVariable(BaseEnvVariable):
+    service = models.ForeignKey(
+        to="GitRepositoryService",
         on_delete=models.CASCADE,
+        related_name="env_variables",
     )
 
     def __str__(self):
-        return f"EnvVariable ({self.key})"
+        return f"GitEnvVariable({self.key})"
 
 
 class Volume(TimestampedModel):
     name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255)
-    project = models.ForeignKey(
-        to=Project,
-        on_delete=models.CASCADE,
-    )
     containerPath = models.CharField(max_length=255)
-
-    class Meta:
-        unique_together = (
-            "slug",
-            "project",
-        )
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix="vol_")
 
     def __str__(self):
-        return f"Volume ({self.slug})"
+        return f"Volume({self.name})"
 
 
 class BaseDeployment(models.Model):
@@ -169,8 +198,6 @@ class BaseDeployment(models.Model):
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.PENDING,
     )
-    hash = ShortUUIDField(length=11, max_length=11, unique=True)
-    env_variables = models.ManyToManyField(to="EnvVariable")
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
 
@@ -180,9 +207,11 @@ class BaseDeployment(models.Model):
 
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
 
-    def get_task_id(self):
-        return f"dpl-docker-{self.hash}-{self.service.slug}-{self.service.project.slug}"
+    @property
+    def task_id(self):
+        return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
 
 
 class GitDeployment(BaseDeployment):
@@ -206,6 +235,7 @@ class GitDeployment(BaseDeployment):
     service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
     commit_author_username = models.CharField(max_length=255)
     commit_author_avatar_url = models.URLField(null=True)
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_git_")
 
     @property
     def image_tags(self) -> List[str]:
@@ -333,7 +363,8 @@ class Worker(models.Model):
         to=Project,
         on_delete=models.CASCADE,
     )
-    env_variables = models.ManyToManyField(to=EnvVariable)
+    # TODO : when working with workers
+    # env_variables = models.ManyToManyField(to=EnvVariable)
 
     class Meta:
         abstract = True

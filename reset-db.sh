@@ -1,3 +1,13 @@
+#!/bin/bash
+read -p "Are you sure? (Y/N): " -n 1 -r
+echo    # (optional) move to a new line
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo "Bye... 👋"
+    [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
+fi
+
+
 echo "Flushing the database..."
 source ./backend/venv/bin/activate && echo yes | python ./backend/manage.py flush
 
@@ -35,7 +45,7 @@ fi
 echo "Deleting networks..."
 docker network rm $(docker network ls -q --filter label=zane-managed=true) 2>/dev/null
 
-# Reset caddy config
+echo "Resetting caddy config..."
 sed -i'.bak' "s#{{ZANE_HOST}}#zane.local#g" ./docker/proxy/default-caddy-config.json
 
 curl "http://localhost:2019/load" \

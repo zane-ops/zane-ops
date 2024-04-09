@@ -8,7 +8,7 @@ from rest_framework import status
 from . import AuthAPITestCase
 from .base import APITestCase
 from ..docker_operations import create_docker_volume, remove_docker_volume
-from ..models import Project, Volume
+from ..models import Project, Volume, DockerRegistryService
 
 
 class FakeDockerClient:
@@ -58,12 +58,13 @@ class DockerVolumeTests(APITestCase):
         "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
     )
     def test_create_volume_successful(self, mock_fake_docker: Mock):
+        service = DockerRegistryService.objects.create(
+            project=Project.objects.get(slug="zane-ops")
+        )
         volume = Volume.objects.create(
             name="postgres DB Data",
-            slug="postgres-db-data",
-            project=Project.objects.first(),
         )
-        create_docker_volume(volume)
+        create_docker_volume(volume, service)
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
         self.assertEqual(1, len(fake_docker_client.volume_map))
 
@@ -71,12 +72,13 @@ class DockerVolumeTests(APITestCase):
         "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
     )
     def test_remove_volume_successful(self, mock_fake_docker: Mock):
+        service = DockerRegistryService.objects.create(
+            project=Project.objects.get(slug="zane-ops")
+        )
         volume = Volume.objects.create(
             name="postgres DB Data",
-            slug="postgres-db-data",
-            project=Project.objects.first(),
         )
-        create_docker_volume(volume)
+        create_docker_volume(volume, service)
 
         remove_docker_volume(volume)
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
@@ -90,8 +92,6 @@ class DockerVolumeTests(APITestCase):
     ):
         volume = Volume.objects.create(
             name="postgres DB Data",
-            slug="postgres-db-data",
-            project=Project.objects.first(),
         )
 
         remove_docker_volume(volume)
@@ -111,11 +111,10 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
     def test_get_volume_size(self, _: Mock):
         volume = Volume.objects.create(
             name="postgres DB Data",
-            slug="postgres-db-data",
-            project=Project.objects.first(),
         )
+
         response = self.client.get(
-            reverse("zane_api:volume.size", kwargs={"slug": volume.slug})
+            reverse("zane_api:volume.size", kwargs={"volume_id": volume.id})
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
@@ -126,7 +125,7 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
     )
     def test_non_existant_volume(self, _: Mock):
         response = self.client.get(
-            reverse("zane_api:volume.size", kwargs={"slug": "postgres-db-data"})
+            reverse("zane_api:volume.size", kwargs={"volume_id": "abcDefGh1jk"})
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
         data = response.json()

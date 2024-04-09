@@ -32,7 +32,9 @@ def validate_url_path(value: str):
     try:
         validate_url("https://zane.com" + value)
         parsed = urlparse("https://zane.com" + value)
-        if not parsed.path == value or ".." in value:
+        if not parsed.path == value or ".." in value or "*" in value:
             raise ValidationError("Invalid Path")
     except ValidationError:
-        raise ValidationError("should be a valid url segment starting with `/`")
+        raise ValidationError(
+            "should be a valid url segment starting with `/`, not containing `..` or `*`"
+        )

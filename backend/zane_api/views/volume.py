@@ -24,17 +24,19 @@ class VolumeGetSizeView(APIView):
             403: forbidden_serializer_class,
             404: error_serializer_class,
         },
-        operation_id="getVolumeSize"
+        operation_id="getVolumeSize",
     )
-    def get(self, request: Request, slug: str):
+    def get(self, request: Request, volume_id: str):
         try:
-            volume = Volume.objects.get(slug=slug)
+            volume = Volume.objects.get(id=volume_id)
         except Volume.DoesNotExist:
-            response = self.error_serializer_class({
-                'errors': {
-                    'root': [f"A volume with the slug `{slug}` does not exist"]
+            response = self.error_serializer_class(
+                {
+                    "errors": {
+                        "root": [f"A volume with the id `{volume_id}` does not exist"]
+                    }
                 }
-            })
+            )
             return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         else:
             size = get_docker_volume_size(volume)
