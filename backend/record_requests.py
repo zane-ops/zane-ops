@@ -193,32 +193,52 @@ def fetch_etag(url: str):
     return etag
 
 
-def apply_config_changes(
-    url: str, request_function: Callable[[str, dict], Response], retry_count=3
-):
-    for attempt in range(retry_count):
-        etag = fetch_etag(url)
-
-        if not etag:
-            raise Exception("Failed to retrieve new ETag. ")
-
-        headers = {"If-Match": etag, "Content-Type": "application/json"}
-        response = request_function(
-            url,
-            headers,
-        )
-        if response.status_code == 412:
-            print(f"Collision detected, retrying... (Attempt {attempt + 1})")
-            continue
-        return response
-    raise Exception("Failed to apply changes after several attempts.")
+#
+# def apply_config_changes(
+#     url: str, request_function: Callable[[str, dict], Response], retry_count=3
+# ):
+#     for attempt in range(retry_count):
+#         etag = fetch_etag(url)
+#
+#         if not etag:
+#             raise Exception("Failed to retrieve new ETag. ")
+#
+#         headers = {"If-Match": etag, "Content-Type": "application/json"}
+#         response = request_function(
+#             url,
+#             headers,
+#         )
+#         if response.status_code == 412:
+#             print(f"Collision detected, retrying... (Attempt {attempt + 1})")
+#             continue
+#         return response
+#     raise Exception("Failed to apply changes after several attempts.")
 
 
 if __name__ == "__main__":
     # fetch_config("apps")
-    etag, body = fetch_etag(
-        "localhost:2019/config/apps/http/servers/zane/routes"
-    )
-    print(f"Etag={etag}")
+    # etag, body = fetch_etag(
+    #     "localhost:2019/config/apps/http/servers/zane/routes"
+    # )
+    # print(f"Etag={etag}")
     # print(f"Body={json.dumps(json.loads(body), indent=2)}")
+    from wrapt_timeout_decorator import timeout
+    import docker
+
+    client = docker.from_env()
+
+    @timeout(5)
+    def mytest(message):
+        print(message)
+        # for i in range(1, 10):
+        for event in client.events(decode=True):
+            print(dict(event=event))
+            pass
+        # i = 0
+        # while True:
+        #     i += 1
+        #     # time.sleep(1)
+        #     print("{} loop cycles have passed".format(i))
+
+    mytest("starting")
     pass

@@ -54,7 +54,7 @@ def create_docker_resources_for_project(project_slug: str):
 
 
 @shared_task(
-    autoretry_for=(docker.errors.APIError,),
+    autoretry_for=(docker.errors.APIError, TimeoutError),
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
 def delete_docker_resources_for_project(archived_project_id: int):
@@ -74,7 +74,7 @@ def delete_docker_resources_for_project(archived_project_id: int):
 
 
 @shared_task(
-    autoretry_for=(docker.errors.APIError,),
+    autoretry_for=(docker.errors.APIError, TimeoutError),
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
 def delete_resources_for_docker_service(archived_service_id: id):

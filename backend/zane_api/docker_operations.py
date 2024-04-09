@@ -8,6 +8,7 @@ from django.conf import settings
 from docker.models.networks import Network
 from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
 from rest_framework import status
+from wrapt_timeout_decorator import timeout
 
 from .models import (
     Project,
@@ -24,6 +25,7 @@ from .utils import strip_slash_if_exists
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
+DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
 
 
 def get_docker_client():
@@ -123,34 +125,42 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
         pass
     else:
         service.remove()
-        # Wait for service to be completely deleted
-        for event in client.events(
-            decode=True,
-            filters={
-                "service": get_docker_service_resource_name(
-                    service_id=archived_service.original_id,
-                    project_id=archived_service.project.original_id,
-                )
-            },
-        ):
-            print(dict(event=event))
-            if event["Type"] == "container" and event["status"] == "destroy":
-                break
 
-        docker_volume_list = client.volumes.list(
-            filters={
-                "label": [
-                    f"{key}={value}"
-                    for key, value in get_resource_labels(
-                        archived_service.project.original_id,
-                        parent=archived_service.original_id,
-                    ).items()
-                ]
-            }
+        @timeout(
+            DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+            exception_message="Timeout encountered when waiting for service to be down",
         )
+        def wait_for_service_to_be_down():
+            nonlocal client
+            for event in client.events(
+                decode=True,
+                filters={
+                    "service": get_docker_service_resource_name(
+                        service_id=archived_service.original_id,
+                        project_id=archived_service.project.original_id,
+                    )
+                },
+            ):
+                print(dict(event=event))
+                if event["Type"] == "container" and event["status"] == "destroy":
+                    break
 
-        for volume in docker_volume_list:
-            volume.remove(force=True)
+        wait_for_service_to_be_down()
+
+    docker_volume_list = client.volumes.list(
+        filters={
+            "label": [
+                f"{key}={value}"
+                for key, value in get_resource_labels(
+                    archived_service.project.original_id,
+                    parent=archived_service.original_id,
+                ).items()
+            ]
+        }
+    )
+
+    for volume in docker_volume_list:
+        volume.remove(force=True)
 
 
 def cleanup_project_resources(archived_project: ArchivedProject):
@@ -182,17 +192,27 @@ def cleanup_project_resources(archived_project: ArchivedProject):
         detach_network_from_proxy(network_associated_to_project)
 
         # Wait for service to finish updating before deleting the network
-        for event in client.events(
-            decode=True, filters={"service": settings.CADDY_PROXY_SERVICE}
-        ):
-            print(dict(event=event))
-            if (
-                event["Type"] == "service"
-                and event.get("Action") == "update"
-                and event.get("Actor", {}).get("Attributes", {}).get("updatestate.new")
-                == "completed"
+        @timeout(
+            DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+            exception_message="Timeout encountered when waiting for service to be updated",
+        )
+        def wait_for_service_to_update():
+            nonlocal client
+            for event in client.events(
+                decode=True, filters={"service": settings.CADDY_PROXY_SERVICE}
             ):
-                break
+                print(dict(event=event))
+                if (
+                    event["Type"] == "service"
+                    and event.get("Action") == "update"
+                    and event.get("Actor", {})
+                    .get("Attributes", {})
+                    .get("updatestate.new")
+                    == "completed"
+                ):
+                    break
+
+        wait_for_service_to_update()
         network_associated_to_project.remove()
 
 
