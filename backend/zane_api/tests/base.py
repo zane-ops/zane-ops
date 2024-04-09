@@ -28,21 +28,6 @@ from ..models import Project
 )
 class APITestCase(TestCase):
     client = APIClient(enforce_csrf_checks=True, content_type="application/json")
-    INITIAL_CADDY_CONFIG = {
-        "@id": "root",
-        "apps": {
-            "http": {
-                "servers": {
-                    "zane": {
-                        "@id": "zane-server",
-                        "listen": [":443", ":80"],
-                        "logs": {"logger_names": {}},
-                        "routes": [{"terminal": True}],
-                    }
-                }
-            }
-        },
-    }
 
     def tearDown(self):
         cache.clear()
