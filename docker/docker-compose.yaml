@@ -5,7 +5,10 @@ services:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
-    command: celery -A backend worker -E -l info
+    command: >
+      bash -c "source /venv/bin/activate &&
+               uv pip install -r requirements.txt &&
+               celery -A backend worker -E -l info"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock
@@ -17,11 +20,16 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
+      VIRTUAL_ENV: /venv
   celery-beat:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
-    command: celery -A backend beat -l info
+
+    command: >
+      bash -c "source /venv/bin/activate &&
+               uv pip install -r requirements.txt &&
+               celery -A backend beat -l info"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock
@@ -30,22 +38,6 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
-    depends_on:
-      - db
-      - redis
-  celery-flower:
-    build:
-      context: ../backend
-      dockerfile: ../backend/Dockerfile
-    command: celery -A backend flower -l info
-    volumes:
-      - ../backend:/code
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      DB_HOST: db
-      DB_PORT: 5432
-    ports:
-      - 5555:5555
     depends_on:
       - db
       - redis
