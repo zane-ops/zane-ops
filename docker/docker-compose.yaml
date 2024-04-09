@@ -20,7 +20,6 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
-      VIRTUAL_ENV: /venv
   celery-beat:
     build:
       context: ../backend
