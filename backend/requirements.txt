@@ -18,7 +18,6 @@ django-celery-beat==2.6.0
 django-celery-results==2.5.1
 django-compat==1.0.15
 django-filter==23.5
-django-ratelimit==4.1.0
 django-timezone-field==6.1.0
 djangorestframework==3.14.0
 docker==7.0.0
