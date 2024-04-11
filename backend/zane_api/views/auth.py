@@ -93,8 +93,6 @@ class LoginView(APIView):
         },
         operation_id="login",
     )
-    # @method_decorator(ratelimit(key="ip", rate="5/m"))
-    # @method_decorator(ratelimit(key="post:username", rate="5/m"))
     def post(self, request: Request) -> Response:
         form = LoginRequestSerializer(data=request.data)
         if form.is_valid():
