@@ -10,6 +10,6 @@
     "makemigration": "source ./venv/bin/activate && python manage.py makemigrations",
     "migrate": "source ./venv/bin/activate && python manage.py migrate",
     "openapi": "source ./venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",
-    "freeze": "source ./venv/bin/activate && pip freeze > requirements.txt"
+    "freeze": "source ./venv/bin/activate && uv pip freeze > requirements.txt"
   }
 }

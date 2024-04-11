@@ -3,11 +3,9 @@ from typing import Any
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django_ratelimit.decorators import ratelimit
-from django_ratelimit.exceptions import Ratelimited
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, permissions
-from rest_framework.exceptions import NotAuthenticated, PermissionDenied
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied, Throttled
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,16 +17,18 @@ EMPTY_RESPONSE: dict = {}
 
 
 def custom_exception_handler(exception: Any, context: Any) -> Response:
-    if isinstance(exception, Ratelimited):
+    if isinstance(exception, Throttled):
         return Response(
             {
                 "errors": {
                     "root": [
-                        "Too Many Requests",
+                        f"You made too Many requests in a short amount of time, "
+                        f"Please wait for {exception.wait} seconds before retrying your action.",
                     ]
                 }
             },
             status=status.HTTP_429_TOO_MANY_REQUESTS,
+            headers={"Retry-After": exception.wait},
         )
 
     if isinstance(exception, NotAuthenticated):
@@ -93,8 +93,6 @@ class LoginView(APIView):
         },
         operation_id="login",
     )
-    @method_decorator(ratelimit(key="ip", rate="5/m"))
-    @method_decorator(ratelimit(key="post:username", rate="5/m"))
     def post(self, request: Request) -> Response:
         form = LoginRequestSerializer(data=request.data)
         if form.is_valid():
