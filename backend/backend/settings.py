@@ -218,8 +218,7 @@ REST_FRAMEWORK = {
         "anon": "5/minute",
     },
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
-    # "EXCEPTION_HANDLER": "zane_api.views.auth.custom_exception_handler",
-    "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
+    "EXCEPTION_HANDLER": "zane_api.views.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
