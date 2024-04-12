@@ -19,7 +19,7 @@ def custom_exception_handler(exception: Any, context: Any) -> Response:
             f"Please wait for {exception.wait} seconds before retrying your action.",
         )
     if isinstance(exception, NotAuthenticated):
-        exception.detail = NotAuthenticated(
+        exception = NotAuthenticated(
             detail="Authentication required. Please log in to access this resource.",
             code=exception.default_code,
         )

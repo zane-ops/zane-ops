@@ -1,5 +1,3 @@
-import json
-
 from django.urls import reverse
 from rest_framework import status
 
@@ -44,7 +42,7 @@ class AuthLoginViewTests(AuthAPITestCase):
                 data={},
             )
         self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code)
-        print(json.dumps(response.json(), indent=2))
+
         self.assertIsNotNone(response.json().get("errors"))
 
 

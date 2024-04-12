@@ -1,14 +1,8 @@
-from typing import Any
-
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
-from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
-# from rest_framework.views import exception_handler
-from drf_standardized_errors.handler import exception_handler
 from rest_framework import status, permissions
-from rest_framework.exceptions import NotAuthenticated, PermissionDenied, Throttled
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,50 +10,6 @@ from rest_framework.views import APIView
 from .. import serializers
 
 EMPTY_RESPONSE: dict = {}
-
-
-class CustomPermissionDenied(PermissionDenied):
-    status_code = status.HTTP_401_UNAUTHORIZED
-
-
-class CustomNotAuthenticated(NotAuthenticated):
-    default_detail = _(
-        "Authentication required. Please log in to access this resource."
-    )
-
-
-def custom_exception_handler(exception: Any, context: Any) -> Response:
-    if isinstance(exception, Throttled):
-        return Response(
-            {
-                "errors": {
-                    "root": [
-                        f"You made too Many requests in a short amount of time, "
-                        f"Please wait for {exception.wait} seconds before retrying your action.",
-                    ]
-                }
-            },
-            status=status.HTTP_429_TOO_MANY_REQUESTS,
-            headers={"Retry-After": exception.wait},
-        )
-
-    if isinstance(exception, NotAuthenticated):
-        response = serializers.ForbiddenResponseSerializer(
-            {
-                "errors": {
-                    "root": [
-                        "Authentication required. Please log in to access this resource."
-                    ]
-                }
-            }
-        )
-        return Response(
-            response.data,
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-    if isinstance(exception, PermissionDenied):
-        exception = CustomPermissionDenied()
-    return exception_handler(exception, context)
 
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
