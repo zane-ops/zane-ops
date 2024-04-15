@@ -25,18 +25,6 @@ class ErrorResponse409Serializer(serializers.Serializer):
     errors = Error409Serializer(many=True)
 
 
-class StringListField(ListField):
-    child = CharField()
-
-
-class BaseErrorSerializer(Serializer):
-    root = StringListField(required=False)
-
-
-class BaseErrorResponseSerializer(Serializer):
-    errors = BaseErrorSerializer()
-
-
 class URLPathField(CharField):
     default_validators = [validate_url_path]
 
@@ -110,7 +98,3 @@ class DockerServiceSerializer(ModelSerializer):
             "ports",
             "env_variables",
         ]
-
-
-class ForbiddenResponseSerializer(BaseErrorResponseSerializer):
-    pass

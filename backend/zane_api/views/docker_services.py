@@ -389,7 +389,6 @@ class CreateDockerServiceAPIView(APIView):
 
 class GetDockerServiceAPIView(APIView):
     serializer_class = DockerServiceResponseSerializer
-    error_serializer_class = serializers.BaseErrorResponseSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,

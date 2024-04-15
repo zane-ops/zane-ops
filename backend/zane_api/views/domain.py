@@ -1,6 +1,5 @@
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,13 +13,8 @@ class GetRootDomainSerializer(serializers.Serializer):
 
 class GetRootDomainView(APIView):
     serializer_class = GetRootDomainSerializer
-    error_serializer_class = serializers.ForbiddenResponseSerializer
 
     @extend_schema(
-        responses={
-            200: serializer_class,
-            403: error_serializer_class,
-        },
         operation_id="getRootDomain",
     )
     def get(self, _: Request) -> Response:
@@ -28,8 +22,3 @@ class GetRootDomainView(APIView):
 
         if response.is_valid():
             return Response(response.data)
-
-        return Response(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            data={"errors": {"root": response.errors}},
-        )
