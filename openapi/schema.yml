@@ -2,7 +2,8 @@ openapi: 3.0.3
 info:
   title: ZaneOps API
   version: 1.0.0
-  description: Your deployment, simplified. Everything handled for you.
+  description: ZaneOps is a self-hosted, open source platform as a service for hosting
+    static sites, web apps, databases, CRONS, Workers using docker swarm as the engine.
 paths:
   /api/auth/login/:
     post:
@@ -64,20 +65,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -177,20 +164,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -235,20 +208,6 @@ paths:
           description: ''
         '204':
           description: No response body
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
   /api/auth/me/:
     get:
       operationId: getAuthedUser
@@ -296,20 +255,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -360,20 +305,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
           description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
   /api/csrf/:
     get:
       operationId: csrf_retrieve
@@ -423,20 +354,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -540,20 +457,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -686,20 +589,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -829,20 +718,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -938,20 +813,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -1105,20 +966,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -1244,20 +1091,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -1394,20 +1227,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -1548,20 +1367,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -1708,20 +1513,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -1852,20 +1643,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -2010,20 +1787,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -2161,20 +1924,6 @@ paths:
                       detail: Method "get" not allowed.
                       attr: null
           description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
-                      attr: null
-          description: ''
         '415':
           content:
             application/json:
@@ -2301,20 +2050,6 @@ paths:
                     errors:
                     - code: method_not_allowed
                       detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '406':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse406'
-              examples:
-                NotAcceptable:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_acceptable
-                      detail: Could not satisfy the request Accept header.
                       attr: null
           description: ''
         '415':
@@ -3683,20 +3418,6 @@ components:
       - attr
       - code
       - detail
-    Error406:
-      type: object
-      properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode406Enum'
-        detail:
-          type: string
-        attr:
-          type: string
-          nullable: true
-      required:
-      - attr
-      - code
-      - detail
     Error415:
       type: object
       properties:
@@ -3752,11 +3473,6 @@ components:
       - method_not_allowed
       type: string
       description: '* `method_not_allowed` - Method Not Allowed'
-    ErrorCode406Enum:
-      enum:
-      - not_acceptable
-      type: string
-      description: '* `not_acceptable` - Not Acceptable'
     ErrorCode415Enum:
       enum:
       - unsupported_media_type
@@ -3793,18 +3509,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Error405'
-      required:
-      - errors
-      - type
-    ErrorResponse406:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ClientErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error406'
       required:
       - errors
       - type
