@@ -1,6 +1,8 @@
 from drf_standardized_errors.handler import ExceptionHandler
 from rest_framework import exceptions, status
 
+EMPTY_RESPONSE = {}
+
 
 class CustomThrottledException(exceptions.Throttled):
     default_detail = "You made too Many requests in a short amount of time,"

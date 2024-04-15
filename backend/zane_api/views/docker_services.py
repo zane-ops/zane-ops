@@ -4,14 +4,14 @@ import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.db.models import Q
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
-from rest_framework import status
+from rest_framework import status, exceptions
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import EMPTY_RESPONSE
+from .base import EMPTY_RESPONSE, ResourceConflict
 from .. import serializers
 from ..docker_operations import (
     login_to_docker_registry,
@@ -56,6 +56,14 @@ class URLRequestSerializer(serializers.Serializer):
     strip_prefix = serializers.BooleanField(required=False, default=True)
 
     def validate(self, url: dict[str, str]):
+        if url["domain"] == settings.ZANE_APP_DOMAIN:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        "Using the domain where zaneOps is installed is not allowed."
+                    ]
+                }
+            )
         existing_urls = URL.objects.filter(
             domain=url["domain"].lower(), base_path=url["base_path"].lower()
         ).distinct()
@@ -63,7 +71,7 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        f"""URL with domain "{url['domain']}" and base path "{url['base_path']}" """
+                        f"""URL with domain `{url['domain']}` and base path `{url['base_path']}` """
                         f"is already assigned to another service."
                     ]
                 }
@@ -124,7 +132,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                     raise serializers.ValidationError(
                         {
                             "urls": [
-                                f"Cannot specify both a custom URL and a public port other than HTTP"
+                                f"Cannot specify both a custom URL and a public port other than a HTTP port (80/443)"
                             ]
                         }
                     )
@@ -193,10 +201,6 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     def validate_urls(self, value: list[dict[str, str]]):
         urls_seen = set()
         for url in value:
-            if url["domain"] == settings.ZANE_APP_DOMAIN:
-                raise serializers.ValidationError(
-                    "Using the domain where zaneOps is installed is not allowed."
-                )
             new_url = (url["domain"], url["base_path"])
             if new_url in urls_seen:
                 raise serializers.ValidationError(
@@ -217,49 +221,16 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         return value
 
 
-class DockerServiceCreateSuccessResponseSerializer(serializers.Serializer):
+class DockerServiceResponseSerializer(serializers.Serializer):
     service = serializers.DockerServiceSerializer(read_only=True)
 
 
-class CredentialErrorSerializer(serializers.Serializer):
-    username = serializers.StringListField(required=False)
-    password = serializers.StringListField(required=False)
-    registry_url = serializers.StringListField(required=False)
-
-
-class URLsErrorSerializer(serializers.Serializer):
-    domain = serializers.StringListField(required=False)
-    base_path = serializers.StringListField(required=False)
-
-
-class DockerServiceCreateErrorSerializer(serializers.BaseErrorSerializer):
-    slug = serializers.StringListField(required=False)
-    image = serializers.StringListField(required=False)
-    command = serializers.StringListField(required=False)
-    credentials = CredentialErrorSerializer(required=False)
-    urls = URLsErrorSerializer(required=False, many=True)
-    ports = serializers.StringListField(required=False)
-    env = serializers.StringListField(required=False)
-    volumes = serializers.StringListField(required=False)
-
-
-class DockerServiceCreateErrorResponseSerializer(serializers.Serializer):
-    errors = DockerServiceCreateErrorSerializer()
-
-
 class CreateDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceCreateSuccessResponseSerializer
-    error_serializer_class = DockerServiceCreateErrorResponseSerializer
-
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
-            # TODO
-            # 422: DockerServiceCreateErrorResponseSerializer,
-            404: error_serializer_class,
-            409: error_serializer_class,
-            201: serializer_class,
-            403: serializers.ForbiddenResponseSerializer,
+            409: serializers.ErrorResponse409Serializer,
+            201: DockerServiceResponseSerializer,
         },
         operation_id="createDockerService",
     )
@@ -268,19 +239,12 @@ class CreateDockerServiceAPIView(APIView):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
         except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [
-                            f"A project with the slug `{project_slug}` does not exist"
-                        ],
-                    }
-                }
+            raise exceptions.NotFound(
+                f"A project with the slug `{project_slug}` does not exist"
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         else:
             form = DockerServiceCreateRequestSerializer(data=request.data)
-            if form.is_valid():
+            if form.is_valid(raise_exception=True):
                 data = form.data
 
                 # Create service in DB
@@ -306,16 +270,9 @@ class CreateDockerServiceAPIView(APIView):
                         ),
                     )
                 except IntegrityError:
-                    response = self.error_serializer_class(
-                        {
-                            "errors": {
-                                "slug": [
-                                    f"A service with the slug `{service_slug}` already exists."
-                                ]
-                            }
-                        }
+                    raise ResourceConflict(
+                        detail=f"A service with the slug `{service_slug}` already exists."
                     )
-                    return Response(response.data, status=status.HTTP_409_CONFLICT)
 
                 # Create volumes if exists
                 volumes_request = data.get("volumes", [])
@@ -426,44 +383,25 @@ class CreateDockerServiceAPIView(APIView):
                     task_id=first_deployment.task_id,
                 )
 
-                response = self.serializer_class({"service": service})
+                response = DockerServiceResponseSerializer({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
-
-            # TODO: format errors correctly using `DRF Standardized Errors`
-            # response = self.error_serializer_class({"errors": form.errors})
-            return Response(
-                data={"errors": form.errors},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            )
 
 
 class GetDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceCreateSuccessResponseSerializer
+    serializer_class = DockerServiceResponseSerializer
     error_serializer_class = serializers.BaseErrorResponseSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
-        responses={
-            404: error_serializer_class,
-            200: serializer_class,
-            403: serializers.ForbiddenResponseSerializer,
-        },
         operation_id="getDockerService",
     )
     def get(self, request: Request, project_slug: str, service_slug: str):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [
-                            f"A project with the slug `{project_slug}` does not exist"
-                        ],
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
         service = (
             DockerRegistryService.objects.filter(
@@ -474,34 +412,21 @@ class GetDockerServiceAPIView(APIView):
         ).first()
 
         if service is None:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [
-                            f"A service with the slug `{service_slug}`"
-                            f" does not exist within the project `{project_slug}`"
-                        ],
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
-        response = self.serializer_class({"service": service})
+        response = DockerServiceResponseSerializer({"service": service})
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class AchiveDockerServiveSuccessResponse(serializers.Serializer):
-    pass
-
-
 class ArchiveDockerServiceAPIView(APIView):
-    error_serializer = serializers.BaseErrorResponseSerializer
-
     @extend_schema(
         responses={
-            204: AchiveDockerServiveSuccessResponse,
-            404: error_serializer,
-            403: serializers.ForbiddenResponseSerializer,
+            204: inline_serializer(
+                name="AchiveDockerServiveResponseSerializer", fields={}
+            ),
         },
         operation_id="archiveDockerService",
     )
@@ -513,16 +438,9 @@ class ArchiveDockerServiceAPIView(APIView):
         ).first()
 
         if project is None:
-            response = self.error_serializer(
-                {
-                    "errors": {
-                        "root": [
-                            f"A project with the slug `{project_slug}` does not exist."
-                        ]
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
         service: DockerRegistryService = (
             DockerRegistryService.objects.filter(
@@ -533,16 +451,9 @@ class ArchiveDockerServiceAPIView(APIView):
         ).first()
 
         if service is None:
-            response = self.error_serializer(
-                {
-                    "errors": {
-                        "root": [
-                            f"A service with the slug `{service_slug}` does not exist in this project"
-                        ]
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
         archived_project = (
             project.archived_version if hasattr(project, "archived_version") else None

@@ -12,7 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import EMPTY_RESPONSE, ResourceConflict
+from .base import EMPTY_RESPONSE, ResourceConflict
 from .. import serializers
 from ..models import (
     Project,

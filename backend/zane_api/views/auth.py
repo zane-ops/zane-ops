@@ -8,9 +8,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .base import EMPTY_RESPONSE
 from .. import serializers
-
-EMPTY_RESPONSE: dict = {}
 
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
