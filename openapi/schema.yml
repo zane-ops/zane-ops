@@ -2,7 +2,28 @@ openapi: 3.0.3
 info:
   title: ZaneOps API
   version: 1.0.0
-  description: Your deployment, simplified. Everything handled for you.
+  description: "\n\n## Overview\n\nZaneOps is a self-hosted, open source platform\
+    \ as a service for hosting static sites, web apps, \ndatabases, CRONS, Workers\
+    \ using docker swarm as the engine.\n\n## Errors\n\n### 405 Method Not Allowed\n\
+    \nThis is returned when an endpoint is called with an unexpected http method.\
+    \ For example, if updating a user requires\na POST request and a PATCH is issued\
+    \ instead, this error is returned. Here's how it looks like:\n\n```json\n{\n \
+    \ \"type\": \"client_error\",\n  \"errors\": [\n    {\n      \"code\": \"method_not_allowed\"\
+    ,\n      \"detail\": \"Method “patch” not allowed.\",\n      \"attr\": null\n\
+    \    }\n  ]\n}\n```\n\n### 406 Not Acceptable\n\nThis is returned if the `Accept`\
+    \ header is submitted and contains a value other than `application/json`. Here's\
+    \ how the\nresponse would look:\n\n```json\n{\n  \"type\": \"client_error\",\n\
+    \  \"errors\": [\n    {\n      \"code\": \"not_acceptable\",\n      \"detail\"\
+    : \"Could not satisfy the request Accept header.\",\n      \"attr\": null\n  \
+    \  }\n  ]\n}\n```\n\n### 415 Unsupported Media Type\n\nThis is returned when the\
+    \ request content type is not json. Here's how the response would look:\n\n```json\n\
+    {\n  \"type\": \"client_error\",\n  \"errors\": [\n    {\n      \"code\": \"not_acceptable\"\
+    ,\n      \"detail\": \"Unsupported media type “application/xml” in request.\"\
+    ,\n      \"attr\": null\n    }\n  ]\n}\n```\n\n### 500 Internal Server Error\n\
+    \nThis is returned when the API server encounters an unexpected error. Here's\
+    \ how the response would look:\n\n```json\n{\n  \"type\": \"server_error\",\n\
+    \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
+    \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
   /api/auth/login/:
     post:
@@ -25,29 +46,52 @@ paths:
       - cookieAuth: []
       - {}
       responses:
-        '201':
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginSuccessResponse'
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginErrorResponse'
+                $ref: '#/components/schemas/LoginErrorResponse400'
           description: ''
         '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
           description: ''
         '429':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
           description: ''
   /api/auth/logout/:
     delete:
@@ -57,14 +101,49 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '204':
-          description: No response body
-        '403':
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
+                $ref: '#/components/schemas/LogoutErrorResponse400'
           description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/auth/me/:
     get:
       operationId: getAuthedUser
@@ -73,17 +152,52 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAuthedUserErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
           description: ''
   /api/csrf/:
     get:
@@ -95,6 +209,47 @@ paths:
       - cookieAuth: []
       - {}
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -121,6 +276,41 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -138,6 +328,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
         '422':
           content:
@@ -160,6 +358,47 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchDockerRegistryErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -171,6 +410,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
         '422':
           content:
@@ -198,29 +445,52 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '200':
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerLoginSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerLoginErrorResponse'
+                $ref: '#/components/schemas/DockerLoginErrorResponse400'
           description: ''
         '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerLoginErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerLoginSuccessResponse'
           description: ''
   /api/domain/root/:
     get:
@@ -230,6 +500,47 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRootDomainErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -241,6 +552,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
   /api/projects/:
     get:
@@ -290,23 +609,52 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProjectListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
+                $ref: '#/components/schemas/ProjectListResponse'
           description: ''
     post:
       operationId: createProject
@@ -326,35 +674,58 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProjectErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
+                $ref: '#/components/schemas/SingleProjectResponse'
           description: ''
         '409':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
@@ -377,6 +748,47 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '204':
           description: No response body
         '404':
@@ -384,12 +796,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseErrorResponse'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
         '403':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
   /api/projects/{project_slug}/create-service/docker/:
     post:
@@ -418,11 +846,60 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DockerServiceCreateErrorResponse'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
         '409':
           content:
@@ -441,6 +918,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/:
     get:
@@ -463,11 +948,60 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseErrorResponse'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
         '200':
           content:
@@ -480,6 +1014,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
   /api/projects/{slug}/:
     get:
@@ -496,23 +1038,66 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '200':
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectSuccessResponse'
+                $ref: '#/components/schemas/GetSingleProjectErrorResponse400'
           description: ''
-        '403':
+        '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleProjectResponse'
           description: ''
     patch:
       operationId: updateProjectName
@@ -539,29 +1124,66 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '200':
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectSuccessResponse'
+                $ref: '#/components/schemas/UpdateProjectNameErrorResponse400'
           description: ''
-        '403':
+        '401':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
     delete:
       operationId: archiveSingleProject
@@ -577,26 +1199,63 @@ paths:
       security:
       - cookieAuth: []
       responses:
-        '200':
-          description: No response body
-        '403':
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
+                $ref: '#/components/schemas/ArchiveSingleProjectErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
-        '500':
+        '429':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
           description: ''
+        '200':
+          description: No response body
   /api/volumes/{volume_id}/size/:
     get:
       operationId: getVolumeSize
@@ -612,6 +1271,47 @@ paths:
       security:
       - cookieAuth: []
       responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetVolumeSizeErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -623,12 +1323,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenResponse'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
           description: ''
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseErrorResponse'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
 components:
   schemas:
@@ -644,6 +1360,20 @@ components:
       required:
       - projects
       - total_count
+    ArchiveDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ArchiveSingleProjectErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ArchivedProject:
       type: object
       properties:
@@ -699,6 +1429,761 @@ components:
           type: string
       required:
       - details
+    ClientErrorEnum:
+      enum:
+      - client_error
+      type: string
+      description: '* `client_error` - Client Error'
+    CreateDockerServiceCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - command
+          type: string
+          description: '* `command` - command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.non_field_errors
+          type: string
+          description: '* `credentials.non_field_errors` - credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.password
+          type: string
+          description: '* `credentials.password` - credentials.password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceCredentialsRegistryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.registry_url
+          type: string
+          description: '* `credentials.registry_url` - credentials.registry_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.username
+          type: string
+          description: '* `credentials.username` - credentials.username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceEnvErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env
+          type: string
+          description: '* `env` - env'
+        code:
+          enum:
+          - not_a_dict
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_dict` - not_a_dict
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceEnvKEYErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.KEY
+          type: string
+          description: '* `env.KEY` - env.KEY'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateDockerServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceSlugErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceImageErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceCommandErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceCredentialsRegistryUrlErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceUrlsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXDomainErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXBasePathErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXStripPrefixErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServicePortsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServicePortsINDEXPublicErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServicePortsINDEXForwardedErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceEnvErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceEnvKEYErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateDockerServiceNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/CreateDockerServiceSlugErrorComponent'
+          image: '#/components/schemas/CreateDockerServiceImageErrorComponent'
+          command: '#/components/schemas/CreateDockerServiceCommandErrorComponent'
+          credentials.non_field_errors: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
+          credentials.username: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
+          credentials.password: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
+          credentials.registry_url: '#/components/schemas/CreateDockerServiceCredentialsRegistryUrlErrorComponent'
+          urls.non_field_errors: '#/components/schemas/CreateDockerServiceUrlsNonFieldErrorsErrorComponent'
+          urls.INDEX.non_field_errors: '#/components/schemas/CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent'
+          urls.INDEX.domain: '#/components/schemas/CreateDockerServiceUrlsINDEXDomainErrorComponent'
+          urls.INDEX.base_path: '#/components/schemas/CreateDockerServiceUrlsINDEXBasePathErrorComponent'
+          urls.INDEX.strip_prefix: '#/components/schemas/CreateDockerServiceUrlsINDEXStripPrefixErrorComponent'
+          ports.non_field_errors: '#/components/schemas/CreateDockerServicePortsNonFieldErrorsErrorComponent'
+          ports.INDEX.non_field_errors: '#/components/schemas/CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent'
+          ports.INDEX.public: '#/components/schemas/CreateDockerServicePortsINDEXPublicErrorComponent'
+          ports.INDEX.forwarded: '#/components/schemas/CreateDockerServicePortsINDEXForwardedErrorComponent'
+          env: '#/components/schemas/CreateDockerServiceEnvErrorComponent'
+          env.KEY: '#/components/schemas/CreateDockerServiceEnvKEYErrorComponent'
+          volumes.non_field_errors: '#/components/schemas/CreateDockerServiceVolumesNonFieldErrorsErrorComponent'
+          volumes.INDEX.non_field_errors: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
+          volumes.INDEX.name: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
+          volumes.INDEX.mount_path: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
+    CreateDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateDockerServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateDockerServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateDockerServiceImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - image
+          type: string
+          description: '* `image` - image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServicePortsINDEXForwardedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.forwarded
+          type: string
+          description: '* `ports.INDEX.forwarded` - ports.INDEX.forwarded'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.non_field_errors
+          type: string
+          description: '* `ports.INDEX.non_field_errors` - ports.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServicePortsINDEXPublicErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.public
+          type: string
+          description: '* `ports.INDEX.public` - ports.INDEX.public'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServicePortsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.non_field_errors
+          type: string
+          description: '* `ports.non_field_errors` - ports.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceUrlsINDEXBasePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.INDEX.base_path
+          type: string
+          description: '* `urls.INDEX.base_path` - urls.INDEX.base_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceUrlsINDEXDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.INDEX.domain
+          type: string
+          description: '* `urls.INDEX.domain` - urls.INDEX.domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.INDEX.non_field_errors
+          type: string
+          description: '* `urls.INDEX.non_field_errors` - urls.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceUrlsINDEXStripPrefixErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.INDEX.strip_prefix
+          type: string
+          description: '* `urls.INDEX.strip_prefix` - urls.INDEX.strip_prefix'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceUrlsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.non_field_errors
+          type: string
+          description: '* `urls.non_field_errors` - urls.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateDockerServiceError'
+      required:
+      - errors
+      - type
+    CreateDockerServiceVolumesINDEXMountPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.mount_path
+          type: string
+          description: '* `volumes.INDEX.mount_path` - volumes.INDEX.mount_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceVolumesINDEXNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.name
+          type: string
+          description: '* `volumes.INDEX.name` - volumes.INDEX.name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.non_field_errors
+          type: string
+          description: '* `volumes.INDEX.non_field_errors` - volumes.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceVolumesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.non_field_errors
+          type: string
+          description: '* `volumes.non_field_errors` - volumes.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateProjectError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateProjectNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateProjectSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateProjectNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/CreateProjectSlugErrorComponent'
+    CreateProjectErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateProjectValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateProjectValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateProjectNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateProjectSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateProjectValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateProjectError'
+      required:
+      - errors
+      - type
     CredentialError:
       type: object
       properties:
@@ -714,6 +2199,13 @@ components:
           type: array
           items:
             type: string
+    CsrfRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     DockerCredentialsRequest:
       type: object
       properties:
@@ -772,31 +2264,106 @@ components:
       required:
       - errors
     DockerLoginError:
+      oneOf:
+      - $ref: '#/components/schemas/DockerLoginNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/DockerLoginUsernameErrorComponent'
+      - $ref: '#/components/schemas/DockerLoginPasswordErrorComponent'
+      - $ref: '#/components/schemas/DockerLoginRegistryUrlErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/DockerLoginNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/DockerLoginUsernameErrorComponent'
+          password: '#/components/schemas/DockerLoginPasswordErrorComponent'
+          registry_url: '#/components/schemas/DockerLoginRegistryUrlErrorComponent'
+    DockerLoginErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/DockerLoginValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/DockerLoginValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    DockerLoginNonFieldErrorsErrorComponent:
       type: object
       properties:
-        root:
-          type: array
-          items:
-            type: string
-        username:
-          type: array
-          items:
-            type: string
-        password:
-          type: array
-          items:
-            type: string
-        registry_url:
-          type: array
-          items:
-            type: string
-    DockerLoginErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/DockerLoginError'
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
       required:
-      - errors
+      - attr
+      - code
+      - detail
+    DockerLoginPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DockerLoginRegistryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_url
+          type: string
+          description: '* `registry_url` - registry_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     DockerLoginRequest:
       type: object
       properties:
@@ -819,6 +2386,50 @@ components:
           type: boolean
       required:
       - success
+    DockerLoginUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DockerLoginValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerLoginError'
+      required:
+      - errors
+      - type
     DockerPortCheckError:
       type: object
       properties:
@@ -997,6 +2608,133 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
+    Error401:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode401Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    Error404:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode404Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    Error409:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/Error409CodeEnum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    Error409CodeEnum:
+      enum:
+      - resource_conflict
+      type: string
+      description: '* `resource_conflict` - Resource Conflict'
+    Error429:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode429Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    ErrorCode401Enum:
+      enum:
+      - authentication_failed
+      - not_authenticated
+      type: string
+      description: |-
+        * `authentication_failed` - Authentication Failed
+        * `not_authenticated` - Not Authenticated
+    ErrorCode404Enum:
+      enum:
+      - not_found
+      type: string
+      description: '* `not_found` - Not Found'
+    ErrorCode429Enum:
+      enum:
+      - throttled
+      type: string
+      description: '* `throttled` - Throttled'
+    ErrorResponse401:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error401'
+      required:
+      - errors
+      - type
+    ErrorResponse404:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error404'
+      required:
+      - errors
+      - type
+    ErrorResponse409:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error409'
+      required:
+      - errors
+      - type
+    ErrorResponse429:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error429'
+      required:
+      - errors
+      - type
     ForbiddenResponse:
       type: object
       properties:
@@ -1004,6 +2742,27 @@ components:
           $ref: '#/components/schemas/BaseError'
       required:
       - errors
+    GetAuthedUserErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetProjectListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetRootDomain:
       type: object
       properties:
@@ -1011,28 +2770,100 @@ components:
           type: string
       required:
       - domain
+    GetRootDomainErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetSingleProjectErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetVolumeSizeErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
+      oneOf:
+      - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/LoginUsernameErrorComponent'
+      - $ref: '#/components/schemas/LoginPasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/LoginUsernameErrorComponent'
+          password: '#/components/schemas/LoginPasswordErrorComponent'
+    LoginErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/LoginValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/LoginValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    LoginNonFieldErrorsErrorComponent:
       type: object
       properties:
-        root:
-          type: array
-          items:
-            type: string
-        username:
-          type: array
-          items:
-            type: string
-        password:
-          type: array
-          items:
-            type: string
-    LoginErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/LoginError'
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
       required:
-      - errors
+      - attr
+      - code
+      - detail
+    LoginPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     LoginRequest:
       type: object
       properties:
@@ -1054,6 +2885,90 @@ components:
           type: boolean
       required:
       - success
+    LoginUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    LoginValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoginError'
+      required:
+      - errors
+      - type
+    LogoutErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ParseError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ParseErrorCodeEnum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    ParseErrorCodeEnum:
+      enum:
+      - parse_error
+      type: string
+      description: '* `parse_error` - Parse Error'
+    ParseErrorResponse:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseError'
+      required:
+      - errors
+      - type
     PatchedProjectUpdateRequest:
       type: object
       properties:
@@ -1101,7 +3016,7 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    ProjectSuccessResponse:
+    ProjectListResponse:
       type: object
       properties:
         active:
@@ -1111,42 +3026,13 @@ components:
       required:
       - active
       - archived
-    ProjectUpdateErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/ProjetUpdateError'
-      required:
-      - errors
-    ProjetCreateError:
-      type: object
-      properties:
-        root:
-          type: array
-          items:
-            type: string
-        slug:
-          type: array
-          items:
-            type: string
-    ProjetCreateErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/ProjetCreateError'
-      required:
-      - errors
-    ProjetUpdateError:
-      type: object
-      properties:
-        root:
-          type: array
-          items:
-            type: string
-        slug:
-          type: array
-          items:
-            type: string
+    SearchDockerRegistryErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ServicePortsRequest:
       type: object
       properties:
@@ -1157,7 +3043,7 @@ components:
           type: integer
       required:
       - forwarded
-    SingleProjectSuccessResponse:
+    SingleProjectResponse:
       type: object
       properties:
         project:
@@ -1202,6 +3088,87 @@ components:
           type: array
           items:
             type: string
+    UpdateProjectNameError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateProjectNameNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateProjectNameSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateProjectNameNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/UpdateProjectNameSlugErrorComponent'
+    UpdateProjectNameErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateProjectNameValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateProjectNameValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateProjectNameNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateProjectNameSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateProjectNameValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateProjectNameError'
+      required:
+      - errors
+      - type
     User:
       type: object
       properties:
@@ -1223,6 +3190,11 @@ components:
           description: Designates whether the user can log into this admin site.
       required:
       - username
+    ValidationErrorEnum:
+      enum:
+      - validation_error
+      type: string
+      description: '* `validation_error` - Validation Error'
     Volume:
       type: object
       properties:
