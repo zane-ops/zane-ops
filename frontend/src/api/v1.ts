@@ -34,9 +34,6 @@ export interface paths {
     get: operations["getProjectList"];
     post: operations["createProject"];
   };
-  "/api/projects/{project_slug}/archive-service/docker/{service_slug}/": {
-    delete: operations["archiveDockerService"];
-  };
   "/api/projects/{project_slug}/create-service/docker/": {
     post: operations["createDockerService"];
   };
@@ -48,7 +45,7 @@ export interface paths {
     delete: operations["archiveSingleProject"];
     patch: operations["updateProjectName"];
   };
-  "/api/volumes/{volume_id}/size/": {
+  "/api/volumes/{slug}/size/": {
     get: operations["getVolumeSize"];
   };
 }
@@ -61,8 +58,6 @@ export interface components {
       projects: components["schemas"]["Project"][];
       total_count: number;
     };
-    ArchiveDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchivedProject: {
       slug?: string;
       /** Format: date-time */
@@ -84,429 +79,11 @@ export interface components {
     CSRF: {
       details: string;
     };
-    /**
-     * @description * `client_error` - Client Error
-     * @enum {string}
-     */
-    ClientErrorEnum: "client_error";
-    CreateDockerServiceCommandErrorComponent: {
-      /**
-       * @description * `command` - command
-       * @enum {string}
-       */
-      attr: "command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `credentials.non_field_errors` - credentials.non_field_errors
-       * @enum {string}
-       */
-      attr: "credentials.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    CreateDockerServiceCredentialsPasswordErrorComponent: {
-      /**
-       * @description * `credentials.password` - credentials.password
-       * @enum {string}
-       */
-      attr: "credentials.password";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceCredentialsRegistryUrlErrorComponent: {
-      /**
-       * @description * `credentials.registry_url` - credentials.registry_url
-       * @enum {string}
-       */
-      attr: "credentials.registry_url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceCredentialsUsernameErrorComponent: {
-      /**
-       * @description * `credentials.username` - credentials.username
-       * @enum {string}
-       */
-      attr: "credentials.username";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceEnvErrorComponent: {
-      /**
-       * @description * `env` - env
-       * @enum {string}
-       */
-      attr: "env";
-      /**
-       * @description * `not_a_dict` - not_a_dict
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "not_a_dict" | "null";
-      detail: string;
-    };
-    CreateDockerServiceEnvKEYErrorComponent: {
-      /**
-       * @description * `env.KEY` - env.KEY
-       * @enum {string}
-       */
-      attr: "env.KEY";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceError: components["schemas"]["CreateDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceSlugErrorComponent"] | components["schemas"]["CreateDockerServiceImageErrorComponent"] | components["schemas"]["CreateDockerServiceCommandErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsUsernameErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsPasswordErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsRegistryUrlErrorComponent"] | components["schemas"]["CreateDockerServiceUrlsNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceUrlsINDEXDomainErrorComponent"] | components["schemas"]["CreateDockerServiceUrlsINDEXBasePathErrorComponent"] | components["schemas"]["CreateDockerServiceUrlsINDEXStripPrefixErrorComponent"] | components["schemas"]["CreateDockerServicePortsNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServicePortsINDEXPublicErrorComponent"] | components["schemas"]["CreateDockerServicePortsINDEXForwardedErrorComponent"] | components["schemas"]["CreateDockerServiceEnvErrorComponent"] | components["schemas"]["CreateDockerServiceEnvKEYErrorComponent"] | components["schemas"]["CreateDockerServiceVolumesNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceVolumesINDEXNameErrorComponent"] | components["schemas"]["CreateDockerServiceVolumesINDEXMountPathErrorComponent"];
-    CreateDockerServiceErrorResponse400: components["schemas"]["CreateDockerServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
-    CreateDockerServiceImageErrorComponent: {
-      /**
-       * @description * `image` - image
-       * @enum {string}
-       */
-      attr: "image";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    CreateDockerServicePortsINDEXForwardedErrorComponent: {
-      /**
-       * @description * `ports.INDEX.forwarded` - ports.INDEX.forwarded
-       * @enum {string}
-       */
-      attr: "ports.INDEX.forwarded";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "null" | "required";
-      detail: string;
-    };
-    CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `ports.INDEX.non_field_errors` - ports.INDEX.non_field_errors
-       * @enum {string}
-       */
-      attr: "ports.INDEX.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    CreateDockerServicePortsINDEXPublicErrorComponent: {
-      /**
-       * @description * `ports.INDEX.public` - ports.INDEX.public
-       * @enum {string}
-       */
-      attr: "ports.INDEX.public";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "null";
-      detail: string;
-    };
-    CreateDockerServicePortsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `ports.non_field_errors` - ports.non_field_errors
-       * @enum {string}
-       */
-      attr: "ports.non_field_errors";
-      /**
-       * @description * `not_a_list` - not_a_list
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "not_a_list" | "null";
-      detail: string;
-    };
-    CreateDockerServiceSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceUrlsINDEXBasePathErrorComponent: {
-      /**
-       * @description * `urls.INDEX.base_path` - urls.INDEX.base_path
-       * @enum {string}
-       */
-      attr: "urls.INDEX.base_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceUrlsINDEXDomainErrorComponent: {
-      /**
-       * @description * `urls.INDEX.domain` - urls.INDEX.domain
-       * @enum {string}
-       */
-      attr: "urls.INDEX.domain";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `urls.INDEX.non_field_errors` - urls.INDEX.non_field_errors
-       * @enum {string}
-       */
-      attr: "urls.INDEX.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    CreateDockerServiceUrlsINDEXStripPrefixErrorComponent: {
-      /**
-       * @description * `urls.INDEX.strip_prefix` - urls.INDEX.strip_prefix
-       * @enum {string}
-       */
-      attr: "urls.INDEX.strip_prefix";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    CreateDockerServiceUrlsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `urls.non_field_errors` - urls.non_field_errors
-       * @enum {string}
-       */
-      attr: "urls.non_field_errors";
-      /**
-       * @description * `not_a_list` - not_a_list
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "not_a_list" | "null";
-      detail: string;
-    };
-    CreateDockerServiceValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["CreateDockerServiceError"][];
-    };
-    CreateDockerServiceVolumesINDEXMountPathErrorComponent: {
-      /**
-       * @description * `volumes.INDEX.mount_path` - volumes.INDEX.mount_path
-       * @enum {string}
-       */
-      attr: "volumes.INDEX.mount_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceVolumesINDEXNameErrorComponent: {
-      /**
-       * @description * `volumes.INDEX.name` - volumes.INDEX.name
-       * @enum {string}
-       */
-      attr: "volumes.INDEX.name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `volumes.INDEX.non_field_errors` - volumes.INDEX.non_field_errors
-       * @enum {string}
-       */
-      attr: "volumes.INDEX.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    CreateDockerServiceVolumesNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `volumes.non_field_errors` - volumes.non_field_errors
-       * @enum {string}
-       */
-      attr: "volumes.non_field_errors";
-      /**
-       * @description * `not_a_list` - not_a_list
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "not_a_list" | "null";
-      detail: string;
-    };
-    CreateProjectError: components["schemas"]["CreateProjectNonFieldErrorsErrorComponent"] | components["schemas"]["CreateProjectSlugErrorComponent"];
-    CreateProjectErrorResponse400: components["schemas"]["CreateProjectValidationError"] | components["schemas"]["ParseErrorResponse"];
-    CreateProjectNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    CreateProjectSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CreateProjectValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["CreateProjectError"][];
-    };
     CredentialError: {
       username?: string[];
       password?: string[];
       registry_url?: string[];
     };
-    CsrfRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DockerCredentialsRequest: {
       username: string;
       password: string;
@@ -515,10 +92,6 @@ export interface components {
        * @default registry-1.docker.io/v2
        */
       registry_url?: string;
-    };
-    DockerEnvVariable: {
-      key: string;
-      value: string;
     };
     DockerImage: {
       full_image: string;
@@ -531,56 +104,14 @@ export interface components {
     DockerImageSearchErrorResponse: {
       errors: components["schemas"]["DockerImageSearchError"];
     };
-    DockerLoginError: components["schemas"]["DockerLoginNonFieldErrorsErrorComponent"] | components["schemas"]["DockerLoginUsernameErrorComponent"] | components["schemas"]["DockerLoginPasswordErrorComponent"] | components["schemas"]["DockerLoginRegistryUrlErrorComponent"];
-    DockerLoginErrorResponse400: components["schemas"]["DockerLoginValidationError"] | components["schemas"]["ParseErrorResponse"];
-    DockerLoginNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
+    DockerLoginError: {
+      root?: string[];
+      username?: string[];
+      password?: string[];
+      registry_url?: string[];
     };
-    DockerLoginPasswordErrorComponent: {
-      /**
-       * @description * `password` - password
-       * @enum {string}
-       */
-      attr: "password";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    DockerLoginRegistryUrlErrorComponent: {
-      /**
-       * @description * `registry_url` - registry_url
-       * @enum {string}
-       */
-      attr: "registry_url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
+    DockerLoginErrorResponse: {
+      errors: components["schemas"]["DockerLoginError"];
     };
     DockerLoginRequest: {
       username: string;
@@ -590,29 +121,6 @@ export interface components {
     };
     DockerLoginSuccessResponse: {
       success: boolean;
-    };
-    DockerLoginUsernameErrorComponent: {
-      /**
-       * @description * `username` - username
-       * @enum {string}
-       */
-      attr: "username";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    DockerLoginValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["DockerLoginError"][];
     };
     DockerPortCheckError: {
       root?: string[];
@@ -636,13 +144,14 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
       volumes: readonly components["schemas"]["Volume"][];
+      name: string;
+      archived?: boolean;
       command?: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: components["schemas"]["DockerEnvVariable"][];
     };
     DockerServiceCreateError: {
       root?: string[];
-      slug?: string[];
+      name?: string[];
       image?: string[];
       command?: string[];
       credentials?: components["schemas"]["CredentialError"];
@@ -655,7 +164,7 @@ export interface components {
       errors: components["schemas"]["DockerServiceCreateError"];
     };
     DockerServiceCreateRequest: {
-      slug?: string;
+      name: string;
       image: string;
       command?: string;
       credentials?: components["schemas"]["DockerCredentialsRequest"];
@@ -675,81 +184,19 @@ export interface components {
     DockerSuccessResponse: {
       images: components["schemas"]["DockerImage"][];
     };
-    Error401: {
-      code: components["schemas"]["ErrorCode401Enum"];
-      detail: string;
-      attr: string | null;
-    };
-    Error429: {
-      code: components["schemas"]["ErrorCode429Enum"];
-      detail: string;
-      attr: string | null;
-    };
-    /**
-     * @description * `authentication_failed` - Authentication Failed
-     * * `not_authenticated` - Not Authenticated
-     * @enum {string}
-     */
-    ErrorCode401Enum: "authentication_failed" | "not_authenticated";
-    /**
-     * @description * `throttled` - Throttled
-     * @enum {string}
-     */
-    ErrorCode429Enum: "throttled";
-    ErrorResponse401: {
-      type: components["schemas"]["ClientErrorEnum"];
-      errors: components["schemas"]["Error401"][];
-    };
-    ErrorResponse429: {
-      type: components["schemas"]["ClientErrorEnum"];
-      errors: components["schemas"]["Error429"][];
-    };
     ForbiddenResponse: {
       errors: components["schemas"]["BaseError"];
     };
-    GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetProjectListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetRootDomain: {
       domain: string;
     };
-    GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetVolumeSizeErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
-    LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
-    LoginNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
+    LoginError: {
+      root?: string[];
+      username?: string[];
+      password?: string[];
     };
-    LoginPasswordErrorComponent: {
-      /**
-       * @description * `password` - password
-       * @enum {string}
-       */
-      attr: "password";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `min_length` - min_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
+    LoginErrorResponse: {
+      errors: components["schemas"]["LoginError"];
     };
     LoginRequest: {
       username: string;
@@ -757,45 +204,6 @@ export interface components {
     };
     LoginSuccessResponse: {
       success: boolean;
-    };
-    LoginUsernameErrorComponent: {
-      /**
-       * @description * `username` - username
-       * @enum {string}
-       */
-      attr: "username";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `min_length` - min_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    LoginValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["LoginError"][];
-    };
-    LogoutErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ParseError: {
-      code: components["schemas"]["ParseErrorCodeEnum"];
-      detail: string;
-      attr: string | null;
-    };
-    /**
-     * @description * `parse_error` - Parse Error
-     * @enum {string}
-     */
-    ParseErrorCodeEnum: "parse_error";
-    ParseErrorResponse: {
-      type: components["schemas"]["ClientErrorEnum"];
-      errors: components["schemas"]["ParseError"][];
     };
     PatchedProjectUpdateRequest: {
       slug?: string;
@@ -832,7 +240,6 @@ export interface components {
       root?: string[];
       slug?: string[];
     };
-    SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServicePortsRequest: {
       /** @default 80 */
       public?: number;
@@ -858,44 +265,6 @@ export interface components {
       domain?: string[];
       base_path?: string[];
     };
-    UpdateProjectNameError: components["schemas"]["UpdateProjectNameNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProjectNameSlugErrorComponent"];
-    UpdateProjectNameErrorResponse400: components["schemas"]["UpdateProjectNameValidationError"] | components["schemas"]["ParseErrorResponse"];
-    UpdateProjectNameNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    UpdateProjectNameSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    UpdateProjectNameValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["UpdateProjectNameError"][];
-    };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -907,17 +276,12 @@ export interface components {
        */
       is_staff?: boolean;
     };
-    /**
-     * @description * `validation_error` - Validation Error
-     * @enum {string}
-     */
-    ValidationErrorEnum: "validation_error";
     Volume: {
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
       updated_at: string;
-      id?: string;
+      slug: string;
       name: string;
       containerPath: string;
     };
@@ -956,19 +320,19 @@ export interface operations {
           "application/json": components["schemas"]["LoginSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["LoginErrorResponse400"];
-        };
-      };
       401: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
+          "application/json": components["schemas"]["LoginErrorResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["LoginErrorResponse"];
         };
       };
       429: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
+          "application/json": components["schemas"]["LoginErrorResponse"];
         };
       };
     };
@@ -979,19 +343,9 @@ export interface operations {
       204: {
         content: never;
       };
-      400: {
+      403: {
         content: {
-          "application/json": components["schemas"]["LogoutErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
+          "application/json": components["schemas"]["ForbiddenResponse"];
         };
       };
     };
@@ -1003,19 +357,9 @@ export interface operations {
           "application/json": components["schemas"]["AuthedSuccessResponse"];
         };
       };
-      400: {
+      403: {
         content: {
-          "application/json": components["schemas"]["GetAuthedUserErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
+          "application/json": components["schemas"]["ForbiddenResponse"];
         };
       };
     };
@@ -1026,21 +370,6 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["CSRF"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["CsrfRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1064,11 +393,6 @@ export interface operations {
           "application/json": components["schemas"]["DockerPortCheckSuccessResponse"];
         };
       };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1077,11 +401,6 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["DockerPortCheckErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1098,16 +417,6 @@ export interface operations {
           "application/json": components["schemas"]["DockerSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["SearchDockerRegistryErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1116,11 +425,6 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["DockerImageSearchErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1139,19 +443,19 @@ export interface operations {
           "application/json": components["schemas"]["DockerLoginSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["DockerLoginErrorResponse400"];
-        };
-      };
       401: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
+          "application/json": components["schemas"]["DockerLoginErrorResponse"];
         };
       };
-      429: {
+      403: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
+          "application/json": components["schemas"]["ForbiddenResponse"];
+        };
+      };
+      422: {
+        content: {
+          "application/json": components["schemas"]["DockerLoginErrorResponse"];
         };
       };
     };
@@ -1163,24 +467,9 @@ export interface operations {
           "application/json": components["schemas"]["GetRootDomain"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1209,16 +498,6 @@ export interface operations {
           "application/json": components["schemas"]["ProjectSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetProjectListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1227,11 +506,6 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["ProjetCreateErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1250,16 +524,6 @@ export interface operations {
           "application/json": components["schemas"]["SingleProjectSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["CreateProjectErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1275,53 +539,9 @@ export interface operations {
           "application/json": components["schemas"]["ProjetCreateErrorResponse"];
         };
       };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
       500: {
         content: {
           "application/json": components["schemas"]["ProjetCreateErrorResponse"];
-        };
-      };
-    };
-  };
-  archiveDockerService: {
-    parameters: {
-      path: {
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      /** @description No response body */
-      204: {
-        content: never;
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ArchiveDockerServiceErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ForbiddenResponse"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["BaseErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1345,16 +565,6 @@ export interface operations {
           "application/json": components["schemas"]["DockerServiceCreateSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["CreateDockerServiceErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1368,11 +578,6 @@ export interface operations {
       409: {
         content: {
           "application/json": components["schemas"]["DockerServiceCreateErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1390,16 +595,6 @@ export interface operations {
           "application/json": components["schemas"]["DockerServiceCreateSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetDockerServiceErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1408,11 +603,6 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["BaseErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1429,16 +619,6 @@ export interface operations {
           "application/json": components["schemas"]["SingleProjectSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetSingleProjectErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1447,11 +627,6 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
@@ -1467,16 +642,6 @@ export interface operations {
       200: {
         content: never;
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ArchiveSingleProjectErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1485,11 +650,6 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["BaseErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
       500: {
@@ -1518,16 +678,6 @@ export interface operations {
           "application/json": components["schemas"]["SingleProjectSuccessResponse"];
         };
       };
-      400: {
-        content: {
-          "application/json": components["schemas"]["UpdateProjectNameErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
       403: {
         content: {
           "application/json": components["schemas"]["ForbiddenResponse"];
@@ -1543,33 +693,18 @@ export interface operations {
           "application/json": components["schemas"]["ProjectUpdateErrorResponse"];
         };
       };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
     };
   };
   getVolumeSize: {
     parameters: {
       path: {
-        volume_id: string;
+        slug: string;
       };
     };
     responses: {
       200: {
         content: {
           "application/json": components["schemas"]["VolumeGetSizeSuccessResponse"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetVolumeSizeErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       403: {
@@ -1580,11 +715,6 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["BaseErrorResponse"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
         };
       };
     };
