@@ -87,12 +87,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '201':
           content:
             application/json:
@@ -148,12 +142,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '204':
           description: No response body
   /api/auth/me/:
@@ -204,12 +192,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -267,12 +249,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -334,12 +310,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -429,12 +399,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '200':
           content:
             application/json:
@@ -522,12 +486,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '200':
           content:
             application/json:
@@ -582,12 +540,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -698,12 +650,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '200':
           content:
             application/json:
@@ -769,17 +715,17 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '201':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SingleProjectResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
@@ -842,12 +788,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '204':
           description: No response body
@@ -1049,12 +989,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '404':
           content:
             application/json:
@@ -1159,12 +1093,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '200':
           content:
             application/json:
@@ -1257,12 +1185,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse409'
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleProjectResponse'
-          description: ''
     delete:
       operationId: archiveSingleProject
       parameters:
@@ -1332,12 +1254,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '200':
           description: No response body
   /api/volumes/{volume_id}/size/:
@@ -1395,12 +1311,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -2730,7 +2640,7 @@ components:
       type: object
       properties:
         code:
-          $ref: '#/components/schemas/ErrorCode409Enum'
+          $ref: '#/components/schemas/Error409CodeEnum'
         detail:
           type: string
         attr:
@@ -2740,6 +2650,11 @@ components:
       - attr
       - code
       - detail
+    Error409CodeEnum:
+      enum:
+      - resource_conflict
+      type: string
+      description: '* `resource_conflict` - Resource Conflict'
     Error429:
       type: object
       properties:
@@ -2767,11 +2682,6 @@ components:
       - not_found
       type: string
       description: '* `not_found` - Not Found'
-    ErrorCode409Enum:
-      enum:
-      - resource_conflict
-      type: string
-      description: '* `resource_conflict` - Resource Conflict'
     ErrorCode429Enum:
       enum:
       - throttled
@@ -2805,7 +2715,7 @@ components:
       type: object
       properties:
         type:
-          $ref: '#/components/schemas/ServerErrorEnum'
+          $ref: '#/components/schemas/ClientErrorEnum'
         errors:
           type: array
           items:
@@ -3123,11 +3033,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ServerErrorEnum:
-      enum:
-      - server_error
-      type: string
-      description: '* `server_error` - Server Error'
     ServicePortsRequest:
       type: object
       properties:

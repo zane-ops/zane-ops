@@ -2,7 +2,7 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models import TextChoices
-from drf_standardized_errors.openapi_serializers import ServerErrorEnum
+from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
 from rest_framework.serializers import *
 
@@ -21,7 +21,7 @@ class Error409Serializer(serializers.Serializer):
 
 
 class ErrorResponse409Serializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=ServerErrorEnum.choices)
+    type = serializers.ChoiceField(choices=ClientErrorEnum.choices)
     errors = Error409Serializer(many=True)
 
 

@@ -155,6 +155,7 @@ class ProjectsListView(APIView):
         request=ProjectCreateRequestSerializer,
         responses={
             201: SingleProjectResponseSerializer,
+            409: serializers.ErrorResponse409Serializer,
         },
         operation_id="createProject",
     )
@@ -175,21 +176,6 @@ class ProjectsListView(APIView):
                     detail=f"A project with the slug '{slug}' already exist,"
                     f" please use another one for this project."
                 )
-            # except Exception as e:
-            #     with transaction.atomic():
-            #         newly_created_project = Project.objects.get(slug=slug)
-            #         if newly_created_project is not None:
-            #             newly_created_project.delete()
-            #     response = self.error_serializer_class(
-            #         {
-            #             "errors": {
-            #                 "root": [str(e)],
-            #             }
-            #         }
-            #     )
-            #     return Response(
-            #         response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            #     )
             else:
                 create_docker_resources_for_project.apply_async(
                     (slug,), task_id=new_project.create_task_id
@@ -207,6 +193,9 @@ class ProjectDetailsView(APIView):
 
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
+        responses={
+            409: serializers.ErrorResponse409Serializer,
+        },
         operation_id="updateProjectName",
     )
     def patch(self, request: Request, slug: str) -> Response:
