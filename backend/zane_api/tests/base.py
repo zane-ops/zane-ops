@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, List
 from unittest.mock import MagicMock
 
 import docker.errors
@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 from docker.types import EndpointSpec
 from rest_framework.test import APIClient
 
-from ..docker_operations import get_network_resource_name
+from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project
 
 
@@ -101,6 +101,7 @@ class FakeDockerClient:
         self.is_logged_in = False
         self.credentials = {}
 
+        self.images.search = self.images_search
         self.containers.run = self.containers_run
         self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
@@ -191,14 +192,29 @@ class FakeDockerClient:
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):
-        if (
-            username != "fredkiss3"
-            or password != "s3cret"
-            or registry != "https://dcr.fredkiss.dev/"
-        ):
+        if username != "fredkiss3" or password != "s3cret":
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
         self.is_logged_in = True
+
+    @staticmethod
+    def images_search(term: str, limit: int) -> List[DockerImageResultFromRegistry]:
+        return [
+            {
+                "name": "caddy",
+                "is_official": True,
+                "is_automated": True,
+                "description": "Caddy 2 is a powerful, enterprise-ready,"
+                " open source web server with automatic HTTPS written in Go",
+            },
+            {
+                "description": "caddy webserver optimized for usage within the SIWECOS project",
+                "is_automated": False,
+                "is_official": False,
+                "name": "siwecos/caddy",
+                "star_count": 0,
+            },
+        ]
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
