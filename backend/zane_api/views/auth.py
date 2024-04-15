@@ -90,6 +90,12 @@ class CSRFCookieView(APIView):
     serializer_class = CSRFSerializer
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        responses={
+            401: None,
+        },
+        operation_id="getCSRF",
+    )
     @method_decorator(ensure_csrf_cookie)
     def get(self, _: Request) -> Response:
         response = CSRFSerializer(data={"details": "CSRF cookie set"})

@@ -201,7 +201,7 @@ paths:
           description: ''
   /api/csrf/:
     get:
-      operationId: csrf_retrieve
+      operationId: getCSRF
       description: CSRF cookie view for retrieving CSRF before doing requests
       tags:
       - csrf
@@ -213,28 +213,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CsrfRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
+                $ref: '#/components/schemas/GetCSRFErrorResponse400'
           description: ''
         '429':
           content:
@@ -250,12 +229,8 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CSRF'
-          description: ''
+        '401':
+          description: No response body
   /api/docker/check-port/:
     post:
       operationId: checkIfPortIsAvailable
@@ -1319,13 +1294,6 @@ components:
           type: array
           items:
             type: string
-    CSRF:
-      type: object
-      properties:
-        details:
-          type: string
-      required:
-      - details
     CheckIfPortIsAvailableError:
       oneOf:
       - $ref: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
@@ -2158,13 +2126,6 @@ components:
       required:
       - errors
       - type
-    CsrfRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     DockerCredentialsRequest:
       type: object
       properties:
@@ -2622,6 +2583,13 @@ components:
       required:
       - errors
     GetAuthedUserErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetCSRFErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
