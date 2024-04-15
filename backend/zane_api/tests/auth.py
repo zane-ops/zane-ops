@@ -42,7 +42,7 @@ class AuthLoginViewTests(AuthAPITestCase):
                 data={},
             )
         self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code)
-        self.assertIsNotNone(response.json().get("errors", None))
+        self.assertIsNotNone(response.json().get("errors"))
 
 
 class AuthMeViewTests(AuthAPITestCase):
