@@ -1,10 +1,28 @@
 import os
 
 from django.contrib.auth.models import User
+from django.db.models import TextChoices
+from drf_standardized_errors.openapi_serializers import ServerErrorEnum
+from rest_framework import serializers
 from rest_framework.serializers import *
 
 from . import models
 from .validators import validate_url_path, validate_url_domain
+
+
+class ErrorCode409Enum(TextChoices):
+    RESOURCE_CONFLICT = "resource_conflict"
+
+
+class Error409Serializer(serializers.Serializer):
+    code = serializers.ChoiceField(choices=ErrorCode409Enum.choices)
+    detail = serializers.CharField()
+    attr = serializers.CharField(allow_null=True)
+
+
+class ErrorResponse409Serializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=ServerErrorEnum.choices)
+    errors = Error409Serializer(many=True)
 
 
 class StringListField(ListField):

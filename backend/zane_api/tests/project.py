@@ -203,9 +203,6 @@ class ProjectCreateViewTests(AuthAPITestCase):
             data={"slug": "zane-ops"},
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("slug"))
         self.assertEqual(1, Project.objects.count())
 
     @patch(
@@ -218,9 +215,7 @@ class ProjectCreateViewTests(AuthAPITestCase):
             reverse("zane_api:projects.list"),
             data={"slug": "zane Ops"},
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-        self.assertIsNotNone(response.json().get("errors"))
-        self.assertIsNotNone(response.json().get("errors").get("slug"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -269,8 +264,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
             data={"slug": "Zane Ops"},
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-        self.assertIsNotNone(response.json().get("errors").get("slug"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_non_existent(self):
         self.loginUser()

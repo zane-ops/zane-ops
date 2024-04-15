@@ -232,7 +232,11 @@ DRF_STANDARDIZED_ERRORS = {
         "403",
         "404",
         "429",
+        "409",
     ],
+    "ERROR_SCHEMAS": {
+        "409": "zane_api.serializers.ErrorResponse409Serializer",
+    },
 }
 
 # DRF SPECTACULAR, for OpenAPI schema generation
@@ -255,6 +259,7 @@ SPECTACULAR_SETTINGS = {
         "ErrorCode415Enum": "drf_standardized_errors.openapi_serializers.ErrorCode415Enum.choices",
         "ErrorCode429Enum": "drf_standardized_errors.openapi_serializers.ErrorCode429Enum.choices",
         "ErrorCode500Enum": "drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices",
+        "ErrorCode409Enum": "zane_api.serializers.ErrorCode409Enum.choices",
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums"

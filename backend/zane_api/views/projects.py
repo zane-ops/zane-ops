@@ -4,14 +4,15 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
+from rest_framework import exceptions
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import EMPTY_RESPONSE
+from . import EMPTY_RESPONSE, ResourceConflict
 from .. import serializers
 from ..models import (
     Project,
@@ -38,12 +39,12 @@ class ArchivedProjectPaginatedSerializer(serializers.Serializer):
     total_count = serializers.IntegerField()
 
 
-class ProjectSuccessResponseSerializer(serializers.Serializer):
+class ProjectListResponseSerializer(serializers.Serializer):
     active = ActiveProjectPaginatedSerializer()
     archived = ArchivedProjectPaginatedSerializer()
 
 
-class SingleProjectSuccessResponseSerializer(serializers.Serializer):
+class SingleProjectResponseSerializer(serializers.Serializer):
     project = serializers.ProjectSerializer()
 
 
@@ -87,35 +88,20 @@ class ProjectCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
 
 
-class ProjetCreateErrorSerializer(serializers.BaseErrorSerializer):
-    slug = serializers.StringListField(required=False)
-
-
-class ProjetCreateErrorResponseSerializer(serializers.Serializer):
-    errors = ProjetCreateErrorSerializer()
-
-
 class ProjectsListView(APIView):
-    serializer_class = ProjectSuccessResponseSerializer
-    single_serializer_class = SingleProjectSuccessResponseSerializer
-    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = ProjetCreateErrorResponseSerializer
-
     @extend_schema(
         parameters=[
             ProjectListSearchFiltersSerializer,
         ],
         responses={
-            200: serializer_class,
-            403: forbidden_serializer_class,
-            422: error_serializer_class,
+            200: ProjectListResponseSerializer,
         },
         operation_id="getProjectList",
     )
     def get(self, request: Request) -> Response:
         query_params = request.query_params.dict()
         form = ProjectListSearchFiltersSerializer(data=query_params)
-        if form.is_valid():
+        if form.is_valid(raise_exception=True):
             params = form.data
 
             sort_by_map_to_fields = {
@@ -136,7 +122,7 @@ class ProjectsListView(APIView):
                 )
 
                 page = paginator.get_page(params["page"])
-                response = self.serializer_class(
+                response = ProjectListResponseSerializer(
                     {
                         "active": {
                             "projects": list(page),
@@ -154,7 +140,7 @@ class ProjectsListView(APIView):
                     per_page,
                 )
                 page = paginator.get_page(params["page"])
-                response = self.serializer_class(
+                response = ProjectListResponseSerializer(
                     {
                         "archived": {
                             "projects": list(page),
@@ -165,26 +151,16 @@ class ProjectsListView(APIView):
                 )
             return Response(response.data)
 
-        # This should be unreachable
-        return Response(
-            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            data={"errors": form.errors},
-        )
-
     @extend_schema(
         request=ProjectCreateRequestSerializer,
         responses={
-            201: single_serializer_class,
-            403: forbidden_serializer_class,
-            422: error_serializer_class,
-            409: error_serializer_class,
-            500: error_serializer_class,
+            201: SingleProjectResponseSerializer,
         },
         operation_id="createProject",
     )
     def post(self, request: Request) -> Response:
         form = ProjectCreateRequestSerializer(data=request.data)
-        if form.is_valid():
+        if form.is_valid(raise_exception=True):
             data = form.data
 
             # To prevent collisions
@@ -195,187 +171,119 @@ class ProjectsListView(APIView):
                 with transaction.atomic():
                     new_project = Project.objects.create(slug=slug, owner=request.user)
             except IntegrityError:
-                response = self.error_serializer_class(
-                    {
-                        "errors": {
-                            "slug": [
-                                f"A project with the slug '{slug}' already exist,"
-                                f" please use another one for this project."
-                            ]
-                        }
-                    }
+                raise ResourceConflict(
+                    detail=f"A project with the slug '{slug}' already exist,"
+                    f" please use another one for this project."
                 )
-                return Response(response.data, status=status.HTTP_409_CONFLICT)
-            except Exception as e:
-                with transaction.atomic():
-                    newly_created_project = Project.objects.get(slug=slug)
-                    if newly_created_project is not None:
-                        newly_created_project.delete()
-                response = self.error_serializer_class(
-                    {
-                        "errors": {
-                            "root": [str(e)],
-                        }
-                    }
-                )
-                return Response(
-                    response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+            # except Exception as e:
+            #     with transaction.atomic():
+            #         newly_created_project = Project.objects.get(slug=slug)
+            #         if newly_created_project is not None:
+            #             newly_created_project.delete()
+            #     response = self.error_serializer_class(
+            #         {
+            #             "errors": {
+            #                 "root": [str(e)],
+            #             }
+            #         }
+            #     )
+            #     return Response(
+            #         response.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            #     )
             else:
                 create_docker_resources_for_project.apply_async(
                     (slug,), task_id=new_project.create_task_id
                 )
-                response = self.single_serializer_class({"project": new_project})
+                response = SingleProjectResponseSerializer({"project": new_project})
                 return Response(response.data, status=status.HTTP_201_CREATED)
-        return Response(
-            {"errors": form.errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
 
 
 class ProjectUpdateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255)
 
 
-class ProjetUpdateErrorSerializer(serializers.BaseErrorSerializer):
-    slug = serializers.StringListField(required=False)
-
-
-class ProjectUpdateErrorResponseSerializer(serializers.Serializer):
-    errors = ProjetUpdateErrorSerializer()
-
-
-class DeleteProjectSuccessResponseSerializer(serializers.Serializer):
-    pass
-
-
 class ProjectDetailsView(APIView):
-    serializer_class = SingleProjectSuccessResponseSerializer
-    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = ProjectUpdateErrorResponseSerializer
+    serializer_class = SingleProjectResponseSerializer
 
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
-        responses={
-            200: serializer_class,
-            403: forbidden_serializer_class,
-            422: error_serializer_class,
-            404: error_serializer_class,
-        },
         operation_id="updateProjectName",
     )
     def patch(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug, owner=request.user)
         except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "slug": [f"A project with the slug `{slug}` does not exist"],
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
 
         form = ProjectUpdateRequestSerializer(data=request.data)
-        if form.is_valid():
+        if form.is_valid(raise_exception=True):
             try:
                 project.slug = form.data["slug"]
                 project.save()
             except IntegrityError:
-                response = self.error_serializer_class(
-                    {
-                        "errors": {
-                            "slug": [
-                                f"The slug `{slug}` is already used by another project"
-                            ]
-                        }
-                    }
+                raise ResourceConflict(
+                    detail=f"The slug `{slug}` is already used by another project."
                 )
-                return Response(response.data, status=status.HTTP_409_CONFLICT)
             else:
-                response = self.serializer_class({"project": project})
+                response = SingleProjectResponseSerializer({"project": project})
                 return Response(response.data)
 
-        response = self.error_serializer_class({"errors": form.errors})
-        return Response(response.data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
     @extend_schema(
-        responses={
-            200: serializer_class,
-            403: forbidden_serializer_class,
-            404: error_serializer_class,
-        },
         operation_id="getSingleProject",
     )
     def get(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug.lower())
         except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [f"A project with the slug `{slug}` does not exist"],
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
-        response = self.serializer_class({"project": project})
+        response = SingleProjectResponseSerializer({"project": project})
         return Response(response.data)
 
     @extend_schema(
         responses={
-            200: DeleteProjectSuccessResponseSerializer,
-            403: forbidden_serializer_class,
-            404: serializers.BaseErrorResponseSerializer,
-            500: serializers.BaseErrorResponseSerializer,
+            200: inline_serializer("DeleteProjectResponseSerializer", fields={}),
         },
         operation_id="archiveSingleProject",
     )
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
-        try:
-            project: Project = (
-                Project.objects.filter(
-                    slug=slug.lower(), owner=request.user
-                ).select_related("archived_version")
-            ).first()
+        project: Project = (
+            Project.objects.filter(
+                slug=slug.lower(), owner=request.user
+            ).select_related("archived_version")
+        ).first()
 
-            if project is None:
-                raise Project.DoesNotExist(f"A Project with slug {slug} doesn't exit")
-
-            archived_version = ArchivedProject.get_or_create_from_project(project)
-
-            docker_service_list = (
-                DockerRegistryService.objects.filter(Q(project=project))
-                .select_related("project")
-                .prefetch_related("volumes", "ports", "urls", "env_variables")
+        if project is None:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist or has already been archived"
             )
-            id_list = []
-            for service in docker_service_list:
-                ArchivedDockerService.create_from_service(service, archived_version)
-                id_list.append(service.id)
 
-            PortConfiguration.objects.filter(
-                Q(dockerregistryservice__id__in=id_list)
-            ).delete()
-            URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-            Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-            docker_service_list.delete()
+        archived_version = ArchivedProject.get_or_create_from_project(project)
 
-            delete_docker_resources_for_project.apply_async(
-                kwargs=dict(archived_project_id=archived_version.id),
-                task_id=project.archive_task_id,
-            )
-            project.delete()
-        except Project.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [
-                            f"A project with the slug `{slug}` does not exist or has already been archived"
-                        ],
-                    }
-                }
-            )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
+        docker_service_list = (
+            DockerRegistryService.objects.filter(Q(project=project))
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables")
+        )
+        id_list = []
+        for service in docker_service_list:
+            ArchivedDockerService.create_from_service(service, archived_version)
+            id_list.append(service.id)
+
+        PortConfiguration.objects.filter(
+            Q(dockerregistryservice__id__in=id_list)
+        ).delete()
+        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        docker_service_list.delete()
+
+        delete_docker_resources_for_project.apply_async(
+            kwargs=dict(archived_project_id=archived_version.id),
+            task_id=project.archive_task_id,
+        )
+        project.delete()
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

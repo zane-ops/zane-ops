@@ -10,6 +10,15 @@ class CustomThrottledException(exceptions.Throttled):
     )
 
 
+class ResourceConflict(exceptions.APIException):
+    status_code = 409
+    default_detail = (
+        "The action you tried to perform is not possible because"
+        " another resource already exists with the same ID."
+    )
+    default_code = "resource_conflict"
+
+
 class CustomExceptionHandler(ExceptionHandler):
     def convert_known_exceptions(self, exc: Exception) -> Exception:
         if isinstance(exc, exceptions.Throttled):

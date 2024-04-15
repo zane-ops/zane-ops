@@ -87,6 +87,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '201':
           content:
             application/json:
@@ -142,6 +148,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '204':
           description: No response body
   /api/auth/me/:
@@ -192,6 +204,12 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -249,6 +267,12 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -310,6 +334,12 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -399,6 +429,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
@@ -486,6 +522,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
@@ -540,6 +582,12 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -650,31 +698,17 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
+                $ref: '#/components/schemas/ProjectListResponse'
           description: ''
     post:
       operationId: createProject
@@ -735,51 +769,17 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SingleProjectSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
-          description: ''
         '409':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
-        '500':
+        '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjetCreateErrorResponse'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
-                      attr: null
+                $ref: '#/components/schemas/SingleProjectResponse'
           description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
@@ -842,6 +842,12 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '204':
           description: No response body
@@ -1043,6 +1049,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '404':
           content:
             application/json:
@@ -1119,6 +1131,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -1133,39 +1159,17 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
+                $ref: '#/components/schemas/SingleProjectResponse'
           description: ''
     patch:
       operationId: updateProjectName
@@ -1219,6 +1223,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -1233,45 +1251,17 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectSuccessResponse'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectUpdateErrorResponse'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
+                $ref: '#/components/schemas/SingleProjectResponse'
           description: ''
     delete:
       operationId: archiveSingleProject
@@ -1314,6 +1304,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -1328,50 +1332,14 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           description: No response body
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseErrorResponse'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
-                      attr: null
-          description: ''
   /api/volumes/{volume_id}/size/:
     get:
       operationId: getVolumeSize
@@ -1427,6 +1395,12 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -2738,6 +2712,34 @@ components:
       - attr
       - code
       - detail
+    Error404:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode404Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    Error409:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode409Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
     Error429:
       type: object
       properties:
@@ -2760,6 +2762,16 @@ components:
       description: |-
         * `authentication_failed` - Authentication Failed
         * `not_authenticated` - Not Authenticated
+    ErrorCode404Enum:
+      enum:
+      - not_found
+      type: string
+      description: '* `not_found` - Not Found'
+    ErrorCode409Enum:
+      enum:
+      - resource_conflict
+      type: string
+      description: '* `resource_conflict` - Resource Conflict'
     ErrorCode429Enum:
       enum:
       - throttled
@@ -2774,6 +2786,30 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Error401'
+      required:
+      - errors
+      - type
+    ErrorResponse404:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error404'
+      required:
+      - errors
+      - type
+    ErrorResponse409:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ServerErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error409'
       required:
       - errors
       - type
@@ -3070,7 +3106,7 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    ProjectSuccessResponse:
+    ProjectListResponse:
       type: object
       properties:
         active:
@@ -3080,42 +3116,6 @@ components:
       required:
       - active
       - archived
-    ProjectUpdateErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/ProjetUpdateError'
-      required:
-      - errors
-    ProjetCreateError:
-      type: object
-      properties:
-        root:
-          type: array
-          items:
-            type: string
-        slug:
-          type: array
-          items:
-            type: string
-    ProjetCreateErrorResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/ProjetCreateError'
-      required:
-      - errors
-    ProjetUpdateError:
-      type: object
-      properties:
-        root:
-          type: array
-          items:
-            type: string
-        slug:
-          type: array
-          items:
-            type: string
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3123,6 +3123,11 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ServerErrorEnum:
+      enum:
+      - server_error
+      type: string
+      description: '* `server_error` - Server Error'
     ServicePortsRequest:
       type: object
       properties:
@@ -3133,7 +3138,7 @@ components:
           type: integer
       required:
       - forwarded
-    SingleProjectSuccessResponse:
+    SingleProjectResponse:
       type: object
       properties:
         project:
