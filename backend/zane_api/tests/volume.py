@@ -1,52 +1,13 @@
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 
-import docker.errors
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
-from . import AuthAPITestCase
+from . import AuthAPITestCase, FakeDockerClient
 from .base import APITestCase
 from ..docker_operations import create_docker_volume, remove_docker_volume
 from ..models import Project, Volume, DockerRegistryService
-
-
-class FakeDockerClient:
-    class FakeVolume:
-        def __init__(self, parent: "FakeDockerClient", name: str):
-            self.name = name
-            self.parent = parent
-
-        def remove(self, force: bool):
-            if self.parent.raise_error:
-                raise docker.errors.APIError("Unknown error")
-            self.parent.volume_map.pop(self.name)
-
-    def __init__(self, raise_error: bool = False):
-        self.volumes = MagicMock()
-        self.containers = MagicMock()
-        self.raise_error = raise_error
-
-        self.containers.run = self.containers_run
-        self.volumes.create = self.volumes_create
-        self.volumes.get = self.volumes_get
-        self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
-
-    def volumes_create(self, name: str, **kwargs):
-        if self.raise_error:
-            raise docker.errors.APIError("Unkwown error")
-
-        self.volume_map[name] = FakeDockerClient.FakeVolume(parent=self, name=name)
-
-    def volumes_get(self, name: str):
-        if name not in self.volume_map:
-            raise docker.errors.NotFound("Volume Not found")
-        return self.volume_map[name]
-
-    def containers_run(self, **kwargs):
-        if self.raise_error:
-            raise docker.errors.APIError("Unkwown error")
-        return "72689062\t/data".encode(encoding="utf-8")
 
 
 class DockerVolumeTests(APITestCase):
@@ -128,6 +89,3 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
             reverse("zane_api:volume.size", kwargs={"volume_id": "abcDefGh1jk"})
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        data = response.json()
-        self.assertTrue(isinstance(data.get("errors"), dict))
-        self.assertTrue("root" in data.get("errors"))

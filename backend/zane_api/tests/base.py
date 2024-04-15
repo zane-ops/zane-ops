@@ -125,12 +125,14 @@ class FakeDockerClient:
     def events(self, decode: bool, filters: dict):
         return []
 
-    def containers_run(
-        self, image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
-    ):
-        _, port = list(ports.values())[0]
-        if port == self.PORT_USED_BY_HOST:
-            raise docker.errors.APIError(f"Port {port} is already used")
+    def containers_run(self, command: str, *args, **kwargs):
+        ports: dict[str, tuple[str, int]] = kwargs.get("ports")
+        if ports is not None:
+            _, port = list(ports.values())[0]
+            if port == self.PORT_USED_BY_HOST:
+                raise docker.errors.APIError(f"Port {port} is already used")
+        if command == "du -sb /data":
+            return "72689062\t/data".encode(encoding="utf-8")
 
     def volumes_create(self, name: str, labels: dict, **kwargs):
         self.volume_map[name] = FakeDockerClient.FakeVolume(
