@@ -1,5 +1,6 @@
 import docker.errors
 from drf_spectacular.utils import extend_schema
+from rest_framework import exceptions
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -88,17 +89,9 @@ class DockerLoginErrorResponseSerializer(serializers.Serializer):
 
 class DockerLoginView(APIView):
     serializer_class = DockerLoginSuccessResponseSerializer
-    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = DockerLoginErrorResponseSerializer
 
     @extend_schema(
         request=DockerLoginRequestSerializer,
-        responses={
-            200: serializer_class,
-            403: forbidden_serializer_class,
-            422: error_serializer_class,
-            401: error_serializer_class,
-        },
         operation_id="dockerLogin",
     )
     def post(self, request: Request):
@@ -109,10 +102,7 @@ class DockerLoginView(APIView):
             try:
                 login_to_docker_registry(**data)
             except docker.errors.APIError:
-                response = self.error_serializer_class(
-                    {"errors": {"root": ["Invalid credentials"]}}
-                )
-                return Response(response.data, status=status.HTTP_401_UNAUTHORIZED)
+                raise exceptions.AuthenticationFailed("Invalid credentials")
             else:
                 response = self.serializer_class({"success": True})
                 return Response(response.data, status=status.HTTP_200_OK)
