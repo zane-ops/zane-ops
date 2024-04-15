@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from .api_description import API_DESCRIPTION
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -229,19 +231,16 @@ DRF_STANDARDIZED_ERRORS = {
         "401",
         "403",
         "404",
-        "405",
-        "415",
         "429",
-        "500",
     ],
 }
 
 # DRF SPECTACULAR, for OpenAPI schema generation
 
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
-    "DESCRIPTION": "ZaneOps is a self-hosted, open source platform as a service for hosting static sites, web apps, "
-    "databases, CRONS, Workers using docker swarm as the engine.",
+    "DESCRIPTION": API_DESCRIPTION,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {

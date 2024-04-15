@@ -2,8 +2,28 @@ openapi: 3.0.3
 info:
   title: ZaneOps API
   version: 1.0.0
-  description: ZaneOps is a self-hosted, open source platform as a service for hosting
-    static sites, web apps, databases, CRONS, Workers using docker swarm as the engine.
+  description: "\n\n## Overview\n\nZaneOps is a self-hosted, open source platform\
+    \ as a service for hosting static sites, web apps, \ndatabases, CRONS, Workers\
+    \ using docker swarm as the engine.\n\n## Errors\n\n### 405 Method Not Allowed\n\
+    \nThis is returned when an endpoint is called with an unexpected http method.\
+    \ For example, if updating a user requires\na POST request and a PATCH is issued\
+    \ instead, this error is returned. Here's how it looks like:\n\n```json\n{\n \
+    \ \"type\": \"client_error\",\n  \"errors\": [\n    {\n      \"code\": \"method_not_allowed\"\
+    ,\n      \"detail\": \"Method “patch” not allowed.\",\n      \"attr\": null\n\
+    \    }\n  ]\n}\n```\n\n### 406 Not Acceptable\n\nThis is returned if the `Accept`\
+    \ header is submitted and contains a value other than `application/json`. Here's\
+    \ how the\nresponse would look:\n\n```json\n{\n  \"type\": \"client_error\",\n\
+    \  \"errors\": [\n    {\n      \"code\": \"not_acceptable\",\n      \"detail\"\
+    : \"Could not satisfy the request Accept header.\",\n      \"attr\": null\n  \
+    \  }\n  ]\n}\n```\n\n### 415 Unsupported Media Type\n\nThis is returned when the\
+    \ request content type is not json. Here's how the response would look:\n\n```json\n\
+    {\n  \"type\": \"client_error\",\n  \"errors\": [\n    {\n      \"code\": \"not_acceptable\"\
+    ,\n      \"detail\": \"Unsupported media type “application/xml” in request.\"\
+    ,\n      \"attr\": null\n    }\n  ]\n}\n```\n\n### 500 Internal Server Error\n\
+    \nThis is returned when the API server encounters an unexpected error. Here's\
+    \ how the response would look:\n\n```json\n{\n  \"type\": \"server_error\",\n\
+    \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
+    \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
   /api/auth/login/:
     post:
@@ -53,34 +73,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -93,20 +85,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '201':
@@ -150,34 +128,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -190,20 +140,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '204':
@@ -243,34 +179,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -283,20 +191,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -342,34 +236,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -382,20 +248,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -445,34 +297,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -485,20 +309,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -575,34 +385,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -615,20 +397,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -704,34 +472,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -744,20 +484,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -801,34 +527,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -841,20 +539,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -952,34 +636,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -992,20 +648,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -1077,34 +719,6 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
                       attr: null
           description: ''
         '429':
@@ -1215,34 +829,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -1255,20 +841,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '204':
@@ -1355,34 +927,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -1395,20 +939,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '404':
@@ -1499,34 +1029,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -1539,20 +1041,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '404':
@@ -1631,34 +1119,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -1671,20 +1131,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -1773,34 +1219,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -1813,20 +1231,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -1908,34 +1312,6 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
                       attr: null
           description: ''
         '429':
@@ -2038,34 +1414,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '405':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse405'
-              examples:
-                MethodNotAllowed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: method_not_allowed
-                      detail: Method "get" not allowed.
-                      attr: null
-          description: ''
-        '415':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse415'
-              examples:
-                UnsupportedMediaType:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: unsupported_media_type
-                      detail: Unsupported media type "application/json" in request.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -2078,20 +1426,6 @@ paths:
                     errors:
                     - code: throttled
                       detail: Request was throttled.
-                      attr: null
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse500'
-              examples:
-                APIException:
-                  value:
-                    type: server_error
-                    errors:
-                    - code: error
-                      detail: A server error occurred.
                       attr: null
           description: ''
         '200':
@@ -3404,53 +2738,11 @@ components:
       - attr
       - code
       - detail
-    Error405:
-      type: object
-      properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode405Enum'
-        detail:
-          type: string
-        attr:
-          type: string
-          nullable: true
-      required:
-      - attr
-      - code
-      - detail
-    Error415:
-      type: object
-      properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode415Enum'
-        detail:
-          type: string
-        attr:
-          type: string
-          nullable: true
-      required:
-      - attr
-      - code
-      - detail
     Error429:
       type: object
       properties:
         code:
           $ref: '#/components/schemas/ErrorCode429Enum'
-        detail:
-          type: string
-        attr:
-          type: string
-          nullable: true
-      required:
-      - attr
-      - code
-      - detail
-    Error500:
-      type: object
-      properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode500Enum'
         detail:
           type: string
         attr:
@@ -3468,26 +2760,11 @@ components:
       description: |-
         * `authentication_failed` - Authentication Failed
         * `not_authenticated` - Not Authenticated
-    ErrorCode405Enum:
-      enum:
-      - method_not_allowed
-      type: string
-      description: '* `method_not_allowed` - Method Not Allowed'
-    ErrorCode415Enum:
-      enum:
-      - unsupported_media_type
-      type: string
-      description: '* `unsupported_media_type` - Unsupported Media Type'
     ErrorCode429Enum:
       enum:
       - throttled
       type: string
       description: '* `throttled` - Throttled'
-    ErrorCode500Enum:
-      enum:
-      - error
-      type: string
-      description: '* `error` - Error'
     ErrorResponse401:
       type: object
       properties:
@@ -3500,30 +2777,6 @@ components:
       required:
       - errors
       - type
-    ErrorResponse405:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ClientErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error405'
-      required:
-      - errors
-      - type
-    ErrorResponse415:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ClientErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error415'
-      required:
-      - errors
-      - type
     ErrorResponse429:
       type: object
       properties:
@@ -3533,18 +2786,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Error429'
-      required:
-      - errors
-      - type
-    ErrorResponse500:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ServerErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error500'
       required:
       - errors
       - type
@@ -3882,11 +3123,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ServerErrorEnum:
-      enum:
-      - server_error
-      type: string
-      description: '* `server_error` - Server Error'
     ServicePortsRequest:
       type: object
       properties:
