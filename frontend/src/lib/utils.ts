@@ -32,7 +32,12 @@ export function getFormErrorsFromResponseData<
     errors: ValidationErrorDetail[];
   }
     ? T["errors"][number]["attr"]
-    : never,
+    : T extends {
+          type: "client_error";
+          errors: ClientErrorDetail[];
+        }
+      ? "non_field_errors"
+      : never,
   string[]
 > {
   const errors: Record<string, string[]> = {};
