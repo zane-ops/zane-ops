@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
       <Header />
-      <main className="flex-grow container p-6">
+      <main className="flex-grow  container p-6">
         <Outlet />
       </main>
       <Footer />
