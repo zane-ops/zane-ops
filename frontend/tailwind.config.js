@@ -55,6 +55,18 @@ module.exports = {
         toggle: {
           DEFAULT: "hsl(var(--toggle))",
           light: "hsl(var(--light))"
+        },
+        statusgreen: {
+          DEFAULT: "hsl(var(--statusgreen))",
+          light: "hsl(var(--light))"
+        },
+        statusred: {
+          DEFAULT: "hsl(var(--statusred))",
+          light: "hsl(var(--light))"
+        },
+        statusyellow: {
+          DEFAULT: "hsl(var(--statusyellow))",
+          light: "hsl(var(--light))"
         }
       },
       borderRadius: {

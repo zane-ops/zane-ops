@@ -4,7 +4,7 @@ import { useAuthUser } from "~/components/helper/use-auth-user";
 import { MetaTitle } from "~/components/meta-title";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -33,7 +33,7 @@ import {
   TableFooter,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 
 const projects = [
@@ -43,7 +43,7 @@ const projects = [
     status: "0/5 Services Up",
     actions: "Settings",
     statusIcon: <X size={14} />,
-    tracker: 0
+    tracker: 0,
   },
   {
     name: "ZaneOps",
@@ -51,7 +51,7 @@ const projects = [
     status: "5/5 Services Up",
     actions: "Settings",
     statusIcon: <Check size={14} />,
-    tracker: 1
+    tracker: 1,
   },
   {
     name: "ZaneOps",
@@ -59,8 +59,8 @@ const projects = [
     status: "2/5 Services Up",
     actions: "Settings",
     statusIcon: <AlertTriangle size={14} />,
-    tracker: 2
-  }
+    tracker: 2,
+  },
 ];
 
 export function TableDemo() {
@@ -70,14 +70,14 @@ export function TableDemo() {
       <div className="flex my-5 w-[40%]  items-center">
         <Search size={20} className="relative left-5" />
         <Input
-          className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
+          className="px-14 placeholder:text-gray-400  -mx-5 w-full my-1 text-sm focus-visible:right-0"
           placeholder="Ex: ZaneOps"
         />
       </div>
 
       <Table>
-        <TableHeader>
-          <TableRow className="border-border">
+        <TableHeader className="bg-toggle">
+          <TableRow className="border-none">
             <TableHead>Name</TableHead>
             <TableHead className="flex items-center gap-2">
               Last Updated
@@ -102,11 +102,11 @@ export function TableDemo() {
                 <div
                   className={`flex border w-fit px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2 ${
                     project.tracker === 1
-                      ? "border-green-600 bg-green-600 bg-opacity-10 text-green-200"
+                      ? "border-green-600 bg-green-600 bg-opacity-10 text-statusgreen"
                       : project.tracker === 0
-                        ? "border-red-600 bg-red-600 bg-opacity-10 text-red-200"
+                        ? "border-red-600 bg-red-600 bg-opacity-10 text-statusred"
                         : project.tracker === 2
-                          ? "border-yellow-600 bg-yellow-600 bg-opacity-10 text-yellow-200"
+                          ? "border-yellow-600 bg-yellow-600 bg-opacity-10 text-statusyellow"
                           : ""
                   }`}
                 >
@@ -155,7 +155,7 @@ import {
   MinusCircle,
   Search,
   Settings,
-  X
+  X,
 } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import {
@@ -165,7 +165,7 @@ import {
   PaginationItem,
   PaginationLink,
   PaginationNext,
-  PaginationPrevious
+  PaginationPrevious,
 } from "~/components/ui/pagination";
 
 export function PaginationDemo() {
