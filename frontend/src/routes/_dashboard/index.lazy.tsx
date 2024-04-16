@@ -4,7 +4,7 @@ import { useAuthUser } from "~/components/helper/use-auth-user";
 import { MetaTitle } from "~/components/meta-title";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -33,7 +33,7 @@ import {
   TableFooter,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
 
 const projects = [
@@ -43,7 +43,7 @@ const projects = [
     status: "0/5 Services Up",
     actions: "Settings",
     statusIcon: <X size={14} />,
-    tracker: 0,
+    tracker: 0
   },
   {
     name: "ZaneOps",
@@ -51,7 +51,7 @@ const projects = [
     status: "5/5 Services Up",
     actions: "Settings",
     statusIcon: <Check size={14} />,
-    tracker: 1,
+    tracker: 1
   },
   {
     name: "ZaneOps",
@@ -59,8 +59,8 @@ const projects = [
     status: "2/5 Services Up",
     actions: "Settings",
     statusIcon: <AlertTriangle size={14} />,
-    tracker: 2,
-  },
+    tracker: 2
+  }
 ];
 
 export function TableDemo() {
@@ -155,7 +155,7 @@ import {
   MinusCircle,
   Search,
   Settings,
-  X,
+  X
 } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import {
@@ -165,7 +165,7 @@ import {
   PaginationItem,
   PaginationLink,
   PaginationNext,
-  PaginationPrevious,
+  PaginationPrevious
 } from "~/components/ui/pagination";
 
 export function PaginationDemo() {
