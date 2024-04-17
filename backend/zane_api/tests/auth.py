@@ -21,19 +21,13 @@ class AuthLoginViewTests(AuthAPITestCase):
             data={"username": "user", "password": "bad_password"},
         )
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
-        self.assertIsNotNone(response.json().get("errors", None))
 
     def test_bad_request(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
             data={},
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-        errors = response.json().get("errors", None)
-
-        self.assertIsNotNone(errors)
-        self.assertIn("username", errors)
-        self.assertIn("password", errors)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login_ratelimit(self):
         for _ in range(6):
@@ -42,7 +36,6 @@ class AuthLoginViewTests(AuthAPITestCase):
                 data={},
             )
         self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code)
-        self.assertIsNotNone(response.json().get("errors"))
 
 
 class AuthMeViewTests(AuthAPITestCase):

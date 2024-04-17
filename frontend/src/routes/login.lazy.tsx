@@ -13,6 +13,7 @@ import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userKeys } from "~/key-factories";
+import { getFormErrorsFromResponseData } from "~/lib/utils";
 
 export const Route = createLazyFileRoute("/login")({
   component: Login
@@ -51,6 +52,8 @@ function Login() {
     return null;
   }
 
+  const errors = getFormErrorsFromResponseData(data);
+
   return (
     <>
       <MetaTitle title="Login" />
@@ -81,11 +84,11 @@ function Login() {
             Log in
           </h1>
           <div className="card flex flex-col gap-3">
-            {data?.errors?.root && (
+            {errors.non_field_errors && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{data.errors.root}</AlertDescription>
+                <AlertDescription>{errors.non_field_errors}</AlertDescription>
               </Alert>
             )}
 
@@ -94,9 +97,9 @@ function Login() {
               <Form.Control asChild>
                 <Input placeholder="ex: JohnDoe" name="username" type="text" />
               </Form.Control>
-              {data?.errors?.username && (
+              {errors.username && (
                 <Form.Message className="text-red-500 text-sm">
-                  {data.errors.username}
+                  {errors.username}
                 </Form.Message>
               )}
             </Form.Field>
@@ -106,9 +109,9 @@ function Login() {
               <Form.Control asChild>
                 <Input type="password" name="password" />
               </Form.Control>
-              {data?.errors?.password && (
+              {errors.password && (
                 <Form.Message className="text-red-500 text-sm">
-                  {data.errors.password}
+                  {errors.password}
                 </Form.Message>
               )}
             </Form.Field>

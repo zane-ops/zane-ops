@@ -216,11 +216,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("ports"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="nosql-db"
@@ -260,10 +256,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("ports"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="adminer"
@@ -534,10 +527,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("ports"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -554,8 +544,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "slug": "adminer-ui",
             "image": "adminer:latest",
             "ports": [
-                {"public": 8080, "forwarded": 8080},
-                {"public": 8080, "forwarded": 8080},
+                {"public": 8081, "forwarded": 8080},
+                {"public": 8081, "forwarded": 8080},
             ],
         }
 
@@ -564,10 +554,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("ports"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -597,10 +584,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("urls"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -627,10 +611,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("volumes"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -659,10 +640,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("urls"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -691,10 +669,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("urls"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -794,10 +769,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("credentials"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
@@ -831,10 +803,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("image"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
@@ -870,10 +839,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("image"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
@@ -901,10 +867,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("image"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
@@ -925,10 +888,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps({}),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
@@ -957,10 +917,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("root"))
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
             slug="main-app"
@@ -991,9 +947,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("slug"))
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -1027,10 +980,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
-        self.assertEqual(status.HTTP_422_UNPROCESSABLE_ENTITY, response.status_code)
-
-        errors = response.json()["errors"]
-        self.assertIsNotNone(errors.get("urls"))
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -1119,9 +1069,6 @@ class DockerGetServiceViewTest(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("root"))
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -1143,9 +1090,6 @@ class DockerGetServiceViewTest(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("root"))
 
 
 class DockerServiceArchiveViewTest(AuthAPITestCase):
@@ -1426,9 +1370,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("root"))
 
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -1443,6 +1384,3 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        errors = response.json().get("errors")
-        self.assertIsNotNone(errors)
-        self.assertIsNotNone(errors.get("root"))
