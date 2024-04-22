@@ -82,13 +82,27 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     python manage.py migrate
     ```
 
-6. Go to `/etc/hosts` and append this entry to that file :
+6. **Setting up the local domain for development :**
+   This step is for allowing you to access the app and generated domains locally
+   (for example when you create an app in the GUI), the generated domains will be
+   available at `<service-name-project-name>.zaneops.local`.
 
-    ```
-    127.0.0.1       zane.local 
-    ```
+    1. On a Mac, list all your network services :
 
-   The API will be available at [https://zane.local](https://zane.local).
+        ```shell
+        sudo networksetup -listallnetworkservices
+        ```
+
+    2. You will probably see `Wi-Fi` appear in the list of services,
+       if you are connected to it, you can add `127.0.0.1` the list of dns servers :
+
+       ```shell
+       # list all the dns servers
+       sudo networksetup -getdnsservers Wi-Fi
+       # Now add localhost as one dns server
+       sudo networksetup -setdnsservers Wi-Fi 127.0.0.1  1.1.1.1 8.8.8.8 8.8.4.4 # the last 3 servers are cloudflare and google dns servers
+       ```
+       The app should be available at https://app.zaneops.local.
 
 7. **Open the source code and start rocking ! 😎**
 

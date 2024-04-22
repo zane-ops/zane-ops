@@ -28,7 +28,7 @@ for service in $services; do
 done
 
 # Wait until Ctrl+C is pressed
-echo "Server launched at http://zane.local"
+echo "Server launched at http://app.zaneops.local"
 echo "Press Ctrl+C to stop everything..."
 while true; do
   sleep 1

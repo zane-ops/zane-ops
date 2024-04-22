@@ -1,6 +1,14 @@
 version: "3.4"
 
 services:
+  dnsmasq:
+    image: andyshinn/dnsmasq
+    cap_add:
+      - NET_ADMIN
+    command: --log-facility=-
+    volumes:
+      - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf
+    network_mode: 'host'
   celery-worker:
     build:
       context: ../backend

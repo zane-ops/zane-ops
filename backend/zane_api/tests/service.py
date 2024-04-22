@@ -309,7 +309,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_create_service_with_port_create_a_domain(
+    def test_create_service_with_port_create_a_default_domain(
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
@@ -335,6 +335,44 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         default_url: URL = created_service.urls.first()
         self.assertIsNotNone(default_url)
         self.assertEqual(
+            f"{p.slug}-{created_service.slug}.{settings.ROOT_DOMAIN}",
+            default_url.domain,
+        )
+        self.assertEqual("/", default_url.base_path)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_with_default_url_get_regenerated_if_url_already_exists(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        URL.objects.create(domain=f"{p.slug}-adminer-ui.{settings.ROOT_DOMAIN}")
+
+        create_service_payload = {
+            "slug": "adminer-ui",
+            "image": "adminer:latest",
+            "ports": [{"forwarded": 8080}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="adminer-ui"
+        ).first()
+
+        default_url: URL = created_service.urls.first()
+        self.assertIsNotNone(default_url)
+        self.assertNotEquals(
             f"{p.slug}-{created_service.slug}.{settings.ROOT_DOMAIN}",
             default_url.domain,
         )

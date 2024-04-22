@@ -335,10 +335,20 @@ class CreateDockerServiceAPIView(APIView):
 
                 if can_create_urls:
                     if len(service_urls_from_request) == 0:
-                        default_url = URL.objects.create(
+                        existing_urls = URL.objects.filter(
                             domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
                             base_path="/",
-                        )
+                        ).first()
+                        if existing_urls is None:
+                            default_url = URL.objects.create(
+                                domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
+                                base_path="/",
+                            )
+                        else:
+                            default_url = URL.objects.create(
+                                domain=f"{project.slug}-{service_slug}-{fake.slug()}.{settings.ROOT_DOMAIN}",
+                                base_path="/",
+                            )
                         service.urls.add(default_url)
                     else:
                         urls_to_create: list[URL] = []

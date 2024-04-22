@@ -46,7 +46,7 @@ echo "Deleting networks..."
 docker network rm $(docker network ls -q --filter label=zane-managed=true) 2>/dev/null
 
 echo "Resetting caddy config..."
-sed -i'.bak' "s#{{ZANE_HOST}}#zane.local#g" ./docker/proxy/default-caddy-config.json
+sed -i'.bak' "s#{{ZANE_HOST}}#app.zaneops.local#g" ./docker/proxy/default-caddy-config.json
 
 curl "http://localhost:2019/load" \
 	-H "Content-Type: application/json" \
