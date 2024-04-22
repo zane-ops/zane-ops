@@ -35,21 +35,21 @@ CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 
-## We will only support one root domain on production
-## And it will be in the format domain.com (without `http://` or `https://`)
-root_domain = os.environ.get("ROOT_DOMAIN")
-zane_app_domain = os.environ.get("ZANE_APP_DOMAIN")
-ROOT_DOMAIN = "zane.local" if root_domain is None else root_domain
-ZANE_APP_DOMAIN = ROOT_DOMAIN if zane_app_domain is None else zane_app_domain
+# We will only support one root domain on production
+# And it will be in the format domain.com (without `http://` or `https://`)
+ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
+ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
 ALLOWED_HOSTS = (
-    ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
+    [ZANE_APP_DOMAIN, "localhost", "127.0.0.1"]
+    if env != PRODUCTION_ENV
+    else [ZANE_APP_DOMAIN]
 )
 
-## This is necessary for making sure that CSRF protections work on production
+# This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
-    ["http://zane.local", "https://zane.local"]
-    if root_domain is None
-    else [f"https://{root_domain}"]
+    [f"https://{ZANE_APP_DOMAIN}", f"http://{ZANE_APP_DOMAIN}"]
+    if env != PRODUCTION_ENV
+    else [f"https://{ZANE_APP_DOMAIN}"]
 )
 
 CACHES = {
