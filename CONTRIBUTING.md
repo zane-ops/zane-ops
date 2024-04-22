@@ -100,7 +100,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
        # list all the dns servers
        sudo networksetup -getdnsservers Wi-Fi
        # Now add localhost as one dns server
-       sudo networksetup -setdnsservers Wi-Fi 127.0.0.1  # 1.1.1.1 8.8.8.8 8.8.4.4 # (optional) these 3 are cloudflare and google dns servers
+       sudo networksetup -setdnsservers Wi-Fi 127.0.0.1  1.1.1.1 8.8.8.8 8.8.4.4 # the last 3 servers are cloudflare and google dns servers
        ```
        The app should be available at https://app.zaneops.local.
 
