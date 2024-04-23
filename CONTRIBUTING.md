@@ -96,19 +96,19 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
     4. Now you should try to run this command to see if the local DNS server is correctly setup :
 
-      ```shell
-      nslookup zaneops.local localhost
-      ```
-   If you get an error like this, please ensure that your server is up, (with `make dev`) :
-      ```
-      ;; connection timed out; no servers could be reached
-      ```
-   If you still have issues, you can open an issue in the repository, we will have a look at it.
+       ```shell
+       nslookup zaneops.local localhost
+       ```
+       If you get an error like this, please ensure that your server is up, (with `make dev`) :
+       ```
+       ;; connection timed out; no servers could be reached
+       ```
+       If you still have issues, you can open an issue in the repository, we will have a look at it.
 
 6. **Open the source code and start rocking ! 😎**
 
    The app should be available at https://app.zaneops.local.
-  
+
 ## 🧐 Project structure
 
 A quick look at the top-level files and directories you will see in this project.
