@@ -72,13 +72,19 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
    (for example when you create an app in the GUI), the generated domains will be
    available at `<service-name-project-name>.zaneops.local`.
 
-    1. On a Mac, list all your network services :
+    1. On Linux, you add localhost to the nameservers in `/etc/resolv.conf` :
+
+       ```shell
+       echo "nameserver 127.0.0.1" >> /etc/resolv.conf
+       ```
+
+    2. On a Mac, list all your network services :
 
         ```shell
         sudo networksetup -listallnetworkservices
         ```
 
-    2. You will probably see `Wi-Fi` appear in the list of services,
+    3. You will probably see `Wi-Fi` appear in the list of services,
        if you are connected to it, you can add `127.0.0.1` the list of dns servers :
 
        ```shell
@@ -88,6 +94,17 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
        sudo networksetup -setdnsservers Wi-Fi 127.0.0.1  1.1.1.1 8.8.8.8 8.8.4.4 # the last 3 servers are cloudflare and google dns servers
        ```
        The app should be available at https://app.zaneops.local.
+
+    4. Now you should try to run this command to see if the local DNS server is correctly setup :
+
+      ```shell
+      nslookup zaneops.local localhost
+      ```
+   If you get an error like this, please ensure that your server is up, (with `make dev`) :
+      ```
+      ;; connection timed out; no servers could be reached
+      ```
+   If you still have issues, you can open an issue in the repository, we will have a look at it.
 
 6. **Open the source code and start rocking ! 😎**
 
