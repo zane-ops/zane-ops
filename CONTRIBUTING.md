@@ -93,7 +93,6 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
        # Now add localhost as one dns server
        sudo networksetup -setdnsservers Wi-Fi 127.0.0.1  1.1.1.1 8.8.8.8 8.8.4.4 # the last 3 servers are cloudflare and google dns servers
        ```
-       The app should be available at https://app.zaneops.local.
 
     4. Now you should try to run this command to see if the local DNS server is correctly setup :
 
@@ -108,6 +107,8 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 6. **Open the source code and start rocking ! 😎**
 
+   The app should be available at https://app.zaneops.local.
+  
 ## 🧐 Project structure
 
 A quick look at the top-level files and directories you will see in this project.
