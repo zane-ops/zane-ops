@@ -41,7 +41,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     ``` 
 
 2. **Then run the setup script** :
-   From the root
+
    ```shell
    make setup
    ```
@@ -55,7 +55,6 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 3. **Start the project**
 
-   From the root
     ```shell
     make dev
     # or
@@ -64,7 +63,6 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 4. **Run DB migrations :**
 
-   From the root
     ```shell
     make migrate
     ```
