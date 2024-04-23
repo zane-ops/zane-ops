@@ -40,32 +40,20 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     git clone https://github.com/zane-ops/zane-ops.git
     ``` 
 
-2. **Then, Install the dependencies :**
-
-   From the root of the project :
-    ```shell
-    pnpm install --frozen-lockfile
-    ```
-
-   For the backend
-    ```shell
-    cd backend
-    # Create a virtual env
-    python -m venv ./venv
-    # activate the virtualenv
-    source ./venv/bin/activate
-    # Install all the packages
-    pip install uv
-    uv pip install -r requirements.txt
-    ```
-
-3. **Start docker swarm for the DEV server**
-
+2. **Then run the setup script** :
+   From the root
    ```shell
-   docker swarm init
+   make setup
    ```
 
-4. **Start the project**
+   If you receive this error message :
+
+    ```
+    Error response from daemon: This node is already part of a swarm. Use "docker swarm leave" to leave this swarm and join another one.
+    ```
+   You can safely ignore it, it means that you have already initialized docker swarm.
+
+3. **Start the project**
 
    From the root
     ```shell
@@ -74,15 +62,14 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     pnpm -r --parallel run dev
     ```
 
-5. **Run DB migrations :**
+4. **Run DB migrations :**
 
-   From the Backend
+   From the root
     ```shell
-    cd backend
-    python manage.py migrate
+    make migrate
     ```
 
-6. **Setting up the local domain for development :**
+5. **Setting up the local domain for development :**
    This step is for allowing you to access the app and generated domains locally
    (for example when you create an app in the GUI), the generated domains will be
    available at `<service-name-project-name>.zaneops.local`.
@@ -104,7 +91,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
        ```
        The app should be available at https://app.zaneops.local.
 
-7. **Open the source code and start rocking ! 😎**
+6. **Open the source code and start rocking ! 😎**
 
 ## 🧐 Project structure
 
