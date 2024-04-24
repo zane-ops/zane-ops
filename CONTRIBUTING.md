@@ -99,6 +99,16 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
        ```shell
        nslookup zaneops.local localhost
        ```
+       You should get an output like this :
+
+       ```
+        Server:     localhost
+        Address:    ::1#53
+        
+        Name:	zaneops.local
+        Address: 127.0.0.1
+       ```
+
        If you get an error like this, please ensure that your server is up, (with `make dev`) :
        ```
        ;; connection timed out; no servers could be reached
