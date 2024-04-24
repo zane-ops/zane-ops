@@ -40,60 +40,51 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     git clone https://github.com/zane-ops/zane-ops.git
     ``` 
 
-2. **Then, Install the dependencies :**
-
-   From the root of the project :
-    ```shell
-    pnpm install --frozen-lockfile
-    ```
-
-   For the backend
-    ```shell
-    cd backend
-    # Create a virtual env
-    python -m venv ./venv
-    # activate the virtualenv
-    source ./venv/bin/activate
-    # Install all the packages
-    pip install uv
-    uv pip install -r requirements.txt
-    ```
-
-3. **Start docker swarm for the DEV server**
+2. **Then run the setup script** :
 
    ```shell
-   docker swarm init
+   make setup
    ```
 
-4. **Start the project**
+   If you receive this error message :
 
-   From the root
+    ```
+    Error response from daemon: This node is already part of a swarm. Use "docker swarm leave" to leave this swarm and join another one.
+    ```
+   You can safely ignore it, it means that you have already initialized docker swarm.
+
+3. **Start the project**
+
     ```shell
     make dev
     # or
     pnpm -r --parallel run dev
     ```
 
-5. **Run DB migrations :**
+4. **Run DB migrations :**
 
-   From the Backend
     ```shell
-    cd backend
-    python manage.py migrate
+    make migrate
     ```
 
-6. **Setting up the local domain for development :**
+5. **Setting up the local domain for development :**
    This step is for allowing you to access the app and generated domains locally
    (for example when you create an app in the GUI), the generated domains will be
    available at `<service-name-project-name>.zaneops.local`.
 
-    1. On a Mac, list all your network services :
+    1. On Linux, you add localhost to the nameservers in `/etc/resolv.conf` :
+
+       ```shell
+       echo "nameserver 127.0.0.1" >> /etc/resolv.conf
+       ```
+
+    2. On a Mac, list all your network services :
 
         ```shell
         sudo networksetup -listallnetworkservices
         ```
 
-    2. You will probably see `Wi-Fi` appear in the list of services,
+    3. You will probably see `Wi-Fi` appear in the list of services,
        if you are connected to it, you can add `127.0.0.1` the list of dns servers :
 
        ```shell
@@ -102,9 +93,31 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
        # Now add localhost as one dns server
        sudo networksetup -setdnsservers Wi-Fi 127.0.0.1  1.1.1.1 8.8.8.8 8.8.4.4 # the last 3 servers are cloudflare and google dns servers
        ```
-       The app should be available at https://app.zaneops.local.
 
-7. **Open the source code and start rocking ! 😎**
+    4. Now you should try to run this command to see if the local DNS server is correctly setup :
+
+       ```shell
+       nslookup zaneops.local localhost
+       ```
+       You should get an output like this :
+
+       ```
+       Server:     localhost
+       Address:    ::1#53
+       
+       Name:	zaneops.local
+       Address: 127.0.0.1
+       ```
+
+       If you get an error like this, please ensure that your server is up, (with `make dev`) :
+       ```
+       ;; connection timed out; no servers could be reached
+       ```
+       If you still have issues, you can open an issue in the repository, we will have a look at it.
+
+6. **Open the source code and start rocking ! 😎**
+
+   The app should be available at https://app.zaneops.local.
 
 ## 🧐 Project structure
 
