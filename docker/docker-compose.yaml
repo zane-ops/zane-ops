@@ -15,9 +15,8 @@ services:
       dockerfile: ../backend/Dockerfile
     command: >
       bash -c "source /venv/bin/activate &&
-               uv pip install watchdog &&
                uv pip install -r requirements.txt &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- celery -A backend worker -E -l info"
+               celery -A backend worker -E -l info"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock
@@ -36,9 +35,8 @@ services:
 
     command: >
       bash -c "source /venv/bin/activate &&
-               uv pip install watchdog &&
                uv pip install -r requirements.txt &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- celery -A backend beat -l info"
+               celery -A backend beat -l info"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock
