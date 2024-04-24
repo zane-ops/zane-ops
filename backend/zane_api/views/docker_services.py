@@ -76,24 +76,6 @@ class URLRequestSerializer(serializers.Serializer):
                     ]
                 }
             )
-
-        domain = url["domain"]
-        domain_parts = domain.split(".")
-        domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
-
-        existing_parent_domain = URL.objects.filter(
-            domain=domain_as_wildcard.lower()
-        ).distinct()
-        if len(existing_parent_domain) > 0:
-            raise serializers.ValidationError(
-                {
-                    "domain": [
-                        f"URL with domain `{url['domain']}` can't be used because it will be shadowed by the wildcard"
-                        f" domain `{domain_as_wildcard}` which is already assigned to another service."
-                    ]
-                }
-            )
-
         return url
 
 

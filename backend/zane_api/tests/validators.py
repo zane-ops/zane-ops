@@ -33,16 +33,6 @@ class DomainValidatorsTestCase(TestCase):
         with self.assertRaises(ValidationError):
             validate_url_domain("zane.local#hello=world")
 
-    def test_validate_url_wildcard_subdomain(self):
-        try:
-            validate_url_domain("*.gh.fredkiss.dev")
-        except ValidationError:
-            self.fail("ValidationError raised unexpectedly!")
-
-    def test_validate_url_wildcard_double_subdomain(self):
-        with self.assertRaises(ValidationError):
-            validate_url_domain("*.*.gh.fredkiss.dev")
-
 
 class BasePathValidatorsTestCase(TestCase):
     def test_validate_base_path_succesfull(self):
