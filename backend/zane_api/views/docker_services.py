@@ -136,7 +136,6 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                     "image": [
                         f"Either the image `{image}` does not exist {registry_str}"
                         f" or the credentials are invalid for this image."
-                        f" Have you forgotten to include the credentials ?"
                     ]
                 }
             )
@@ -271,17 +270,11 @@ class CreateDockerServiceAPIView(APIView):
                 fake = Faker()
                 Faker.seed(time.monotonic())
                 service_slug = data.get("slug", fake.slug()).lower()
-                docker_image_tag: str | None = None
                 try:
-                    docker_image = data["image"]
-                    docker_image_parts = docker_image.split(":", 1)
-                    if len(docker_image_parts) == 2:
-                        docker_image, docker_image_tag = docker_image_parts
-
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
-                        image_repository=docker_image,
+                        image=data["image"],
                         command=data.get("command"),
                         docker_credentials_username=(
                             docker_credentials.get("username")
@@ -400,9 +393,7 @@ class CreateDockerServiceAPIView(APIView):
                         service.urls.add(*created_urls)
 
                 # Create first deployment
-                first_deployment = DockerDeployment.objects.create(
-                    service=service, image_tag=docker_image_tag
-                )
+                first_deployment = DockerDeployment.objects.create(service=service)
 
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get("env", {})

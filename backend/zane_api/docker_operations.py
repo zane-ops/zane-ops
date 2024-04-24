@@ -20,7 +20,6 @@ from .models import (
     ArchivedProject,
     ArchivedDockerService,
     ArchivedURL,
-    DockerDeployment,
 )
 from .utils import strip_slash_if_exists
 
@@ -35,6 +34,7 @@ def get_docker_client():
     """
     global docker_client
     if docker_client is None:
+        print("Recreate docker client")
         docker_client = docker.from_env()
     return docker_client
 
@@ -92,6 +92,11 @@ def login_to_docker_registry(
 class DockerAuthConfig(TypedDict):
     username: str
     password: str
+
+
+def pull_docker_image(image: str, auth: DockerAuthConfig = None):
+    client = get_docker_client()
+    client.images.pull(image, auth_config=auth)
 
 
 def check_if_docker_image_exists(
@@ -303,24 +308,9 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
-def create_service_from_docker_registry(
-    service: DockerRegistryService, deployment: DockerDeployment
-):
+def create_service_from_docker_registry(service: DockerRegistryService):
+    # TODO: Pull Image Tag (#44)
     client = get_docker_client()
-    auth_config: DockerAuthConfig | None = None
-    if (
-        service.docker_credentials_username is not None
-        and service.docker_credentials_password is not None
-    ):
-        auth_config = {
-            "username": service.docker_credentials_username,
-            "password": service.docker_credentials_password,
-        }
-    client.images.pull(
-        repository=service.image_repository,
-        tag=deployment.image_tag,
-        auth_config=auth_config,
-    )
 
     exposed_ports: dict[int, int] = {}
     endpoint_spec: EndpointSpec | None = None
@@ -351,7 +341,7 @@ def create_service_from_docker_registry(
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
     client.services.create(
-        image=f"{service.image_repository}:{deployment.image_tag}",
+        image=service.image,
         name=get_docker_service_resource_name(
             service_id=service.id,
             project_id=service.project.id,

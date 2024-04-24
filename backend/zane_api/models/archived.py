@@ -118,7 +118,7 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
 
 
 class ArchivedDockerService(ArchivedBaseService):
-    image_repository = models.CharField(max_length=510, null=False, blank=False)
+    image = models.CharField(max_length=510)
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"
     )
@@ -135,7 +135,6 @@ class ArchivedDockerService(ArchivedBaseService):
         cls, service: DockerRegistryService, parent: ArchivedProject
     ):
         archived_service = cls.objects.create(
-            image_repository=service.image_repository,
             slug=service.slug,
             project=parent,
             command=service.command,
@@ -154,7 +153,7 @@ class ArchivedDockerService(ArchivedBaseService):
                 for volume in service.volumes.all()
             ]
         )
-        ArchivedDockerEnvVariable.objects.bulk_create(
+        archived_envs = ArchivedDockerEnvVariable.objects.bulk_create(
             [
                 ArchivedDockerEnvVariable(
                     key=env.key,
