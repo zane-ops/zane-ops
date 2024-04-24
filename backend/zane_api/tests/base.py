@@ -102,6 +102,7 @@ class FakeDockerClient:
         self.credentials = {}
 
         self.images.search = self.images_search
+        self.images.pull = self.images_pull
         self.containers.run = self.containers_run
         self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
@@ -109,18 +110,20 @@ class FakeDockerClient:
         self.volumes.create = self.volumes_create
         self.volumes.get = self.volumes_get
         self.volumes.list = self.volumes_list
-        self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
-        self.service_map = {
-            settings.CADDY_PROXY_SERVICE: FakeDockerClient.FakeService(
-                name="zane_zane-proxy", parent=self
-            )
-        }  # type: dict[str, FakeDockerClient.FakeService]
 
         self.networks = MagicMock()
         self.network_map = {}  # type: dict[str, FakeDockerClient.FakeNetwork]
 
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
+
+        self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
+        self.service_map = {
+            settings.CADDY_PROXY_SERVICE: FakeDockerClient.FakeService(
+                name="zane_zane-proxy", parent=self
+            )
+        }  # type: dict[str, FakeDockerClient.FakeService]
+        self.pulled_images: set[str] = set()
 
     def events(self, decode: bool, filters: dict):
         return []
@@ -177,6 +180,8 @@ class FakeDockerClient:
         command: str | None,
         labels: dict[str, str],
     ):
+        if image not in self.pulled_images:
+            raise docker.errors.NotFound("image not pulled")
         volumes: dict[str, str] = {}
         for mount in mounts:
             volume_name, mount_path, _ = mount.split(":")
@@ -217,6 +222,9 @@ class FakeDockerClient:
                 "star_count": 0,
             },
         ]
+
+    def images_pull(self, repository: str, tag: str = None, *args, **kwargs):
+        self.pulled_images.add(f"{repository}:{tag}")
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:

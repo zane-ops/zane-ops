@@ -235,7 +235,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            slug="cache-db", image="redis:alpine", project=p
+            slug="cache-db", image_repository="redis", project=p
         )
 
         used_port = PortConfiguration(
@@ -971,7 +971,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         DockerRegistryService.objects.create(
-            slug="cache-db", image="redis:alpine", project=p
+            slug="cache-db", image_repository="redis", project=p
         )
 
         create_service_payload = {
@@ -998,7 +998,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         existing_service = DockerRegistryService.objects.create(
-            slug="redis", image="redis:alpine", project=p
+            slug="redis", image_repository="redis", project=p
         )
         url = URL.objects.bulk_create(
             [
@@ -1079,7 +1079,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            slug="cache-db", image="redis:alpine", project=p
+            slug="cache-db", image_repository="redis", project=p
         )
 
         response = self.client.get(
@@ -1118,7 +1118,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p2 = Project.objects.create(slug="camly", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            slug="cache-db", image="redis:alpine", project=p1
+            slug="cache-db", image_repository="redis", project=p1
         )
 
         response = self.client.get(
