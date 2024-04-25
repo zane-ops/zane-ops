@@ -32,10 +32,16 @@ class Version:
 
 
 @dataclass
+class ContainerStatus:
+    ExitCode: int
+
+
+@dataclass
 class Status:
     Timestamp: str
     State: TaskState
     Message: str
+    ContainerStatus: ContainerStatus | None
 
 
 @dataclass
@@ -50,14 +56,22 @@ class Task:
 
     @staticmethod
     def from_dict(
-        data: dict[str, str | int | dict[str, str | int]], deployment_id: str
+        data: dict[str, str | int | dict[str, str | int | dict]], deployment_id: str
     ) -> "Task":
         version = Version(**data["Version"])
         status_data = data["Status"]
+        container_status: None | ContainerStatus = None
+        container_status_data = data["Status"].get("ContainerStatus")
+        if container_status_data is not None:
+            container_status = ContainerStatus(
+                ExitCode=container_status_data["ExitCode"]
+            )
+
         status = Status(
             Timestamp=status_data["Timestamp"],
             State=TaskState(status_data["State"]),
             Message=status_data["Message"],
+            ContainerStatus=container_status,
         )
         return Task(
             ID=data["ID"],
@@ -79,7 +93,7 @@ if __name__ == "__main__":
     service = client.services.create(
         image="memcached:latest",
         name="memcache_db",
-        labels={"deployment": "first", "zane-managed": "true"},
+        labels={"zane-deployment-id": "first", "zane-managed": "true"},
         # mounts=['redis_data_volume:/data:rw'],
         # env=["REDIS_PASSWORD=strongPassword123"],
         # networks=['zane-out'],
@@ -100,34 +114,38 @@ if __name__ == "__main__":
         # command="redis-server --requirepass ${REDIS_PASSWORD}"
         # labels={},
     )
-    first_deploy_task_ID = service.tasks()[0]["ID"]
+
+    def get_task_by_deployment_id(service, deploy_id):
+        task_list = service.tasks(filters={"label": f"zane-deployment-id={deploy_id}"})
+        if len(task_list) == 0:
+            return None
+        return Task.from_dict(
+            max(
+                task_list,
+                key=lambda task: task["Version"],
+            ),
+            deployment_id=deploy_id,
+        )
+
     print(json.dumps(service.tasks()))
 
-    first_deploy_task = Task.from_dict(
-        service.tasks(
-            filters={"id": first_deploy_task_ID, "label": "deployment=first"}
-        )[0],
-        deployment_id="first",
-    )
+    first_deploy_task = get_task_by_deployment_id(service, deploy_id="first")
     # SHEDULE TO LISTEN TO THE DEPLOYMENT STATUS
-    while first_deploy_task.Status.State != TaskState.RUNNING:
-        time.sleep(0.1)
-        print(first_deploy_task)
+    while (
+        first_deploy_task is None or first_deploy_task.Status.State != TaskState.RUNNING
+    ):
+        time.sleep(0.5)
+        print(dict(first_deploy_task=first_deploy_task))
 
-        first_deploy_task = Task.from_dict(
-            service.tasks(
-                filters={"id": first_deploy_task.ID, "label": "deployment=first"}
-            )[0],
-            deployment_id="first",
-        )
-    print(first_deploy_task)
+        first_deploy_task = get_task_by_deployment_id(service, deploy_id="first")
+    print(dict(first_deploy_task=first_deploy_task))
     # result = service.scale(replicas=1)
     # for event in client.events(decode=True, filters={"service": "memcache_db"}):
     #     print(event)
     #     if event["status"] == "start" and event["Type"] == "container":
     #         break
 
-    # print(json.dumps(service.tasks()))
+    print(json.dumps(service.tasks()))
     network = client.networks.get("net-prj_fUTgAByB8pH")
     service_spec = service.attrs["Spec"]
     current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
@@ -135,35 +153,29 @@ if __name__ == "__main__":
     network_ids.add(network.id)
 
     previous_task_length = len(service.tasks())
-    service.update(networks=list(network_ids), labels={"deployment": "second"})
+    service.update(networks=list(network_ids), labels={"zane-deployment-id": "second"})
 
     # Wait until new task is added
-    while len(service.tasks(filters={"label": "deployment=second"})) == 0:
-        continue
-    print(service.tasks())
-    second_deploy_task_ID = service.tasks(filters={"label": "deployment=second"})[0][
-        "ID"
-    ]
-
-    second_deploy_task = Task.from_dict(
-        service.tasks(filters={"id": second_deploy_task_ID})[0],
-        deployment_id="second",
-    )
-    print(second_deploy_task)
+    second_deploy_task = get_task_by_deployment_id(service, deploy_id="second")
+    print(dict(second_deploy_task=second_deploy_task))
     # SHEDULE TO LISTEN TO THE DEPLOYMENT STATUS
-    while second_deploy_task.Status.State != TaskState.RUNNING:
-        time.sleep(0.1)
-        print(second_deploy_task)
+    while (
+        second_deploy_task is None
+        or second_deploy_task.Status.State != TaskState.RUNNING
+    ):
+        time.sleep(0.5)
+        print(dict(second_deploy_task=second_deploy_task))
 
-        second_deploy_task = Task.from_dict(
-            service.tasks(
-                filters={"id": second_deploy_task.ID, "label": "deployment=second"}
-            )[0],
-            deployment_id="second",
-        )
-
-    print(second_deploy_task)
-
+        # second_deploy_task = Task.from_dict(
+        #     service.tasks(
+        #         filters={"id": second_deploy_task.ID, "label": "deployment=second"}
+        #     )[0],
+        #     deployment_id="second",
+        # )
+        second_deploy_task = get_task_by_deployment_id(service, deploy_id="second")
+    print(json.dumps(service.tasks()))
+    print(dict(second_deploy_task=second_deploy_task))
+    service.remove()
     # print(json.dumps(service.tasks()))
     # for event in client.events(decode=True, filters={"service": "memcache_db"}):
     #     print(dict(event=event))
