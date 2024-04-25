@@ -184,20 +184,9 @@ class Volume(TimestampedModel):
 
 
 class BaseDeployment(models.Model):
-    class DeploymentStatus(models.TextChoices):
-        OFFLINE = "OFFLINE", _("Offline")
-        ERROR = "ERROR", _("Error")
-        LIVE = "LIVE", _("Live")
-        PENDING = "PENDING", _("Pending")
-
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_production = models.BooleanField(default=True)
-    deployment_status = models.CharField(
-        max_length=10,
-        choices=DeploymentStatus.choices,
-        default=DeploymentStatus.PENDING,
-    )
+
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
 
@@ -206,9 +195,25 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
+    class DeploymentStatus(models.TextChoices):
+        QUEUED = "QUEUED", _("Queued")
+        STARTING = "STARTING", _("Starting")
+        RESTARTING = "RESTARTING", _("Restarting")
+        CANCELLED = "CANCELLED", _("Cancelled")
+        HEALTHY = "HEALTHY", _("Healthy")
+        UNHEALTHY = "UNHEALTHY", _("Unhealthy")
+        OFFLINE = "OFFLINE", _("Offline")
+
+    deployment_status = models.CharField(
+        max_length=10,
+        choices=DeploymentStatus.choices,
+        default=DeploymentStatus.QUEUED,
+    )
+    deployment_status_reason = models.CharField(max_length=255, null=True)
+    is_current_production = models.BooleanField(default=True)
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
-    image_tag = models.CharField(max_length=255, null=True, blank=True, default="latest")
+    image_tag = models.CharField(max_length=255, default="latest")
 
     @property
     def task_id(self):
@@ -227,6 +232,35 @@ class GitDeployment(BaseDeployment):
         choices=BuildStatus.choices,
         default=BuildStatus.QUEUED,
     )
+
+    class DeploymentStatus(models.TextChoices):
+        QUEUED = "QUEUED", _("Queued")
+        STARTING = "STARTING", _("Starting")
+        BUILDING = "BUILDING", _("Building")
+        CANCELLED = "CANCELLED", _("Cancelled")
+        HEALTHY = "HEALTHY", _("Healthy")
+        UNHEALTHY = "UNHEALTHY", _("UnHealthy")
+        OFFLINE = "OFFLINE", _("Offline")
+        SLEEPING = "SLEEPING", _("Sleeping")
+
+    deployment_status = models.CharField(
+        max_length=10,
+        choices=DeploymentStatus.choices,
+        default=DeploymentStatus.QUEUED,
+    )
+    deployment_status_reason = models.CharField(max_length=255, null=True)
+
+    class DeploymentEnvironment(models.TextChoices):
+        PRODUCTION = "PRODUCTION", _("Production")
+        PREVIEW = "PREVIEW", _("Preview")
+
+    deployment_environment = models.CharField(
+        max_length=10,
+        choices=DeploymentEnvironment.choices,
+        default=DeploymentEnvironment.PREVIEW,
+    )
+    is_current_production = models.BooleanField(default=False)
+
     commit_hash = models.CharField(
         max_length=40
     )  # Typical length of a Git commit hash, but we will use the short version
