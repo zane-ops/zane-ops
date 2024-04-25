@@ -10,6 +10,7 @@ from .base import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import (
     get_docker_service_resource_name,
     get_volume_resource_name,
+    update_docker_service_deployment_status,
 )
 from ..models import (
     Project,
@@ -1422,3 +1423,305 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class DockerServiceMonitorTests(AuthAPITestCase):
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_normal_deployment_flow(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+        )
+        update_docker_service_deployment_status(deployment)
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, deployment.deployment_status
+        )
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_restart_is_set_after_multiple_tasks_deployments(
+        self, mock_fake_docker: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+
+        class FakeService:
+            @staticmethod
+            def tasks(*args, **kwargs):
+                return [
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdkg",
+                        "Version": {"Index": 15078},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "shutdown",
+                            "Message": "started",
+                            "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ExitCode": 127,
+                            },
+                        },
+                        "DesiredState": "shutdown",
+                    },
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "Version": {"Index": 15079},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "starting",
+                            "Message": "started",
+                            # "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ExitCode": 0,
+                            },
+                        },
+                        "DesiredState": "starting",
+                    },
+                ]
+
+        fake_docker_client.services.get = lambda _id: FakeService()
+
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+        )
+        update_docker_service_deployment_status(deployment)
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.RESTARTING, deployment.deployment_status
+        )
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_succesful_restart_deploymen_flow(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+
+        class FakeService:
+            @staticmethod
+            def tasks(*args, **kwargs):
+                return [
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdkg",
+                        "Version": {"Index": 15078},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "shutdown",
+                            "Message": "started",
+                            "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ExitCode": 127,
+                            },
+                        },
+                        "DesiredState": "shutdown",
+                    },
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "Version": {"Index": 15079},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "running",
+                            "Message": "started",
+                            # "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ExitCode": 0,
+                            },
+                        },
+                        "DesiredState": "running",
+                    },
+                ]
+
+        fake_docker_client.services.get = lambda _id: FakeService()
+
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+        )
+        update_docker_service_deployment_status(deployment)
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, deployment.deployment_status
+        )
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_unsuccesful_restart_deploymen_flow(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+
+        class FakeService:
+            @staticmethod
+            def tasks(*args, **kwargs):
+                return [
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "Version": {"Index": 15078},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "failed",
+                            "Message": "started",
+                            "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ContainerID": "a6e983977676b708ed0201c91c4fa3c6fbc4c1d43f7520327db8efc5ba8b76f0",
+                                "PID": 0,
+                                "ExitCode": 127,
+                            },
+                            "PortStatus": {},
+                        },
+                        "DesiredState": "shutdown",
+                    },
+                    {
+                        "ID": "jumpidf77nnc9u24dn2t0t8gk",
+                        "Version": {"Index": 15070},
+                        "CreatedAt": "2024-04-25T20:11:21.303508844Z",
+                        "UpdatedAt": "2024-04-25T20:11:32.93669947Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:32.642315167Z",
+                            "State": "failed",
+                            "Message": "started",
+                            "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ContainerID": "407c4b40d621b127a1cac498d066587522f4ddcca1ec01992dbf94f49c6092fc",
+                                "PID": 0,
+                                "ExitCode": 127,
+                            },
+                            "PortStatus": {},
+                        },
+                        "DesiredState": "shutdown",
+                    },
+                    {
+                        "ID": "wqnwod7cacovpscsp3n6vsgmc",
+                        "Version": {"Index": 15091},
+                        "CreatedAt": "2024-04-25T20:11:52.686304192Z",
+                        "UpdatedAt": "2024-04-25T20:12:02.693438335Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:12:02.415795453Z",
+                            "State": "failed",
+                            "Message": "started",
+                            "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ContainerID": "edd2aa5d80747f860b1cee700a1028e7000970f05a8fe9784fa0f81c460459ac",
+                                "PID": 0,
+                                "ExitCode": 127,
+                            },
+                            "PortStatus": {},
+                        },
+                        "DesiredState": "shutdown",
+                    },
+                    {
+                        "ID": "wwkdns3g7fsyq37hwe5cj7spl",
+                        "Version": {"Index": 15086},
+                        "CreatedAt": "2024-04-25T20:11:42.863807131Z",
+                        "UpdatedAt": "2024-04-25T20:11:52.887691861Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:52.620438735Z",
+                            "State": "failed",
+                            "Message": "started",
+                            "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ContainerID": "f45b1785bca08314c9b6af63bdf8080aa79d60a427315d9fe96ba8928d1d1d54",
+                                "PID": 0,
+                                "ExitCode": 127,
+                            },
+                            "PortStatus": {},
+                        },
+                        "DesiredState": "shutdown",
+                    },
+                ]
+
+        fake_docker_client.services.get = lambda _id: FakeService()
+
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+        )
+        update_docker_service_deployment_status(deployment)
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.UNHEALTHY, deployment.deployment_status
+        )
