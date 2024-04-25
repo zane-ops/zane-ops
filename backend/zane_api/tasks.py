@@ -38,6 +38,14 @@ def deploy_docker_service(deployment_hash: str):
             "Cannot execute a deploy a non existent deployment."
         )
 
+    if deployment.deployment_status == DockerDeployment.DeploymentStatus.CANCELLED:
+        # Do nothing as this deployment has been ignored
+        pass
+
+    # update the deployment status to prevent cancelling it
+    if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
+        deployment.deployment_status = DockerDeployment.DeploymentStatus.STARTING
+        deployment.save()
     service = deployment.service
     for volume in service.volumes.all():
         create_docker_volume(volume, service=service)
