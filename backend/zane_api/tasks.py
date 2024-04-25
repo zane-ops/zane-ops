@@ -9,6 +9,7 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
+    update_docker_service_deployment_status,
 )
 from .models import (
     DockerDeployment,
@@ -33,12 +34,14 @@ def deploy_docker_service(deployment_hash: str):
         .first()
     )
     if deployment is None:
-        raise Exception("Cannot execute a deploy a non existent deployment.")
+        raise DockerDeployment.DoesNotExist(
+            "Cannot execute a deploy a non existent deployment."
+        )
 
     service = deployment.service
     for volume in service.volumes.all():
         create_docker_volume(volume, service=service)
-    create_service_from_docker_registry(service, deployment)
+    create_service_from_docker_registry(deployment)
 
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is not None:
@@ -89,3 +92,21 @@ def delete_resources_for_docker_service(archived_service_id: id):
         )
     cleanup_docker_service_resources(archived_service)
     unexpose_docker_service_from_http(archived_service)
+
+
+@shared_task
+def monitor_docker_service_deployments(deployment_hash: str):
+    deployment: DockerDeployment | None = (
+        DockerDeployment.objects.filter(hash=deployment_hash)
+        .select_related("service", "service__project")
+        .prefetch_related(
+            "service__volumes",
+            "service__urls",
+            "service__ports",
+            "service__env_variables",
+        )
+        .first()
+    )
+    if deployment is None:
+        raise DockerDeployment.DoesNotExist("Cannot monitor a non existent deployment.")
+    update_docker_service_deployment_status(deployment)

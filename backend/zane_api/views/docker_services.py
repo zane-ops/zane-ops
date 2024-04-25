@@ -88,6 +88,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeRequestSerializer(many=True, required=False, default=[])
+    # TODO : add healthcheck (path or command ?)
 
     def validate(self, data: dict):
         credentials = data.get("credentials")

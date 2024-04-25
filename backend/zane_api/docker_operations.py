@@ -22,11 +22,12 @@ from .models import (
     ArchivedURL,
     DockerDeployment,
 )
-from .utils import strip_slash_if_exists
+from .utils import strip_slash_if_exists, DockerSwarmTask, DockerSwarmTaskState
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
 DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
+MAX_SERVICE_RESTART_COUNT = 3
 
 
 def get_docker_client():
@@ -303,9 +304,8 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
-def create_service_from_docker_registry(
-    service: DockerRegistryService, deployment: DockerDeployment
-):
+def create_service_from_docker_registry(deployment: DockerDeployment):
+    service = deployment.service
     client = get_docker_client()
     auth_config: DockerAuthConfig | None = None
     if (
@@ -354,7 +354,7 @@ def create_service_from_docker_registry(
     # get data corruption when two live containers want to write into the volume
     update_order = "start-first" if len(service.volumes.all()) == 0 else "stop-first"
 
-    created_service = client.services.create(
+    client.services.create(
         image=f"{service.image_repository}:{deployment.image_tag}",
         name=get_docker_service_resource_name(
             service_id=service.id,
@@ -363,12 +363,12 @@ def create_service_from_docker_registry(
         mounts=mounts,
         endpoint_spec=endpoint_spec,
         env=envs,
-        labels=get_resource_labels(service.project.id),
+        labels=get_resource_labels(service.project.id, deployment_hash=deployment.hash),
         command=service.command,
         networks=[get_network_resource_name(service.project.id)],
         restart_policy=RestartPolicy(
             condition="on-failure",
-            max_attempts=3,
+            max_attempts=MAX_SERVICE_RESTART_COUNT,
             delay=5,
         ),
         update_config=UpdateConfig(
@@ -558,3 +558,63 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
                 requests.delete(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
                 )
+
+
+def update_docker_service_deployment_status(deployment: DockerDeployment):
+    client = get_docker_client()
+    service = client.services.get(
+        get_docker_service_resource_name(
+            deployment.service.id, deployment.service.project.id
+        )
+    )
+    task_list = service.tasks(filters={"label": f"deployment_hash={deployment.hash}"})
+
+    if len(task_list) == 0:
+        return  # the swarm task has not been created yet, we can't
+
+    most_recent_swarm_task = DockerSwarmTask.from_dict(
+        max(
+            task_list,
+            key=lambda task: task["Version"]["Index"],
+        )
+    )
+
+    starting_status = deployment.DeploymentStatus.STARTING
+    # We set the status to restarting, because we get more than one task for this service when we restart it
+    if len(task_list) > 1:
+        starting_status = deployment.DeploymentStatus.RESTARTING
+
+    state_matrix = {
+        DockerSwarmTaskState.NEW: starting_status,
+        DockerSwarmTaskState.PENDING: starting_status,
+        DockerSwarmTaskState.ASSIGNED: starting_status,
+        DockerSwarmTaskState.ACCEPTED: starting_status,
+        DockerSwarmTaskState.READY: starting_status,
+        DockerSwarmTaskState.PREPARING: starting_status,
+        DockerSwarmTaskState.STARTING: starting_status,
+        DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
+        DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+        DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
+        DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+        DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
+        DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
+        DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+    }
+
+    exited_without_error = 0
+    deployment.deployment_status = state_matrix[most_recent_swarm_task.Status.State]
+    deployment.deployment_status_reason = (
+        most_recent_swarm_task.Status.Err
+        if most_recent_swarm_task.Status.Err is not None
+        else most_recent_swarm_task.Status.Message
+    )
+
+    if most_recent_swarm_task.Status.State == DockerSwarmTaskState.SHUTDOWN:
+        status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+        if (
+            status_code is not None and status_code != exited_without_error
+        ) or most_recent_swarm_task.Status.Err is not None:
+            deployment.deployment_status = deployment.DeploymentStatus.UNHEALTHY
+
+    deployment.save()
+    # TODO (#67) : send system logs when the state changes
