@@ -4,6 +4,7 @@ from typing import List
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django_celery_beat.models import PeriodicTask
 from shortuuid.django_fields import ShortUUIDField
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
@@ -216,6 +217,9 @@ class DockerDeployment(BaseDeployment):
     )
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
     image_tag = models.CharField(max_length=255, default="latest")
+    monitor_task = models.ForeignKey(
+        to=PeriodicTask, null=True, on_delete=models.SET_NULL
+    )
 
     @property
     def task_id(self):

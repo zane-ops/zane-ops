@@ -1,5 +1,6 @@
 import docker.errors
 from celery import shared_task
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
     expose_docker_service_to_http,
@@ -9,6 +10,7 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
+    update_docker_service_deployment_status,
 )
 from .models import (
     DockerDeployment,
@@ -49,7 +51,11 @@ def deploy_docker_service(deployment_hash: str):
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is not None:
         expose_docker_service_to_http(service)
-    # TODO Create scheduled task for monitoring
+    deployment.monitor_task = PeriodicTask.objects.create(
+        interval=IntervalSchedule(every=30, period=IntervalSchedule.SECONDS),
+        name=f"monitor deployment {deployment_hash}",
+        task="zane_api.tasks.monitor_docker_service_deployments",
+    )
 
 
 @shared_task(
@@ -113,3 +119,5 @@ def monitor_docker_service_deployments(deployment_hash: str):
     )
     if deployment is None:
         raise DockerDeployment.DoesNotExist("Cannot monitor a non existent deployment.")
+    if deployment.deployment_status != DockerDeployment.DeploymentStatus.OFFLINE:
+        update_docker_service_deployment_status(deployment)
