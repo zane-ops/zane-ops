@@ -136,7 +136,7 @@ class ArchivedDockerService(ArchivedBaseService):
         cls, service: DockerRegistryService, parent: ArchivedProject
     ):
         latest_deployment: DockerDeployment | None = (
-            service.deployments.filter(is_production=True)
+            service.deployments.filter(is_current_production=True)
             .order_by("-created_at")
             .first()
         )
