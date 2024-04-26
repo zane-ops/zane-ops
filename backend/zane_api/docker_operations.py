@@ -350,7 +350,7 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
 
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
-    # We disable blue-green updates for services with volumes so that we don't
+    # We disable zero-downtime deployments for services with volumes so that we don't
     # get data corruption when two live containers want to write into the volume
     update_order = "start-first" if len(service.volumes.all()) == 0 else "stop-first"
 

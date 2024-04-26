@@ -76,6 +76,24 @@ class URLRequestSerializer(serializers.Serializer):
                     ]
                 }
             )
+
+        domain = url["domain"]
+        domain_parts = domain.split(".")
+        domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+
+        existing_parent_domain = URL.objects.filter(
+            domain=domain_as_wildcard.lower()
+        ).distinct()
+        if len(existing_parent_domain) > 0:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{url['domain']}` can't be used because it will be shadowed by the wildcard"
+                        f" domain `{domain_as_wildcard}` which is already assigned to another service."
+                    ]
+                }
+            )
+
         return url
 
 
@@ -254,7 +272,7 @@ class CreateDockerServiceAPIView(APIView):
                 fake = Faker()
                 Faker.seed(time.monotonic())
                 service_slug = data.get("slug", fake.slug()).lower()
-                docker_image_tag: str | None = None
+                docker_image_tag = "latest"
                 try:
                     docker_image = data["image"]
                     docker_image_parts = docker_image.split(":", 1)
@@ -467,7 +485,9 @@ class ArchiveDockerServiceAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "ports", "urls", "env_variables")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
         ).first()
 
         if service is None:

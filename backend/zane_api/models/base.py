@@ -211,7 +211,9 @@ class DockerDeployment(BaseDeployment):
     )
     deployment_status_reason = models.CharField(max_length=255, null=True)
     is_current_production = models.BooleanField(default=True)
-    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    service = models.ForeignKey(
+        to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
+    )
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
     image_tag = models.CharField(max_length=255, default="latest")
 
