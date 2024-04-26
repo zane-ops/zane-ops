@@ -208,7 +208,7 @@ class BaseDeployment(models.Model):
 class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
-    image_tag = models.CharField(max_length=255, null=True, blank=True, default="latest")
+    image_tag = models.CharField(max_length=255, default="latest")
 
     @property
     def task_id(self):
