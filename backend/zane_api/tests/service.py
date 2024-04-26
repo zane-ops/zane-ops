@@ -4,13 +4,13 @@ from unittest.mock import patch, Mock
 
 from django.conf import settings
 from django.urls import reverse
+from django_celery_beat.models import PeriodicTask
 from rest_framework import status
 
 from .base import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import (
     get_docker_service_resource_name,
     get_volume_resource_name,
-    update_docker_service_deployment_status,
 )
 from ..models import (
     Project,
@@ -22,6 +22,7 @@ from ..models import (
     DockerEnvVariable,
     Volume,
 )
+from ..tasks import monitor_docker_service_deployment
 
 
 class DockerServiceCreateViewTest(AuthAPITestCase):
@@ -1170,6 +1171,87 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
 
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_use_specific_tag_for_deployment_with_the_user_specifed_one(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service__slug="cache-db"
+        ).first()
+        self.assertIsNotNone(deployment)
+        self.assertEqual("alpine", deployment.image_tag)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_use_latest_tag_for_deployment_when_no_tag_specifed(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service__slug="cache-db"
+        ).first()
+        self.assertIsNotNone(deployment)
+        self.assertEqual("latest", deployment.image_tag)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_scheduled_task_when_creating_a_service(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        initial_deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service__slug="cache-db"
+        ).first()
+        self.assertIsNotNone(initial_deployment)
+        self.assertIsNotNone(initial_deployment.monitor_task)
+
 
 class DockerGetServiceViewTest(AuthAPITestCase):
     @patch(
@@ -1525,6 +1607,85 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_archive_should_have_deployment_tag_and_service_image_repository(
+        self, mock_fake_docker: Mock, _: Mock, __: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
+            slug="cache-db"
+        ).first()
+        self.assertIsNotNone(archived_service)
+
+        self.assertEqual("redis", archived_service.image_repository)
+        self.assertEqual("alpine", archived_service.image_tag)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.unexpose_docker_service_from_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_archive_should_delete_monitoring_tasks_for_the_deployment(
+        self, mock_fake_docker: Mock, _: Mock, __: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        # create
+        self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+
+        # then delete
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deployments = DockerDeployment.objects.filter(service__slug="cache-db")
+        self.assertEqual(0, len(deployments))
+        monitoring_tasks = PeriodicTask.objects.all()
+        self.assertEqual(0, len(monitoring_tasks))
+
 
 class DockerServiceMonitorTests(AuthAPITestCase):
     @patch(
@@ -1554,7 +1715,10 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         self.assertEqual(
             DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
         )
-        update_docker_service_deployment_status(deployment)
+        monitor_docker_service_deployment(deployment.hash)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY, deployment.deployment_status
         )
@@ -1630,7 +1794,10 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         self.assertEqual(
             DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
         )
-        update_docker_service_deployment_status(deployment)
+        monitor_docker_service_deployment(deployment.hash)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.RESTARTING, deployment.deployment_status
         )
@@ -1704,7 +1871,10 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         self.assertEqual(
             DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
         )
-        update_docker_service_deployment_status(deployment)
+        monitor_docker_service_deployment(deployment.hash)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY, deployment.deployment_status
         )
@@ -1822,7 +1992,10 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         self.assertEqual(
             DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
         )
-        update_docker_service_deployment_status(deployment)
+        monitor_docker_service_deployment(deployment.hash)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service=created_service
+        ).first()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY, deployment.deployment_status
         )

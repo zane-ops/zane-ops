@@ -142,6 +142,11 @@ class DockerRegistryService(BaseService):
     def archive_task_id(self):
         return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
+    def delete_resources(self):
+        super().delete_resources()
+        all_deployments = self.deployments.all()
+        PeriodicTask.objects.filter(dockerdeployment__in=all_deployments).delete()
+
 
 class GitRepositoryService(BaseService):
     previews_enabled = models.BooleanField(default=True)
