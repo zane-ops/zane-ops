@@ -1451,7 +1451,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             service=created_service
         ).first()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.STARTING, deployment.deployment_status
         )
         update_docker_service_deployment_status(deployment)
         self.assertEqual(
@@ -1527,7 +1527,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.STARTING, deployment.deployment_status
         )
         update_docker_service_deployment_status(deployment)
         self.assertEqual(
@@ -1601,7 +1601,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.STARTING, deployment.deployment_status
         )
         update_docker_service_deployment_status(deployment)
         self.assertEqual(
@@ -1719,7 +1719,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.QUEUED, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.STARTING, deployment.deployment_status
         )
         update_docker_service_deployment_status(deployment)
         self.assertEqual(
