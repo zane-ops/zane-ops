@@ -206,7 +206,9 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
-    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    service = models.ForeignKey(
+        to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
+    )
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
     image_tag = models.CharField(max_length=255, default="latest")
 

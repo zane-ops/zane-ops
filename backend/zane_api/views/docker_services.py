@@ -465,7 +465,9 @@ class ArchiveDockerServiceAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "ports", "urls", "env_variables")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
         ).first()
 
         if service is None:
