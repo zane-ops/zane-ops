@@ -1,5 +1,6 @@
 import docker.errors
 from celery import shared_task
+from django.db import transaction
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
@@ -10,7 +11,7 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
-    update_docker_service_deployment_status,
+    get_updated_docker_service_deployment_status,
 )
 from .models import (
     DockerDeployment,
@@ -23,39 +24,44 @@ from .models import (
 
 @shared_task
 def deploy_docker_service(deployment_hash: str):
-    deployment: DockerDeployment | None = (
-        DockerDeployment.objects.filter(hash=deployment_hash)
-        .select_related("service", "service__project")
-        .prefetch_related(
-            "service__volumes",
-            "service__urls",
-            "service__ports",
-            "service__env_variables",
+    with transaction.atomic():
+        deployment: DockerDeployment | None = (
+            DockerDeployment.objects.filter(hash=deployment_hash)
+            .select_related("service", "service__project")
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
+            )
+            .first()
         )
-        .first()
-    )
-    if deployment is None:
-        raise DockerDeployment.DoesNotExist(
-            "Cannot execute a deploy a non existent deployment."
-        )
+        if deployment is None:
+            raise DockerDeployment.DoesNotExist(
+                "Cannot execute a deploy a non existent deployment."
+            )
 
-    if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
-        deployment.deployment_status = DockerDeployment.DeploymentStatus.PREPARING
+        if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
+            deployment.deployment_status = DockerDeployment.DeploymentStatus.PREPARING
+            deployment.save()
+        # TODO (#67) : send system logs when the resources are created
+        service = deployment.service
+        for volume in service.volumes.all():
+            create_docker_volume(volume, service=service)
+        create_service_from_docker_registry(deployment)
+
+        http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
+        if http_port is not None:
+            expose_docker_service_to_http(service)
+
+        deployment.monitor_task = PeriodicTask.objects.create(
+            interval=IntervalSchedule.objects.create(
+                every=30, period=IntervalSchedule.SECONDS
+            ),
+            name=f"monitor deployment {deployment_hash}",
+            task="zane_api.tasks.monitor_docker_service_deployments",
+        )
         deployment.save()
-    # TODO (#67) : send system logs when the resources are created
-    service = deployment.service
-    for volume in service.volumes.all():
-        create_docker_volume(volume, service=service)
-    create_service_from_docker_registry(deployment)
-
-    http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
-    if http_port is not None:
-        expose_docker_service_to_http(service)
-    deployment.monitor_task = PeriodicTask.objects.create(
-        interval=IntervalSchedule(every=30, period=IntervalSchedule.SECONDS),
-        name=f"monitor deployment {deployment_hash}",
-        task="zane_api.tasks.monitor_docker_service_deployments",
-    )
 
 
 @shared_task(
@@ -105,19 +111,28 @@ def delete_resources_for_docker_service(archived_service_id: id):
 
 
 @shared_task
-def monitor_docker_service_deployments(deployment_hash: str):
-    deployment: DockerDeployment | None = (
-        DockerDeployment.objects.filter(hash=deployment_hash)
-        .select_related("service", "service__project")
-        .prefetch_related(
-            "service__volumes",
-            "service__urls",
-            "service__ports",
-            "service__env_variables",
+def monitor_docker_service_deployment(deployment_hash: str):
+    with transaction.atomic():
+        deployment: DockerDeployment | None = (
+            DockerDeployment.objects.filter(hash=deployment_hash)
+            .select_related("service", "service__project")
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
+            )
+            .first()
         )
-        .first()
-    )
-    if deployment is None:
-        raise DockerDeployment.DoesNotExist("Cannot monitor a non existent deployment.")
-    if deployment.deployment_status != DockerDeployment.DeploymentStatus.OFFLINE:
-        update_docker_service_deployment_status(deployment)
+
+        if (
+            deployment is not None
+            and deployment.deployment_status
+            != DockerDeployment.DeploymentStatus.OFFLINE
+        ):
+            deployment_status, deployment_status_reason = (
+                get_updated_docker_service_deployment_status(deployment)
+            )
+            deployment.deployment_status = deployment_status
+            deployment.deployment_status_reason = deployment_status_reason
+            deployment.save()

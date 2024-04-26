@@ -560,7 +560,7 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
                 )
 
 
-def update_docker_service_deployment_status(deployment: DockerDeployment):
+def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
     client = get_docker_client()
     try:
         swarm_service = client.services.get(
@@ -609,8 +609,8 @@ def update_docker_service_deployment_status(deployment: DockerDeployment):
         }
 
         exited_without_error = 0
-        deployment.deployment_status = state_matrix[most_recent_swarm_task.Status.State]
-        deployment.deployment_status_reason = (
+        deployment_status = state_matrix[most_recent_swarm_task.Status.State]
+        deployment_status_reason = (
             most_recent_swarm_task.Status.Err
             if most_recent_swarm_task.Status.Err is not None
             else most_recent_swarm_task.Status.Message
@@ -621,7 +621,7 @@ def update_docker_service_deployment_status(deployment: DockerDeployment):
             if (
                 status_code is not None and status_code != exited_without_error
             ) or most_recent_swarm_task.Status.Err is not None:
-                deployment.deployment_status = deployment.DeploymentStatus.UNHEALTHY
+                deployment_status = deployment.DeploymentStatus.UNHEALTHY
 
-        deployment.save()
         # TODO (#67) : send system logs when the state changes
+        return deployment_status, deployment_status_reason

@@ -468,6 +468,7 @@ class ArchiveDockerServiceAPIView(APIView):
         },
         operation_id="archiveDockerService",
     )
+    @transaction.atomic()
     def delete(self, request: Request, project_slug: str, service_slug: str):
         project = (
             Project.objects.filter(
@@ -504,7 +505,6 @@ class ArchiveDockerServiceAPIView(APIView):
         archived_service = ArchivedDockerService.create_from_service(
             service, archived_project
         )
-        print("Executiong delete_resources_for_docker_service")
         delete_resources_for_docker_service.apply_async(
             kwargs=dict(archived_service_id=archived_service.id),
             task_id=service.archive_task_id,
