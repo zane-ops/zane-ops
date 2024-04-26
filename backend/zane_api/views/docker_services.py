@@ -271,7 +271,7 @@ class CreateDockerServiceAPIView(APIView):
                 fake = Faker()
                 Faker.seed(time.monotonic())
                 service_slug = data.get("slug", fake.slug()).lower()
-                docker_image_tag: str | None = None
+                docker_image_tag = "latest"
                 try:
                     docker_image = data["image"]
                     docker_image_parts = docker_image.split(":", 1)
