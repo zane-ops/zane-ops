@@ -9,7 +9,6 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
-    update_docker_service_deployment_status,
 )
 from .models import (
     DockerDeployment,
@@ -38,14 +37,10 @@ def deploy_docker_service(deployment_hash: str):
             "Cannot execute a deploy a non existent deployment."
         )
 
-    if deployment.deployment_status == DockerDeployment.DeploymentStatus.CANCELLED:
-        # Do nothing as this deployment has been ignored
-        pass
-
-    # update the deployment status to prevent cancelling it
     if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
-        deployment.deployment_status = DockerDeployment.DeploymentStatus.STARTING
+        deployment.deployment_status = DockerDeployment.DeploymentStatus.PREPARING
         deployment.save()
+    # TODO (#67) : send system logs when the resources are created
     service = deployment.service
     for volume in service.volumes.all():
         create_docker_volume(volume, service=service)
@@ -54,6 +49,7 @@ def deploy_docker_service(deployment_hash: str):
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is not None:
         expose_docker_service_to_http(service)
+    # TODO Create scheduled task for monitoring
 
 
 @shared_task(
@@ -117,4 +113,3 @@ def monitor_docker_service_deployments(deployment_hash: str):
     )
     if deployment is None:
         raise DockerDeployment.DoesNotExist("Cannot monitor a non existent deployment.")
-    update_docker_service_deployment_status(deployment)

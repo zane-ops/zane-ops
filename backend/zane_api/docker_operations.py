@@ -562,59 +562,66 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
 
 def update_docker_service_deployment_status(deployment: DockerDeployment):
     client = get_docker_client()
-    service = client.services.get(
-        get_docker_service_resource_name(
-            deployment.service.id, deployment.service.project.id
+    try:
+        swarm_service = client.services.get(
+            get_docker_service_resource_name(
+                deployment.service.id, deployment.service.project.id
+            )
         )
-    )
-    task_list = service.tasks(filters={"label": f"deployment_hash={deployment.hash}"})
-
-    if len(task_list) == 0:
-        return  # the swarm task has not been created yet, we can't
-
-    most_recent_swarm_task = DockerSwarmTask.from_dict(
-        max(
-            task_list,
-            key=lambda task: task["Version"]["Index"],
+        task_list = swarm_service.tasks(
+            filters={"label": f"deployment_hash={deployment.hash}"}
         )
-    )
+    except docker.errors.NotFound:
+        # We get will hit this error when the service has been deleted in the meantime
+        return
+    else:
+        if len(task_list) == 0:
+            # the swarm task has not been created yet, we can't update the state of the deployment with this
+            return
 
-    starting_status = deployment.DeploymentStatus.STARTING
-    # We set the status to restarting, because we get more than one task for this service when we restart it
-    if len(task_list) > 1:
-        starting_status = deployment.DeploymentStatus.RESTARTING
+        most_recent_swarm_task = DockerSwarmTask.from_dict(
+            max(
+                task_list,
+                key=lambda task: task["Version"]["Index"],
+            )
+        )
 
-    state_matrix = {
-        DockerSwarmTaskState.NEW: starting_status,
-        DockerSwarmTaskState.PENDING: starting_status,
-        DockerSwarmTaskState.ASSIGNED: starting_status,
-        DockerSwarmTaskState.ACCEPTED: starting_status,
-        DockerSwarmTaskState.READY: starting_status,
-        DockerSwarmTaskState.PREPARING: starting_status,
-        DockerSwarmTaskState.STARTING: starting_status,
-        DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
-        DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
-        DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
-        DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
-        DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
-        DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
-        DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
-    }
+        starting_status = deployment.DeploymentStatus.STARTING
+        # We set the status to restarting, because we get more than one task for this service when we restart it
+        if len(task_list) > 1:
+            starting_status = deployment.DeploymentStatus.RESTARTING
 
-    exited_without_error = 0
-    deployment.deployment_status = state_matrix[most_recent_swarm_task.Status.State]
-    deployment.deployment_status_reason = (
-        most_recent_swarm_task.Status.Err
-        if most_recent_swarm_task.Status.Err is not None
-        else most_recent_swarm_task.Status.Message
-    )
+        state_matrix = {
+            DockerSwarmTaskState.NEW: starting_status,
+            DockerSwarmTaskState.PENDING: starting_status,
+            DockerSwarmTaskState.ASSIGNED: starting_status,
+            DockerSwarmTaskState.ACCEPTED: starting_status,
+            DockerSwarmTaskState.READY: starting_status,
+            DockerSwarmTaskState.PREPARING: starting_status,
+            DockerSwarmTaskState.STARTING: starting_status,
+            DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
+            DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+            DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
+            DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+            DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
+            DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
+            DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+        }
 
-    if most_recent_swarm_task.Status.State == DockerSwarmTaskState.SHUTDOWN:
-        status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
-        if (
-            status_code is not None and status_code != exited_without_error
-        ) or most_recent_swarm_task.Status.Err is not None:
-            deployment.deployment_status = deployment.DeploymentStatus.UNHEALTHY
+        exited_without_error = 0
+        deployment.deployment_status = state_matrix[most_recent_swarm_task.Status.State]
+        deployment.deployment_status_reason = (
+            most_recent_swarm_task.Status.Err
+            if most_recent_swarm_task.Status.Err is not None
+            else most_recent_swarm_task.Status.Message
+        )
 
-    deployment.save()
-    # TODO (#67) : send system logs when the state changes
+        if most_recent_swarm_task.Status.State == DockerSwarmTaskState.SHUTDOWN:
+            status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+            if (
+                status_code is not None and status_code != exited_without_error
+            ) or most_recent_swarm_task.Status.Err is not None:
+                deployment.deployment_status = deployment.DeploymentStatus.UNHEALTHY
+
+        deployment.save()
+        # TODO (#67) : send system logs when the state changes

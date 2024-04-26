@@ -197,9 +197,9 @@ class BaseDeployment(models.Model):
 class DockerDeployment(BaseDeployment):
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
+        PREPARING = "PREPARING", _("Preparing")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
-        CANCELLED = "CANCELLED", _("Cancelled")
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("Unhealthy")
         OFFLINE = "OFFLINE", _("Offline")
