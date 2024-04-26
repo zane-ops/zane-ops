@@ -17,14 +17,22 @@ def validate_crontab(value: str):
 
 def validate_url_domain(value: str):
     validate_url = URLValidator()
-
+    wildcard = "*."
     try:
+        if value.startswith(wildcard):
+            prefix, domain = value.split(wildcard)
+            if len(prefix) != 0:
+                raise ValidationError("Invalid domain")
+            value = domain
+
         validate_url("https://" + value)
         parsed = urlparse("https://" + value)
         if not parsed.netloc == value:
             raise ValidationError("Invalid domain")
     except ValidationError:
         raise ValidationError("Should be a domain without the scheme.")
+    except Exception:
+        raise ValidationError("Invalid domain")
 
 
 def validate_url_path(value: str):

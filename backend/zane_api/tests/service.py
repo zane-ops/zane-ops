@@ -383,7 +383,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_create_service_with_explicit_domain(self, mock_fake_docker: Mock, _: Mock):
+    def test_create_service_with_explicit_url(self, mock_fake_docker: Mock, _: Mock):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
@@ -410,6 +410,107 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(url)
         self.assertEqual("dcr.fredkiss.dev", url.domain)
         self.assertEqual("/portainer", url.base_path)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_with_wildcard_url_domain(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "gh-next",
+            "image": "dcr.fredkiss.dev/gh-next",
+            "urls": [{"domain": "*.gh.fredkiss.dev"}],
+            "ports": [{"forwarded": 3000}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="gh-next"
+        ).first()
+
+        self.assertEqual(1, created_service.urls.count())
+        url: URL = created_service.urls.first()
+        self.assertIsNotNone(url)
+        self.assertEqual("*.gh.fredkiss.dev", url.domain)
+        self.assertEqual("/", url.base_path)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_can_create_a_service_with_same_parent_domain_even_if_wildcard_exists(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        URL.objects.create(domain="*.gh.fredkiss.dev")
+
+        create_service_payload = {
+            "slug": "gh-next",
+            "image": "dcr.fredkiss.dev/gh-next",
+            "urls": [{"domain": "gh.fredkiss.dev"}],
+            "ports": [{"forwarded": 3000}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="gh-next"
+        ).first()
+
+        self.assertEqual(1, created_service.urls.count())
+        url: URL = created_service.urls.first()
+        self.assertIsNotNone(url)
+        self.assertEqual("gh.fredkiss.dev", url.domain)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_cannot_create_a_service_with_same_subdomain_if_wildcard_exists(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        URL.objects.create(domain="*.gh.fredkiss.dev")
+
+        create_service_payload = {
+            "slug": "gh-next",
+            "image": "dcr.fredkiss.dev/gh-next",
+            "urls": [{"domain": "abc.gh.fredkiss.dev"}],
+            "ports": [{"forwarded": 3000}],
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="gh-next"
+        ).first()
+        self.assertIsNone(created_service)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
