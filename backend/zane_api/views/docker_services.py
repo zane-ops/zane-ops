@@ -7,6 +7,7 @@ from django.db.models import Q
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import status, exceptions
+from rest_framework.generics import ListAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -457,6 +458,25 @@ class GetDockerServiceAPIView(APIView):
 
         response = DockerServiceResponseSerializer({"service": service})
         return Response(response.data, status=status.HTTP_200_OK)
+
+
+class DockerServiceDeploymentSerializer(serializers.Serializer):
+    pass
+
+
+class DockerServiceDeploymentsAPIView(ListAPIView):
+    def get_queryset(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+
+        # try:
+        #     project = Project.objects.get(slug=project_slug)
+        #     service = Service.objects.get(slug=service_slug, project=project)
+        # except (Project.DoesNotExist, Service.DoesNotExist):
+        #     raise Http404("Project or service not found.")
+
+        return  # TODO
+        # return Deployment.objects.filter(project=project, service=service)
 
 
 class ArchiveDockerServiceAPIView(APIView):
