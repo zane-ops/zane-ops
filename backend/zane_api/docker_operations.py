@@ -303,9 +303,8 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
-def create_service_from_docker_registry(
-    service: DockerRegistryService, deployment: DockerDeployment
-):
+def create_service_from_docker_registry(deployment: DockerDeployment):
+    service = deployment.service
     client = get_docker_client()
     auth_config: DockerAuthConfig | None = None
     if (
@@ -354,7 +353,7 @@ def create_service_from_docker_registry(
     # get data corruption when two live containers want to write into the volume
     update_order = "start-first" if len(service.volumes.all()) == 0 else "stop-first"
 
-    created_service = client.services.create(
+    client.services.create(
         image=f"{service.image_repository}:{deployment.image_tag}",
         name=get_docker_service_resource_name(
             service_id=service.id,
