@@ -119,7 +119,7 @@ class DockerEnvVariable(BaseEnvVariable):
 
 
 class DockerRegistryService(BaseService):
-    image = models.CharField(max_length=510)
+    image_repository = models.CharField(max_length=510, null=False, blank=False)
     command = models.TextField(null=True, blank=True)
     docker_credentials_username = models.CharField(
         max_length=255, null=True, blank=True
@@ -206,8 +206,11 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
-    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    service = models.ForeignKey(
+        to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
+    )
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
+    image_tag = models.CharField(max_length=255, default="latest")
 
     @property
     def task_id(self):

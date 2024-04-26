@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from .base import Project, DockerRegistryService
+from .base import Project, DockerRegistryService, DockerDeployment
 from ..utils import strip_slash_if_exists
 
 
@@ -118,7 +118,8 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
 
 
 class ArchivedDockerService(ArchivedBaseService):
-    image = models.CharField(max_length=510)
+    image_repository = models.CharField(max_length=510, null=False, blank=False)
+    image_tag = models.CharField(max_length=255, default="latest")
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"
     )
@@ -134,7 +135,19 @@ class ArchivedDockerService(ArchivedBaseService):
     def create_from_service(
         cls, service: DockerRegistryService, parent: ArchivedProject
     ):
+        latest_deployment: DockerDeployment | None = (
+            service.deployments.filter(is_production=True)
+            .order_by("-created_at")
+            .first()
+        )
+
         archived_service = cls.objects.create(
+            image_repository=service.image_repository,
+            image_tag=(
+                latest_deployment.image_tag
+                if latest_deployment is not None
+                else "latest"
+            ),
             slug=service.slug,
             project=parent,
             command=service.command,
@@ -153,7 +166,7 @@ class ArchivedDockerService(ArchivedBaseService):
                 for volume in service.volumes.all()
             ]
         )
-        archived_envs = ArchivedDockerEnvVariable.objects.bulk_create(
+        ArchivedDockerEnvVariable.objects.bulk_create(
             [
                 ArchivedDockerEnvVariable(
                     key=env.key,
