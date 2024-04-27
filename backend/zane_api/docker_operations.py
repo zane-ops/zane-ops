@@ -584,10 +584,18 @@ def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
         # We get will hit this error when the service has been deleted in the meantime
         return None
     else:
-        # FIXME: make sure that this is only for when the deployment has not started yet, or else,
-        # we set the deployment to either UNHEALTHY or OFFLINE
         if len(task_list) == 0:
-            # the swarm task has not been created yet, we can't update the state of the deployment with this
+            if deployment.deployment_status in [
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                DockerDeployment.DeploymentStatus.STARTING,
+                DockerDeployment.DeploymentStatus.RESTARTING,
+            ]:
+                return (
+                    DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    "An Unknown error occurred, did you manually scale down the service ?",
+                )
+            # the swarm task has not been created yet or has exited without any issue,
+            # we can't update the state of the deployment with this
             return None
 
         most_recent_swarm_task = DockerSwarmTask.from_dict(

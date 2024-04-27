@@ -155,6 +155,20 @@ class DockerRegistryService(BaseService):
         IntervalSchedule.objects.filter(id__in=interval_ids).delete()
         all_monitor_tasks.delete()
 
+    def get_latest_deployment(self) -> 'DockerDeployment':
+        return (
+            self.deployments.filter(is_current_production=True)
+            .select_related("service", "service__project")
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
 
 class GitRepositoryService(BaseService):
     previews_enabled = models.BooleanField(default=True)

@@ -1999,7 +1999,50 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             service=created_service
         ).first()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.UNHEALTHY, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.UNHEALTHY,
+            latest_deployment.deployment_status,
+        )
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_service_fail_outside_of_zane_control(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service = DockerRegistryService.objects.get(slug="cache-db")
+        latest_deployment = created_service.get_latest_deployment()
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+
+        class FakeService:
+            @staticmethod
+            def tasks(*args, **kwargs):
+                return []
+
+        fake_docker_client.services.get = lambda _id: FakeService()
+
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.PREPARING,
+            latest_deployment.deployment_status,
+        )
+        latest_deployment.deployment_status = DockerDeployment.DeploymentStatus.HEALTHY
+        latest_deployment.save()
+        monitor_docker_service_deployment(latest_deployment.hash)
+        latest_deployment = created_service.get_latest_deployment()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.UNHEALTHY,
+            latest_deployment.deployment_status,
         )
 
 
