@@ -422,7 +422,6 @@ class CreateDockerServiceAPIView(APIView):
                 deploy_docker_service.apply_async(
                     kwargs=dict(deployment_hash=first_deployment.hash),
                     task_id=first_deployment.task_id,
-                    countdown=5,  # allow 5 seconds to cancel the deployment
                 )
 
                 response = DockerServiceResponseSerializer({"service": service})
