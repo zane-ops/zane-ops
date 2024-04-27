@@ -582,11 +582,11 @@ def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
         )
     except docker.errors.NotFound:
         # We get will hit this error when the service has been deleted in the meantime
-        return
+        return None
     else:
         if len(task_list) == 0:
             # the swarm task has not been created yet, we can't update the state of the deployment with this
-            return
+            return None
 
         most_recent_swarm_task = DockerSwarmTask.from_dict(
             max(

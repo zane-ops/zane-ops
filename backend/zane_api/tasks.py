@@ -133,9 +133,9 @@ def monitor_docker_service_deployment(deployment_hash: str):
             and deployment.deployment_status
             != DockerDeployment.DeploymentStatus.OFFLINE
         ):
-            deployment_status, deployment_status_reason = (
-                get_updated_docker_service_deployment_status(deployment)
-            )
-            deployment.deployment_status = deployment_status
-            deployment.deployment_status_reason = deployment_status_reason
-            deployment.save()
+            status = get_updated_docker_service_deployment_status(deployment)
+            if status is not None:
+                deployment_status, deployment_status_reason = status
+                deployment.deployment_status = deployment_status
+                deployment.deployment_status_reason = deployment_status_reason
+                deployment.save()
