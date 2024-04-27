@@ -1708,21 +1708,17 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        created_service = DockerRegistryService.objects.get(slug="cache-db")
+        latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.PREPARING,
+            latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(deployment.hash)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        monitor_docker_service_deployment(latest_deployment.hash)
+        latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.HEALTHY,
+            latest_deployment.deployment_status,
         )
 
     @patch(
@@ -1745,12 +1741,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        created_service = DockerRegistryService.objects.get(slug="cache-db")
+        latest_deployment = created_service.get_latest_deployment()
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         class FakeService:
@@ -1794,14 +1786,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.PREPARING,
+            latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(deployment.hash)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        monitor_docker_service_deployment(latest_deployment.hash)
+        latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.RESTARTING, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.RESTARTING,
+            latest_deployment.deployment_status,
         )
 
     @patch(
@@ -1822,12 +1814,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        created_service = DockerRegistryService.objects.get(slug="cache-db")
+        latest_deployment = created_service.get_latest_deployment()
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         class FakeService:
@@ -1871,14 +1859,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.PREPARING,
+            latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(deployment.hash)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        monitor_docker_service_deployment(latest_deployment.hash)
+        latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.HEALTHY,
+            latest_deployment.deployment_status,
         )
 
     @patch(
@@ -1899,12 +1887,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        created_service = DockerRegistryService.objects.get(slug="cache-db")
+        latest_deployment = created_service.get_latest_deployment()
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         class FakeService:
@@ -1992,12 +1976,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING, deployment.deployment_status
+            DockerDeployment.DeploymentStatus.PREPARING,
+            latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(deployment.hash)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service=created_service
-        ).first()
+        monitor_docker_service_deployment(latest_deployment.hash)
+        latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             latest_deployment.deployment_status,
