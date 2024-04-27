@@ -584,6 +584,8 @@ def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
         # We get will hit this error when the service has been deleted in the meantime
         return None
     else:
+        # FIXME: make sure that this is only for when the deployment has not started yet, or else,
+        # we set the deployment to either UNHEALTHY or OFFLINE
         if len(task_list) == 0:
             # the swarm task has not been created yet, we can't update the state of the deployment with this
             return None
