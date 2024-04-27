@@ -1999,3 +1999,116 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY, deployment.deployment_status
         )
+
+
+class DockerServiceDeploymentViewTests(AuthAPITestCase):
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_get_deployments_succesful(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployments_list",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "cache-db",
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        self.assertEqual(1, len(data))
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_filter_deployments_succesful(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployments_list",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "cache-db",
+                },
+            )
+            + "?deployment_status=HEALTHY"
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        self.assertEqual(0, len(data))
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_deployments_project_non_existing(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployments_list",
+                kwargs={
+                    "project_slug": "inexistent",
+                    "service_slug": "cache-db",
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_deployments_service_non_existing(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployments_list",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "cache-db",
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

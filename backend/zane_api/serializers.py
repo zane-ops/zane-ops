@@ -98,3 +98,17 @@ class DockerServiceSerializer(ModelSerializer):
             "ports",
             "env_variables",
         ]
+
+
+class DockerServiceDeploymentSerializer(ModelSerializer):
+    class Meta:
+        model = models.DockerDeployment
+        fields = [
+            "is_current_production",
+            "created_at",
+            "is_redeploy_of",
+            "hash",
+            "image_tag",
+            "deployment_status",
+            "deployment_status_reason",
+        ]

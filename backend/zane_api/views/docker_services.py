@@ -1,9 +1,11 @@
 import time
 
+import django_filters
 import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
-from django.db.models import Q
+from django.db.models import Q, QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import status, exceptions
@@ -460,23 +462,47 @@ class GetDockerServiceAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class DockerServiceDeploymentSerializer(serializers.Serializer):
-    pass
+class DockerServiceDeploymentFilter(django_filters.FilterSet):
+    deployment_status = django_filters.MultipleChoiceFilter(
+        choices=DockerDeployment.DeploymentStatus.choices
+    )
+
+    class Meta:
+        model = DockerDeployment
+        fields = ["deployment_status", "created_at", "hash"]
 
 
 class DockerServiceDeploymentsAPIView(ListAPIView):
-    def get_queryset(self):
+    serializer_class = serializers.DockerServiceDeploymentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DockerServiceDeploymentFilter
+    queryset = (
+        DockerDeployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_queryset(self) -> QuerySet[DockerDeployment]:
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
 
-        # try:
-        #     project = Project.objects.get(slug=project_slug)
-        #     service = Service.objects.get(slug=service_slug, project=project)
-        # except (Project.DoesNotExist, Service.DoesNotExist):
-        #     raise Http404("Project or service not found.")
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
 
-        return  # TODO
-        # return Deployment.objects.filter(project=project, service=service)
+        return (
+            DockerDeployment.objects.filter(service=service)
+            .select_related("service", "is_redeploy_of")
+            .order_by("-created_at")
+        )
 
 
 class ArchiveDockerServiceAPIView(APIView):

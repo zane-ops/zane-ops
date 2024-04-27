@@ -190,7 +190,6 @@ class Volume(TimestampedModel):
 
 
 class BaseDeployment(models.Model):
-    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     logs = models.ManyToManyField(to="SimpleLog")
@@ -201,6 +200,8 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
+
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
         PREPARING = "PREPARING", _("Preparing")
@@ -232,6 +233,8 @@ class DockerDeployment(BaseDeployment):
 
 
 class GitDeployment(BaseDeployment):
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
+
     class BuildStatus(models.TextChoices):
         ERROR = "ERROR", _("Error")
         SUCCESS = "SUCCESS", _("Success")
