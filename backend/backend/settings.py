@@ -280,4 +280,3 @@ CELERY_RESULT_SERIALIZER = "json"
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://localhost:2019"
 )
-CADDY_PROXY_SERVICE = "zane_zane-proxy"
