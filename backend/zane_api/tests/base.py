@@ -3,7 +3,6 @@ from typing import Any, List
 from unittest.mock import MagicMock
 
 import docker.errors
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
@@ -82,6 +81,7 @@ class FakeDockerClient:
             self.attached_volumes = {} if volumes is None else volumes
             self.env = {} if env is None else env
             self.endpoint = endpoint
+            self.id = name
 
         def remove(self):
             self.parent.services_remove(self.name)
@@ -107,6 +107,7 @@ class FakeDockerClient:
         self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
         self.services.get = self.services_get
+        self.services.list = self.services_list
         self.volumes.create = self.volumes_create
         self.volumes.get = self.volumes_get
         self.volumes.list = self.volumes_list
@@ -119,11 +120,16 @@ class FakeDockerClient:
 
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
         self.service_map = {
-            settings.CADDY_PROXY_SERVICE: FakeDockerClient.FakeService(
+            "proxy-service": FakeDockerClient.FakeService(
                 name="zane_zane-proxy", parent=self
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
+
+    def services_list(self, **kwargs):
+        if kwargs.get("filter") == {"label": "zane.role=proxy"}:
+            return [self.service_map["proxy_service"]]
+        return [service for service in self.service_map.values()]
 
     def events(self, decode: bool, filters: dict):
         return []
