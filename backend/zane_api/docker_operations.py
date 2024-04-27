@@ -158,6 +158,16 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
         volume.remove(force=True)
 
 
+def get_proxy_service():
+    client = get_docker_client()
+    services_list = client.services.list(filter={"label": ["zane.role=proxy"]})
+
+    if len(services_list) == 0:
+        raise docker.errors.NotFound("Proxy Service is not up")
+    proxy_service = services_list[0]
+    return proxy_service
+
+
 def cleanup_project_resources(archived_project: ArchivedProject):
     """
     Cleanup all resources attached to a project after it has been archived, which means :
@@ -193,8 +203,9 @@ def cleanup_project_resources(archived_project: ArchivedProject):
         )
         def wait_for_service_to_update():
             nonlocal client
+            proxy_service = get_proxy_service()
             for event in client.events(
-                decode=True, filters={"service": settings.CADDY_PROXY_SERVICE}
+                decode=True, filters={"service": proxy_service.id}
             ):
                 print(dict(event=event))
                 if (
@@ -224,24 +235,22 @@ def create_project_resources(project: Project):
 
 
 def attach_network_to_proxy(network: Network):
-    client = get_docker_client()
-    service = client.services.get(settings.CADDY_PROXY_SERVICE)
-    service_spec = service.attrs["Spec"]
+    proxy_service = get_proxy_service()
+    service_spec = proxy_service.attrs["Spec"]
     current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
     network_ids = set(net["Target"] for net in current_networks)
     network_ids.add(network.id)
-    service.update(networks=list(network_ids))
+    proxy_service.update(networks=list(network_ids))
 
 
 def detach_network_from_proxy(network: Network):
-    client = get_docker_client()
-    service = client.services.get(settings.CADDY_PROXY_SERVICE)
-    service_spec = service.attrs["Spec"]
+    proxy_service = get_proxy_service()
+    service_spec = proxy_service.attrs["Spec"]
     current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
     network_ids = set(net["Target"] for net in current_networks)
     if network.id in network_ids:
         network_ids.remove(network.id)
-        service.update(networks=list(network_ids))
+        proxy_service.update(networks=list(network_ids))
 
 
 def check_if_port_is_available_on_host(port: int) -> bool:
