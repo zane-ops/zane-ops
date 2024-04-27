@@ -1,3 +1,5 @@
+import json
+
 import docker.errors
 from celery import shared_task
 from django.db import transaction
@@ -56,10 +58,11 @@ def deploy_docker_service(deployment_hash: str):
 
         deployment.monitor_task = PeriodicTask.objects.create(
             interval=IntervalSchedule.objects.create(
-                every=30, period=IntervalSchedule.SECONDS
+                every=5, period=IntervalSchedule.SECONDS
             ),
             name=f"monitor deployment {deployment_hash}",
-            task="zane_api.tasks.monitor_docker_service_deployments",
+            task="zane_api.tasks.monitor_docker_service_deployment",
+            kwargs=json.dumps({"deployment_hash": deployment_hash}),
         )
         deployment.save()
 
