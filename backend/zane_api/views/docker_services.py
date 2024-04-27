@@ -9,7 +9,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import status, exceptions
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -503,6 +503,46 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
             .select_related("service", "is_redeploy_of")
             .order_by("-created_at")
         )
+
+
+class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
+    serializer_class = serializers.DockerServiceDeploymentSerializer
+    lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
+    lookup_field = "hash"
+    queryset = (
+        DockerDeployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_object(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        deployment_hash = self.kwargs["deployment_hash"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment: DockerDeployment | None = (
+                DockerDeployment.objects.filter(service=service, hash=deployment_hash)
+                .select_related("service", "is_redeploy_of")
+                .first()
+            )
+            if deployment is None:
+                raise DockerDeployment.DoesNotExist("")
+            return deployment
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
 
 
 class ArchiveDockerServiceAPIView(APIView):

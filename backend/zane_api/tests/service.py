@@ -2112,3 +2112,66 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_get_single_deployment_succesful(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service__slug="cache-db"
+        ).first()
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_single",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "cache-db",
+                    "deployment_hash": deployment.hash,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_single_deployment_service_non_existing(self, mock_fake_docker: Mock):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_single",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "cache-db",
+                    "deployment_hash": "dkr_dpl_hash1234",
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
