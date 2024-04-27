@@ -4,7 +4,7 @@ from typing import List
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import PeriodicTask
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from shortuuid.django_fields import ShortUUIDField
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
@@ -145,7 +145,15 @@ class DockerRegistryService(BaseService):
     def delete_resources(self):
         super().delete_resources()
         all_deployments = self.deployments.all()
-        PeriodicTask.objects.filter(dockerdeployment__in=all_deployments).delete()
+        all_monitor_tasks = PeriodicTask.objects.filter(
+            dockerdeployment__in=all_deployments
+        )
+
+        interval_ids = []
+        for task in all_monitor_tasks.all():
+            interval_ids.append(task.interval_id)
+        IntervalSchedule.objects.filter(id__in=interval_ids).delete()
+        all_monitor_tasks.delete()
 
 
 class GitRepositoryService(BaseService):

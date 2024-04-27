@@ -4,7 +4,7 @@ from unittest.mock import patch, Mock
 
 from django.conf import settings
 from django.urls import reverse
-from django_celery_beat.models import PeriodicTask
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from rest_framework import status
 
 from .base import AuthAPITestCase, FakeDockerClient
@@ -1685,6 +1685,8 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(0, len(deployments))
         monitoring_tasks = PeriodicTask.objects.all()
         self.assertEqual(0, len(monitoring_tasks))
+        schedules = IntervalSchedule.objects.all()
+        self.assertEqual(0, len(schedules))
 
 
 class DockerServiceMonitorTests(AuthAPITestCase):
