@@ -507,10 +507,9 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
 class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = serializers.DockerServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
-    lookup_field = "hash"
     queryset = (
         DockerDeployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
 
     def get_object(self):
         project_slug = self.kwargs["project_slug"]
