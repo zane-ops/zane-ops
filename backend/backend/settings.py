@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django_celery_beat",
     "drf_standardized_errors",
+    "django_filters",
 ]
 
 MIDDLEWARE = [

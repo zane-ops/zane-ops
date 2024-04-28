@@ -19,7 +19,7 @@ from ..models import Project
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,
+    # DEBUG=True,  # uncomment for debugging celery tasks
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -89,6 +89,27 @@ class FakeDockerClient:
         def update(self, networks: list):
             self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
                 {"Target": network} for network in networks
+            ]
+
+        @staticmethod
+        def tasks(*args, **kwargs):
+            return [
+                {
+                    "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                    "Version": {"Index": 15078},
+                    "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                    "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                    "Status": {
+                        "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                        "State": "running",
+                        "Message": "started",
+                        # "Err": "task: non-zero exit (127)",
+                        "ContainerStatus": {
+                            "ExitCode": 0,
+                        },
+                    },
+                    "DesiredState": "running",
+                }
             ]
 
     PORT_USED_BY_HOST = 8080

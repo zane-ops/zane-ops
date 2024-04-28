@@ -482,20 +482,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetRootDomain'
           description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenResponse'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
   /api/projects/:
     get:
       operationId: getProjectList
@@ -916,6 +902,211 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceResponse'
           description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/:
+    get:
+      operationId: projects_service_details_docker_deployments_list
+      parameters:
+      - in: query
+        name: created_at
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: deployment_status
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - HEALTHY
+            - OFFLINE
+            - PREPARING
+            - QUEUED
+            - RESTARTING
+            - STARTING
+            - UNHEALTHY
+        description: |-
+          * `QUEUED` - Queued
+          * `PREPARING` - Preparing
+          * `STARTING` - Starting
+          * `RESTARTING` - Restarting
+          * `HEALTHY` - Healthy
+          * `UNHEALTHY` - Unhealthy
+          * `OFFLINE` - Offline
+        explode: true
+        style: form
+      - in: query
+        name: hash
+        schema:
+          type: string
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
+    get:
+      operationId: projects_service_details_docker_deployments_retrieve
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -1287,13 +1478,6 @@ components:
           readOnly: true
       required:
       - user
-    BaseError:
-      type: object
-      properties:
-        root:
-          type: array
-          items:
-            type: string
     CheckIfPortIsAvailableError:
       oneOf:
       - $ref: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
@@ -2126,6 +2310,24 @@ components:
       required:
       - errors
       - type
+    DeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - PREPARING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      - OFFLINE
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `PREPARING` - Preparing
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `OFFLINE` - Offline
     DockerCredentialsRequest:
       type: object
       properties:
@@ -2359,7 +2561,7 @@ components:
     DockerService:
       type: object
       properties:
-        image:
+        image_repository:
           type: string
           maxLength: 510
         slug:
@@ -2399,7 +2601,7 @@ components:
       required:
       - created_at
       - env_variables
-      - image
+      - image_repository
       - ports
       - slug
       - updated_at
@@ -2439,6 +2641,32 @@ components:
           default: []
       required:
       - image
+    DockerServiceDeployment:
+      type: object
+      properties:
+        is_current_production:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_redeploy_of:
+          type: integer
+          nullable: true
+        hash:
+          type: string
+          maxLength: 255
+        image_tag:
+          type: string
+          maxLength: 255
+        deployment_status:
+          $ref: '#/components/schemas/DeploymentStatusEnum'
+        deployment_status_reason:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - created_at
     DockerServiceResponse:
       type: object
       properties:
@@ -2575,13 +2803,6 @@ components:
       required:
       - errors
       - type
-    ForbiddenResponse:
-      type: object
-      properties:
-        errors:
-          $ref: '#/components/schemas/BaseError'
-      required:
-      - errors
     GetAuthedUserErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -2873,6 +3094,105 @@ components:
       required:
       - active
       - archived
+    ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - created_at
+          type: string
+          description: '* `created_at` - created_at'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsListDeploymentStatusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deployment_status
+          type: string
+          description: '* `deployment_status` - deployment_status'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListDeploymentStatusErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          deployment_status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListDeploymentStatusErrorComponent'
+          created_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
+          hash: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent'
+    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - hash
+          type: string
+          description: '* `hash` - hash'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListError'
+      required:
+      - errors
+      - type
+    ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

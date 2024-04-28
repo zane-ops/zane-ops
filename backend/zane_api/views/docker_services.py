@@ -1,12 +1,15 @@
 import time
 
+import django_filters
 import docker.errors
 from django.conf import settings
 from django.db import transaction, IntegrityError
-from django.db.models import Q
+from django.db.models import Q, QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import status, exceptions
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -106,6 +109,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeRequestSerializer(many=True, required=False, default=[])
+    # TODO : add healthcheck (path or command ?)
 
     def validate(self, data: dict):
         credentials = data.get("credentials")
@@ -457,6 +461,88 @@ class GetDockerServiceAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
+class DockerServiceDeploymentFilter(django_filters.FilterSet):
+    deployment_status = django_filters.MultipleChoiceFilter(
+        choices=DockerDeployment.DeploymentStatus.choices
+    )
+
+    class Meta:
+        model = DockerDeployment
+        fields = ["deployment_status", "created_at", "hash"]
+
+
+class DockerServiceDeploymentsAPIView(ListAPIView):
+    serializer_class = serializers.DockerServiceDeploymentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DockerServiceDeploymentFilter
+    queryset = (
+        DockerDeployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_queryset(self) -> QuerySet[DockerDeployment]:
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+
+        return (
+            DockerDeployment.objects.filter(service=service)
+            .select_related("service", "is_redeploy_of")
+            .order_by("-created_at")
+        )
+
+
+class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
+    serializer_class = serializers.DockerServiceDeploymentSerializer
+    lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
+    queryset = (
+        DockerDeployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+
+    def get_object(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        deployment_hash = self.kwargs["deployment_hash"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment: DockerDeployment | None = (
+                DockerDeployment.objects.filter(service=service, hash=deployment_hash)
+                .select_related("service", "is_redeploy_of")
+                .first()
+            )
+            if deployment is None:
+                raise DockerDeployment.DoesNotExist("")
+            return deployment
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+
 class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
         responses={
@@ -466,6 +552,7 @@ class ArchiveDockerServiceAPIView(APIView):
         },
         operation_id="archiveDockerService",
     )
+    @transaction.atomic()
     def delete(self, request: Request, project_slug: str, service_slug: str):
         project = (
             Project.objects.filter(
@@ -502,7 +589,6 @@ class ArchiveDockerServiceAPIView(APIView):
         archived_service = ArchivedDockerService.create_from_service(
             service, archived_project
         )
-        print("Executiong delete_resources_for_docker_service")
         delete_resources_for_docker_service.apply_async(
             kwargs=dict(archived_service_id=archived_service.id),
             task_id=service.archive_task_id,
