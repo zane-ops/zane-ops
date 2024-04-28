@@ -155,7 +155,7 @@ class DockerRegistryService(BaseService):
         IntervalSchedule.objects.filter(id__in=interval_ids).delete()
         all_monitor_tasks.delete()
 
-    def get_latest_deployment(self) -> 'DockerDeployment':
+    def get_latest_deployment(self) -> "DockerDeployment":
         return (
             self.deployments.filter(is_current_production=True)
             .select_related("service", "service__project")
@@ -272,12 +272,13 @@ class GitDeployment(BaseDeployment):
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
         STARTING = "STARTING", _("Starting")
+        RESTARTING = "RESTARTING", _("Restarting")
         BUILDING = "BUILDING", _("Building")
         CANCELLED = "CANCELLED", _("Cancelled")
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("UnHealthy")
         OFFLINE = "OFFLINE", _("Offline")
-        SLEEPING = "SLEEPING", _("Sleeping")
+        SLEEPING = "SLEEPING", _("Sleeping") # preview deploys
 
     deployment_status = models.CharField(
         max_length=10,
