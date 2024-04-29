@@ -8,7 +8,7 @@ Should we ?
 ### what we will use :
 
 - On service creation :
-    1. use docker swarm tasks values by default with a strong retry policy
+    1. use docker swarm tasks values by default with a strong retry policy but no update config, we will handle that
         1. to check if a service is up, we need to check if a task is running first
     2. Manually run the healthcheck by ourselves regularly, and report the status to the user, if they defined one
 
