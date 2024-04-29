@@ -129,7 +129,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
    3. make sure that the API is launched, and that no error is in thrown in the terminal where `make dev` is running
    4. make sure to run `nslookup` as stated in the previous section detailling how to setup the local domain
    5. make sure to setup the project and install the packages with `make setup`
-   6. If the app is still unresponsive, run `make reset-db`
+   6. If the app is still unresponsive, run `make reset-db` However, it's crucial to note that this action will completely erase all data in the database and reset the project to its initial state.
 
 
 ## 🧐 Project structure
