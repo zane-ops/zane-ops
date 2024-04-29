@@ -119,6 +119,18 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
    The app should be available at https://app.zaneops.local.
 
+
+7. **Debugging :**
+   If the app is unresponsive
+   
+   0. make sure you ran make dev and it didn't exit unexpectedly 
+   1. make sure that all the containers are up, you can check it in your docker tool of choice, orbstack or docker desktop (image pour illustrer)
+   2. make sure that the API is launched, and that no error is in thrown in the terminal where make dev is running
+   3. make sure to run nslookup
+   4. make sure to setup the project and install the packges with make setup
+   5. If the app is still unresponsive, run make reset-db
+
+
 ## 🧐 Project structure
 
 A quick look at the top-level files and directories you will see in this project.
