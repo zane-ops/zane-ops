@@ -278,7 +278,7 @@ class GitDeployment(BaseDeployment):
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("UnHealthy")
         OFFLINE = "OFFLINE", _("Offline")
-        SLEEPING = "SLEEPING", _("Sleeping") # preview deploys
+        SLEEPING = "SLEEPING", _("Sleeping")  # preview deploys
 
     deployment_status = models.CharField(
         max_length=10,
