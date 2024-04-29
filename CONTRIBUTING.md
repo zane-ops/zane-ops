@@ -122,9 +122,10 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 7. **Debugging :**
    If the app is unresponsive
-   
+
    0. make sure you ran make dev and it didn't exit unexpectedly 
-   1. make sure that all the containers are up, you can check it in your docker tool of choice, orbstack or docker desktop (image pour illustrer)
+   1. make sure that all the containers are up, you can check it in your docker tool of choice, orbstack or docker desktop 
+   ![Alt text](https://media.discordapp.net/attachments/1146204833913782363/1234480044492198010/image.png?ex=6630e2a2&is=662f9122&hm=51504fb845b7e5f5cd36ea50908ceced025b4bbb60e9b7cf177cc53a8adff745&=&format=webp&quality=lossless&width=1880&height=1202)
    2. make sure that the API is launched, and that no error is in thrown in the terminal where make dev is running
    3. make sure to run nslookup
    4. make sure to setup the project and install the packges with make setup
