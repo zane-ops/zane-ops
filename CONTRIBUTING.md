@@ -120,7 +120,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
    The app should be available at https://app.zaneops.local.
 
 
-7. ##  🛠️ Debugging 
+##  🛠️ Debugging 
    If the app is unresponsive
 
    1. make sure you ran `make dev` and it didn't exit unexpectedly 
