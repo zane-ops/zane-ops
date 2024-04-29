@@ -1266,7 +1266,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         create_service_payload = {
             "slug": "simple-webserver",
-            "image": "caddy:alpine",
+            "image": "caddy",
+            "ports": [{"forwarded": 80}],
             "healthcheck": {
                 "type": "path",
                 "value": "/",
