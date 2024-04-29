@@ -119,6 +119,19 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
    The app should be available at https://app.zaneops.local.
 
+
+##  🛠️ Debugging 
+   You may end up having issues where the project is not working, the app is not reachable on the browser, or the API seems to be down, this section is to help debugging this case, if the app is working fine on your end, you don't need to read this section.
+
+   1. make sure you ran `make dev` and it didn't exit unexpectedly 
+   2. make sure that all the containers are up, you can check it in your docker tool of choice, orbstack or docker desktop 
+   ![illustration](./images/illustration.webp)
+   3. make sure that the API is launched, and that no error is in thrown in the terminal where `make dev` is running
+   4. make sure to run `nslookup` as stated in the previous section detailling how to setup the local domain
+   5. make sure to setup the project and install the packages with `make setup`
+   6. If the app is still unresponsive, run `make reset-db` However, it's crucial to note that this action will completely erase all data in the database and reset the project to its initial state.
+
+
 ## 🧐 Project structure
 
 A quick look at the top-level files and directories you will see in this project.
