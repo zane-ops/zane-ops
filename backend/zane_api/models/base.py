@@ -4,6 +4,7 @@ from typing import List
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from shortuuid.django_fields import ShortUUIDField
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
@@ -119,7 +120,7 @@ class DockerEnvVariable(BaseEnvVariable):
 
 
 class DockerRegistryService(BaseService):
-    image = models.CharField(max_length=510)
+    image_repository = models.CharField(max_length=510, null=False, blank=False)
     command = models.TextField(null=True, blank=True)
     docker_credentials_username = models.CharField(
         max_length=255, null=True, blank=True
@@ -140,6 +141,33 @@ class DockerRegistryService(BaseService):
     @property
     def archive_task_id(self):
         return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
+
+    def delete_resources(self):
+        super().delete_resources()
+        all_deployments = self.deployments.all()
+        all_monitor_tasks = PeriodicTask.objects.filter(
+            dockerdeployment__in=all_deployments
+        )
+
+        interval_ids = []
+        for task in all_monitor_tasks.all():
+            interval_ids.append(task.interval_id)
+        IntervalSchedule.objects.filter(id__in=interval_ids).delete()
+        all_monitor_tasks.delete()
+
+    def get_latest_deployment(self) -> "DockerDeployment":
+        return (
+            self.deployments.filter(is_current_production=True)
+            .select_related("service", "service__project")
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
+            )
+            .order_by("-created_at")
+            .first()
+        )
 
 
 class GitRepositoryService(BaseService):
@@ -184,20 +212,8 @@ class Volume(TimestampedModel):
 
 
 class BaseDeployment(models.Model):
-    class DeploymentStatus(models.TextChoices):
-        OFFLINE = "OFFLINE", _("Offline")
-        ERROR = "ERROR", _("Error")
-        LIVE = "LIVE", _("Live")
-        PENDING = "PENDING", _("Pending")
-
-    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_production = models.BooleanField(default=True)
-    deployment_status = models.CharField(
-        max_length=10,
-        choices=DeploymentStatus.choices,
-        default=DeploymentStatus.PENDING,
-    )
+
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
 
@@ -206,8 +222,32 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
-    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
+
+    class DeploymentStatus(models.TextChoices):
+        QUEUED = "QUEUED", _("Queued")
+        PREPARING = "PREPARING", _("Preparing")
+        STARTING = "STARTING", _("Starting")
+        RESTARTING = "RESTARTING", _("Restarting")
+        HEALTHY = "HEALTHY", _("Healthy")
+        UNHEALTHY = "UNHEALTHY", _("Unhealthy")
+        OFFLINE = "OFFLINE", _("Offline")
+
+    deployment_status = models.CharField(
+        max_length=10,
+        choices=DeploymentStatus.choices,
+        default=DeploymentStatus.QUEUED,
+    )
+    deployment_status_reason = models.CharField(max_length=255, null=True)
+    is_current_production = models.BooleanField(default=True)
+    service = models.ForeignKey(
+        to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
+    )
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
+    image_tag = models.CharField(max_length=255, default="latest")
+    monitor_task = models.ForeignKey(
+        to=PeriodicTask, null=True, on_delete=models.SET_NULL
+    )
 
     @property
     def task_id(self):
@@ -215,6 +255,8 @@ class DockerDeployment(BaseDeployment):
 
 
 class GitDeployment(BaseDeployment):
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
+
     class BuildStatus(models.TextChoices):
         ERROR = "ERROR", _("Error")
         SUCCESS = "SUCCESS", _("Success")
@@ -226,6 +268,36 @@ class GitDeployment(BaseDeployment):
         choices=BuildStatus.choices,
         default=BuildStatus.QUEUED,
     )
+
+    class DeploymentStatus(models.TextChoices):
+        QUEUED = "QUEUED", _("Queued")
+        STARTING = "STARTING", _("Starting")
+        RESTARTING = "RESTARTING", _("Restarting")
+        BUILDING = "BUILDING", _("Building")
+        CANCELLED = "CANCELLED", _("Cancelled")
+        HEALTHY = "HEALTHY", _("Healthy")
+        UNHEALTHY = "UNHEALTHY", _("UnHealthy")
+        OFFLINE = "OFFLINE", _("Offline")
+        SLEEPING = "SLEEPING", _("Sleeping") # preview deploys
+
+    deployment_status = models.CharField(
+        max_length=10,
+        choices=DeploymentStatus.choices,
+        default=DeploymentStatus.QUEUED,
+    )
+    deployment_status_reason = models.CharField(max_length=255, null=True)
+
+    class DeploymentEnvironment(models.TextChoices):
+        PRODUCTION = "PRODUCTION", _("Production")
+        PREVIEW = "PREVIEW", _("Preview")
+
+    deployment_environment = models.CharField(
+        max_length=10,
+        choices=DeploymentEnvironment.choices,
+        default=DeploymentEnvironment.PREVIEW,
+    )
+    is_current_production = models.BooleanField(default=False)
+
     commit_hash = models.CharField(
         max_length=40
     )  # Typical length of a Git commit hash, but we will use the short version

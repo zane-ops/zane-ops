@@ -1,22 +1,28 @@
 import os
 
 from django.contrib.auth.models import User
+from django.db.models import TextChoices
+from drf_standardized_errors.openapi_serializers import ClientErrorEnum
+from rest_framework import serializers
 from rest_framework.serializers import *
 
 from . import models
 from .validators import validate_url_path, validate_url_domain
 
 
-class StringListField(ListField):
-    child = CharField()
+class ErrorCode409Enum(TextChoices):
+    RESOURCE_CONFLICT = "resource_conflict"
 
 
-class BaseErrorSerializer(Serializer):
-    root = StringListField(required=False)
+class Error409Serializer(serializers.Serializer):
+    code = serializers.ChoiceField(choices=ErrorCode409Enum.choices)
+    detail = serializers.CharField()
+    attr = serializers.CharField(allow_null=True)
 
 
-class BaseErrorResponseSerializer(Serializer):
-    errors = BaseErrorSerializer()
+class ErrorResponse409Serializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=ClientErrorEnum.choices)
+    errors = Error409Serializer(many=True)
 
 
 class URLPathField(CharField):
@@ -82,7 +88,7 @@ class DockerServiceSerializer(ModelSerializer):
     class Meta:
         model = models.DockerRegistryService
         fields = [
-            "image",
+            "image_repository",
             "slug",
             "urls",
             "created_at",
@@ -94,5 +100,15 @@ class DockerServiceSerializer(ModelSerializer):
         ]
 
 
-class ForbiddenResponseSerializer(BaseErrorResponseSerializer):
-    pass
+class DockerServiceDeploymentSerializer(ModelSerializer):
+    class Meta:
+        model = models.DockerDeployment
+        fields = [
+            "is_current_production",
+            "created_at",
+            "is_redeploy_of",
+            "hash",
+            "image_tag",
+            "deployment_status",
+            "deployment_status_reason",
+        ]

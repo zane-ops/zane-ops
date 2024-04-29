@@ -20,12 +20,14 @@ from .models import (
     ArchivedProject,
     ArchivedDockerService,
     ArchivedURL,
+    DockerDeployment,
 )
-from .utils import strip_slash_if_exists
+from .utils import strip_slash_if_exists, DockerSwarmTask, DockerSwarmTaskState
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
 DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
+MAX_SERVICE_RESTART_COUNT = 3
 
 
 def get_docker_client():
@@ -34,7 +36,6 @@ def get_docker_client():
     """
     global docker_client
     if docker_client is None:
-        print("Recreate docker client")
         docker_client = docker.from_env()
     return docker_client
 
@@ -92,11 +93,6 @@ def login_to_docker_registry(
 class DockerAuthConfig(TypedDict):
     username: str
     password: str
-
-
-def pull_docker_image(image: str, auth: DockerAuthConfig = None):
-    client = get_docker_client()
-    client.images.pull(image, auth_config=auth)
 
 
 def check_if_docker_image_exists(
@@ -163,6 +159,16 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
         volume.remove(force=True)
 
 
+def get_proxy_service():
+    client = get_docker_client()
+    services_list = client.services.list(filter={"label": ["zane.role=proxy"]})
+
+    if len(services_list) == 0:
+        raise docker.errors.NotFound("Proxy Service is not up")
+    proxy_service = services_list[0]
+    return proxy_service
+
+
 def cleanup_project_resources(archived_project: ArchivedProject):
     """
     Cleanup all resources attached to a project after it has been archived, which means :
@@ -198,8 +204,9 @@ def cleanup_project_resources(archived_project: ArchivedProject):
         )
         def wait_for_service_to_update():
             nonlocal client
+            proxy_service = get_proxy_service()
             for event in client.events(
-                decode=True, filters={"service": settings.CADDY_PROXY_SERVICE}
+                decode=True, filters={"service": proxy_service.id}
             ):
                 print(dict(event=event))
                 if (
@@ -229,24 +236,22 @@ def create_project_resources(project: Project):
 
 
 def attach_network_to_proxy(network: Network):
-    client = get_docker_client()
-    service = client.services.get(settings.CADDY_PROXY_SERVICE)
-    service_spec = service.attrs["Spec"]
+    proxy_service = get_proxy_service()
+    service_spec = proxy_service.attrs["Spec"]
     current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
     network_ids = set(net["Target"] for net in current_networks)
     network_ids.add(network.id)
-    service.update(networks=list(network_ids))
+    proxy_service.update(networks=list(network_ids))
 
 
 def detach_network_from_proxy(network: Network):
-    client = get_docker_client()
-    service = client.services.get(settings.CADDY_PROXY_SERVICE)
-    service_spec = service.attrs["Spec"]
+    proxy_service = get_proxy_service()
+    service_spec = proxy_service.attrs["Spec"]
     current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
     network_ids = set(net["Target"] for net in current_networks)
     if network.id in network_ids:
         network_ids.remove(network.id)
-        service.update(networks=list(network_ids))
+        proxy_service.update(networks=list(network_ids))
 
 
 def check_if_port_is_available_on_host(port: int) -> bool:
@@ -308,9 +313,23 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
-def create_service_from_docker_registry(service: DockerRegistryService):
-    # TODO: Pull Image Tag (#44)
+def create_service_from_docker_registry(deployment: DockerDeployment):
+    service = deployment.service
     client = get_docker_client()
+    auth_config: DockerAuthConfig | None = None
+    if (
+        service.docker_credentials_username is not None
+        and service.docker_credentials_password is not None
+    ):
+        auth_config = {
+            "username": service.docker_credentials_username,
+            "password": service.docker_credentials_password,
+        }
+    client.images.pull(
+        repository=service.image_repository,
+        tag=deployment.image_tag,
+        auth_config=auth_config,
+    )
 
     exposed_ports: dict[int, int] = {}
     endpoint_spec: EndpointSpec | None = None
@@ -340,8 +359,12 @@ def create_service_from_docker_registry(service: DockerRegistryService):
 
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
+    # We disable zero-downtime deployments for services with volumes so that we don't
+    # get data corruption when two live containers want to write into the volume
+    update_order = "start-first" if len(service.volumes.all()) == 0 else "stop-first"
+
     client.services.create(
-        image=service.image,
+        image=f"{service.image_repository}:{deployment.image_tag}",
         name=get_docker_service_resource_name(
             service_id=service.id,
             project_id=service.project.id,
@@ -349,19 +372,19 @@ def create_service_from_docker_registry(service: DockerRegistryService):
         mounts=mounts,
         endpoint_spec=endpoint_spec,
         env=envs,
-        labels=get_resource_labels(service.project.id),
+        labels=get_resource_labels(service.project.id, deployment_hash=deployment.hash),
         command=service.command,
         networks=[get_network_resource_name(service.project.id)],
         restart_policy=RestartPolicy(
             condition="on-failure",
-            max_attempts=3,
+            max_attempts=MAX_SERVICE_RESTART_COUNT,
             delay=5,
         ),
         update_config=UpdateConfig(
             parallelism=1,
             delay=5,
             monitor=10,
-            order="start-first",
+            order=update_order,
             failure_action="rollback",
         ),
     )
@@ -544,3 +567,80 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
                 requests.delete(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
                 )
+
+
+def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
+    client = get_docker_client()
+    try:
+        swarm_service = client.services.get(
+            get_docker_service_resource_name(
+                deployment.service.id, deployment.service.project.id
+            )
+        )
+        task_list = swarm_service.tasks(
+            filters={"label": f"deployment_hash={deployment.hash}"}
+        )
+    except docker.errors.NotFound:
+        # We get will hit this error when the service has been deleted in the meantime
+        return None
+    else:
+        if len(task_list) == 0:
+            if deployment.deployment_status in [
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                DockerDeployment.DeploymentStatus.STARTING,
+                DockerDeployment.DeploymentStatus.RESTARTING,
+            ]:
+                return (
+                    DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    "An Unknown error occurred, did you manually scale down the service ?",
+                )
+            # the swarm task has not been created yet or has exited without any issue,
+            # we can't update the state of the deployment with this
+            return None
+
+        most_recent_swarm_task = DockerSwarmTask.from_dict(
+            max(
+                task_list,
+                key=lambda task: task["Version"]["Index"],
+            )
+        )
+
+        starting_status = deployment.DeploymentStatus.STARTING
+        # We set the status to restarting, because we get more than one task for this service when we restart it
+        if len(task_list) > 1:
+            starting_status = deployment.DeploymentStatus.RESTARTING
+
+        state_matrix = {
+            DockerSwarmTaskState.NEW: starting_status,
+            DockerSwarmTaskState.PENDING: starting_status,
+            DockerSwarmTaskState.ASSIGNED: starting_status,
+            DockerSwarmTaskState.ACCEPTED: starting_status,
+            DockerSwarmTaskState.READY: starting_status,
+            DockerSwarmTaskState.PREPARING: starting_status,
+            DockerSwarmTaskState.STARTING: starting_status,
+            DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
+            DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+            DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
+            DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+            DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
+            DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
+            DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+        }
+
+        exited_without_error = 0
+        deployment_status = state_matrix[most_recent_swarm_task.Status.State]
+        deployment_status_reason = (
+            most_recent_swarm_task.Status.Err
+            if most_recent_swarm_task.Status.Err is not None
+            else most_recent_swarm_task.Status.Message
+        )
+
+        if most_recent_swarm_task.Status.State == DockerSwarmTaskState.SHUTDOWN:
+            status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+            if (
+                status_code is not None and status_code != exited_without_error
+            ) or most_recent_swarm_task.Status.Err is not None:
+                deployment_status = deployment.DeploymentStatus.UNHEALTHY
+
+        # TODO (#67) : send system logs when the state changes
+        return deployment_status, deployment_status_reason

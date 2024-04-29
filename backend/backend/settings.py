@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from .api_description import API_DESCRIPTION
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -28,26 +30,26 @@ env = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = not env == PRODUCTION_ENV
+DEBUG = env != PRODUCTION_ENV
 CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 
-## We will only support one root domain on production
-## And it will be in the format domain.com (without `http://` or `https://`)
-root_domain = os.environ.get("ROOT_DOMAIN")
-zane_app_domain = os.environ.get("ZANE_APP_DOMAIN")
-ROOT_DOMAIN = "zane.local" if root_domain is None else root_domain
-ZANE_APP_DOMAIN = ROOT_DOMAIN if zane_app_domain is None else zane_app_domain
+# We will only support one root domain on production
+# And it will be in the format domain.com (without `http://` or `https://`)
+ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
+ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
 ALLOWED_HOSTS = (
-    ["zane.local", "localhost", "127.0.0.1"] if root_domain is None else [root_domain]
+    [ZANE_APP_DOMAIN, "localhost", "127.0.0.1"]
+    if env != PRODUCTION_ENV
+    else [ZANE_APP_DOMAIN]
 )
 
-## This is necessary for making sure that CSRF protections work on production
+# This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
-    ["http://zane.local", "https://zane.local"]
-    if root_domain is None
-    else [f"https://{root_domain}"]
+    [f"https://{ZANE_APP_DOMAIN}", f"http://{ZANE_APP_DOMAIN}"]
+    if env != PRODUCTION_ENV
+    else [f"https://{ZANE_APP_DOMAIN}"]
 )
 
 CACHES = {
@@ -73,6 +75,8 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_celery_results",
     "django_celery_beat",
+    "drf_standardized_errors",
+    "django_filters",
 ]
 
 MIDDLEWARE = [
@@ -217,17 +221,45 @@ REST_FRAMEWORK = {
         "anon": "5/minute",
     },
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
-    "EXCEPTION_HANDLER": "zane_api.views.auth.custom_exception_handler",
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",
+}
+
+DRF_STANDARDIZED_ERRORS = {
+    "EXCEPTION_HANDLER_CLASS": "zane_api.views.CustomExceptionHandler",
+    "ALLOWED_ERROR_STATUS_CODES": [
+        "400",
+        "401",
+        "403",
+        "404",
+        "429",
+    ],
 }
 
 # DRF SPECTACULAR, for OpenAPI schema generation
 
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
-    "DESCRIPTION": "Your deployment, simplified. Everything handled for you.",
+    "DESCRIPTION": API_DESCRIPTION,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "ValidationErrorEnum": "drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices",
+        "ClientErrorEnum": "drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices",
+        "ServerErrorEnum": "drf_standardized_errors.openapi_serializers.ServerErrorEnum.choices",
+        "ErrorCode401Enum": "drf_standardized_errors.openapi_serializers.ErrorCode401Enum.choices",
+        "ErrorCode403Enum": "drf_standardized_errors.openapi_serializers.ErrorCode403Enum.choices",
+        "ErrorCode404Enum": "drf_standardized_errors.openapi_serializers.ErrorCode404Enum.choices",
+        "ErrorCode405Enum": "drf_standardized_errors.openapi_serializers.ErrorCode405Enum.choices",
+        "ErrorCode406Enum": "drf_standardized_errors.openapi_serializers.ErrorCode406Enum.choices",
+        "ErrorCode415Enum": "drf_standardized_errors.openapi_serializers.ErrorCode415Enum.choices",
+        "ErrorCode429Enum": "drf_standardized_errors.openapi_serializers.ErrorCode429Enum.choices",
+        "ErrorCode500Enum": "drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices",
+    },
+    "POSTPROCESSING_HOOKS": [
+        "drf_standardized_errors.openapi_hooks.postprocess_schema_enums"
+    ],
 }
 
 # For having colorized output in tests
@@ -238,6 +270,7 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_ACKS_LATE = True
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
 CELERY_ACCEPT_CONTENT = ["application/json"]
@@ -248,4 +281,3 @@ CELERY_RESULT_SERIALIZER = "json"
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://localhost:2019"
 )
-CADDY_PROXY_SERVICE = "zane_zane-proxy"

@@ -8,7 +8,7 @@ RUN xcaddy build \
 
 FROM caddy:${CADDY_VERSION}
 
-ARG ZANE_HOST=zane.local
+ARG ZANE_HOST=app.zaneops.local
 ENV ZANE_HOST=$ZANE_HOST
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy

@@ -22,6 +22,7 @@ django-timezone-field==6.1.0
 djangorestframework==3.14.0
 docker==7.0.0
 drf-spectacular==0.27.1
+drf-standardized-errors==0.13.0
 faker==24.2.0
 flower==2.0.1
 gunicorn==21.2.0

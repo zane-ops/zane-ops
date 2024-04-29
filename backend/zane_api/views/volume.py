@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import exceptions
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,36 +9,24 @@ from ..docker_operations import get_docker_volume_size
 from ..models import Volume
 
 
-class VolumeGetSizeSuccessResponseSerializer(serializers.Serializer):
+class VolumeGetSizeResponseSerializer(serializers.Serializer):
     size = serializers.IntegerField()
 
 
 class VolumeGetSizeView(APIView):
-    serializer_class = VolumeGetSizeSuccessResponseSerializer
-    forbidden_serializer_class = serializers.ForbiddenResponseSerializer
-    error_serializer_class = serializers.BaseErrorResponseSerializer
+    serializer_class = VolumeGetSizeResponseSerializer
 
     @extend_schema(
-        responses={
-            200: serializer_class,
-            403: forbidden_serializer_class,
-            404: error_serializer_class,
-        },
         operation_id="getVolumeSize",
     )
     def get(self, request: Request, volume_id: str):
         try:
             volume = Volume.objects.get(id=volume_id)
         except Volume.DoesNotExist:
-            response = self.error_serializer_class(
-                {
-                    "errors": {
-                        "root": [f"A volume with the id `{volume_id}` does not exist"]
-                    }
-                }
+            raise exceptions.NotFound(
+                detail=f"A volume with the id `{volume_id}` does not exist"
             )
-            return Response(response.data, status=status.HTTP_404_NOT_FOUND)
         else:
             size = get_docker_volume_size(volume)
-            response = self.serializer_class(dict(size=size))
+            response = VolumeGetSizeResponseSerializer({"size": size})
             return Response(response.data)

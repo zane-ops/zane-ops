@@ -19,6 +19,8 @@ services:
       placement:
         constraints:
           - node.role==manager
+      labels:
+        zane.role: "proxy"
     ports:
       - "80:80"
       - "443:443"

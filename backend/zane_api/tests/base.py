@@ -1,16 +1,15 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, List
 from unittest.mock import MagicMock
 
 import docker.errors
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from docker.types import EndpointSpec
 from rest_framework.test import APIClient
 
-from ..docker_operations import get_network_resource_name
+from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project
 
 
@@ -20,7 +19,7 @@ from ..models import Project
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,
+    # DEBUG=True,  # uncomment for debugging celery tasks
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -82,6 +81,7 @@ class FakeDockerClient:
             self.attached_volumes = {} if volumes is None else volumes
             self.env = {} if env is None else env
             self.endpoint = endpoint
+            self.id = name
 
         def remove(self):
             self.parent.services_remove(self.name)
@@ -89,6 +89,27 @@ class FakeDockerClient:
         def update(self, networks: list):
             self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
                 {"Target": network} for network in networks
+            ]
+
+        @staticmethod
+        def tasks(*args, **kwargs):
+            return [
+                {
+                    "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                    "Version": {"Index": 15078},
+                    "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                    "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                    "Status": {
+                        "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                        "State": "running",
+                        "Message": "started",
+                        # "Err": "task: non-zero exit (127)",
+                        "ContainerStatus": {
+                            "ExitCode": 0,
+                        },
+                    },
+                    "DesiredState": "running",
+                }
             ]
 
     PORT_USED_BY_HOST = 8080
@@ -101,19 +122,16 @@ class FakeDockerClient:
         self.is_logged_in = False
         self.credentials = {}
 
+        self.images.search = self.images_search
+        self.images.pull = self.images_pull
         self.containers.run = self.containers_run
         self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
         self.services.get = self.services_get
+        self.services.list = self.services_list
         self.volumes.create = self.volumes_create
         self.volumes.get = self.volumes_get
         self.volumes.list = self.volumes_list
-        self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
-        self.service_map = {
-            settings.CADDY_PROXY_SERVICE: FakeDockerClient.FakeService(
-                name="zane_zane-proxy", parent=self
-            )
-        }  # type: dict[str, FakeDockerClient.FakeService]
 
         self.networks = MagicMock()
         self.network_map = {}  # type: dict[str, FakeDockerClient.FakeNetwork]
@@ -121,15 +139,30 @@ class FakeDockerClient:
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
 
+        self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
+        self.service_map = {
+            "proxy-service": FakeDockerClient.FakeService(
+                name="zane_zane-proxy", parent=self
+            )
+        }  # type: dict[str, FakeDockerClient.FakeService]
+        self.pulled_images: set[str] = set()
+
+    def services_list(self, **kwargs):
+        if kwargs.get("filter") == {"label": "zane.role=proxy"}:
+            return [self.service_map["proxy_service"]]
+        return [service for service in self.service_map.values()]
+
     def events(self, decode: bool, filters: dict):
         return []
 
-    def containers_run(
-        self, image: str, ports: dict[str, tuple[str, int]], command: str, remove: bool
-    ):
-        _, port = list(ports.values())[0]
-        if port == self.PORT_USED_BY_HOST:
-            raise docker.errors.APIError(f"Port {port} is already used")
+    def containers_run(self, command: str, *args, **kwargs):
+        ports: dict[str, tuple[str, int]] = kwargs.get("ports")
+        if ports is not None:
+            _, port = list(ports.values())[0]
+            if port == self.PORT_USED_BY_HOST:
+                raise docker.errors.APIError(f"Port {port} is already used")
+        if command == "du -sb /data":
+            return "72689062\t/data".encode(encoding="utf-8")
 
     def volumes_create(self, name: str, labels: dict, **kwargs):
         self.volume_map[name] = FakeDockerClient.FakeVolume(
@@ -174,6 +207,8 @@ class FakeDockerClient:
         command: str | None,
         labels: dict[str, str],
     ):
+        if image not in self.pulled_images:
+            raise docker.errors.NotFound("image not pulled")
         volumes: dict[str, str] = {}
         for mount in mounts:
             volume_name, mount_path, _ = mount.split(":")
@@ -191,14 +226,32 @@ class FakeDockerClient:
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):
-        if (
-            username != "fredkiss3"
-            or password != "s3cret"
-            or registry != "https://dcr.fredkiss.dev/"
-        ):
+        if username != "fredkiss3" or password != "s3cret":
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
         self.is_logged_in = True
+
+    @staticmethod
+    def images_search(term: str, limit: int) -> List[DockerImageResultFromRegistry]:
+        return [
+            {
+                "name": "caddy",
+                "is_official": True,
+                "is_automated": True,
+                "description": "Caddy 2 is a powerful, enterprise-ready,"
+                " open source web server with automatic HTTPS written in Go",
+            },
+            {
+                "description": "caddy webserver optimized for usage within the SIWECOS project",
+                "is_automated": False,
+                "is_official": False,
+                "name": "siwecos/caddy",
+                "star_count": 0,
+            },
+        ]
+
+    def images_pull(self, repository: str, tag: str = None, *args, **kwargs):
+        self.pulled_images.add(f"{repository}:{tag}")
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
