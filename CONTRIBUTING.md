@@ -121,7 +121,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 
 ##  🛠️ Debugging 
-   If the app is unresponsive
+   You may end up having issues where the project is not working, the app is not reachable on the browser, or the API seems to be down, this section is to help debugging this case, if the app is working fine on your end, you don't need to read this section.
 
    1. make sure you ran `make dev` and it didn't exit unexpectedly 
    2. make sure that all the containers are up, you can check it in your docker tool of choice, orbstack or docker desktop 
