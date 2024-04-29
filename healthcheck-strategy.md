@@ -24,7 +24,8 @@ Should we ?
         1. if the service fails to meet the health status requirements, we remove the service for the
            deployment
         2. if the service succeed to meet the requirements, we remove the previous service
-    4. we mark the deployment as finished and release the lock for the deployment
+    4. we mark the deployment as finished and release the lock for the deployment,
+       and also schedule the task for the next deployment
 
 - On caddy side :
     1. use the service network alias instead of the service name
