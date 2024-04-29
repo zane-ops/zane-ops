@@ -71,12 +71,31 @@ class URL(models.Model):
         )
 
 
+class HealthCheck(models.Model):
+    class HealthCheckType(models.TextChoices):
+        COMMAND = "COMMAND", _("Command")
+        PATH = "PATH", _("Path")
+
+    type = models.CharField(
+        max_length=255,
+        null=False,
+        choices=HealthCheckType.choices,
+        default=HealthCheckType.PATH,
+    )
+    value = models.CharField(max_length=255, null=False, default="/")
+    interval_seconds = models.PositiveIntegerField(default=15)
+    timeout_seconds = models.PositiveIntegerField(default=300)
+
+
 class BaseService(TimestampedModel):
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
+    healthcheck = models.ForeignKey(
+        to=HealthCheck, null=True, on_delete=models.SET_NULL
+    )
 
     class Meta:
         abstract = True
@@ -89,6 +108,7 @@ class BaseService(TimestampedModel):
         self.ports.filter().delete()
         self.urls.filter().delete()
         self.volumes.filter().delete()
+        self.healthcheck.delete()
 
 
 class PortConfiguration(models.Model):
