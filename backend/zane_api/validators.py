@@ -44,5 +44,5 @@ def validate_url_path(value: str):
             raise ValidationError("Invalid Path")
     except ValidationError:
         raise ValidationError(
-            "should be a valid url segment starting with `/`, not containing `..` or `*`"
+            "should be a valid url route path starting with `/` and not containing `..` or `*`"
         )

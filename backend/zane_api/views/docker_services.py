@@ -3,8 +3,10 @@ import time
 import django_filters
 import docker.errors
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import Q, QuerySet
+from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
@@ -32,9 +34,11 @@ from ..models import (
     DockerEnvVariable,
     ArchivedProject,
     ArchivedDockerService,
+    HealthCheck,
 )
 from ..tasks import deploy_docker_service, delete_resources_for_docker_service
 from ..utils import strip_slash_if_exists
+from ..validators import validate_url_path
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
@@ -100,6 +104,27 @@ class URLRequestSerializer(serializers.Serializer):
         return url
 
 
+class HealthCheckSerializer(serializers.Serializer):
+    HEALTCHECK_CHOICES = (
+        ("path", _("path")),
+        ("command", _("command")),
+    )
+    type = serializers.CaseInsensitiveChoiceField(
+        required=True, choices=HEALTCHECK_CHOICES
+    )
+    value = serializers.CharField(max_length=255, required=True)
+    timeout_seconds = serializers.IntegerField(required=False, default=300)
+    interval_seconds = serializers.CharField(required=False, default=15)
+
+    def validate(self, data: dict):
+        if data["type"] == "path":
+            try:
+                validate_url_path(data["value"])
+            except ValidationError as e:
+                raise serializers.ValidationError({"value": e.messages})
+        return data
+
+
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
@@ -109,11 +134,12 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeRequestSerializer(many=True, required=False, default=[])
-    # TODO : add healthcheck (path or command ?)
+    healthcheck = HealthCheckSerializer(required=False)
 
     def validate(self, data: dict):
         credentials = data.get("credentials")
         image = data.get("image")
+        healthcheck = data.get("healthcheck")
 
         if credentials is not None:
             try:
@@ -160,6 +186,17 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                         }
                     )
 
+        if healthcheck is not None and healthcheck["type"].lower() == "path":
+            if len(ports) == 0 and len(urls) == 0:
+                raise serializers.ValidationError(
+                    {
+                        "healthcheck": {
+                            "path": [
+                                f"healthcheck requires that at least one `url` or one `port` is provided"
+                            ]
+                        }
+                    }
+                )
         return data
 
     def validate_credentials(self, value: dict):
@@ -282,6 +319,7 @@ class CreateDockerServiceAPIView(APIView):
                     if len(docker_image_parts) == 2:
                         docker_image, docker_image_tag = docker_image_parts
 
+                    healthcheck = data.get("healthcheck")
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
@@ -295,6 +333,16 @@ class CreateDockerServiceAPIView(APIView):
                         docker_credentials_password=(
                             docker_credentials.get("password")
                             if docker_credentials is not None
+                            else None
+                        ),
+                        healthcheck=(
+                            HealthCheck.objects.create(
+                                type=healthcheck["type"].upper(),
+                                value=healthcheck["value"],
+                                timeout_seconds=healthcheck["timeout_seconds"],
+                                interval_seconds=healthcheck["interval_seconds"],
+                            )
+                            if healthcheck is not None
                             else None
                         ),
                     )
