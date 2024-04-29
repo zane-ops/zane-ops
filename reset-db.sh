@@ -1,6 +1,7 @@
 #!/bin/bash
+echo "⚠️ THIS WILL RESET THE DATABASE AND WIPE OUT ALL DATA ⚠️"
 read -p "Are you sure? (Y/N): " -n 1 -r
-echo    # (optional) move to a new line
+
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then
     echo "Bye... 👋"
