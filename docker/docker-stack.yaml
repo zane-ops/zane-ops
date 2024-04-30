@@ -21,7 +21,6 @@ services:
           - node.role==manager
       labels:
         zane.role: "proxy"
-        zane.node: "manager"
     ports:
       - "80:80"
       - "443:443"
