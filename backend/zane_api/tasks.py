@@ -45,7 +45,6 @@ def deploy_docker_service(deployment_hash: str):
 
         if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
             deployment.deployment_status = DockerDeployment.DeploymentStatus.PREPARING
-            deployment.save()
         # TODO (#67) : send system logs when the resources are created
         service = deployment.service
         for volume in service.volumes.all():
