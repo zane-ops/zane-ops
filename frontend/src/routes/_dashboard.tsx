@@ -3,7 +3,7 @@ import {
   Link,
   Outlet,
   createFileRoute,
-  useNavigate,
+  useNavigate
 } from "@tanstack/react-router";
 import {
   AlarmCheck,
@@ -20,7 +20,7 @@ import {
   Search,
   Send,
   Settings,
-  Twitter,
+  Twitter
 } from "lucide-react";
 import { apiClient } from "~/api/client";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -31,7 +31,7 @@ import {
   MenubarContent,
   MenubarItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 import { userKeys } from "~/key-factories";
 import { cn } from "~/lib/utils";
@@ -46,7 +46,7 @@ export const Route = createFileRoute("/_dashboard")({
       </main>
       <Footer />
     </div>
-  ),
+  )
 });
 
 function Header() {
@@ -61,20 +61,20 @@ function Header() {
       const csrfToken = getCookie("csrftoken");
       const { error } = await apiClient.DELETE("/api/auth/logout/", {
         headers: {
-          "X-CSRFToken": csrfToken,
-        },
+          "X-CSRFToken": csrfToken
+        }
       });
       if (error) {
         return error;
       }
 
       queryClient.removeQueries({
-        queryKey: userKeys.authedUser,
+        queryKey: userKeys.authedUser
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });
       return null;
-    },
+    }
   });
 
   if (!user) {
@@ -150,23 +150,23 @@ const links = [
   {
     name: "Feedback",
     url: " https://github.com/zane-ops/zane-ops/discussions",
-    icon: <Send width={linksIconWidth} />,
+    icon: <Send width={linksIconWidth} />
   },
   {
     name: "Docs",
     url: "https://github.com/zane-ops/zane-ops/blob/main/docs.md",
-    icon: <BookOpen width={linksIconWidth} />,
+    icon: <BookOpen width={linksIconWidth} />
   },
   {
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
-    icon: <HeartHandshake width={linksIconWidth} />,
+    icon: <HeartHandshake width={linksIconWidth} />
   },
   {
     name: "Twitter",
     url: "https://twitter.com/zaneopsdev",
-    icon: <Twitter width={linksIconWidth} />,
-  },
+    icon: <Twitter width={linksIconWidth} />
+  }
 ];
 
 function Footer() {
@@ -199,7 +199,7 @@ type MenubarContentItemProps = {
 export function MenubarContentItem({
   icon: Icon,
   text,
-  className,
+  className
 }: MenubarContentItemProps) {
   return (
     <MenubarItem
