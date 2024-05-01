@@ -37,19 +37,9 @@ import { userKeys } from "~/key-factories";
 import { cn } from "~/lib/utils";
 import { deleteCookie, getCookie } from "~/utils";
 
-export const Route = createFileRoute("/_dashboard")({
-  component: () => (
-    <div className="min-h-screen flex flex-col justify-between">
-      <Header />
-      <main className="flex-grow container p-6">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
-  )
-});
+import type { ElementType, FC } from "react";
 
-function Header() {
+const Header: FC = () => {
   const query = useAuthUser();
   const navigate = useNavigate();
   const user = query.data?.data?.user;
@@ -77,9 +67,8 @@ function Header() {
     }
   });
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
+
   return (
     <>
       <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle t justify-between gap-4">
@@ -143,7 +132,7 @@ function Header() {
       </header>
     </>
   );
-}
+};
 
 const linksIconWidth = 15;
 const links = [
@@ -169,44 +158,52 @@ const links = [
   }
 ];
 
-function Footer() {
-  return (
-    <>
-      <div className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-10">
-        {links.map((link) => (
-          <a
-            key={link.name}
-            className="flex underline items-center gap-2"
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {link.icon}
-            {link.name}
-          </a>
-        ))}
-      </div>
-    </>
-  );
-}
+const Footer: FC = () => (
+  <>
+    <div className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-10">
+      {links.map((link) => (
+        <a
+          key={link.name}
+          className="flex underline items-center gap-2"
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {link.icon}
+          {link.name}
+        </a>
+      ))}
+    </div>
+  </>
+);
 
 type MenubarContentItemProps = {
-  icon: React.ElementType;
+  icon: ElementType;
   text: string;
   className?: string;
 };
 
-function MenubarContentItem({
+const MenubarContentItem: FC<MenubarContentItemProps> = ({
   icon: Icon,
   text,
   className
-}: MenubarContentItemProps) {
-  return (
-    <MenubarItem
-      className={cn("flex pr-4 w-full gap-2 cursor-pointer", className)}
-    >
-      {Icon && <Icon className={cn("w-4 opacity-50", className)} />}
-      {text}
-    </MenubarItem>
-  );
-}
+}) => (
+  <MenubarItem
+    className={cn("flex pr-4 w-full gap-2 cursor-pointer", className)}
+  >
+    {Icon && <Icon className={cn("w-4 opacity-50", className)} />}
+    {text}
+  </MenubarItem>
+);
+
+export const Route = createFileRoute("/_dashboard")({
+  component: () => (
+    <div className="min-h-screen flex flex-col justify-between">
+      <Header />
+      <main className="flex-grow container p-6">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  )
+});

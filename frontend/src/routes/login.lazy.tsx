@@ -1,7 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { type RequestInput, apiClient } from "~/api/client";
+import { apiClient } from "~/api/client";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
@@ -15,11 +15,10 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userKeys } from "~/key-factories";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 
-export const Route = createLazyFileRoute("/login")({
-  component: Login
-});
+import type { FC } from "react";
+import type { RequestInput } from "~/api/client";
 
-function Login() {
+const Login: FC = () => {
   const navigate = useNavigate();
   const query = useAuthUser();
   const user = query.data?.data?.user;
@@ -126,4 +125,8 @@ function Login() {
       </div>
     </>
   );
-}
+};
+
+export const Route = createLazyFileRoute("/login")({
+  component: Login
+});

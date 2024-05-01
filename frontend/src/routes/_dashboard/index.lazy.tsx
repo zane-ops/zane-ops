@@ -3,17 +3,13 @@ import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { MetaTitle } from "~/components/meta-title";
 
-export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
-});
+import type { FC } from "react";
 
-function AuthedView() {
+const AuthedView: FC = () => {
   const query = useAuthUser();
   const user = query.data?.data?.user;
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <dl>
@@ -23,4 +19,8 @@ function AuthedView() {
       </h1>
     </dl>
   );
-}
+};
+
+export const Route = createLazyFileRoute("/_dashboard/")({
+  component: withAuthRedirect(AuthedView)
+});

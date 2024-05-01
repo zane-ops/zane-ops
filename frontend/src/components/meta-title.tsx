@@ -1,3 +1,9 @@
-export function MetaTitle({ title }: { title: string }) {
-  return <title>{`${title} | ZaneOps`}</title>;
-}
+import type { FC } from "react";
+
+type MetaTitleProps = {
+  title: string;
+};
+
+export const MetaTitle: FC<MetaTitleProps> = ({ title }) => (
+  <title>{`${title} | ZaneOps`}</title>
+);

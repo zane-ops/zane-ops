@@ -1,15 +1,15 @@
-import { Link, type LinkProps } from "@tanstack/react-router";
-import React from "react";
+import { Link } from "@tanstack/react-router";
+import { forwardRef } from "react";
+
+import type { LinkProps } from "@tanstack/react-router";
+import type { ElementRef } from "react";
 
 export type NavLinkProps = Omit<LinkProps, "to" | "ref" | "activeProps"> & {
   href: string;
 };
 
-export const NavLink = React.forwardRef<
-  React.ElementRef<typeof Link>,
-  NavLinkProps
->(function NavLink({ href, ...props }, ref) {
-  return (
+export const NavLink = forwardRef<ElementRef<typeof Link>, NavLinkProps>(
+  ({ href, ...props }, ref) => (
     <Link
       ref={ref}
       {...props}
@@ -18,5 +18,5 @@ export const NavLink = React.forwardRef<
       }}
       to={href}
     />
-  );
-});
+  )
+);

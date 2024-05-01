@@ -1,8 +1,10 @@
-import * as React from "react";
+import { useEffect, useState } from "react";
 
-export function TailwindIndicator() {
-  const [mediaSize, setMediaSize] = React.useState(0);
-  React.useEffect(() => {
+import type { FC } from "react";
+
+export const TailwindIndicator: FC = () => {
+  const [mediaSize, setMediaSize] = useState(0);
+  useEffect(() => {
     const listener = () => setMediaSize(window.innerWidth);
     window.addEventListener("resize", listener);
 
@@ -22,4 +24,4 @@ export function TailwindIndicator() {
       <div className="hidden 2xl:block xxl:hidden">2xl</div>| {mediaSize}px
     </div>
   );
-}
+};

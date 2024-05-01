@@ -42,6 +42,7 @@
     "@tanstack/router-vite-plugin": "^1.16.5",
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
+    "@types/node": "20.12.8",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "@vitejs/plugin-react": "^4.2.1",
