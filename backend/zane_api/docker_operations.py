@@ -611,6 +611,24 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 ),
             )
 
+            # add logger if not exists
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
+                headers={
+                    "content-type": "application/json",
+                    "accept": "application/json",
+                },
+            )
+            if response.json() is None:
+                requests.post(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
+                    data=json.dumps(""),
+                    headers={
+                        "content-type": "application/json",
+                        "accept": "application/json",
+                    },
+                )
+
 
 def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
     for url in service.urls.all():
