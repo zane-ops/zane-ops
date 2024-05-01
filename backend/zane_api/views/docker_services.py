@@ -455,6 +455,9 @@ class CreateDockerServiceAPIView(APIView):
                 first_deployment = DockerDeployment.objects.create(
                     service=service, image_tag=docker_image_tag
                 )
+                if len(service.urls.all()) > 0:
+                    first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.hash}.{settings.ROOT_DOMAIN}"
+                    first_deployment.save()
 
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get("env", {})

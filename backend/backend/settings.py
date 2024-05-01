@@ -40,11 +40,11 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
 ALLOWED_HOSTS = (
-    [f".{ZANE_APP_DOMAIN}", "localhost", "127.0.0.1"]
+    [f".{ROOT_DOMAIN}", "localhost", "127.0.0.1"]
     if env != PRODUCTION_ENV
-    else [f".{ZANE_APP_DOMAIN}"]
+    else [f".{ROOT_DOMAIN}"]
 )
-SESSION_COOKIE_DOMAIN = f".{ZANE_APP_DOMAIN}"
+SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
@@ -282,4 +282,9 @@ CELERY_RESULT_SERIALIZER = "json"
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://localhost:2019"
+)
+ZANE_APP_SERVICE_HOST_FROM_PROXY = (
+    "host.internal.docker:8000"
+    if env != PRODUCTION_ENV
+    else "zane.zaneops.internal:8000"
 )

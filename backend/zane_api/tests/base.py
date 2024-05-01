@@ -200,12 +200,9 @@ class FakeDockerClient:
         mounts: list[str],
         env: list[str],
         endpoint_spec: Any,
-        networks: list[str],
         image: str,
-        restart_policy: Any,
-        update_config: Any,
-        command: str | None,
-        labels: dict[str, str],
+        *args,
+        **kwargs,
     ):
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")

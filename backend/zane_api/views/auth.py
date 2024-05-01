@@ -72,7 +72,8 @@ class AuthedView(APIView):
     )
     def get(self, request: Request):
         if isinstance(request.user, AnonymousUser):
-            if "text/html" in request.headers.get("accept"):
+            accept_header = request.headers.get("accept")
+            if accept_header is not None and "text/html" in accept_header:
                 params = QueryDict(mutable=True)
                 host = request.headers.get("Host", None)
                 uri = request.headers.get("X-Forwared-Uri", None)

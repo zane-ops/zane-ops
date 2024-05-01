@@ -127,4 +127,5 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "image_tag",
             "deployment_status",
             "deployment_status_reason",
+            "url",
         ]

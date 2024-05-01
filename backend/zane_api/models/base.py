@@ -237,6 +237,7 @@ class BaseDeployment(models.Model):
 
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
+    url = models.URLField(null=True)
 
     class Meta:
         abstract = True

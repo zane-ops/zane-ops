@@ -18,7 +18,7 @@ class AuthLoginViewTests(AuthAPITestCase):
 
     def test_login_redirect_to_if_provided(self):
         params = QueryDict(mutable=True)
-        redirect_path = "https://example-service.app.zaneops.local/"
+        redirect_path = "https://example-service-dpl_xyz.zaneops.local/"
         params["redirect_to"] = redirect_path
 
         response = self.client.post(
@@ -83,13 +83,13 @@ class AuthMeViewTests(AuthAPITestCase):
             reverse("zane_api:auth.me"),
             content_type="application/json",
             HTTP_ACCEPT="text/html",
-            HTTP_HOST="example-service.app.zaneops.local",
+            HTTP_HOST="example-service-dpl_xyz.zaneops.local",
             HTTP_X_FORWARED_URI="/",
             HTTP_X_FORWARED_PROTO="https",
         )
         self.assertEqual(status.HTTP_302_FOUND, response.status_code)
         params = QueryDict(mutable=True)
-        params["redirect_to"] = "https://example-service.app.zaneops.local/"
+        params["redirect_to"] = "https://example-service-dpl_xyz.zaneops.local/"
 
         self.assertEqual(
             f"{reverse('zane_api:auth.login')}?{params.urlencode()}",
