@@ -1,3 +1,4 @@
+from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import status
 
@@ -13,6 +14,24 @@ class AuthLoginViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertIsNotNone(
             response.cookies.get("sessionid"),
+        )
+
+    def test_login_redirect_to_if_provided(self):
+        params = QueryDict(mutable=True)
+        redirect_path = "https://example-service.app.zaneops.local/"
+        params["redirect_to"] = redirect_path
+
+        response = self.client.post(
+            f"{reverse('zane_api:auth.login')}?{params.urlencode()}",
+            data={"username": "Fredkiss3", "password": "password"},
+        )
+        self.assertEqual(status.HTTP_302_FOUND, response.status_code)
+        self.assertIsNotNone(
+            response.cookies.get("sessionid"),
+        )
+        self.assertEqual(
+            redirect_path,
+            response.headers.get("Location"),
         )
 
     def test_unsucessful_login(self):
@@ -50,6 +69,32 @@ class AuthMeViewTests(AuthAPITestCase):
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+    def test_redirect_to_path_if_html_request_if_not_authed(self):
+        response = self.client.get(
+            reverse("zane_api:auth.me"),
+            content_type="application/json",
+            HTTP_ACCEPT="text/html",
+        )
+        self.assertEqual(status.HTTP_302_FOUND, response.status_code)
+
+    def test_redirect_to_path_if_html_request_if_not_authed_for_proxy(self):
+        response = self.client.get(
+            reverse("zane_api:auth.me"),
+            content_type="application/json",
+            HTTP_ACCEPT="text/html",
+            HTTP_HOST="example-service.app.zaneops.local",
+            HTTP_X_FORWARED_URI="/",
+            HTTP_X_FORWARED_PROTO="https",
+        )
+        self.assertEqual(status.HTTP_302_FOUND, response.status_code)
+        params = QueryDict(mutable=True)
+        params["redirect_to"] = "https://example-service.app.zaneops.local/"
+
+        self.assertEqual(
+            f"{reverse('zane_api:auth.login')}?{params.urlencode()}",
+            response.headers.get("Location"),
+        )
 
 
 class AuthLogoutViewTests(AuthAPITestCase):

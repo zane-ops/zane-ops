@@ -1,5 +1,10 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import AnonymousUser
+from django.http import QueryDict
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils.encoding import iri_to_uri
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions
@@ -31,6 +36,7 @@ class LoginView(APIView):
         request=LoginRequestSerializer,
         responses={
             201: LoginSuccessResponseSerializer,
+            302: None,
         },
         operation_id="login",
     )
@@ -45,6 +51,10 @@ class LoginView(APIView):
                 login(request, user)
                 response = LoginSuccessResponseSerializer(data={"success": True})
                 if response.is_valid():
+                    query_params = request.query_params.dict()
+                    redirect_uri = query_params.get("redirect_to")
+                    if redirect_uri is not None:
+                        return redirect(iri_to_uri(redirect_uri))
                     return Response(response.data, status=status.HTTP_201_CREATED)
             raise exceptions.AuthenticationFailed(detail="Invalid username or password")
 
@@ -55,11 +65,32 @@ class AuthedSuccessResponseSerializer(serializers.Serializer):
 
 class AuthedView(APIView):
     serializer_class = AuthedSuccessResponseSerializer
+    permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         operation_id="getAuthedUser",
     )
     def get(self, request: Request):
+        if isinstance(request.user, AnonymousUser):
+            if "text/html" in request.headers.get("accept"):
+                params = QueryDict(mutable=True)
+                host = request.headers.get("Host", None)
+                uri = request.headers.get("X-Forwared-Uri", None)
+                proto = request.headers.get("X-Forwared-Proto", "https")
+
+                redirect_path = ""
+                if host is not None:
+                    redirect_path = f"{proto}://{host}"
+                if uri is not None:
+                    redirect_path += uri
+                if len(redirect_path.strip()) > 0:
+                    params["redirect_to"] = redirect_path
+
+                return redirect(
+                    f"{reverse('zane_api:auth.login')}?{params.urlencode()}"
+                )
+            raise exceptions.NotAuthenticated()
+
         response = self.serializer_class({"user": request.user})
         return Response(
             response.data,

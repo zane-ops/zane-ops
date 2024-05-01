@@ -40,10 +40,11 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
 ALLOWED_HOSTS = (
-    [ZANE_APP_DOMAIN, "localhost", "127.0.0.1"]
+    [f".{ZANE_APP_DOMAIN}", "localhost", "127.0.0.1"]
     if env != PRODUCTION_ENV
-    else [ZANE_APP_DOMAIN]
+    else [f".{ZANE_APP_DOMAIN}"]
 )
+SESSION_COOKIE_DOMAIN = f".{ZANE_APP_DOMAIN}"
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
@@ -244,6 +245,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": API_DESCRIPTION,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "SERVERS": [{"url": "https://zaneops.fredkiss.dev"}],
     "ENUM_NAME_OVERRIDES": {
         "ValidationErrorEnum": "drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices",
         "ClientErrorEnum": "drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices",

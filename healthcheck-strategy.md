@@ -48,8 +48,17 @@ Should we ?
     3. If healthcheck has changed, we will modify the caddy proxy after we are sure that the new service is up.
     4. Caddy will always redirect to the first available upstream
 
+- We also need to expose temporarily the deployment to an url that is reachable from the outside
+    - issue: it will be available from the outsider also, maybe we need to add
+      [`forward_auth`](https://caddyserver.com/docs/caddyfile/directives/forward_auth) directive ?
+      with an access token generated for the deployment (?)
+- modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
+  ?redirect_to=<uri>
+- modify the `/api/login` to take into account the search param and redirect accordingly
+
 ### Other important things (in another PR)
 
+- The healthcheck needs to be in its own queue, the timeout is for only one health monitoring
 - We need to make sure only one deployment task is running at a time, so if a deployment is running,
   we will wait for the previous deployment to finish, We can do that with locking :
     - https://stackoverflow.com/questions/9811933/celery-design-help-how-to-prevent-concurrently-executing-tasks
