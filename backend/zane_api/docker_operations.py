@@ -421,6 +421,67 @@ def get_caddy_request_for_domain(domain: str):
     }
 
 
+def get_caddy_request_for_deployment_url(
+    url: str, service_name: str, forwarded_http_port: int
+):
+
+    return {
+        "@id": url,
+        "match": [{"host": [url]}],
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [
+                    {
+                        "handle": [
+                            {
+                                "handle_response": [
+                                    {
+                                        "match": {"status_code": [2]},
+                                        "routes": [
+                                            {
+                                                "handle": [
+                                                    {
+                                                        "handler": "headers",
+                                                        "request": {},
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                    }
+                                ],
+                                "handler": "reverse_proxy",
+                                "headers": {
+                                    "request": {
+                                        "set": {
+                                            "X-Forwarded-Method": [
+                                                "{http.request.method}"
+                                            ],
+                                            "X-Forwarded-Uri": ["{http.request.uri}"],
+                                        }
+                                    }
+                                },
+                                "rewrite": {"method": "GET", "uri": "/api/auth/me"},
+                                "upstreams": [
+                                    {"dial": settings.ZANE_APP_SERVICE_HOST_FROM_PROXY}
+                                ],
+                            },
+                            {
+                                "flush_interval": -1,
+                                "handler": "reverse_proxy",
+                                "upstreams": [
+                                    {"dial": f"{service_name}:{forwarded_http_port}"}
+                                ],
+                            },
+                        ]
+                    }
+                ],
+            }
+        ],
+        "terminal": True,
+    }
+
+
 def get_caddy_id_for_url(url: URL | ArchivedURL):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
@@ -477,7 +538,8 @@ def get_caddy_request_for_url(
     }
 
 
-def expose_docker_service_to_http(service: DockerRegistryService) -> None:
+def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
+    service = deployment.service
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is None:
         raise Exception(
@@ -521,12 +583,32 @@ def expose_docker_service_to_http(service: DockerRegistryService) -> None:
             routes = response.json()
             routes.append(get_caddy_request_for_url(url, service, http_port))
             routes = sort_proxy_routes(routes)
-            print(routes)
 
             requests.patch(
                 f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
                 headers={"content-type": "application/json"},
                 json=routes,
+            )
+
+    # add URL conf for deployment
+    if deployment.url is not None:
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}"
+        )
+
+        # if the domain doesn't exist we create the config for the domain
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            requests.post(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
+                headers={"content-type": "application/json"},
+                json=get_caddy_request_for_deployment_url(
+                    url=deployment.url,
+                    service_name=get_docker_service_resource_name(
+                        service_id=deployment.service.id,
+                        project_id=deployment.service.project.id,
+                    ),
+                    forwarded_http_port=http_port.forwarded,
+                ),
             )
 
 

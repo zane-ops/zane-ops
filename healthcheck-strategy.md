@@ -55,9 +55,12 @@ Should we ?
 - modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
   ?redirect_to=<uri>
 - modify the `/api/login` to take into account the search param and redirect accordingly
+- add lock on monitor, to skip a monitor if it hasn't run yet
 
 ### Other important things (in another PR)
 
+- Make sure that each deployment creates a service alias `service-alias-<deployment-hash>.zaneops.internal`
+  in the same network as the project, to use for the forwarded URL
 - The healthcheck needs to be in its own queue, the timeout is for only one health monitoring
 - We need to make sure only one deployment task is running at a time, so if a deployment is running,
   we will wait for the previous deployment to finish, We can do that with locking :

@@ -34,6 +34,7 @@ def deploy_docker_service(deployment_hash: str):
                 "service__volumes",
                 "service__urls",
                 "service__ports",
+                "service__project_id",
                 "service__env_variables",
             )
             .first()
@@ -53,7 +54,7 @@ def deploy_docker_service(deployment_hash: str):
 
         http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
         if http_port is not None:
-            expose_docker_service_to_http(service)
+            expose_docker_service_to_http(deployment)
 
         deployment.monitor_task = PeriodicTask.objects.create(
             interval=IntervalSchedule.objects.create(

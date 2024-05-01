@@ -286,5 +286,5 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 ZANE_APP_SERVICE_HOST_FROM_PROXY = (
     "host.internal.docker:8000"
     if env != PRODUCTION_ENV
-    else "zane.zaneops.internal:8000"
+    else "zane-api.zaneops.internal:8000"
 )
