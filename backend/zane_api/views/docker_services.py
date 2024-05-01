@@ -104,7 +104,7 @@ class URLRequestSerializer(serializers.Serializer):
         return url
 
 
-class HealthCheckSerializer(serializers.Serializer):
+class HealthCheckRequestSerializer(serializers.Serializer):
     HEALTCHECK_CHOICES = (
         ("path", _("path")),
         ("command", _("command")),
@@ -134,7 +134,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeRequestSerializer(many=True, required=False, default=[])
-    healthcheck = HealthCheckSerializer(required=False)
+    healthcheck = HealthCheckRequestSerializer(required=False)
 
     def validate(self, data: dict):
         credentials = data.get("credentials")
@@ -164,7 +164,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "image": [
-                        f"Either the image `{image}` does not exist {registry_str}"
+                        f"Either the image `{image}` does not exist `{registry_str}`"
                         f" or the credentials are invalid for this image."
                         f" Have you forgotten to include the credentials ?"
                     ]

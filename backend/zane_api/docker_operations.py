@@ -6,7 +6,7 @@ import docker.errors
 import requests
 from django.conf import settings
 from docker.models.networks import Network
-from docker.types import RestartPolicy, UpdateConfig, EndpointSpec
+from docker.types import RestartPolicy, EndpointSpec
 from rest_framework import status
 from wrapt_timeout_decorator import timeout
 
@@ -21,6 +21,7 @@ from .models import (
     ArchivedDockerService,
     ArchivedURL,
     DockerDeployment,
+    HealthCheck,
 )
 from .utils import strip_slash_if_exists, DockerSwarmTask, DockerSwarmTaskState
 
@@ -380,13 +381,6 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
             max_attempts=MAX_SERVICE_RESTART_COUNT,
             delay=5,
         ),
-        update_config=UpdateConfig(
-            parallelism=1,
-            delay=5,
-            monitor=10,
-            order=update_order,
-            failure_action="rollback",
-        ),
     )
 
 
@@ -641,6 +635,21 @@ def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
                 status_code is not None and status_code != exited_without_error
             ) or most_recent_swarm_task.Status.Err is not None:
                 deployment_status = deployment.DeploymentStatus.UNHEALTHY
+
+        if most_recent_swarm_task.Status.State == DockerSwarmTaskState.RUNNING:
+            healthcheck = deployment.service.healthcheck
+            if healthcheck is not None:
+
+                @timeout(healthcheck.timeout_seconds)
+                def run_healthcheck():
+                    if healthcheck.type == HealthCheck.HealthCheckType.PATH:
+                        pass
+                    else:
+                        pass
+
+                run_healthcheck()
+                pass
+            pass
 
         # TODO (#67) : send system logs when the state changes
         return deployment_status, deployment_status_reason

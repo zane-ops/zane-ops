@@ -123,6 +123,7 @@ def monitor_docker_service_deployment(deployment_hash: str):
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
+                "service__healthcheck",
             )
             .first()
         )
