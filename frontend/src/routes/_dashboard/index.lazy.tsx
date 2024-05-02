@@ -18,7 +18,7 @@ import {
   Search,
   Settings,
   Trash,
-  X
+  X,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -31,7 +31,7 @@ import {
   PaginationItem,
   PaginationLink,
   PaginationNext,
-  PaginationPrevious
+  PaginationPrevious,
 } from "~/components/ui/pagination";
 
 import { NavLink } from "~/components/nav-link";
@@ -40,14 +40,14 @@ import {
   Menubar,
   MenubarContent,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui/select";
 import {
   Table,
@@ -55,12 +55,12 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { MenubarContentItem } from "../_dashboard";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -88,7 +88,7 @@ const projects = [
     status: "0/5 Services Up",
     actions: "Settings",
     statusIcon: <X size={14} />,
-    tracker: 0
+    tracker: 0,
   },
   {
     name: "ZaneOps",
@@ -96,7 +96,7 @@ const projects = [
     status: "5/5 Services Up",
     actions: "Settings",
     statusIcon: <Check size={14} />,
-    tracker: 1
+    tracker: 1,
   },
   {
     name: "ZaneOps",
@@ -104,34 +104,35 @@ const projects = [
     status: "2/5 Services Up",
     actions: "Settings",
     statusIcon: <AlertTriangle size={14} />,
-    tracker: 2
-  }
+    tracker: 2,
+  },
 ];
 
 export function TableDemo() {
   return (
     <main>
-      <div className="my-10">
+      <div className="md:my-10 my-5">
         <h1 className="text-3xl  font-bold">Overview</h1>
         <h4 className="text-sm mt-2 opacity-60">List of projects</h4>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex my-5 w-[30%]  items-center">
+      <div className="flex my-3 flex-wrap items-center md:gap-3 gap-1">
+        <div className="flex md:my-5 md:w-[30%] w-[100%]  items-center">
           <Search size={20} className="relative left-5" />
           <Input
             className="px-14 placeholder:text-gray-400  -mx-5 w-full my-1 text-sm focus-visible:right-0"
             placeholder="Ex: ZaneOps"
           />
         </div>
-        <div>
-          <Menubar className="border border-border w-fit ">
+
+        <div className="md:w-fit w-full">
+          <Menubar className="border border-border md:w-fit w-full ">
             <MenubarMenu>
-              <MenubarTrigger className="flex ring-secondary justify-center text-sm items-center gap-1">
+              <MenubarTrigger className="flex md:w-fit w-full ring-secondary md:justify-center justify-between text-sm items-center gap-1">
                 Status
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
-              <MenubarContent className=" border border-border min-w-6">
+              <MenubarContent className=" border min-w-[23rem] border-border md:min-w-6">
                 <MenubarContentItem icon={Rocket} text="Active" />
                 <MenubarContentItem icon={Trash} text="Archived" />
               </MenubarContent>
@@ -165,9 +166,9 @@ export function TableDemo() {
               <TableCell>{project.updated_at}</TableCell>
               <TableCell>
                 <div
-                  className={`flex border w-fit px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2 ${
+                  className={`flex border md:w-fit w-40 px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2 ${
                     project.tracker === 1
-                      ? "border-green-600 bg-green-600 bg-opacity-10 text-statusgreen"
+                      ? "border-green-600  bg-green-600 bg-opacity-10 text-statusgreen"
                       : project.tracker === 0
                         ? "border-red-600 bg-red-600 bg-opacity-10 text-statusred"
                         : project.tracker === 2
@@ -176,7 +177,7 @@ export function TableDemo() {
                   }`}
                 >
                   <div
-                    className={`border w-2 h-2 text-white border-transparent p-0.5 rounded-full ${
+                    className={`border w-2 h-2 text-white  border-transparent p-0.5 rounded-full ${
                       project.tracker === 1
                         ? "bg-green-600"
                         : project.tracker === 0
