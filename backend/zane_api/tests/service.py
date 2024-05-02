@@ -1576,7 +1576,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_create_service_without_healthcheck_apply_default_healthcheck(
+    def test_create_service_without_healthcheck_succeed_when_service_is_working_correctly_by_default(
         self, mock_fake_docker: Mock, _: Mock
     ):
         owner = self.loginUser()
@@ -1593,6 +1593,53 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service = DockerRegistryService.objects.get(slug="simple-webserver")
+        latest_deployment = created_service.get_latest_deployment()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY,
+            latest_deployment.deployment_status,
+        )
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.docker_operations.sleep")
+    @patch("zane_api.docker_operations.monotonic")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_without_healthcheck_deployment_is_set_to_failed_when_docker_fails_to_start(
+        self, mock_fake_docker: Mock, mock_monotonic: Mock, _: Mock, __: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "simple-webserver",
+            "image": "redis:alpine",
+        }
+
+        mock_monotonic.side_effect = [0, 31]
+
+        class FakeService:
+            @staticmethod
+            def tasks(*args, **kwargs):
+                return []
+
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        fake_docker_client.services.get = lambda _id: FakeService()
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service = DockerRegistryService.objects.get(slug="simple-webserver")
+        latest_deployment = created_service.get_latest_deployment()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED,
+            latest_deployment.deployment_status,
+        )
 
 
 class DockerGetServiceViewTest(AuthAPITestCase):
@@ -2053,7 +2100,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         created_service = DockerRegistryService.objects.get(slug="cache-db")
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING,
+            DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
         monitor_docker_service_deployment(latest_deployment.hash)
@@ -2128,7 +2175,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING,
+            DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
         monitor_docker_service_deployment(latest_deployment.hash)
@@ -2201,7 +2248,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING,
+            DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
         monitor_docker_service_deployment(latest_deployment.hash)
@@ -2211,11 +2258,15 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             latest_deployment.deployment_status,
         )
 
+    @patch("zane_api.docker_operations.sleep")
+    @patch("zane_api.docker_operations.monotonic")
     @patch(
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_unsuccesful_restart_deploymen_flow(self, mock_fake_docker: Mock):
+    def test_unsuccesful_restart_deploymen_flow(
+        self, mock_fake_docker: Mock, mock_monotonic: Mock, _: Mock
+    ):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
@@ -2224,6 +2275,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             "image": "redis:alpine",
         }
 
+        mock_monotonic.side_effect = [0, 1]
+
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=create_service_payload,
@@ -2231,6 +2284,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
         latest_deployment = created_service.get_latest_deployment()
+
         fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         class FakeService:
@@ -2317,8 +2371,10 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         fake_docker_client.services.get = lambda _id: FakeService()
 
+        mock_monotonic.side_effect = [0, 15, 31]
+
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING,
+            DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
         monitor_docker_service_deployment(latest_deployment.hash)
@@ -2358,7 +2414,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         fake_docker_client.services.get = lambda _id: FakeService()
 
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.PREPARING,
+            DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
         latest_deployment.deployment_status = DockerDeployment.DeploymentStatus.HEALTHY

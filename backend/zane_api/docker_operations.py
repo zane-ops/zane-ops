@@ -1,4 +1,5 @@
 import json
+from time import monotonic, sleep
 from typing import List, TypedDict
 
 import docker
@@ -21,13 +22,14 @@ from .models import (
     ArchivedDockerService,
     ArchivedURL,
     DockerDeployment,
-    HealthCheck,
 )
 from .utils import strip_slash_if_exists, DockerSwarmTask, DockerSwarmTaskState
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
 DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
+DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
+DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5  # seconds
 MAX_SERVICE_RESTART_COUNT = 3
 
 
@@ -674,21 +676,27 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
         )
 
 
-def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
+def get_updated_docker_service_deployment_status(
+    deployment: DockerDeployment, wait_for_healthy=False
+) -> tuple[DockerDeployment.DeploymentStatus, str]:
     client = get_docker_client()
-    try:
-        swarm_service = client.services.get(
-            get_docker_service_resource_name(
-                deployment.service.id, deployment.service.project.id
-            )
+    swarm_service = client.services.get(
+        get_docker_service_resource_name(
+            deployment.service.id, deployment.service.project.id
         )
-        task_list = swarm_service.tasks(
-            filters={"label": f"deployment_hash={deployment.hash}"}
-        )
-    except docker.errors.NotFound:
-        # We get will hit this error when the service has been deleted in the meantime
-        return None
-    else:
+    )
+    task_list = swarm_service.tasks(
+        filters={"label": f"deployment_hash={deployment.hash}"}
+    )
+    start_time = monotonic()
+    healthcheck = deployment.service.healthcheck
+
+    healthcheck_timeout = (
+        healthcheck.timeout_seconds
+        if healthcheck is not None
+        else DEFAULT_HEALTHCHECK_TIMEOUT
+    )
+    while (monotonic() - start_time) < healthcheck_timeout:
         if len(task_list) == 0:
             if deployment.deployment_status in [
                 DockerDeployment.DeploymentStatus.HEALTHY,
@@ -699,68 +707,79 @@ def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
                     DockerDeployment.DeploymentStatus.UNHEALTHY,
                     "An Unknown error occurred, did you manually scale down the service ?",
                 )
-            # the swarm task has not been created yet or has exited without any issue,
-            # we can't update the state of the deployment with this
-            return None
-
-        most_recent_swarm_task = DockerSwarmTask.from_dict(
-            max(
-                task_list,
-                key=lambda task: task["Version"]["Index"],
+        else:
+            most_recent_swarm_task = DockerSwarmTask.from_dict(
+                max(
+                    task_list,
+                    key=lambda task: task["Version"]["Index"],
+                )
             )
-        )
 
-        starting_status = deployment.DeploymentStatus.STARTING
-        # We set the status to restarting, because we get more than one task for this service when we restart it
-        if len(task_list) > 1:
-            starting_status = deployment.DeploymentStatus.RESTARTING
+            starting_status = deployment.DeploymentStatus.STARTING
+            # We set the status to restarting, because we get more than one task for this service when we restart it
+            if len(task_list) > 1:
+                starting_status = deployment.DeploymentStatus.RESTARTING
 
-        state_matrix = {
-            DockerSwarmTaskState.NEW: starting_status,
-            DockerSwarmTaskState.PENDING: starting_status,
-            DockerSwarmTaskState.ASSIGNED: starting_status,
-            DockerSwarmTaskState.ACCEPTED: starting_status,
-            DockerSwarmTaskState.READY: starting_status,
-            DockerSwarmTaskState.PREPARING: starting_status,
-            DockerSwarmTaskState.STARTING: starting_status,
-            DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
-            DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
-            DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
-            DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
-            DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
-            DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
-            DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
-        }
+            state_matrix = {
+                DockerSwarmTaskState.NEW: starting_status,
+                DockerSwarmTaskState.PENDING: starting_status,
+                DockerSwarmTaskState.ASSIGNED: starting_status,
+                DockerSwarmTaskState.ACCEPTED: starting_status,
+                DockerSwarmTaskState.READY: starting_status,
+                DockerSwarmTaskState.PREPARING: starting_status,
+                DockerSwarmTaskState.STARTING: starting_status,
+                DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
+                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
+                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
+                DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
+                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+            }
 
-        exited_without_error = 0
-        deployment_status = state_matrix[most_recent_swarm_task.Status.State]
-        deployment_status_reason = (
-            most_recent_swarm_task.Status.Err
-            if most_recent_swarm_task.Status.Err is not None
-            else most_recent_swarm_task.Status.Message
-        )
+            exited_without_error = 0
+            deployment_status = state_matrix[most_recent_swarm_task.Status.State]
+            deployment_status_reason = (
+                most_recent_swarm_task.Status.Err
+                if most_recent_swarm_task.Status.Err is not None
+                else most_recent_swarm_task.Status.Message
+            )
 
-        if most_recent_swarm_task.Status.State == DockerSwarmTaskState.SHUTDOWN:
-            status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+            if most_recent_swarm_task.Status.State == DockerSwarmTaskState.SHUTDOWN:
+                status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+                if (
+                    status_code is not None and status_code != exited_without_error
+                ) or most_recent_swarm_task.Status.Err is not None:
+                    deployment_status = deployment.DeploymentStatus.UNHEALTHY
+
+            # if most_recent_swarm_task.Status.State == DockerSwarmTaskState.RUNNING:
+            #
+            #     if healthcheck is not None:
+            #
+            #         @timeout(healthcheck.timeout_seconds)
+            #         def run_healthcheck():
+            #             if healthcheck.type == HealthCheck.HealthCheckType.PATH:
+            #                 pass
+            #             else:
+            #                 pass
+            #
+            #         run_healthcheck()
+            #         pass
+            #     pass
+
             if (
-                status_code is not None and status_code != exited_without_error
-            ) or most_recent_swarm_task.Status.Err is not None:
-                deployment_status = deployment.DeploymentStatus.UNHEALTHY
+                wait_for_healthy
+                and most_recent_swarm_task.Status.State != DockerSwarmTaskState.RUNNING
+            ):
+                sleep(DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
-        if most_recent_swarm_task.Status.State == DockerSwarmTaskState.RUNNING:
-            healthcheck = deployment.service.healthcheck
-            if healthcheck is not None:
+            # TODO (#67) : send system logs when the state changes
+            return deployment_status, deployment_status_reason
 
-                @timeout(healthcheck.timeout_seconds)
-                def run_healthcheck():
-                    if healthcheck.type == HealthCheck.HealthCheckType.PATH:
-                        pass
-                    else:
-                        pass
+        sleep(DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+        continue
 
-                run_healthcheck()
-                pass
-            pass
-
-        # TODO (#67) : send system logs when the state changes
-        return deployment_status, deployment_status_reason
+    return (
+        DockerDeployment.DeploymentStatus.UNHEALTHY,
+        "An Unknown error occurred when deploying the service.",
+    )

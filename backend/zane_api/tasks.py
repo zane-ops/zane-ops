@@ -1,9 +1,11 @@
+import json
 from typing import Any
 
 import docker.errors
 from billiard.einfo import ExceptionWithTraceback
 from celery import shared_task, Task
 from django.db import transaction
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
     expose_docker_service_to_http,
@@ -73,6 +75,8 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
                     deployment.deployment_status = (
                         DockerDeployment.DeploymentStatus.PREPARING
                     )
+                    deployment.save()
+
                 # TODO (#67) : send system logs when the resources are created
                 service = deployment.service
                 for volume in service.volumes.all():
@@ -85,16 +89,27 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
                 if http_port is not None:
                     expose_docker_service_to_http(deployment)
 
-                if service.healthcheck is None:
-                    pass
-                # deployment.monitor_task = PeriodicTask.objects.create(
-                #     interval=IntervalSchedule.objects.create(
-                #         every=30, period=IntervalSchedule.SECONDS
-                #     ),
-                #     name=f"monitor deployment {deployment_hash}",
-                #     task="zane_api.tasks.monitor_docker_service_deployment",
-                #     kwargs=json.dumps({"deployment_hash": deployment_hash}),
-                # )
+                deployment_status, deployment_status_reason = (
+                    get_updated_docker_service_deployment_status(
+                        deployment, wait_for_healthy=True
+                    )
+                )
+                if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                    deployment.deployment_status = (
+                        DockerDeployment.DeploymentStatus.FAILED
+                    )
+                else:
+                    deployment.deployment_status = deployment_status
+                deployment.deployment_status_reason = deployment_status_reason
+
+                deployment.monitor_task = PeriodicTask.objects.create(
+                    interval=IntervalSchedule.objects.create(
+                        every=30, period=IntervalSchedule.SECONDS
+                    ),
+                    name=f"monitor deployment {deployment_hash}",
+                    task="zane_api.tasks.monitor_docker_service_deployment",
+                    kwargs=json.dumps({"deployment_hash": deployment_hash}),
+                )
                 deployment.save()
     except LockAcquisitionError as e:
         # Use the countdown from the exception for retrying
@@ -173,9 +188,9 @@ def monitor_docker_service_deployment(deployment_hash: str):
             and deployment.deployment_status
             != DockerDeployment.DeploymentStatus.OFFLINE
         ):
-            status = get_updated_docker_service_deployment_status(deployment)
-            if status is not None:
-                deployment_status, deployment_status_reason = status
-                deployment.deployment_status = deployment_status
-                deployment.deployment_status_reason = deployment_status_reason
-                deployment.save()
+            deployment_status, deployment_status_reason = (
+                get_updated_docker_service_deployment_status(deployment)
+            )
+            deployment.deployment_status = deployment_status
+            deployment.deployment_status_reason = deployment_status_reason
+            deployment.save()
