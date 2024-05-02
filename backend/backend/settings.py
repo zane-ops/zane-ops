@@ -182,7 +182,7 @@ LOGGING = {
     "loggers": {
         "django.db.backends": {
             "level": "DEBUG",
-            "handlers": ["console"],
+            # "handlers": ["console"],
         }
     },
 }
@@ -284,7 +284,7 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://localhost:2019"
 )
 ZANE_APP_SERVICE_HOST_FROM_PROXY = (
-    "host.internal.docker:8000"
+    "host.docker.internal:8000"
     if env != PRODUCTION_ENV
     else "zane-api.zaneops.internal:8000"
 )

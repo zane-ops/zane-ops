@@ -277,6 +277,10 @@ class DockerDeployment(BaseDeployment):
     def task_id(self):
         return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
 
+    @property
+    def unprefixed_hash(self):
+        return None if self.hash is None else self.hash.replace("dpl_dkr_", "")
+
 
 class GitDeployment(BaseDeployment):
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)

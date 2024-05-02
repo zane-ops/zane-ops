@@ -34,7 +34,6 @@ def deploy_docker_service(deployment_hash: str):
                 "service__volumes",
                 "service__urls",
                 "service__ports",
-                "service__project_id",
                 "service__env_variables",
             )
             .first()
@@ -58,7 +57,7 @@ def deploy_docker_service(deployment_hash: str):
 
         deployment.monitor_task = PeriodicTask.objects.create(
             interval=IntervalSchedule.objects.create(
-                every=5, period=IntervalSchedule.SECONDS
+                every=30, period=IntervalSchedule.SECONDS
             ),
             name=f"monitor deployment {deployment_hash}",
             task="zane_api.tasks.monitor_docker_service_deployment",
@@ -100,17 +99,18 @@ def delete_docker_resources_for_project(archived_project_id: int):
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
 def delete_resources_for_docker_service(archived_service_id: id):
-    archived_service = (
-        ArchivedDockerService.objects.filter(id=archived_service_id)
-        .select_related("project")
-        .prefetch_related("volumes", "urls")
-    ).first()
-    if archived_service is None:
-        raise Exception(
-            f"Cannot execute a deploy a non existent archived service with id={archived_service_id}."
-        )
-    cleanup_docker_service_resources(archived_service)
-    unexpose_docker_service_from_http(archived_service)
+    with transaction.atomic():
+        archived_service = (
+            ArchivedDockerService.objects.filter(id=archived_service_id)
+            .select_related("project")
+            .prefetch_related("volumes", "urls", "deployment_urls")
+        ).first()
+        if archived_service is None:
+            raise ArchivedDockerService.DoesNotExist(
+                f"Cannot execute a ressource deletion a non existent archived service with id={archived_service_id}."
+            )
+        cleanup_docker_service_resources(archived_service)
+        unexpose_docker_service_from_http(archived_service)
 
 
 @shared_task

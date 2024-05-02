@@ -117,6 +117,10 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
     )
 
 
+class DeploymentURL(models.Model):
+    domain = models.URLField(null=False)
+
+
 class ArchivedDockerService(ArchivedBaseService):
     image_repository = models.CharField(max_length=510, null=False, blank=False)
     image_tag = models.CharField(max_length=255, default="latest")
@@ -130,6 +134,7 @@ class ArchivedDockerService(ArchivedBaseService):
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
+    deployment_urls = models.ManyToManyField(to=DeploymentURL)
 
     @classmethod
     def create_from_service(
@@ -195,8 +200,19 @@ class ArchivedDockerService(ArchivedBaseService):
             ]
         )
 
+        existing_deployments_urls: list[DockerDeployment] = list(
+            filter(lambda dpl: dpl.url is not None, service.deployments.all())
+        )
+        deployment_urls = DeploymentURL.objects.bulk_create(
+            [
+                DeploymentURL(domain=deployment.url)
+                for deployment in existing_deployments_urls
+            ]
+        )
+
         archived_service.volumes.add(*archived_volumes)
         archived_service.ports.add(*archived_ports)
         archived_service.urls.add(*archived_urls)
+        archived_service.deployment_urls.add(*deployment_urls)
 
         return archived_service

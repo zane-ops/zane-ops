@@ -162,7 +162,7 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
 
 def get_proxy_service():
     client = get_docker_client()
-    services_list = client.services.list(filter={"label": ["zane.role=proxy"]})
+    services_list = client.services.list(filters={"label": ["zane.role=proxy"]})
 
     if len(services_list) == 0:
         raise docker.errors.NotFound("Proxy Service is not up")
@@ -326,6 +326,7 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
             "username": service.docker_credentials_username,
             "password": service.docker_credentials_password,
         }
+
     client.images.pull(
         repository=service.image_repository,
         tag=deployment.image_tag,
@@ -661,6 +662,16 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
                 requests.delete(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
                 )
+
+    for url in service.deployment_urls.all():
+        requests.delete(f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}")
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+            headers={
+                "content-type": "application/json",
+                "accept": "application/json",
+            },
+        )
 
 
 def get_updated_docker_service_deployment_status(deployment: DockerDeployment):
