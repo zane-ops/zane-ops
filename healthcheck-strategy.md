@@ -56,6 +56,8 @@ Should we ?
   ?redirect_to=<uri>
 - modify the `/api/login` to take into account the search param and redirect accordingly
 - add lock on monitor, to skip a monitor if it hasn't run yet
+- Remove all deployments url configs when archiving a service
+- Pass user context in monitor task
 
 ### Other important things (in another PR)
 
