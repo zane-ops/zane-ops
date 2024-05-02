@@ -1576,6 +1576,35 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
+    def test_create_service_with_healtheck_cmd_success(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "simple-webserver",
+            "image": "redis:alpine",
+            "healthcheck": {
+                "type": "command",
+                "value": "redis-cli PING",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
     def test_create_service_without_healthcheck_succeed_when_service_is_working_correctly_by_default(
         self, mock_fake_docker: Mock, _: Mock
     ):
@@ -2485,7 +2514,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
                     "service_slug": "cache-db",
                 },
             )
-            + "?deployment_status=HEALTHY"
+            + "?deployment_status=OFFLINE"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
