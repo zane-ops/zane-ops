@@ -471,7 +471,9 @@ class CreateDockerServiceAPIView(APIView):
 
                 # Run celery deployment task
                 deploy_docker_service.apply_async(
-                    kwargs=dict(deployment_hash=first_deployment.hash),
+                    kwargs=dict(
+                        deployment_hash=first_deployment.hash, service_id=service.id
+                    ),
                     task_id=first_deployment.task_id,
                 )
 

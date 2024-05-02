@@ -1,6 +1,9 @@
 import datetime
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
+
+from django.core.cache import cache
 
 
 def strip_slash_if_exists(
@@ -94,3 +97,28 @@ class DockerSwarmTask:
             Status=task_status,
             DesiredState=DockerSwarmTaskState(data["DesiredState"]),
         )
+
+
+class LockAcquisitionError(Exception):
+    """Exception raised when a lock cannot be acquired."""
+
+    def __init__(self, message: str, countdown: int):
+        super().__init__(message)
+        self.countdown = countdown
+
+
+@contextmanager
+def cache_lock(lock_id: str, timeout=60, margin: int = 5):
+    lock_key = f"{lock_id}_lock"
+    # Attempt to acquire the lock
+    if not cache.add(lock_id, "true", timeout=timeout):  # Lock expires in 60 seconds
+        remaining_ttl = cache.ttl(lock_key) or timeout
+        countdown = remaining_ttl + margin
+        raise LockAcquisitionError(
+            f"Failed to acquire lock for {lock_id}", countdown=countdown
+        )
+
+    try:
+        yield True
+    finally:
+        cache.delete(lock_key)  # Release the lock
