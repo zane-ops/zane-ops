@@ -13,6 +13,7 @@
   "keywords": [],
   "license": "MIT",
   "devDependencies": {
-    "@biomejs/biome": "^1.6.1"
+    "@biomejs/biome": "^1.6.1",
+    "concurrently": "^8.2.2"
   }
 }

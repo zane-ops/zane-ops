@@ -9,6 +9,7 @@ cleanup() {
 
 # Trap SIGINT (Ctrl+C) and call the cleanup function
 trap cleanup SIGINT
+trap cleanup SIGTERM
 
 # Deploy the stack
 echo "Deploying the stack..."
