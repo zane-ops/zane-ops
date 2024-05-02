@@ -65,6 +65,10 @@ Should we ?
   in the same network as the project, to use for the forwarded URL
 - Prevent deployment task from running if failed or cancelled
 - Cancel deployment if possible (if not in `PREPARING` state)
+- Delete resources for a failed deployment
+    - If it has volumes, we need to make sure to delete only the volumes added in the deployment
+    - Delete monitor task also
+- Ignore Zero-downtime deploys for services with volumes and instead stop the app when deploying a new version
 - The healthcheck needs to be in its own queue, the timeout is for only one health monitoring
 - We need to make sure only one deployment task is running at a time, so if a deployment is running,
   we will wait for the previous deployment to finish, We can do that with locking :
