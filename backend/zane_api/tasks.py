@@ -1,9 +1,9 @@
-import json
+from typing import Any
 
 import docker.errors
+from billiard.einfo import ExceptionWithTraceback
 from celery import shared_task, Task
 from django.db import transaction
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
     expose_docker_service_to_http,
@@ -25,7 +25,26 @@ from .models import (
 from .utils import cache_lock, LockAcquisitionError
 
 
-@shared_task(bind=True)
+def docker_service_deploy_failure(
+    self: Task,
+    exc: Exception,
+    task_id: str,
+    args: list[Any],
+    kwargs: dict[str, str],
+    einfo: ExceptionWithTraceback,
+):
+    with transaction.atomic():
+        deployment_hash = kwargs["deployment_hash"]
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            hash=deployment_hash
+        ).first()
+        if deployment is not None:
+            deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
+            deployment.deployment_status_reason = str(exc)
+            deployment.save()
+
+
+@shared_task(bind=True, on_failure=docker_service_deploy_failure)
 def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
     lock_id = f"deploy_{service_id}"
     try:
@@ -66,14 +85,16 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
                 if http_port is not None:
                     expose_docker_service_to_http(deployment)
 
-                deployment.monitor_task = PeriodicTask.objects.create(
-                    interval=IntervalSchedule.objects.create(
-                        every=30, period=IntervalSchedule.SECONDS
-                    ),
-                    name=f"monitor deployment {deployment_hash}",
-                    task="zane_api.tasks.monitor_docker_service_deployment",
-                    kwargs=json.dumps({"deployment_hash": deployment_hash}),
-                )
+                if service.healthcheck is None:
+                    pass
+                # deployment.monitor_task = PeriodicTask.objects.create(
+                #     interval=IntervalSchedule.objects.create(
+                #         every=30, period=IntervalSchedule.SECONDS
+                #     ),
+                #     name=f"monitor deployment {deployment_hash}",
+                #     task="zane_api.tasks.monitor_docker_service_deployment",
+                #     kwargs=json.dumps({"deployment_hash": deployment_hash}),
+                # )
                 deployment.save()
     except LockAcquisitionError as e:
         # Use the countdown from the exception for retrying
