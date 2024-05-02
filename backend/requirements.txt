@@ -13,7 +13,6 @@ click-didyoumean==0.3.0
 click-plugins==1.1.1
 click-repl==0.3.0
 cron-descriptor==1.4.3
-cryptography==42.0.5
 dill==0.3.8
 django==5.0.4
 django-celery-beat==2.6.0
