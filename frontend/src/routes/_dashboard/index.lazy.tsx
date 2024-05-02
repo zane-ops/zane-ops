@@ -18,7 +18,7 @@ import {
   Search,
   Settings,
   Trash,
-  X,
+  X
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -31,7 +31,7 @@ import {
   PaginationItem,
   PaginationLink,
   PaginationNext,
-  PaginationPrevious,
+  PaginationPrevious
 } from "~/components/ui/pagination";
 
 import { NavLink } from "~/components/nav-link";
@@ -40,14 +40,14 @@ import {
   Menubar,
   MenubarContent,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "~/components/ui/select";
 import {
   Table,
@@ -55,12 +55,12 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
 import { MenubarContentItem } from "../_dashboard";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -88,7 +88,7 @@ const projects = [
     status: "0/5 Services Up",
     actions: "Settings",
     statusIcon: <X size={14} />,
-    tracker: 0,
+    tracker: 0
   },
   {
     name: "ZaneOps",
@@ -96,7 +96,7 @@ const projects = [
     status: "5/5 Services Up",
     actions: "Settings",
     statusIcon: <Check size={14} />,
-    tracker: 1,
+    tracker: 1
   },
   {
     name: "ZaneOps",
@@ -104,8 +104,8 @@ const projects = [
     status: "2/5 Services Up",
     actions: "Settings",
     statusIcon: <AlertTriangle size={14} />,
-    tracker: 2,
-  },
+    tracker: 2
+  }
 ];
 
 export function TableDemo() {
