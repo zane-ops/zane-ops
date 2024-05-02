@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "description": "Backend for ZaneOps",
   "scripts": {
-    "dev": "sleep 5 && source ./venv/bin/activate && python manage.py runserver 0.0.0.0:8000",
+    "dev": "pnpm dev:api",
+    "celery:worker": "source ./venv/bin/activate && watchmedo auto-restart --directory=. --pattern=*.py --ignore-patterns=\"./zane_api/tests/**\" --recursive -- celery -A backend worker -E -l info",
+    "celery:beat": "source ./venv/bin/activate && watchmedo auto-restart --directory=. --pattern=*.py --ignore-patterns=\"./zane_api/tests/**\" --recursive -- celery -A backend beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler",
+    "dev:api": "sleep 5 && source ./venv/bin/activate && python manage.py runserver 0.0.0.0:8000",
     "test": "source ./venv/bin/activate && python manage.py test --parallel",
     "test:filter": "source ./venv/bin/activate && python manage.py test --parallel -k",
     "makemigration": "source ./venv/bin/activate && python manage.py makemigrations",
