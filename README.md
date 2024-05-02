@@ -10,6 +10,8 @@
 
 ### <div align="center">A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.</div>
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zane-ops/zane-ops/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zane-ops/zane-ops)
+
 ---
 
 ## 📸 Screenshots
