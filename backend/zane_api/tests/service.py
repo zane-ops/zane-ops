@@ -8,6 +8,7 @@ from django.conf import settings
 from django.urls import reverse
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from .base import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import (
@@ -2428,7 +2429,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(latest_deployment.hash)
+        token = Token.objects.get(user=owner)
+        monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
@@ -2503,7 +2505,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(latest_deployment.hash)
+        token = Token.objects.get(user=owner)
+        monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.RESTARTING,
@@ -2576,7 +2579,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(latest_deployment.hash)
+        token = Token.objects.get(user=owner)
+        monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
@@ -2702,7 +2706,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.deployment_status,
         )
-        monitor_docker_service_deployment(latest_deployment.hash)
+        token = Token.objects.get(user=owner)
+        monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
@@ -2744,7 +2749,8 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         latest_deployment.deployment_status = DockerDeployment.DeploymentStatus.HEALTHY
         latest_deployment.save()
-        monitor_docker_service_deployment(latest_deployment.hash)
+        token = Token.objects.get(user=owner)
+        monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,

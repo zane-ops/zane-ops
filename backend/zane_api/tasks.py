@@ -197,9 +197,14 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
         deployment is not None
         and deployment.deployment_status != DockerDeployment.DeploymentStatus.OFFLINE
     ):
-        deployment_status, deployment_status_reason = (
-            get_updated_docker_service_deployment_status(deployment, auth_token)
-        )
-        deployment.deployment_status = deployment_status
-        deployment.deployment_status_reason = deployment_status_reason
-        deployment.save()
+        try:
+            deployment_status, deployment_status_reason = (
+                get_updated_docker_service_deployment_status(deployment, auth_token)
+            )
+            deployment.deployment_status = deployment_status
+            deployment.deployment_status_reason = deployment_status_reason
+        except TimeoutError as e:
+            deployment.deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+            deployment.deployment_status_reason = str(e)
+        finally:
+            deployment.save()
