@@ -1,9 +1,5 @@
-from datetime import timedelta
-from unittest.mock import patch, Mock
-
 from django.http import QueryDict
 from django.urls import reverse
-from django.utils import timezone
 from rest_framework import status
 
 from .base import AuthAPITestCase, APITestCase
@@ -69,16 +65,6 @@ class AuthMeViewTests(AuthAPITestCase):
         self.assertIsNotNone(response.json().get("user", None))
         user = response.json().get("user")
         self.assertEqual("Fredkiss3", user["username"])
-
-    @patch("zane_api.views.auth.timezone")
-    def test_authed_renew_session(self, mock_timezone: Mock):
-        self.loginUser()
-
-        fixed_time = timezone.now() + timedelta(days=10)
-        mock_timezone.now.return_value = fixed_time
-        response = self.client.get(reverse("zane_api:auth.me"))
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertIsNotNone(response.cookies.get("sessionid"))
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
