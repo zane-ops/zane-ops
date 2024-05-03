@@ -48,6 +48,7 @@ class Version:
 @dataclass
 class ContainerStatus:
     ExitCode: int
+    ContainerID: str | None
 
 
 @dataclass
@@ -79,7 +80,8 @@ class DockerSwarmTask:
         container_status_data = data["Status"].get("ContainerStatus")
         if container_status_data is not None:
             container_status = ContainerStatus(
-                ExitCode=container_status_data["ExitCode"]
+                ExitCode=container_status_data["ExitCode"],
+                ContainerID=container_status_data.get("ContainerID"),
             )
 
         task_status = Status(

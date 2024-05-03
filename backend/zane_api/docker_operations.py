@@ -771,19 +771,37 @@ def get_updated_docker_service_deployment_status(
                     deployment_status = deployment.DeploymentStatus.UNHEALTHY
 
             # if most_recent_swarm_task.Status.State == DockerSwarmTaskState.RUNNING:
-            #
             #     if healthcheck is not None:
+            #         time_left = healthcheck_timeout - (monotonic() - start_time)
             #
-            #         @timeout(healthcheck.timeout_seconds)
+            #         @timeout(time_left)
             #         def run_healthcheck():
-            #             if healthcheck.type == HealthCheck.HealthCheckType.PATH:
-            #                 pass
+            #             nonlocal deployment_status
+            #             if healthcheck.type == HealthCheck.HealthCheckType.COMMAND:
+            #                 container_id = (
+            #                     most_recent_swarm_task.Status.ContainerStatus.ContainerID
+            #                 )
+            #                 # Get the container
+            #                 container = client.containers.get(container_id)
+            #                 # Execute the command
+            #                 exit_code, output = container.exec_run(
+            #                     healthcheck.value, stdout=True, stderr=True, stdin=False
+            #                 )
+            #                 if exit_code == 0:
+            #                     deployment_status = (
+            #                         DockerDeployment.DeploymentStatus.HEALTHY
+            #                     )
             #             else:
+            #                 # TODO
             #                 pass
             #
-            #         run_healthcheck()
-            #         pass
-            #     pass
+            #         try:
+            #             run_healthcheck()
+            #         except TimeoutError:
+            #             return (
+            #                 DockerDeployment.DeploymentStatus.UNHEALTHY,
+            #                 "An Unknown error occurred when deploying the service.",
+            #             )
 
             if (
                 wait_for_healthy
