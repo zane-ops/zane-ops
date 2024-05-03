@@ -199,8 +199,8 @@ class FakeDockerClient:
         @staticmethod
         def exec_run(cmd: str, *args, **kwargs):
             if cmd == FakeDockerClient.FAILING_CMD:
-                return 1, "connection refused"
-            return 0, "connection succesful"
+                return 1, b"connection refused"
+            return 0, b"connection succesful"
 
     PORT_USED_BY_HOST = 8080
     FAILING_CMD = "invalid"
