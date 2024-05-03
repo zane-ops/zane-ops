@@ -272,7 +272,7 @@ class FakeDockerClient:
             key, value = label.split("=")
             labels[key] = value
         return [
-             volume for volume in self.volume_map.values() if volume.labels == labels
+            volume for volume in self.volume_map.values() if volume.labels == labels
         ]
 
     def services_get(self, name: str):
