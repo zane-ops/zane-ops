@@ -159,18 +159,7 @@ class FakeDockerClient:
             self.env = {} if env is None else env
             self.endpoint = endpoint
             self.id = name
-
-        def remove(self):
-            self.parent.services_remove(self.name)
-
-        def update(self, networks: list):
-            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
-                {"Target": network} for network in networks
-            ]
-
-        @staticmethod
-        def tasks(*args, **kwargs):
-            return [
+            self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
                     "Version": {"Index": 15078},
@@ -182,6 +171,7 @@ class FakeDockerClient:
                         "Message": "started",
                         # "Err": "task: non-zero exit (127)",
                         "ContainerStatus": {
+                            "ContainerID": "abcd",
                             "ExitCode": 0,
                         },
                     },
@@ -189,10 +179,21 @@ class FakeDockerClient:
                 }
             ]
 
-        @staticmethod
-        def scale(replicas: int):
+        def remove(self):
+            self.parent.services_remove(self.name)
+
+        def update(self, networks: list):
+            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
+                {"Target": network} for network in networks
+            ]
+
+        def tasks(self, *args, **kwargs):
+            return self.swarm_tasks
+
+        def scale(self, replicas: int):
             """do nothing for now"""
-            pass
+            if replicas == 0:
+                self.swarm_tasks = []
 
     class FakeContainer:
         @staticmethod

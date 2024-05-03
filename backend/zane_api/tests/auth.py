@@ -81,11 +81,11 @@ class AuthMeViewTests(AuthAPITestCase):
         self.assertEqual("Fredkiss3", user["username"])
 
     def test_authed_with_token(self):
-        user = self.loginUser()
+        user = User.objects.get(username="Fredkiss3")
         token, _ = Token.objects.get_or_create(user=user)
         response = self.client.get(
             reverse("zane_api:auth.me.with_token"),
-            HTTP_AUTHORIZATION=f"Bearer {token.key}",
+            HTTP_AUTHORIZATION=f"Token {token.key}",
         )
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -103,13 +103,13 @@ class AuthMeViewTests(AuthAPITestCase):
     def test_unauthed_without_token_and_session(self):
         response = self.client.get(
             reverse("zane_api:auth.me.with_token"),
-            HTTP_AUTHORIZATION=f"Bearer bad_token",
         )
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
     def test_unauthed_with_bad_token(self):
         response = self.client.get(
             reverse("zane_api:auth.me.with_token"),
+            HTTP_AUTHORIZATION=f"Token bad_token",
         )
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 

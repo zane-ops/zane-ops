@@ -153,13 +153,69 @@ paths:
       - auth
       security:
       - cookieAuth: []
-      - {}
       responses:
         '400':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetAuthedUserErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedSuccessResponse'
+          description: ''
+  /api/auth/me/with-token/:
+    get:
+      operationId: getAuthedUserWithToken
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAuthedUserWithTokenErrorResponse400'
           description: ''
         '401':
           content:
@@ -1893,11 +1949,13 @@ components:
           enum:
           - invalid
           - max_string_length
+          - min_value
           - 'null'
           type: string
           description: |-
             * `invalid` - invalid
             * `max_string_length` - max_string_length
+            * `min_value` - min_value
             * `null` - null
         detail:
           type: string
@@ -2821,6 +2879,11 @@ components:
           type: string
           nullable: true
           maxLength: 255
+        url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
       required:
       - created_at
     DockerServiceResponse:
@@ -2966,6 +3029,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetAuthedUserWithTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetCSRFErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3041,10 +3111,11 @@ components:
           maxLength: 255
         timeout_seconds:
           type: integer
+          minimum: 5
           default: 300
         interval_seconds:
           type: string
-          default: '15'
+          default: '30'
       required:
       - type
       - value
@@ -3156,8 +3227,11 @@ components:
       properties:
         success:
           type: boolean
+        token:
+          type: string
       required:
       - success
+      - token
     LoginUsernameErrorComponent:
       type: object
       properties:
@@ -3545,10 +3619,6 @@ components:
         last_name:
           type: string
           maxLength: 150
-        is_staff:
-          type: boolean
-          title: Staff status
-          description: Designates whether the user can log into this admin site.
       required:
       - username
     ValidationErrorEnum:
@@ -3605,5 +3675,10 @@ components:
       type: apiKey
       in: cookie
       name: sessionid
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
 servers:
 - url: https://zaneops.fredkiss.dev

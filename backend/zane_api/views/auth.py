@@ -21,6 +21,7 @@ from .. import serializers
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+    token = serializers.CharField()
 
 
 class LoginRequestSerializer(serializers.Serializer):
@@ -51,10 +52,12 @@ class LoginView(APIView):
             )
             if user is not None:
                 login(request, user)
-                Token.objects.get_or_create(
+                token, _ = Token.objects.get_or_create(
                     user=user
                 )  # this is fine, Token is only used to authenticated internally
-                response = LoginSuccessResponseSerializer({"success": True})
+                response = LoginSuccessResponseSerializer(
+                    {"success": True, "token": token.key}
+                )
                 query_params = request.query_params.dict()
                 redirect_uri = query_params.get("redirect_to")
                 if redirect_uri is not None:

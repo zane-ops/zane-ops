@@ -115,7 +115,7 @@ class HealthCheckRequestSerializer(serializers.Serializer):
     )
     value = serializers.CharField(max_length=255, required=True)
     timeout_seconds = serializers.IntegerField(required=False, default=300, min_value=5)
-    interval_seconds = serializers.CharField(required=False, default=15)
+    interval_seconds = serializers.CharField(required=False, default=30)
 
     def validate(self, data: dict):
         if data["type"] == "path":
