@@ -316,6 +316,24 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
+def scale_down_docker_service(deployment: DockerDeployment):
+    service = deployment.service
+    client = get_docker_client()
+
+    swarm_service_list = client.services.list(
+        filters={
+            "name": get_docker_service_resource_name(
+                service_id=service.id,
+                project_id=service.project.id,
+            )
+        }
+    )
+
+    if len(swarm_service_list) > 0:
+        swarm_service = swarm_service_list[0]
+        swarm_service.scale(0)
+
+
 def create_service_from_docker_registry(deployment: DockerDeployment):
     service = deployment.service
     client = get_docker_client()

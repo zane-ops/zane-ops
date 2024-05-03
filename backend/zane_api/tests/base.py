@@ -112,6 +112,11 @@ class FakeDockerClient:
                 }
             ]
 
+        @staticmethod
+        def scale(replicas: int):
+            """do nothing for now"""
+            pass
+
     PORT_USED_BY_HOST = 8080
 
     def __init__(self):

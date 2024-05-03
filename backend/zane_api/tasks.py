@@ -16,6 +16,7 @@ from .docker_operations import (
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
     get_updated_docker_service_deployment_status,
+    scale_down_docker_service,
 )
 from .models import (
     DockerDeployment,
@@ -35,6 +36,7 @@ def docker_service_deploy_failure(
     kwargs: dict[str, str],
     einfo: ExceptionWithTraceback,
 ):
+    print(f"ON DEPLOYMENT FAILURE {exc=}")
     with transaction.atomic():
         deployment_hash = kwargs["deployment_hash"]
         deployment: DockerDeployment = DockerDeployment.objects.filter(
@@ -43,6 +45,7 @@ def docker_service_deploy_failure(
         if deployment is not None:
             deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
             deployment.deployment_status_reason = str(exc)
+            scale_down_docker_service(deployment)
             deployment.save()
 
 
@@ -94,22 +97,23 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
                         deployment, wait_for_healthy=True
                     )
                 )
-                if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
+                    deployment.deployment_status = deployment_status
+                    deployment.monitor_task = PeriodicTask.objects.create(
+                        interval=IntervalSchedule.objects.create(
+                            every=30, period=IntervalSchedule.SECONDS
+                        ),
+                        name=f"monitor deployment {deployment_hash}",
+                        task="zane_api.tasks.monitor_docker_service_deployment",
+                        kwargs=json.dumps({"deployment_hash": deployment_hash}),
+                    )
+                else:
                     deployment.deployment_status = (
                         DockerDeployment.DeploymentStatus.FAILED
                     )
-                else:
-                    deployment.deployment_status = deployment_status
-                deployment.deployment_status_reason = deployment_status_reason
+                    scale_down_docker_service(deployment)
 
-                deployment.monitor_task = PeriodicTask.objects.create(
-                    interval=IntervalSchedule.objects.create(
-                        every=30, period=IntervalSchedule.SECONDS
-                    ),
-                    name=f"monitor deployment {deployment_hash}",
-                    task="zane_api.tasks.monitor_docker_service_deployment",
-                    kwargs=json.dumps({"deployment_hash": deployment_hash}),
-                )
+                deployment.deployment_status_reason = deployment_status_reason
                 deployment.save()
     except LockAcquisitionError as e:
         # Use the countdown from the exception for retrying
