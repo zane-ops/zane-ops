@@ -2539,7 +2539,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             "image": "redis:alpine",
         }
 
-        mock_monotonic.side_effect = [0, 1]
+        mock_monotonic.side_effect = [0, 1, 1.5]
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
@@ -2635,7 +2635,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         fake_docker_client.services.get = lambda _id: FakeService()
 
-        mock_monotonic.side_effect = [0, 15, 30]
+        mock_monotonic.side_effect = [0, 15, 31]
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
