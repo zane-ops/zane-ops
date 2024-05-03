@@ -1,7 +1,9 @@
 import json
 import random
+import re
 from unittest.mock import patch, Mock, MagicMock
 
+import responses
 from django.conf import settings
 from django.urls import reverse
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
@@ -1480,8 +1482,8 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "image": "caddy",
             "ports": [{"forwarded": 80}],
             "healthcheck": {
-                "type": "path",
-                "value": "/",
+                "type": "command",
+                "value": "caddy validate",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
             },
@@ -1497,9 +1499,9 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         self.assertIsNotNone(service.get("healthcheck"))
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
         self.assertIsNotNone(created_service.healthcheck)
-        self.assertEqual("/", created_service.healthcheck.value)
+        self.assertEqual("caddy validate", created_service.healthcheck.value)
         self.assertEqual(
-            HealthCheck.HealthCheckType.PATH, created_service.healthcheck.type
+            HealthCheck.HealthCheckType.COMMAND, created_service.healthcheck.type
         )
         self.assertEqual(5, created_service.healthcheck.interval_seconds)
         self.assertEqual(30, created_service.healthcheck.timeout_seconds)
@@ -1564,6 +1566,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    @responses.activate
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -1586,6 +1589,12 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
                 "interval_seconds": 5,
             },
         }
+
+        responses.add(
+            responses.GET,
+            url=re.compile("^(https?)*"),
+            status=status.HTTP_200_OK,
+        )
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
@@ -1652,6 +1661,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
+    @responses.activate
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
         "zane_api.docker_operations.get_docker_client",
@@ -1675,6 +1685,12 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             },
         }
 
+        responses.add(
+            responses.GET,
+            url=re.compile("^(https?)*"),
+            status=status.HTTP_200_OK,
+        )
+
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
             data=create_service_payload,
@@ -1684,6 +1700,51 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
+            latest_deployment.deployment_status,
+        )
+
+    @responses.activate
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.docker_operations.sleep")
+    @patch("zane_api.docker_operations.monotonic")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_with_healtheck_path_error(
+        self, mock_fake_docker: Mock, mock_monotonic: Mock, _: Mock, __: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "simple-webserver",
+            "image": "caddy:alpine",
+            "ports": [{"forwarded": 80}],
+            "healthcheck": {
+                "type": "path",
+                "value": "/",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+        }
+
+        responses.add(
+            responses.GET,
+            url=re.compile("^(https?)*"),
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+        mock_monotonic.side_effect = [0, 14, 15, 31]
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_service = DockerRegistryService.objects.get(slug="simple-webserver")
+        latest_deployment = created_service.get_latest_deployment()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.deployment_status,
         )
 

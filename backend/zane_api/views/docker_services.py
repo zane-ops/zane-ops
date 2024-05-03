@@ -11,6 +11,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import status, exceptions
+from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -469,12 +470,14 @@ class CreateDockerServiceAPIView(APIView):
                     ]
                 )
 
+                token = Token.objects.get(user=request.user)
                 # Run celery deployment task
                 transaction.on_commit(
                     lambda: deploy_docker_service.apply_async(
                         kwargs=dict(
                             deployment_hash=first_deployment.hash,
                             service_id=service.id,
+                            auth_token=token.key,
                         ),
                         task_id=first_deployment.task_id,
                     )

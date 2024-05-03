@@ -9,6 +9,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions
 from rest_framework import status, permissions
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -49,13 +51,15 @@ class LoginView(APIView):
             )
             if user is not None:
                 login(request, user)
-                response = LoginSuccessResponseSerializer(data={"success": True})
-                if response.is_valid():
-                    query_params = request.query_params.dict()
-                    redirect_uri = query_params.get("redirect_to")
-                    if redirect_uri is not None:
-                        return redirect(iri_to_uri(redirect_uri))
-                    return Response(response.data, status=status.HTTP_201_CREATED)
+                Token.objects.get_or_create(
+                    user=user
+                )  # this is fine, Token is only used to authenticated internally
+                response = LoginSuccessResponseSerializer({"success": True})
+                query_params = request.query_params.dict()
+                redirect_uri = query_params.get("redirect_to")
+                if redirect_uri is not None:
+                    return redirect(iri_to_uri(redirect_uri))
+                return Response(response.data, status=status.HTTP_201_CREATED)
             raise exceptions.AuthenticationFailed(detail="Invalid username or password")
 
 
@@ -65,10 +69,24 @@ class AuthedSuccessResponseSerializer(serializers.Serializer):
 
 class AuthedView(APIView):
     serializer_class = AuthedSuccessResponseSerializer
-    permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         operation_id="getAuthedUser",
+    )
+    def get(self, request: Request):
+        response = AuthedSuccessResponseSerializer({"user": request.user})
+        return Response(
+            response.data,
+        )
+
+
+class TokenAuthedView(APIView):
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    serializer_class = AuthedSuccessResponseSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        operation_id="getAuthedUserWithToken",
     )
     def get(self, request: Request):
         if isinstance(request.user, AnonymousUser):
@@ -92,7 +110,7 @@ class AuthedView(APIView):
                 )
             raise exceptions.NotAuthenticated()
 
-        response = self.serializer_class({"user": request.user})
+        response = AuthedSuccessResponseSerializer({"user": request.user})
         return Response(
             response.data,
         )

@@ -696,7 +696,9 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
 
 
 def get_updated_docker_service_deployment_status(
-    deployment: DockerDeployment, wait_for_healthy=False
+    deployment: DockerDeployment,
+    auth_token: str,
+    wait_for_healthy=False,
 ) -> tuple[DockerDeployment.DeploymentStatus, str]:
     client = get_docker_client()
     swarm_service = client.services.get(
@@ -717,8 +719,14 @@ def get_updated_docker_service_deployment_status(
     )
     while (monotonic() - start_time) < healthcheck_timeout:
         healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
+        if healthcheck_time_left <= 0:
+            raise TimeoutError(
+                "Failed to run the healthcheck because there is no time left,"
+                + " please make sure the healthcheck timeout is large enough"
+            )
+
         sleep_time_available = min(
-            float(DEFAULT_HEALTHCHECK_WAIT_INTERVAL), healthcheck_time_left
+            float(DEFAULT_HEALTHCHECK_WAIT_INTERVAL), healthcheck_time_left - 1
         )
 
         if len(task_list) == 0:
@@ -778,11 +786,6 @@ def get_updated_docker_service_deployment_status(
 
             if most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING:
                 if healthcheck is not None:
-                    if healthcheck_time_left <= 0:
-                        raise TimeoutError(
-                            "Failed to run the healthcheck because there is no time left,"
-                            + " please make sure the healthcheck timeout is large enough"
-                        )
 
                     @timeout(healthcheck_time_left)
                     def run_healthcheck():
@@ -810,8 +813,26 @@ def get_updated_docker_service_deployment_status(
                                     DockerDeployment.DeploymentStatus.UNHEALTHY
                                 )
                         else:
-                            # TODO
-                            pass
+                            scheme = (
+                                "https"
+                                if settings.ENVIRONMENT == settings.PRODUCTION_ENV
+                                else "http"
+                            )
+                            full_url = (
+                                f"{scheme}://{deployment.url + healthcheck.value}"
+                            )
+                            response = requests.get(
+                                full_url,
+                                headers={"Authorization": f"Bearer {auth_token}"},
+                            )
+                            if response.status_code == status.HTTP_200_OK:
+                                deployment_status = (
+                                    DockerDeployment.DeploymentStatus.HEALTHY
+                                )
+                            else:
+                                deployment_status = (
+                                    DockerDeployment.DeploymentStatus.UNHEALTHY
+                                )
 
                     try:
                         run_healthcheck()

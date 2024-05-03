@@ -26,13 +26,13 @@ SECRET_KEY = os.environ.get(
     "SECRET_KEY", "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx"
 )
 
-env = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env != PRODUCTION_ENV
-CSRF_COOKIE_SECURE = env == PRODUCTION_ENV
-SESSION_COOKIE_SECURE = env == PRODUCTION_ENV
+DEBUG = ENVIRONMENT != PRODUCTION_ENV
+CSRF_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
+SESSION_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 
 # We will only support one root domain on production
@@ -41,7 +41,7 @@ ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
 ALLOWED_HOSTS = (
     [f".{ROOT_DOMAIN}", "localhost", "127.0.0.1"]
-    if env != PRODUCTION_ENV
+    if ENVIRONMENT != PRODUCTION_ENV
     else [f".{ROOT_DOMAIN}"]
 )
 SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
@@ -49,7 +49,7 @@ SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
     [f"https://{ZANE_APP_DOMAIN}", f"http://{ZANE_APP_DOMAIN}"]
-    if env != PRODUCTION_ENV
+    if ENVIRONMENT != PRODUCTION_ENV
     else [f"https://{ZANE_APP_DOMAIN}"]
 )
 
@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
     "rest_framework",
+    "rest_framework.authtoken",
     "drf_spectacular",
     "django_celery_results",
     "django_celery_beat",
@@ -285,6 +286,6 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 )
 ZANE_APP_SERVICE_HOST_FROM_PROXY = (
     "host.docker.internal:8000"
-    if env != PRODUCTION_ENV
+    if ENVIRONMENT != PRODUCTION_ENV
     else "zane-api.zaneops.internal:8000"
 )

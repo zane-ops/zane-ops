@@ -50,7 +50,9 @@ def docker_service_deploy_failure(
 
 
 @shared_task(bind=True, on_failure=docker_service_deploy_failure)
-def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
+def deploy_docker_service(
+    self: Task, deployment_hash: str, service_id: str, auth_token: str
+):
     lock_id = f"deploy_{service_id}"
     try:
         with cache_lock(lock_id):
@@ -96,7 +98,9 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
 
                 deployment_status, deployment_status_reason = (
                     get_updated_docker_service_deployment_status(
-                        deployment, wait_for_healthy=True
+                        deployment,
+                        auth_token=auth_token,
+                        wait_for_healthy=True,
                     )
                 )
                 if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
@@ -114,7 +118,12 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
                         ),
                         name=f"monitor deployment {deployment_hash}",
                         task="zane_api.tasks.monitor_docker_service_deployment",
-                        kwargs=json.dumps({"deployment_hash": deployment_hash}),
+                        kwargs=json.dumps(
+                            {
+                                "deployment_hash": deployment_hash,
+                                "auth_token": auth_token,
+                            }
+                        ),
                     )
                 else:
                     deployment.deployment_status = (
@@ -181,7 +190,7 @@ def delete_resources_for_docker_service(archived_service_id: id):
 
 
 @shared_task
-def monitor_docker_service_deployment(deployment_hash: str):
+def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
     with transaction.atomic():
         deployment: DockerDeployment | None = (
             DockerDeployment.objects.filter(hash=deployment_hash)
@@ -202,7 +211,7 @@ def monitor_docker_service_deployment(deployment_hash: str):
             != DockerDeployment.DeploymentStatus.OFFLINE
         ):
             deployment_status, deployment_status_reason = (
-                get_updated_docker_service_deployment_status(deployment)
+                get_updated_docker_service_deployment_status(deployment, auth_token)
             )
             deployment.deployment_status = deployment_status
             deployment.deployment_status_reason = deployment_status_reason

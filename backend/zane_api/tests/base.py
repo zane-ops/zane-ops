@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from docker.types import EndpointSpec
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
@@ -112,7 +113,9 @@ class AuthAPITestCase(APITestCase):
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
-        return User.objects.get(username="Fredkiss3")
+        user = User.objects.get(username="Fredkiss3")
+        Token.objects.get_or_create(user=user)
+        return user
 
 
 class FakeDockerClient:
