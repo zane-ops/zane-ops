@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from typing import Any, List
 from unittest.mock import MagicMock
@@ -13,20 +14,92 @@ from ..docker_operations import get_network_resource_name, DockerImageResultFrom
 from ..models import Project
 
 
+class CustomAPIClient(APIClient):
+    def __init__(self, parent: TestCase, **defaults):
+        super().__init__(enforce_csrf_checks=False, **defaults)
+        self.parent = parent
+
+    def post(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) is dict:
+            data = json.dumps(data)
+
+        with self.parent.captureOnCommitCallbacks(execute=True) as callbacks:
+            response = super().post(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    def put(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) is dict:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().put(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    def patch(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) is dict:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().patch(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    def delete(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) == dict:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().delete(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+
 @override_settings(
     CACHES={
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging celery tasks
+    DEBUG=True,  # uncomment for debugging celery tasks
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
     CELERY_TASK_STORE_EAGER_RESULT=True,
 )
 class APITestCase(TestCase):
-    client = APIClient(enforce_csrf_checks=True, content_type="application/json")
+    def setUp(self):
+        self.client = CustomAPIClient(parent=self)
 
     def tearDown(self):
         cache.clear()
@@ -34,6 +107,7 @@ class APITestCase(TestCase):
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
+        super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
 
     def loginUser(self):
@@ -117,7 +191,15 @@ class FakeDockerClient:
             """do nothing for now"""
             pass
 
+    class FakeContainer:
+        @staticmethod
+        def exec_run(cmd: str, *args, **kwargs):
+            if cmd == FakeDockerClient.FAILING_CMD:
+                return 1, "connection refused"
+            return 0, "connection succesful"
+
     PORT_USED_BY_HOST = 8080
+    FAILING_CMD = "invalid"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -130,6 +212,7 @@ class FakeDockerClient:
         self.images.search = self.images_search
         self.images.pull = self.images_pull
         self.containers.run = self.containers_run
+        self.containers.get = self.containers_get
         self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
         self.services.get = self.services_get
@@ -160,6 +243,9 @@ class FakeDockerClient:
     def events(self, decode: bool, filters: dict):
         return []
 
+    def containers_get(self, container_id: str):
+        return FakeDockerClient.FakeContainer()
+
     def containers_run(self, command: str, *args, **kwargs):
         ports: dict[str, tuple[str, int]] = kwargs.get("ports")
         if ports is not None:
@@ -186,7 +272,7 @@ class FakeDockerClient:
             key, value = label.split("=")
             labels[key] = value
         return [
-            volume for volume in self.volume_map.values() if volume.labels == labels
+             volume for volume in self.volume_map.values() if volume.labels == labels
         ]
 
     def services_get(self, name: str):

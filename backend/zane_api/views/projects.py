@@ -272,9 +272,11 @@ class ProjectDetailsView(APIView):
         Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         docker_service_list.delete()
 
-        delete_docker_resources_for_project.apply_async(
-            kwargs=dict(archived_project_id=archived_version.id),
-            task_id=project.archive_task_id,
+        transaction.on_commit(
+            lambda: delete_docker_resources_for_project.apply_async(
+                kwargs=dict(archived_project_id=archived_version.id),
+                task_id=project.archive_task_id,
+            )
         )
         project.delete()
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

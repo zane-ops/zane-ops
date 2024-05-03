@@ -69,6 +69,15 @@ class DockerSwarmTask:
     Status: Status
     DesiredState: DockerSwarmTaskState
 
+    @property
+    def container_id(self):
+        container_status = self.Status.ContainerStatus
+        return container_status.ContainerID if container_status is not None else None
+
+    @property
+    def state(self):
+        return self.Status.State
+
     @classmethod
     def from_dict(
         cls,

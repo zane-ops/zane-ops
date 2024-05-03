@@ -113,7 +113,7 @@ class HealthCheckRequestSerializer(serializers.Serializer):
         required=True, choices=HEALTCHECK_CHOICES
     )
     value = serializers.CharField(max_length=255, required=True)
-    timeout_seconds = serializers.IntegerField(required=False, default=300)
+    timeout_seconds = serializers.IntegerField(required=False, default=300, min_value=5)
     interval_seconds = serializers.CharField(required=False, default=15)
 
     def validate(self, data: dict):
@@ -294,6 +294,7 @@ class CreateDockerServiceAPIView(APIView):
         },
         operation_id="createDockerService",
     )
+    @transaction.atomic()
     def post(self, request: Request, project_slug: str):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
@@ -304,177 +305,179 @@ class CreateDockerServiceAPIView(APIView):
         else:
             form = DockerServiceCreateRequestSerializer(data=request.data)
             if form.is_valid(raise_exception=True):
-                with transaction.atomic():
-                    data = form.data
+                data = form.data
 
-                    # Create service in DB
-                    docker_credentials: dict | None = data.get("credentials")
-                    fake = Faker()
-                    Faker.seed(time.monotonic())
-                    service_slug = data.get("slug", fake.slug()).lower()
-                    docker_image_tag = "latest"
-                    try:
-                        docker_image = data["image"]
-                        docker_image_parts = docker_image.split(":", 1)
-                        if len(docker_image_parts) == 2:
-                            docker_image, docker_image_tag = docker_image_parts
+                # Create service in DB
+                docker_credentials: dict | None = data.get("credentials")
+                fake = Faker()
+                Faker.seed(time.monotonic())
+                service_slug = data.get("slug", fake.slug()).lower()
+                docker_image_tag = "latest"
+                try:
+                    docker_image = data["image"]
+                    docker_image_parts = docker_image.split(":", 1)
+                    if len(docker_image_parts) == 2:
+                        docker_image, docker_image_tag = docker_image_parts
 
-                        healthcheck = data.get("healthcheck")
-                        service = DockerRegistryService.objects.create(
-                            slug=service_slug,
-                            project=project,
-                            image_repository=docker_image,
-                            command=data.get("command"),
-                            docker_credentials_username=(
-                                docker_credentials.get("username")
-                                if docker_credentials is not None
-                                else None
-                            ),
-                            docker_credentials_password=(
-                                docker_credentials.get("password")
-                                if docker_credentials is not None
-                                else None
-                            ),
-                            healthcheck=(
-                                HealthCheck.objects.create(
-                                    type=healthcheck["type"].upper(),
-                                    value=healthcheck["value"],
-                                    timeout_seconds=healthcheck["timeout_seconds"],
-                                    interval_seconds=healthcheck["interval_seconds"],
-                                )
-                                if healthcheck is not None
-                                else None
-                            ),
-                        )
-                    except IntegrityError:
-                        raise ResourceConflict(
-                            detail=f"A service with the slug `{service_slug}` already exists."
-                        )
-
-                    # Create volumes if exists
-                    volumes_request = data.get("volumes", [])
-                    created_volumes = Volume.objects.bulk_create(
-                        [
-                            Volume(
-                                name=volume["name"],
-                                containerPath=volume["mount_path"],
+                    healthcheck = data.get("healthcheck")
+                    service = DockerRegistryService.objects.create(
+                        slug=service_slug,
+                        project=project,
+                        image_repository=docker_image,
+                        command=data.get("command"),
+                        docker_credentials_username=(
+                            docker_credentials.get("username")
+                            if docker_credentials is not None
+                            else None
+                        ),
+                        docker_credentials_password=(
+                            docker_credentials.get("password")
+                            if docker_credentials is not None
+                            else None
+                        ),
+                        healthcheck=(
+                            HealthCheck.objects.create(
+                                type=healthcheck["type"].upper(),
+                                value=healthcheck["value"],
+                                timeout_seconds=healthcheck["timeout_seconds"],
+                                interval_seconds=healthcheck["interval_seconds"],
                             )
-                            for volume in volumes_request
-                        ]
+                            if healthcheck is not None
+                            else None
+                        ),
+                    )
+                except IntegrityError:
+                    raise ResourceConflict(
+                        detail=f"A service with the slug `{service_slug}` already exists."
                     )
 
-                    service.volumes.add(*created_volumes)
+                # Create volumes if exists
+                volumes_request = data.get("volumes", [])
+                created_volumes = Volume.objects.bulk_create(
+                    [
+                        Volume(
+                            name=volume["name"],
+                            containerPath=volume["mount_path"],
+                        )
+                        for volume in volumes_request
+                    ]
+                )
 
-                    # create ports configuration
-                    service_urls_from_request = data.get("urls", [])
-                    ports_from_request = data.get("ports", [])
-                    http_ports = [80, 443]
+                service.volumes.add(*created_volumes)
 
-                    if len(service_urls_from_request) > 0:
-                        has_at_least_one_http_port = False
-                        for port in ports_from_request:
-                            if port["public"] in http_ports:
-                                has_at_least_one_http_port = True
-                                break
+                # create ports configuration
+                service_urls_from_request = data.get("urls", [])
+                ports_from_request = data.get("ports", [])
+                http_ports = [80, 443]
 
-                        if not has_at_least_one_http_port:
-                            ports_from_request.append(
-                                {
-                                    "public": 80,
-                                    "forwarded": 80,
-                                }
-                            )
+                if len(service_urls_from_request) > 0:
+                    has_at_least_one_http_port = False
+                    for port in ports_from_request:
+                        if port["public"] in http_ports:
+                            has_at_least_one_http_port = True
+                            break
 
-                    created_ports = PortConfiguration.objects.bulk_create(
-                        [
-                            PortConfiguration(
-                                host=(
-                                    port["public"]
-                                    if port["public"] not in http_ports
-                                    else None
-                                ),
-                                forwarded=port["forwarded"],
-                            )
-                            for port in ports_from_request
-                        ]
-                    )
+                    if not has_at_least_one_http_port:
+                        ports_from_request.append(
+                            {
+                                "public": 80,
+                                "forwarded": 80,
+                            }
+                        )
 
-                    service.ports.add(*created_ports)
+                created_ports = PortConfiguration.objects.bulk_create(
+                    [
+                        PortConfiguration(
+                            host=(
+                                port["public"]
+                                if port["public"] not in http_ports
+                                else None
+                            ),
+                            forwarded=port["forwarded"],
+                        )
+                        for port in ports_from_request
+                    ]
+                )
 
-                    # Create urls to route the service to
-                    can_create_urls = len(service_urls_from_request) > 0
-                    if not can_create_urls:
-                        for port in ports_from_request:
-                            public_port = port["public"]
-                            if public_port in http_ports:
-                                can_create_urls = True
-                                break
+                service.ports.add(*created_ports)
 
-                    if can_create_urls:
-                        if len(service_urls_from_request) == 0:
-                            existing_urls = URL.objects.filter(
+                # Create urls to route the service to
+                can_create_urls = len(service_urls_from_request) > 0
+                if not can_create_urls:
+                    for port in ports_from_request:
+                        public_port = port["public"]
+                        if public_port in http_ports:
+                            can_create_urls = True
+                            break
+
+                if can_create_urls:
+                    if len(service_urls_from_request) == 0:
+                        existing_urls = URL.objects.filter(
+                            domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
+                            base_path="/",
+                        ).first()
+                        if existing_urls is None:
+                            default_url = URL.objects.create(
                                 domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
                                 base_path="/",
-                            ).first()
-                            if existing_urls is None:
-                                default_url = URL.objects.create(
-                                    domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
-                                    base_path="/",
-                                )
-                            else:
-                                default_url = URL.objects.create(
-                                    domain=f"{project.slug}-{service_slug}-{fake.slug()}.{settings.ROOT_DOMAIN}",
-                                    base_path="/",
-                                )
-                            service.urls.add(default_url)
+                            )
                         else:
-                            urls_to_create: list[URL] = []
+                            default_url = URL.objects.create(
+                                domain=f"{project.slug}-{service_slug}-{fake.slug()}.{settings.ROOT_DOMAIN}",
+                                base_path="/",
+                            )
+                        service.urls.add(default_url)
+                    else:
+                        urls_to_create: list[URL] = []
 
-                            for url in service_urls_from_request:
-                                base_path = (
-                                    "/"
-                                    if url["base_path"] == "/"
-                                    else strip_slash_if_exists(
-                                        url["base_path"],
-                                        strip_end=True,
-                                        strip_start=False,
-                                    )
+                        for url in service_urls_from_request:
+                            base_path = (
+                                "/"
+                                if url["base_path"] == "/"
+                                else strip_slash_if_exists(
+                                    url["base_path"],
+                                    strip_end=True,
+                                    strip_start=False,
                                 )
-                                urls_to_create.append(
-                                    URL(
-                                        domain=url["domain"],
-                                        base_path=base_path,
-                                        strip_prefix=url["strip_prefix"],
-                                    )
+                            )
+                            urls_to_create.append(
+                                URL(
+                                    domain=url["domain"],
+                                    base_path=base_path,
+                                    strip_prefix=url["strip_prefix"],
                                 )
+                            )
 
-                            created_urls = URL.objects.bulk_create(urls_to_create)
-                            service.urls.add(*created_urls)
+                        created_urls = URL.objects.bulk_create(urls_to_create)
+                        service.urls.add(*created_urls)
 
-                    # Create first deployment
-                    first_deployment = DockerDeployment.objects.create(
-                        service=service, image_tag=docker_image_tag
-                    )
-                    if len(service.urls.all()) > 0:
-                        first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
-                        first_deployment.save()
+                # Create first deployment
+                first_deployment = DockerDeployment.objects.create(
+                    service=service, image_tag=docker_image_tag
+                )
+                if len(service.urls.all()) > 0:
+                    first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+                    first_deployment.save()
 
-                    # Create envs if exists
-                    envs_from_request: dict[str, str] = data.get("env", {})
+                # Create envs if exists
+                envs_from_request: dict[str, str] = data.get("env", {})
 
-                    DockerEnvVariable.objects.bulk_create(
-                        [
-                            DockerEnvVariable(key=key, value=value, service=service)
-                            for key, value in envs_from_request.items()
-                        ]
-                    )
+                DockerEnvVariable.objects.bulk_create(
+                    [
+                        DockerEnvVariable(key=key, value=value, service=service)
+                        for key, value in envs_from_request.items()
+                    ]
+                )
 
                 # Run celery deployment task
-                deploy_docker_service.apply_async(
-                    kwargs=dict(
-                        deployment_hash=first_deployment.hash, service_id=service.id
-                    ),
-                    task_id=first_deployment.task_id,
+                transaction.on_commit(
+                    lambda: deploy_docker_service.apply_async(
+                        kwargs=dict(
+                            deployment_hash=first_deployment.hash,
+                            service_id=service.id,
+                        ),
+                        task_id=first_deployment.task_id,
+                    )
                 )
 
                 response = DockerServiceResponseSerializer({"service": service})
@@ -605,53 +608,53 @@ class ArchiveDockerServiceAPIView(APIView):
         },
         operation_id="archiveDockerService",
     )
+    @transaction.atomic()
     def delete(self, request: Request, project_slug: str, service_slug: str):
-        with transaction.atomic():
-            project = (
-                Project.objects.filter(
-                    slug=project_slug.lower(), owner=request.user
-                ).select_related("archived_version")
-            ).first()
+        project = (
+            Project.objects.filter(
+                slug=project_slug.lower(), owner=request.user
+            ).select_related("archived_version")
+        ).first()
 
-            if project is None:
-                raise exceptions.NotFound(
-                    detail=f"A project with the slug `{project_slug}` does not exist."
-                )
-
-            service: DockerRegistryService = (
-                DockerRegistryService.objects.filter(
-                    Q(slug=service_slug) & Q(project=project)
-                )
-                .select_related("project")
-                .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "deployments"
-                )
-            ).first()
-
-            if service is None:
-                raise exceptions.NotFound(
-                    detail=f"A service with the slug `{service_slug}` does not exist in this project."
-                )
-
-            archived_project = (
-                project.archived_version
-                if hasattr(project, "archived_version")
-                else None
-            )
-            if archived_project is None:
-                archived_project = ArchivedProject.create_from_project(project)
-
-            archived_service = ArchivedDockerService.create_from_service(
-                service, archived_project
+        if project is None:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
             )
 
-            archive_task_id = service.archive_task_id
-            service.delete_resources()
-            service.delete()
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
+        ).first()
 
-        delete_resources_for_docker_service.apply_async(
-            kwargs=dict(archived_service_id=archived_service.id),
-            task_id=archive_task_id,
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+
+        archived_project = (
+            project.archived_version if hasattr(project, "archived_version") else None
+        )
+        if archived_project is None:
+            archived_project = ArchivedProject.create_from_project(project)
+
+        archived_service = ArchivedDockerService.create_from_service(
+            service, archived_project
+        )
+
+        archive_task_id = service.archive_task_id
+        service.delete_resources()
+        service.delete()
+
+        transaction.on_commit(
+            lambda: delete_resources_for_docker_service.apply_async(
+                kwargs=dict(archived_service_id=archived_service.id),
+                task_id=archive_task_id,
+            )
         )
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

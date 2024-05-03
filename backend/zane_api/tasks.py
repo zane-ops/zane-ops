@@ -57,7 +57,9 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
             with transaction.atomic():
                 deployment: DockerDeployment | None = (
                     DockerDeployment.objects.filter(hash=deployment_hash)
-                    .select_related("service", "service__project")
+                    .select_related(
+                        "service", "service__project", "service__healthcheck"
+                    )
                     .prefetch_related(
                         "service__volumes",
                         "service__urls",
@@ -99,9 +101,16 @@ def deploy_docker_service(self: Task, deployment_hash: str, service_id: str):
                 )
                 if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
                     deployment.deployment_status = deployment_status
+                    healthcheck = service.healthcheck
+
                     deployment.monitor_task = PeriodicTask.objects.create(
                         interval=IntervalSchedule.objects.create(
-                            every=30, period=IntervalSchedule.SECONDS
+                            every=(
+                                healthcheck.interval_seconds
+                                if healthcheck is not None
+                                else 30
+                            ),
+                            period=IntervalSchedule.SECONDS,
                         ),
                         name=f"monitor deployment {deployment_hash}",
                         task="zane_api.tasks.monitor_docker_service_deployment",
