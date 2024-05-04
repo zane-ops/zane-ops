@@ -101,7 +101,7 @@ class AuthMeViewTests(AuthAPITestCase):
     def test_authed_renew_session(self, mock_timezone: Mock):
         self.loginUser()
 
-        fixed_time = timezone.now() + timedelta(days=10)
+        fixed_time = timezone.now() + timedelta(days=13)
         mock_timezone.now.return_value = fixed_time
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)

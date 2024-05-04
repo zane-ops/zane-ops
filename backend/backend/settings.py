@@ -61,8 +61,7 @@ CACHES = {
 }
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-# Only extend the session if the current expiry_date is less than 7 days from now
-SESSION_EXPIRE_THRESHOLD = 7
+SESSION_EXPIRE_THRESHOLD = 2
 # Application definition
 
 INSTALLED_APPS = [
