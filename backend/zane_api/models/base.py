@@ -299,6 +299,8 @@ class GitDeployment(BaseDeployment):
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
+        PREPARING = "PREPARING", _("Preparing")
+        FAILED = "FAILED", _("Failed")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
         BUILDING = "BUILDING", _("Building")
