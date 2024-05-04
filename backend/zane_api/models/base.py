@@ -262,7 +262,7 @@ class DockerDeployment(BaseDeployment):
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.QUEUED,
     )
-    deployment_status_reason = models.CharField(max_length=255, null=True)
+    deployment_status_reason = models.TextField(null=True, blank=True)
     is_current_production = models.BooleanField(default=True)
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"

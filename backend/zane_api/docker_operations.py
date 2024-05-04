@@ -133,20 +133,21 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
         def wait_for_service_to_be_down():
             nonlocal client
             nonlocal swarm_service
-            print("WAITING FOR SERVICE TO BE DOWN...")
+            print(f"waiting for service {swarm_service.name=} to be down...")
             task_list = swarm_service.tasks()
             while len(task_list) > 0:
                 print(
-                    f"SERVICE IS NOT DOWN YET, retrying in {DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds : {task_list=}..."
+                    f"service {swarm_service.name=} is not down yet, "
+                    + f"retrying in {DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
                 )
                 sleep(DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                 task_list = swarm_service.tasks()
                 continue
-            print("SERVICE IS DOWN, YAY !! 🎉")
+            print(f"service {swarm_service.name=} is down, YAY !! 🎉")
 
         wait_for_service_to_be_down()
 
-        print("DELETING VOLUME LIST...")
+        print("deleting volume list...")
         docker_volume_list = client.volumes.list(
             filters={
                 "label": [
@@ -161,9 +162,9 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
 
         for volume in docker_volume_list:
             volume.remove(force=True)
-        print("VOLUME LIST DELETED, YAY !! 🎉")
+        print(f"deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
         swarm_service.remove()
-        print("REMOVED SERVICE")
+        print(f"removed service.")
 
 
 def get_proxy_service():
@@ -215,7 +216,7 @@ def cleanup_project_resources(archived_project: ArchivedProject):
             for event in client.events(
                 decode=True, filters={"service": proxy_service.id}
             ):
-                print(dict(event=event))
+                print(f"⏩ received docker event: {event=}")
                 if (
                     event["Type"] == "service"
                     and event.get("Action") == "update"
@@ -726,6 +727,7 @@ def get_updated_docker_service_deployment_status(
     wait_for_healthy=False,
 ) -> tuple[DockerDeployment.DeploymentStatus, str]:
     client = get_docker_client()
+
     swarm_service = client.services.get(
         get_docker_service_resource_name(
             deployment.service.id, deployment.service.project.id
@@ -760,7 +762,7 @@ def get_updated_docker_service_deployment_status(
         )
         # TODO (#67) : send system logs when the state changes
         print(
-            f"Healtcheck attempt #{healthcheck_attempts} | {healthcheck_time_left=} 🏁"
+            f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | {healthcheck_time_left=} 💓"
         )
 
         if len(task_list) == 0:
@@ -882,11 +884,15 @@ def get_updated_docker_service_deployment_status(
             ):
                 # TODO (#67) : send system logs when the state changes
                 print(
-                    f"Healthcheck attempt #{healthcheck_attempts} failed, Retrying in {sleep_time_available=} 🔄"
+                    f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
+                    + f" Retrying in {sleep_time_available=} 🔄"
                 )
                 sleep(sleep_time_available)
                 continue
             # TODO (#67) : send system logs when the state changes
+            print(
+                f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | SUCCEEDED 💚"
+            )
             return deployment_status, deployment_status_reason
 
         sleep(sleep_time_available)

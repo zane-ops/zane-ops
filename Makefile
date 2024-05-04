@@ -23,5 +23,5 @@ dev: ### Start the DEV server
 	pnpm --recursive --parallel run dev
 
 reset-db: ### Wipe out the database and reset the application to its initial state
-   chmod a+x reset-db.sh 
-   ./reset-db.sh
+	chmod a+x reset-db.sh
+	./reset-db.sh
