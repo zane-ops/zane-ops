@@ -40,7 +40,7 @@ class URLDomainField(CharField):
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name", "is_staff"]
+        fields = ["username", "first_name", "last_name"]
 
 
 class ProjectSerializer(ModelSerializer):
@@ -70,7 +70,7 @@ class URLModelSerializer(ModelSerializer):
 class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
         model = models.DockerEnvVariable
-        fields = ["key", "value"]
+        fields = ["key"]
 
 
 class PortConfigurationSerializer(ModelSerializer):
@@ -79,11 +79,20 @@ class PortConfigurationSerializer(ModelSerializer):
         fields = ["host", "forwarded"]
 
 
+class HealthCheckSerializer(ModelSerializer):
+    class Meta:
+        model = models.HealthCheck
+        fields = ["type", "value", "timeout_seconds", "interval_seconds"]
+
+
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
-    ports = PortConfigurationSerializer(read_only=True, many=True, source="port_config")
-    env_variables = DockerEnvVariableSerializer(many=True)
+    ports = PortConfigurationSerializer(
+        read_only=True, many=True, source="port_config", default=[]
+    )
+    env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
+    healthcheck = HealthCheckSerializer(read_only=True)
 
     class Meta:
         model = models.DockerRegistryService
@@ -97,7 +106,14 @@ class DockerServiceSerializer(ModelSerializer):
             "command",
             "ports",
             "env_variables",
+            "healthcheck",
         ]
+
+
+class CaseInsensitiveChoiceField(serializers.ChoiceField):
+    def to_internal_value(self, data: str):
+        data = super().to_internal_value(data.lower())
+        return data
 
 
 class DockerServiceDeploymentSerializer(ModelSerializer):
@@ -111,4 +127,5 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "image_tag",
             "deployment_status",
             "deployment_status_reason",
+            "url",
         ]

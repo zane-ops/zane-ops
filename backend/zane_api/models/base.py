@@ -71,12 +71,31 @@ class URL(models.Model):
         )
 
 
+class HealthCheck(models.Model):
+    class HealthCheckType(models.TextChoices):
+        COMMAND = "COMMAND", _("Command")
+        PATH = "PATH", _("Path")
+
+    type = models.CharField(
+        max_length=255,
+        null=False,
+        choices=HealthCheckType.choices,
+        default=HealthCheckType.PATH,
+    )
+    value = models.CharField(max_length=255, null=False, default="/")
+    interval_seconds = models.PositiveIntegerField(default=15)
+    timeout_seconds = models.PositiveIntegerField(default=60)
+
+
 class BaseService(TimestampedModel):
     slug = models.SlugField(max_length=255)
     project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
     volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
+    healthcheck = models.ForeignKey(
+        to=HealthCheck, null=True, on_delete=models.SET_NULL
+    )
 
     class Meta:
         abstract = True
@@ -89,6 +108,8 @@ class BaseService(TimestampedModel):
         self.ports.filter().delete()
         self.urls.filter().delete()
         self.volumes.filter().delete()
+        if self.healthcheck is not None:
+            self.healthcheck.delete()
 
 
 class PortConfiguration(models.Model):
@@ -216,6 +237,7 @@ class BaseDeployment(models.Model):
 
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
+    url = models.URLField(null=True)
 
     class Meta:
         abstract = True
@@ -226,6 +248,8 @@ class DockerDeployment(BaseDeployment):
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
+        CANCELLED = "CANCELLED", _("Cancelled")
+        FAILED = "FAILED", _("Failed")
         PREPARING = "PREPARING", _("Preparing")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
@@ -238,7 +262,7 @@ class DockerDeployment(BaseDeployment):
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.QUEUED,
     )
-    deployment_status_reason = models.CharField(max_length=255, null=True)
+    deployment_status_reason = models.TextField(null=True, blank=True)
     is_current_production = models.BooleanField(default=True)
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
@@ -252,6 +276,10 @@ class DockerDeployment(BaseDeployment):
     @property
     def task_id(self):
         return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
+
+    @property
+    def unprefixed_hash(self):
+        return None if self.hash is None else self.hash.replace("dpl_dkr_", "")
 
 
 class GitDeployment(BaseDeployment):
@@ -271,6 +299,8 @@ class GitDeployment(BaseDeployment):
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
+        PREPARING = "PREPARING", _("Preparing")
+        FAILED = "FAILED", _("Failed")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
         BUILDING = "BUILDING", _("Building")
@@ -278,7 +308,7 @@ class GitDeployment(BaseDeployment):
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("UnHealthy")
         OFFLINE = "OFFLINE", _("Offline")
-        SLEEPING = "SLEEPING", _("Sleeping") # preview deploys
+        SLEEPING = "SLEEPING", _("Sleeping")  # preview deploys
 
     deployment_status = models.CharField(
         max_length=10,

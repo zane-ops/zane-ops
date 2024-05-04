@@ -5,6 +5,7 @@ billiard==4.2.0
 black==24.3.0
 celery==5.3.6
 certifi==2024.2.2
+cffi==1.16.0
 charset-normalizer==3.3.2
 cli-exit-tools==1.2.6
 click==8.1.7
@@ -13,7 +14,7 @@ click-plugins==1.1.1
 click-repl==0.3.0
 cron-descriptor==1.4.3
 dill==0.3.8
-django==5.0.2
+django==5.0.4
 django-celery-beat==2.6.0
 django-celery-results==2.5.1
 django-compat==1.0.15
@@ -25,7 +26,7 @@ drf-spectacular==0.27.1
 drf-standardized-errors==0.13.0
 faker==24.2.0
 flower==2.0.1
-gunicorn==21.2.0
+gunicorn==22.0.0
 humanize==4.9.0
 idna==3.6
 inflection==0.5.1
@@ -42,7 +43,9 @@ pip==24.0
 platformdirs==4.2.0
 prometheus-client==0.20.0
 prompt-toolkit==3.0.43
+psutil==5.9.8
 psycopg2-binary==2.9.9
+pycparser==2.22
 pycurl==7.45.3
 pygments==2.17.2
 python-crontab==3.0.0
@@ -66,6 +69,7 @@ uritemplate==4.1.1
 urllib3==2.2.0
 uv==0.1.0
 vine==5.1.0
+watchdog==4.0.0
 wcwidth==0.2.13
 wrapt==1.16.0
 wrapt-timeout-decorator==1.5.1

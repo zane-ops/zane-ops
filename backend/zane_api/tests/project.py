@@ -239,11 +239,9 @@ class ProjectUpdateViewTests(AuthAPITestCase):
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
             ),
-            format="json",
             data={
                 "slug": "kisshub",
             },
-            content_type="application/json",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_project: Project = Project.objects.filter(slug="kisshub").first()
@@ -262,7 +260,6 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         response = self.client.patch(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"slug": "Zane Ops"},
-            content_type="application/json",
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
@@ -271,7 +268,6 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         response = self.client.patch(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"name": "zenops"},
-            content_type="application/json",
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
@@ -301,7 +297,6 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         response = self.client.patch(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"slug": "zane-ops"},
-            content_type="application/json",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
