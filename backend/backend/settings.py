@@ -62,6 +62,7 @@ CACHES = {
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_EXPIRE_THRESHOLD = 2
+SESSION_EXTEND_PERIOD = 7
 # Application definition
 
 INSTALLED_APPS = [

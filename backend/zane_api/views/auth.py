@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from django.conf import settings
-from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
@@ -88,7 +87,7 @@ class AuthedView(APIView):
             now + timedelta(days=settings.SESSION_EXPIRE_THRESHOLD)
         ):
             request.session.set_expiry(
-                now + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+                now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
             )
 
         response = AuthedSuccessResponseSerializer({"user": request.user})
