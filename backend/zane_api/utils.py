@@ -135,3 +135,11 @@ def cache_lock(lock_id: str, timeout=60, margin: int = 5):
         cache.delete(lock_key)  # Release the lock
 
 
+def format_seconds(seconds: float):
+    seconds = round(seconds)  # Round to the nearest integer
+    minutes = seconds // 60
+    remaining_seconds = seconds % 60
+    if minutes > 0:
+        return f"{minutes}m{remaining_seconds:02}s"
+    else:
+        return f"{remaining_seconds}s"

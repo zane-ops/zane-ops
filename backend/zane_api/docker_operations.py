@@ -24,13 +24,16 @@ from .models import (
     DockerDeployment,
     HealthCheck,
 )
-from .utils import strip_slash_if_exists, DockerSwarmTask, DockerSwarmTaskState
+from .utils import (
+    strip_slash_if_exists,
+    DockerSwarmTask,
+    DockerSwarmTaskState,
+    format_seconds,
+)
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
 DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 10  # seconds
-DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
-DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5  # seconds
 MAX_SERVICE_RESTART_COUNT = 3
 
 
@@ -138,9 +141,9 @@ def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
             while len(task_list) > 0:
                 print(
                     f"service {swarm_service.name=} is not down yet, "
-                    + f"retrying in {DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
                 )
-                sleep(DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                 task_list = swarm_service.tasks()
                 continue
             print(f"service {swarm_service.name=} is down, YAY !! 🎉")
@@ -724,7 +727,7 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
 def get_updated_docker_service_deployment_status(
     deployment: DockerDeployment,
     auth_token: str,
-    wait_for_healthy=False,
+    retry_if_not_healthy=False,
 ) -> tuple[DockerDeployment.DeploymentStatus, str]:
     client = get_docker_client()
 
@@ -740,9 +743,13 @@ def get_updated_docker_service_deployment_status(
     healthcheck_timeout = (
         healthcheck.timeout_seconds
         if healthcheck is not None
-        else DEFAULT_HEALTHCHECK_TIMEOUT
+        else settings.DEFAULT_HEALTHCHECK_TIMEOUT
     )
     healthcheck_attempts = 0
+    deployment_status, deployment_status_reason = (
+        DockerDeployment.DeploymentStatus.UNHEALTHY,
+        "The service failed to meet the healthcheck requirements when starting the service.",
+    )
     while (monotonic() - start_time) < healthcheck_timeout:
         healthcheck_attempts += 1
         task_list = swarm_service.tasks(
@@ -756,13 +763,14 @@ def get_updated_docker_service_deployment_status(
             )
 
         sleep_time_available = min(
-            float(DEFAULT_HEALTHCHECK_WAIT_INTERVAL),
+            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL),
             healthcheck_time_left - 1,
             healthcheck_time_left,
         )
         # TODO (#67) : send system logs when the state changes
         print(
-            f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | {healthcheck_time_left=} 💓"
+            f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+            f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
         )
 
         if len(task_list) == 0:
@@ -823,11 +831,18 @@ def get_updated_docker_service_deployment_status(
             if most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING:
                 if healthcheck is not None:
 
-                    @timeout(healthcheck_time_left)
+                    @timeout(
+                        healthcheck_time_left,
+                        exception_message="The service failed to meet the healthcheck in the timeout provided",
+                    )
                     def run_healthcheck():
                         nonlocal deployment_status
                         nonlocal deployment_status_reason
                         nonlocal client
+
+                        print(
+                            f"Running custom healthcheck {healthcheck.type=} - {healthcheck.value=}"
+                        )
                         if healthcheck.type == HealthCheck.HealthCheckType.COMMAND:
                             container = client.containers.get(
                                 most_recent_swarm_task.container_id
@@ -860,7 +875,7 @@ def get_updated_docker_service_deployment_status(
                             response = requests.get(
                                 full_url,
                                 headers={"Authorization": f"Token {auth_token}"},
-                                timeout=5,
+                                timeout=min(healthcheck_time_left, 5),
                             )
                             if response.status_code == status.HTTP_200_OK:
                                 deployment_status = (
@@ -875,30 +890,30 @@ def get_updated_docker_service_deployment_status(
                     try:
                         run_healthcheck()
                     except TimeoutError as e:
+                        deployment_status = deployment.DeploymentStatus.UNHEALTHY
                         deployment_status_reason = str(e)
                         break
 
             if (
-                wait_for_healthy
-                and most_recent_swarm_task.state != DockerSwarmTaskState.RUNNING
+                retry_if_not_healthy
+                and deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
             ):
                 # TODO (#67) : send system logs when the state changes
                 print(
                     f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
-                    + f" Retrying in {sleep_time_available=} 🔄"
+                    + f" Retrying in {format_seconds(sleep_time_available)} 🔄"
                 )
                 sleep(sleep_time_available)
                 continue
             # TODO (#67) : send system logs when the state changes
+
             print(
-                f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | SUCCEEDED 💚"
+                f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+                f"| finished with {deployment_status=} ✅"
             )
             return deployment_status, deployment_status_reason
 
         sleep(sleep_time_available)
         continue
 
-    return (
-        DockerDeployment.DeploymentStatus.UNHEALTHY,
-        "The service failed to meet the healthcheck requirements when starting the service.",
-    )
+    return deployment_status, deployment_status_reason

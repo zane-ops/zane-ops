@@ -1803,7 +1803,6 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         }
 
         mock_monotonic.side_effect = [0, 14, 15, 31]
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),

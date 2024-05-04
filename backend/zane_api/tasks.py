@@ -1,9 +1,10 @@
 import json
 from typing import Any
 
+import billiard.einfo as e_info
 import docker.errors
-from billiard.einfo import ExceptionWithTraceback
 from celery import shared_task, Task
+from django.conf import settings
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
@@ -33,7 +34,7 @@ def docker_service_deploy_failure(
     task_id: str,
     args: list[Any],
     kwargs: dict[str, str],
-    einfo: ExceptionWithTraceback,
+    einfo: e_info.ExceptionWithTraceback,
 ):
     print(f"ON DEPLOYMENT FAILURE {exc=}")
     deployment_hash = kwargs["deployment_hash"]
@@ -92,7 +93,7 @@ def deploy_docker_service(
                 get_updated_docker_service_deployment_status(
                     deployment,
                     auth_token=auth_token,
-                    wait_for_healthy=True,
+                    retry_if_not_healthy=True,
                 )
             )
             if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
@@ -104,7 +105,7 @@ def deploy_docker_service(
                         every=(
                             healthcheck.interval_seconds
                             if healthcheck is not None
-                            else 30
+                            else settings.DEFAULT_HEALTHCHECK_INTERVAL
                         ),
                         period=IntervalSchedule.SECONDS,
                     ),
