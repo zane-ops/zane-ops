@@ -2878,7 +2878,6 @@ components:
         deployment_status_reason:
           type: string
           nullable: true
-          maxLength: 255
         url:
           type: string
           format: uri
@@ -3112,7 +3111,7 @@ components:
         timeout_seconds:
           type: integer
           minimum: 5
-          default: 300
+          default: 60
         interval_seconds:
           type: string
           default: '30'
@@ -3231,7 +3230,6 @@ components:
           type: string
       required:
       - success
-      - token
     LoginUsernameErrorComponent:
       type: object
       properties:
