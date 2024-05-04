@@ -84,7 +84,7 @@ class HealthCheck(models.Model):
     )
     value = models.CharField(max_length=255, null=False, default="/")
     interval_seconds = models.PositiveIntegerField(default=15)
-    timeout_seconds = models.PositiveIntegerField(default=300)
+    timeout_seconds = models.PositiveIntegerField(default=60)
 
 
 class BaseService(TimestampedModel):
