@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
@@ -21,7 +22,7 @@ from .. import serializers
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
-    token = serializers.CharField()
+    token = serializers.CharField(required=False)
 
 
 class LoginRequestSerializer(serializers.Serializer):
@@ -56,7 +57,7 @@ class LoginView(APIView):
                     user=user
                 )  # this is fine, Token is only used to authenticated internally
                 response = LoginSuccessResponseSerializer(
-                    {"success": True, "token": token.key}
+                    {"success": True, "token": token.key if settings.DEBUG else None}
                 )
                 query_params = request.query_params.dict()
                 redirect_uri = query_params.get("redirect_to")
