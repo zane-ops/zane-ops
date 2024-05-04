@@ -1,9 +1,12 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -78,6 +81,15 @@ class AuthedView(APIView):
         operation_id="getAuthedUser",
     )
     def get(self, request: Request):
+        now = timezone.now()
+
+        if request.session.get_expiry_date() < (
+            now + timedelta(days=settings.SESSION_EXPIRE_THRESHOLD)
+        ):
+            request.session.set_expiry(
+                now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
+            )
+
         response = AuthedSuccessResponseSerializer({"user": request.user})
         return Response(
             response.data,
