@@ -64,6 +64,8 @@ Should we ?
 - Make sure that each deployment creates a service alias `service-alias-<deployment-hash>.zaneops.internal`
   in the same network as the project, to use for the forwarded URL
 - Prevent deployment task from running if failed or cancelled
+- Make sure to expose a service to caddy only when the deploy has succeeded, same for marking the deployment as
+  production
 - Cancel deployment if possible (if in `QUEUED`, `PREPARING` or `` state)
 - Delete resources for a failed deployment
     - If it has volumes, we need to make sure to delete only the volumes added in the deployment
