@@ -201,6 +201,19 @@ function Header() {
                   </Menubar>
                 </div>
               </div>
+
+              <div className="flex justify-between px-2 py-5 items-center border-b border-border">
+                <p>{user.username}</p>
+                <CircleUser className="w-8 opacity-70" />
+              </div>
+
+              <button
+                className="p-2 rounded-md border border-destructive-foreground text-center"
+                onClick={() => mutate()}
+                disabled={isPending}
+              >
+                {isPending ? "Logging out..." : <div>Log Out</div>}
+              </button>
             </SheetContent>
           </Sheet>
         </div>
