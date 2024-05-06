@@ -78,7 +78,8 @@ class ArchivedURL(models.Model):
 
 class ArchivedVolume(TimestampArchivedModel):
     name = models.CharField(max_length=255)
-    containerPath = models.CharField(max_length=255)
+    container_path = models.CharField(max_length=255)
+    host_path = models.CharField(max_length=255, null=True)
     original_id = models.CharField(max_length=255)
 
     def __str__(self):
@@ -165,7 +166,8 @@ class ArchivedDockerService(ArchivedBaseService):
             [
                 ArchivedVolume(
                     name=volume.name,
-                    containerPath=volume.containerPath,
+                    container_path=volume.container_path,
+                    host_path=volume.host_path,
                     original_id=volume.id,
                 )
                 for volume in service.volumes.all()

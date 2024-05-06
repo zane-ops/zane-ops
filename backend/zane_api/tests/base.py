@@ -304,7 +304,7 @@ class FakeDockerClient:
         volumes: dict[str, str] = {}
         for mount in mounts:
             volume_name, mount_path, _ = mount.split(":")
-            if volume_name not in self.volume_map:
+            if not volume_name.startswith("/") and volume_name not in self.volume_map:
                 raise docker.errors.NotFound("Volume not created")
             volumes[volume_name] = mount_path
 

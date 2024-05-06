@@ -54,8 +54,9 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 
 
 class VolumeRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100)
+    name = serializers.CharField(max_length=100, required=False)
     mount_path = serializers.CharField(max_length=255)
+    host_path = serializers.URLPathField(max_length=255, required=False)
 
 
 class URLRequestSerializer(serializers.Serializer):
@@ -357,8 +358,9 @@ class CreateDockerServiceAPIView(APIView):
                 created_volumes = Volume.objects.bulk_create(
                     [
                         Volume(
-                            name=volume["name"],
-                            containerPath=volume["mount_path"],
+                            name=volume.get("name", fake.slug().lower()),
+                            container_path=volume["mount_path"],
+                            host_path=volume.get("host_path"),
                         )
                         for volume in volumes_request
                     ]

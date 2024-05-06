@@ -225,11 +225,17 @@ class GitEnvVariable(BaseEnvVariable):
 
 class Volume(TimestampedModel):
     name = models.CharField(max_length=255)
-    containerPath = models.CharField(max_length=255)
+    container_path = models.CharField(max_length=255)
+    host_path = models.CharField(
+        max_length=255, null=True, validators=[validate_url_path]
+    )
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix="vol_")
 
     def __str__(self):
         return f"Volume({self.name})"
+
+    class Meta:
+        indexes = [models.Index(fields=["host_path"])]
 
 
 class BaseDeployment(models.Model):

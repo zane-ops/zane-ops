@@ -295,17 +295,6 @@ def create_docker_volume(volume: Volume, service: BaseService):
     )
 
 
-def remove_docker_volume(volume: Volume):
-    client = get_docker_client()
-    try:
-        docker_volume = client.volumes.get(get_volume_resource_name(volume))
-    except docker.errors.NotFound:
-        # We will assume the volume has been deleted before
-        pass
-    else:
-        docker_volume.remove(force=True)
-
-
 def get_docker_volume_size(volume: Volume) -> int:
     client = get_docker_client()
     docker_volume_name = get_volume_resource_name(volume)
@@ -384,8 +373,12 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
             ]
         }
     )
-    for docker_volume, volume in zip(docker_volume_list, service.volumes.all()):
-        mounts.append(f"{docker_volume.name}:{volume.containerPath}:rw")
+    for docker_volume, volume in zip(
+        docker_volume_list, service.volumes.filter(host_path__isnull=True)
+    ):
+        mounts.append(f"{docker_volume.name}:{volume.container_path}:rw")
+    for volume in service.volumes.filter(host_path__isnull=False):
+        mounts.append(f"{volume.host_path}:{volume.container_path}:rw")
 
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
