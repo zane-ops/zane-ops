@@ -390,10 +390,6 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
 
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
-    # We disable zero-downtime deployments for services with volumes so that we don't
-    # get data corruption when two live containers want to write into the volume
-    update_order = "start-first" if len(service.volumes.all()) == 0 else "stop-first"
-
     client.services.create(
         image=f"{service.image_repository}:{deployment.image_tag}",
         name=get_docker_service_resource_name(
