@@ -373,12 +373,20 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
             ]
         }
     )
+    access_mode_map = {
+        Volume.VolumeMode.READ_WRITE: "rw",
+        Volume.VolumeMode.READ_ONLY: "ro",
+    }
     for docker_volume, volume in zip(
         docker_volume_list, service.volumes.filter(host_path__isnull=True)
     ):
-        mounts.append(f"{docker_volume.name}:{volume.container_path}:rw")
+        mounts.append(
+            f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+        )
     for volume in service.volumes.filter(host_path__isnull=False):
-        mounts.append(f"{volume.host_path}:{volume.container_path}:rw")
+        mounts.append(
+            f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
+        )
 
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 

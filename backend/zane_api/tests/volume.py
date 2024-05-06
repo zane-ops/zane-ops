@@ -7,6 +7,7 @@ from . import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import (
     create_docker_volume,
     get_docker_service_resource_name,
+    get_volume_resource_name,
 )
 from ..models import Project, Volume, DockerRegistryService
 
@@ -36,7 +37,7 @@ class DockerVolumeTests(AuthAPITestCase):
         "zane_api.docker_operations.get_docker_client",
         return_value=FakeDockerClient(),
     )
-    def test_create_service_with_volume_supports_absolute_path(
+    def test_create_service_with_volume_supports_host_path(
         self, mock_fake_docker: Mock, _: Mock
     ):
         create_service_payload = {
@@ -78,6 +79,103 @@ class DockerVolumeTests(AuthAPITestCase):
             )
         ]
         self.assertEqual(1, len(fake_service.attached_volumes))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_with_volume_supports_access_mode(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        create_service_payload = {
+            "slug": "zane-on-zane",
+            "image": "ghcr.io/zane-ops/zane-api",
+            "volumes": [
+                {
+                    "name": "Docker Socket",
+                    "mount_path": "/var/run/docker.sock",
+                    "mode": "ro",
+                }
+            ],
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": "zane-ops"}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="zane-on-zane"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertEqual(1, created_service.volumes.count())
+
+        created_volume: Volume = created_service.volumes.first()
+        self.assertEqual(Volume.VolumeMode.READ_ONLY, created_volume.mode)
+
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        fake_service = fake_docker_client.service_map[
+            get_docker_service_resource_name(
+                service_id=created_service.id,
+                project_id=created_service.project.id,
+            )
+        ]
+        fake_volume = fake_service.attached_volumes.get(
+            get_volume_resource_name(created_volume)
+        )
+        self.assertEqual("ro", fake_volume.get("mode"))
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch(
+        "zane_api.docker_operations.get_docker_client",
+        return_value=FakeDockerClient(),
+    )
+    def test_create_service_with_volume_supports_default_access_mode_is_read_write(
+        self, mock_fake_docker: Mock, _: Mock
+    ):
+        create_service_payload = {
+            "slug": "zane-on-zane",
+            "image": "ghcr.io/zane-ops/zane-api",
+            "volumes": [
+                {
+                    "name": "Docker Socket",
+                    "mount_path": "/var/run/docker.sock",
+                }
+            ],
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": "zane-ops"}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="zane-on-zane"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertEqual(1, created_service.volumes.count())
+
+        created_volume: Volume = created_service.volumes.first()
+        self.assertEqual(Volume.VolumeMode.READ_WRITE, created_volume.mode)
+
+        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
+        fake_service = fake_docker_client.service_map[
+            get_docker_service_resource_name(
+                service_id=created_service.id,
+                project_id=created_service.project.id,
+            )
+        ]
+        fake_volume = fake_service.attached_volumes.get(
+            get_volume_resource_name(created_volume)
+        )
+        self.assertEqual("rw", fake_volume.get("mode"))
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(

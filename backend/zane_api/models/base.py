@@ -224,6 +224,16 @@ class GitEnvVariable(BaseEnvVariable):
 
 
 class Volume(TimestampedModel):
+    class VolumeMode(models.TextChoices):
+        READ_ONLY = "READ_ONLY", _("Read-Only")
+        READ_WRITE = "READ_WRITE", _("Read-Write")
+
+    mode = models.CharField(
+        max_length=255,
+        null=False,
+        choices=VolumeMode.choices,
+        default=VolumeMode.READ_WRITE,
+    )
     name = models.CharField(max_length=255)
     container_path = models.CharField(max_length=255)
     host_path = models.CharField(

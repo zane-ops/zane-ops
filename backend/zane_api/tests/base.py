@@ -142,7 +142,7 @@ class FakeDockerClient:
             self,
             parent: "FakeDockerClient",
             name: str,
-            volumes: dict[str, str] = None,
+            volumes: dict[str, dict[str, str]] = None,
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
         ):
@@ -301,12 +301,15 @@ class FakeDockerClient:
     ):
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")
-        volumes: dict[str, str] = {}
+        volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
-            volume_name, mount_path, _ = mount.split(":")
+            volume_name, mount_path, mode = mount.split(":")
             if not volume_name.startswith("/") and volume_name not in self.volume_map:
                 raise docker.errors.NotFound("Volume not created")
-            volumes[volume_name] = mount_path
+            volumes[volume_name] = {
+                "mount_path": mount_path,
+                "mode": mode,
+            }
 
         envs: dict[str, str] = {}
         for var in env:
