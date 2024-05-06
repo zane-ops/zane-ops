@@ -79,7 +79,7 @@ def deploy_docker_service(
 
             # TODO (#67) : send system logs when the resources are created
             service = deployment.service
-            for volume in service.volumes.all():
+            for volume in service.volumes.filter(host_path__isnull=True):
                 create_docker_volume(volume, service=service)
             create_service_from_docker_registry(deployment)
 

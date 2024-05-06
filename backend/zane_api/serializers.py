@@ -58,7 +58,15 @@ class ArchivedProjectSerializer(ModelSerializer):
 class VolumeSerializer(ModelSerializer):
     class Meta:
         model = models.Volume
-        fields = ["created_at", "updated_at", "id", "name", "containerPath"]
+        fields = [
+            "created_at",
+            "updated_at",
+            "id",
+            "name",
+            "container_path",
+            "host_path",
+            "mode",
+        ]
 
 
 class URLModelSerializer(ModelSerializer):

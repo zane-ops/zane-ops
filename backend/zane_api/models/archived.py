@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from .base import Project, DockerRegistryService, DockerDeployment
 from ..utils import strip_slash_if_exists
@@ -77,8 +78,19 @@ class ArchivedURL(models.Model):
 
 
 class ArchivedVolume(TimestampArchivedModel):
+    class VolumeMode(models.TextChoices):
+        READ_ONLY = "READ_ONLY", _("Read-Only")
+        READ_WRITE = "READ_WRITE", _("Read-Write")
+
+    mode = models.CharField(
+        max_length=255,
+        null=False,
+        choices=VolumeMode.choices,
+        default=VolumeMode.READ_WRITE,
+    )
     name = models.CharField(max_length=255)
-    containerPath = models.CharField(max_length=255)
+    container_path = models.CharField(max_length=255)
+    host_path = models.CharField(max_length=255, null=True)
     original_id = models.CharField(max_length=255)
 
     def __str__(self):
@@ -165,8 +177,10 @@ class ArchivedDockerService(ArchivedBaseService):
             [
                 ArchivedVolume(
                     name=volume.name,
-                    containerPath=volume.containerPath,
+                    container_path=volume.container_path,
+                    host_path=volume.host_path,
                     original_id=volume.id,
+                    mode=volume.mode,
                 )
                 for volume in service.volumes.all()
             ]

@@ -54,8 +54,16 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 
 
 class VolumeRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100)
+    name = serializers.CharField(max_length=100, required=False)
     mount_path = serializers.CharField(max_length=255)
+    host_path = serializers.URLPathField(max_length=255, required=False)
+    VOLUME_MODE_CHOICES = (
+        ("ro", _("READ_ONLY")),
+        ("rw", _("READ_WRITE")),
+    )
+    mode = serializers.ChoiceField(
+        required=False, choices=VOLUME_MODE_CHOICES, default="rw"
+    )
 
 
 class URLRequestSerializer(serializers.Serializer):
@@ -354,11 +362,17 @@ class CreateDockerServiceAPIView(APIView):
 
                 # Create volumes if exists
                 volumes_request = data.get("volumes", [])
+                volume_mode_map = {
+                    "rw": Volume.VolumeMode.READ_WRITE,
+                    "ro": Volume.VolumeMode.READ_ONLY,
+                }
                 created_volumes = Volume.objects.bulk_create(
                     [
                         Volume(
-                            name=volume["name"],
-                            containerPath=volume["mount_path"],
+                            name=volume.get("name", fake.slug().lower()),
+                            container_path=volume["mount_path"],
+                            host_path=volume.get("host_path"),
+                            mode=volume_mode_map[volume.get("mode")],
                         )
                         for volume in volumes_request
                     ]

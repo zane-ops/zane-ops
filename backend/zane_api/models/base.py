@@ -224,12 +224,28 @@ class GitEnvVariable(BaseEnvVariable):
 
 
 class Volume(TimestampedModel):
+    class VolumeMode(models.TextChoices):
+        READ_ONLY = "READ_ONLY", _("Read-Only")
+        READ_WRITE = "READ_WRITE", _("Read-Write")
+
+    mode = models.CharField(
+        max_length=255,
+        null=False,
+        choices=VolumeMode.choices,
+        default=VolumeMode.READ_WRITE,
+    )
     name = models.CharField(max_length=255)
-    containerPath = models.CharField(max_length=255)
+    container_path = models.CharField(max_length=255)
+    host_path = models.CharField(
+        max_length=255, null=True, validators=[validate_url_path]
+    )
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix="vol_")
 
     def __str__(self):
         return f"Volume({self.name})"
+
+    class Meta:
+        indexes = [models.Index(fields=["host_path"])]
 
 
 class BaseDeployment(models.Model):
@@ -339,19 +355,19 @@ class GitDeployment(BaseDeployment):
     commit_author_avatar_url = models.URLField(null=True)
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_git_")
 
-    @property
-    def image_tags(self) -> List[str]:
-        tags = []  # type: List[str]
-        if self.is_production:
-            tags.append("latest")
-        tags.append(f"{self.branch}-{self.commit_hash}")
-        return list(map(tags, lambda tag: f"{self.image_name}:{tag}"))
-
-    @property
-    def image_name(self):
-        project_prefix = self.service.project.slug
-        service_prefix = self.service.slug
-        return f"{project_prefix}-{service_prefix}"
+    # @property
+    # def image_tags(self) -> List[str]:
+    #     tags = []  # type: List[str]
+    #     if self.is_current_production:
+    #         tags.append("latest")
+    #     tags.append(f"{self.branch}-{self.commit_hash}")
+    #     return list(map(tags, lambda tag: f"{self.image_name}:{tag}"))
+    #
+    # @property
+    # def image_name(self):
+    #     project_prefix = self.service.project.slug
+    #     service_prefix = self.service.slug
+    #     return f"{project_prefix}-{service_prefix}"
 
     # @property
     # def domain(self):
