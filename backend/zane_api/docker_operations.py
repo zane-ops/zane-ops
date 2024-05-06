@@ -753,17 +753,20 @@ def get_updated_docker_service_deployment_status(
             filters={"label": f"deployment_hash={deployment.hash}"}
         )
         healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
-        if healthcheck_time_left <= 0:
+        if healthcheck_time_left < 1:
             raise TimeoutError(
                 "Failed to run the healthcheck because there is no time left,"
                 + " please make sure the healthcheck timeout is large enough"
             )
 
+        min_time_left = healthcheck_time_left
+        if healthcheck_time_left - 1 > 0:  # we don't want a sleep time of `0`
+            min_time_left = min(healthcheck_time_left - 1, healthcheck_time_left)
+
         sleep_time_available = min(
-            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL),
-            healthcheck_time_left - 1,
-            healthcheck_time_left,
+            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL), min_time_left
         )
+
         # TODO (#67) : send system logs when the state changes
         print(
             f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
