@@ -1842,6 +1842,8 @@ components:
       - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXHostPathErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXModeErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceHealthcheckTypeErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceHealthcheckValueErrorComponent'
@@ -1873,6 +1875,8 @@ components:
           volumes.INDEX.non_field_errors: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
           volumes.INDEX.name: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
           volumes.INDEX.mount_path: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
+          volumes.INDEX.host_path: '#/components/schemas/CreateDockerServiceVolumesINDEXHostPathErrorComponent'
+          volumes.INDEX.mode: '#/components/schemas/CreateDockerServiceVolumesINDEXModeErrorComponent'
           healthcheck.non_field_errors: '#/components/schemas/CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
           healthcheck.type: '#/components/schemas/CreateDockerServiceHealthcheckTypeErrorComponent'
           healthcheck.value: '#/components/schemas/CreateDockerServiceHealthcheckValueErrorComponent'
@@ -2328,6 +2332,58 @@ components:
       required:
       - errors
       - type
+    CreateDockerServiceVolumesINDEXHostPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.host_path
+          type: string
+          description: '* `volumes.INDEX.host_path` - volumes.INDEX.host_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceVolumesINDEXModeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.mode
+          type: string
+          description: '* `volumes.INDEX.mode` - volumes.INDEX.mode'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateDockerServiceVolumesINDEXMountPathErrorComponent:
       type: object
       properties:
@@ -2375,7 +2431,6 @@ components:
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -2384,7 +2439,6 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -3283,6 +3337,14 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ModeEnum:
+      enum:
+      - ro
+      - rw
+      type: string
+      description: |-
+        * `ro` - READ_ONLY
+        * `rw` - READ_WRITE
     ParseError:
       type: object
       properties:
@@ -3641,11 +3703,15 @@ components:
         name:
           type: string
           maxLength: 255
-        containerPath:
+        container_path:
           type: string
           maxLength: 255
+        host_path:
+          type: string
+          nullable: true
+          maxLength: 255
       required:
-      - containerPath
+      - container_path
       - created_at
       - name
       - updated_at
@@ -3665,9 +3731,15 @@ components:
         mount_path:
           type: string
           maxLength: 255
+        host_path:
+          type: string
+          maxLength: 255
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          default: rw
       required:
       - mount_path
-      - name
   securitySchemes:
     cookieAuth:
       type: apiKey
