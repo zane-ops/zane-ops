@@ -65,6 +65,7 @@ class VolumeSerializer(ModelSerializer):
             "name",
             "container_path",
             "host_path",
+            "mode",
         ]
 
 
