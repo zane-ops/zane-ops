@@ -1,6 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
-  AlarmCheck,
   AlertTriangle,
   ArrowDown,
   Check,
@@ -9,11 +8,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
-  CircleDashed,
   Folder,
-  FolderArchive,
-  Globe,
-  Hammer,
   Rocket,
   Search,
   Settings,
@@ -24,17 +19,7 @@ import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { MetaTitle } from "~/components/meta-title";
 import { Input } from "~/components/ui/input";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious
-} from "~/components/ui/pagination";
 
-import { NavLink } from "~/components/nav-link";
 import { Button } from "~/components/ui/button";
 import {
   Menubar,
@@ -75,7 +60,7 @@ function AuthedView() {
     <dl>
       <h1>
         <MetaTitle title="Dashboard" />
-        <TableDemo />
+        <ProjectList />
       </h1>
     </dl>
   );
@@ -108,7 +93,7 @@ const projects = [
   }
 ];
 
-export function TableDemo() {
+export function ProjectList() {
   return (
     <main>
       <div className="md:my-10 my-5">

@@ -37,9 +37,7 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
-  SheetTitle,
   SheetTrigger
 } from "~/components/ui/sheet";
 import { userKeys } from "~/key-factories";
@@ -154,7 +152,7 @@ function Header() {
         <div className="md:hidden block">
           <Sheet>
             <SheetTrigger>
-              <Menu className="" />
+              <Menu />
             </SheetTrigger>
             <SheetContent className="border flex rounded-xl  flex-col gap-5 w-full h-[calc(100dvh-100px)] border-border">
               <SheetHeader>
@@ -222,27 +220,27 @@ function Header() {
   );
 }
 
-const linksIconWidth = 15;
-const links = [
+const socialLinksIconWidth = 15;
+const socialLinks = [
   {
     name: "Feedback",
     url: " https://github.com/zane-ops/zane-ops/discussions",
-    icon: <Send width={linksIconWidth} />
+    icon: <Send width={socialLinksIconWidth} />
   },
   {
     name: "Docs",
     url: "https://github.com/zane-ops/zane-ops/blob/main/docs.md",
-    icon: <BookOpen width={linksIconWidth} />
+    icon: <BookOpen width={socialLinksIconWidth} />
   },
   {
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
-    icon: <HeartHandshake width={linksIconWidth} />
+    icon: <HeartHandshake width={socialLinksIconWidth} />
   },
   {
     name: "Twitter",
     url: "https://twitter.com/zaneopsdev",
-    icon: <Twitter width={linksIconWidth} />
+    icon: <Twitter width={socialLinksIconWidth} />
   }
 ];
 
@@ -250,7 +248,7 @@ function Footer() {
   return (
     <>
       <div className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-4 md:gap-10">
-        {links.map((link) => (
+        {socialLinks.map((link) => (
           <a
             key={link.name}
             className="flex underline items-center gap-2"
