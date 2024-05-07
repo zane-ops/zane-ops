@@ -1,18 +1,7 @@
 from urllib.parse import urlparse
 
-from crontab import CronTab
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-
-
-def validate_crontab(value: str):
-    try:
-        _ = CronTab(value)
-    except ValueError:
-        raise ValidationError(
-            "%(value)s is not a valid CRONTAB expression",
-            params={"value": value},
-        )
 
 
 def validate_url_domain(value: str):

@@ -3,11 +3,11 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
 from shortuuid.django_fields import ShortUUIDField
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
-from ..validators import validate_url_domain, validate_crontab, validate_url_path
+from ..validators import validate_url_domain, validate_url_path
 
 
 class TimestampedModel(models.Model):
@@ -461,7 +461,7 @@ class HttpLog(Log):
 class CRON(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=255)
-    schedule = models.CharField(max_length=255, validators=[validate_crontab])
+    schedule = models.ForeignKey(to=CrontabSchedule, on_delete=models.RESTRICT)
     archived = models.BooleanField(default=False)
 
     def __str__(self):
