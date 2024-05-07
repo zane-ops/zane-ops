@@ -6,7 +6,11 @@ app_name = "zane_api"
 
 urlpatterns = [
     re_path(r"^auth/me/?$", views.AuthedView.as_view(), name="auth.me"),
-    re_path(r"^auth/me/with-token/?$", views.TokenAuthedView.as_view(), name="auth.me.with_token"),
+    re_path(
+        r"^auth/me/with-token/?$",
+        views.TokenAuthedView.as_view(),
+        name="auth.me.with_token",
+    ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(r"^csrf/?$", views.CSRFCookieView.as_view(), name="csrf"),
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
@@ -45,7 +49,13 @@ urlpatterns = [
         name="services.docker.create",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker/?(?P<service_slug>[a-z0-9]+(?:-["
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/update-service/docker/(?P<service_slug>[a-z0-9]+(?:-["
+        r"a-z0-9]+)*)/?$",
+        views.CreateDockerServiceAPIView.as_view(),
+        name="services.docker.update",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker/(?P<service_slug>[a-z0-9]+(?:-["
         r"a-z0-9]+)*)/?$",
         views.ArchiveDockerServiceAPIView.as_view(),
         name="services.docker.archive",
