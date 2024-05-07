@@ -81,3 +81,4 @@ Should we ?
   one
     - will be included: healthcheck, urls, ports (config), tag, image and volumes, envs will stay the same.
     - We need a URL that computes the changeset between two deploys to warn the user about the changes when deploying
+- Variables are directly linked to an environment ?

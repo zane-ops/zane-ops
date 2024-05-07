@@ -18,6 +18,8 @@ from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceResponseSerializer,
     DockerServiceDeploymentFilter,
+    DockerServiceUpdateRequestSerializer,
+    DockerServiceDeployRequestSerializer,
 )
 from .. import serializers
 from ..models import (
@@ -242,15 +244,26 @@ class CreateDockerServiceAPIView(APIView):
                 response = DockerServiceResponseSerializer({"service": service})
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
+
+class UpdateDockerServiceAPIView(APIView):
+    serializer = DockerServiceResponseSerializer
+
     @extend_schema(
-        request=DockerServiceCreateRequestSerializer,
-        responses={
-            409: serializers.ErrorResponse409Serializer,
-            200: DockerServiceResponseSerializer,
-        },
+        request=DockerServiceUpdateRequestSerializer,
         operation_id="updateDockerService",
     )
     def put(self, request: Request, project_slug: str, service_slug: str):
+        return Response()
+
+
+class DeployDockerServiceAPIView(APIView):
+    serializer = DockerServiceResponseSerializer
+
+    @extend_schema(
+        request=DockerServiceDeployRequestSerializer,
+        operation_id="deployDockerService",
+    )
+    def patch(self, request: Request, project_slug: str, service_slug: str):
         return Response()
 
 

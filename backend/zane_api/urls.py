@@ -51,8 +51,14 @@ urlpatterns = [
     re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/update-service/docker/(?P<service_slug>[a-z0-9]+(?:-["
         r"a-z0-9]+)*)/?$",
-        views.CreateDockerServiceAPIView.as_view(),
+        views.UpdateDockerServiceAPIView.as_view(),
         name="services.docker.update",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deploy-service/docker/(?P<service_slug>[a-z0-9]+(?:-["
+        r"a-z0-9]+)*)/?$",
+        views.DeployDockerServiceAPIView.as_view(),
+        name="services.docker.deploy",
     ),
     re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker/(?P<service_slug>[a-z0-9]+(?:-["
