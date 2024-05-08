@@ -101,15 +101,6 @@ class CustomAPIClient(APIClient):
 class APITestCase(TestCase):
     def setUp(self):
         self.client = CustomAPIClient(parent=self)
-
-    def tearDown(self):
-        cache.clear()
-
-
-class AuthAPITestCase(APITestCase):
-    def setUp(self):
-        super().setUp()
-        User.objects.create_user(username="Fredkiss3", password="password")
         self.fake_docker_client = FakeDockerClient()
 
         # these functions are always patched
@@ -122,6 +113,15 @@ class AuthAPITestCase(APITestCase):
         ).start()
 
         self.addCleanup(patch.stopall)
+
+    def tearDown(self):
+        cache.clear()
+
+
+class AuthAPITestCase(APITestCase):
+    def setUp(self):
+        super().setUp()
+        User.objects.create_user(username="Fredkiss3", password="password")
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
