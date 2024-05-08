@@ -20,7 +20,7 @@ services:
                watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- celery -A backend worker -E -l info"
     volumes:
       - ../backend:/code
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - db
       - redis

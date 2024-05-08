@@ -292,6 +292,7 @@ ZANE_APP_SERVICE_HOST_FROM_PROXY = (
     if ENVIRONMENT != PRODUCTION_ENV
     else "zane-api.zaneops.internal:8000"
 )
+ZANE_PRIVATE_DOMAIN = "zaneops.internal"
 
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
