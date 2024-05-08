@@ -630,7 +630,11 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 timeout=5,
             )
 
+
+def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> None:
     # add URL conf for deployment
+    service = deployment.service
+    http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if deployment.url is not None:
         response = requests.get(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}", timeout=5
