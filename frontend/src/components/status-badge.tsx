@@ -8,10 +8,7 @@ interface StatusBadgeProps {
   children: ReactNode;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({
-  color,
-  children
-}) => {
+export function StatusBadge({ color, children }: StatusBadgeProps) {
   let borderColor = "";
   let bgColor = "";
   let textColor = "";
@@ -21,19 +18,19 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     case "red":
       borderColor = "border-red-600";
       bgColor = "bg-red-600 bg-opacity-10";
-      textColor = "text-status-red";
+      textColor = "text-status-error";
       roundedColor = "bg-red-600";
       break;
     case "green":
       borderColor = "border-green-600";
       bgColor = "bg-green-600 bg-opacity-10";
-      textColor = "text-statusgreen";
+      textColor = "text-status-success";
       roundedColor = "bg-green-600 ";
       break;
     case "yellow":
       borderColor = "border-yellow-600";
       bgColor = "bg-yellow-600 bg-opacity-10";
-      textColor = "text-statusyellow";
+      textColor = "text-status-warning";
       roundedColor = "bg-yellow-600";
       break;
     default:
@@ -58,4 +55,4 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       {children}
     </div>
   );
-};
+}

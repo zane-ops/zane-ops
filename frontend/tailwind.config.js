@@ -56,16 +56,16 @@ module.exports = {
           DEFAULT: "hsl(var(--toggle))",
           light: "hsl(var(--light))"
         },
-        statusgreen: {
-          DEFAULT: "hsl(var(--statusgreen))",
+        "status-success": {
+          DEFAULT: "hsl(var(--status-success))",
           light: "hsl(var(--light))"
         },
-        statusred: {
-          DEFAULT: "hsl(var(--statusred))",
+        "status-error": {
+          DEFAULT: "hsl(var(--status-error))",
           light: "hsl(var(--light))"
         },
-        statusyellow: {
-          DEFAULT: "hsl(var(--statusyellow))",
+        "status-warning": {
+          DEFAULT: "hsl(var(--status-warning))",
           light: "hsl(var(--light))"
         }
       },
