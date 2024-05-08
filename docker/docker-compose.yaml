@@ -67,7 +67,7 @@ services:
     ports:
       - "9989:5000"
   redis:
-    image: redis
+    image: valkey/valkey:7.2.5-alpine
     container_name: zane-redis
     volumes:
       - redis-data:/data
