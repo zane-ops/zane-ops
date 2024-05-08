@@ -17,6 +17,7 @@ from .docker_operations import (
     unexpose_docker_service_from_http,
     get_updated_docker_service_deployment_status,
     scale_down_docker_service,
+    expose_docker_service_deployment_to_http,
 )
 from .models import (
     DockerDeployment,
@@ -87,7 +88,7 @@ def deploy_docker_service(
                 host__isnull=True
             ).first()
             if http_port is not None:
-                expose_docker_service_to_http(deployment)
+                expose_docker_service_deployment_to_http(deployment)
 
             deployment_status, deployment_status_reason = (
                 get_updated_docker_service_deployment_status(
@@ -118,6 +119,9 @@ def deploy_docker_service(
                         }
                     ),
                 )
+
+                if http_port is not None:
+                    expose_docker_service_to_http(deployment)
             else:
                 deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
                 scale_down_docker_service(deployment)
@@ -128,9 +132,6 @@ def deploy_docker_service(
         # Use the countdown from the exception for retrying
         self.retry(countdown=e.countdown, exc=e)
         return "retrying due to lock acquisistion error"
-    except Exception as exc:
-        # Handle other exceptions potentially by re-raising or logging
-        raise exc
 
 
 @shared_task(
