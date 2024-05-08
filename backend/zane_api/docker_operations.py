@@ -7,7 +7,7 @@ import docker.errors
 import requests
 from django.conf import settings
 from docker.models.networks import Network
-from docker.types import RestartPolicy, EndpointSpec
+from docker.types import RestartPolicy, EndpointSpec, NetworkAttachmentConfig
 from rest_framework import status
 from wrapt_timeout_decorator import timeout
 
@@ -401,7 +401,12 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
         env=envs,
         labels=get_resource_labels(service.project.id, deployment_hash=deployment.hash),
         command=service.command,
-        networks=[get_network_resource_name(service.project.id)],
+        networks=[
+            NetworkAttachmentConfig(
+                target=get_network_resource_name(service.project.id),
+                aliases=[alias for alias in service.network_aliases],
+            )
+        ],
         restart_policy=RestartPolicy(
             condition="on-failure",
             max_attempts=MAX_SERVICE_RESTART_COUNT,
@@ -758,10 +763,13 @@ def get_updated_docker_service_deployment_status(
         )
         healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
         if healthcheck_time_left < 1:
-            raise TimeoutError(
-                "Failed to run the healthcheck because there is no time left,"
-                + " please make sure the healthcheck timeout is large enough"
-            )
+            # do not override status reason
+            if deployment_status_reason is None:
+                raise TimeoutError(
+                    "Failed to run the healthcheck because there is no time left,"
+                    + " please make sure the healthcheck timeout is large enough"
+                )
+            break
 
         min_time_left = healthcheck_time_left
         if healthcheck_time_left - 1 > 0:  # we don't want a sleep time of `0`

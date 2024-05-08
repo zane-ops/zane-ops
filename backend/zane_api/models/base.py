@@ -95,7 +95,7 @@ class BaseService(TimestampedModel):
     healthcheck = models.ForeignKey(
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
-    network_alias = models.CharField(max_length=300, null=True)
+    network_alias = models.CharField(max_length=300, null=True, unique=True)
 
     class Meta:
         abstract = True
@@ -158,6 +158,21 @@ class DockerRegistryService(BaseService):
 
     def __str__(self):
         return f"DockerRegistryService({self.slug})"
+
+    @property
+    def unprefixed_id(self):
+        return self.id.replace("srv_dkr_", "") if self.id is not None else None
+
+    @property
+    def network_aliases(self):
+        return (
+            [
+                f"{self.network_alias}.{settings.ZANE_PRIVATE_DOMAIN}",
+                self.network_alias,
+            ]
+            if self.network_alias is not None
+            else []
+        )
 
     @property
     def archive_task_id(self):
@@ -254,7 +269,6 @@ class BaseDeployment(models.Model):
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
     url = models.URLField(null=True)
-    network_alias = models.CharField(max_length=300, null=True)
 
     class Meta:
         abstract = True
@@ -307,6 +321,15 @@ class DockerDeployment(BaseDeployment):
     @property
     def unprefixed_hash(self):
         return None if self.hash is None else self.hash.replace("dpl_dkr_", "")
+
+    @property
+    def network_aliases(self):
+        aliases = []
+        if self.service is not None and len(self.service.network_aliases) > 0:
+            aliases = self.service.network_aliases + [
+                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_PRIVATE_DOMAIN}",
+            ]
+        return aliases
 
 
 class GitDeployment(BaseDeployment):
