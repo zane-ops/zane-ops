@@ -1,9 +1,7 @@
-from unittest.mock import patch, Mock
-
 from django.urls import reverse
 from rest_framework import status
 
-from . import AuthAPITestCase, FakeDockerClient
+from . import AuthAPITestCase
 from ..docker_operations import (
     create_docker_volume,
     get_docker_service_resource_name,
@@ -18,10 +16,7 @@ class DockerVolumeTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.create(slug="zane-ops", owner=owner)
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_create_volume_successful(self, mock_fake_docker: Mock):
+    def test_create_volume_successful(self):
         service = DockerRegistryService.objects.create(
             project=Project.objects.get(slug="zane-ops")
         )
@@ -29,17 +24,9 @@ class DockerVolumeTests(AuthAPITestCase):
             name="postgres DB Data",
         )
         create_docker_volume(volume, service)
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        self.assertEqual(1, len(fake_docker_client.volume_map))
+        self.assertEqual(1, len(self.fake_docker_client.volume_map))
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch(
-        "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClient(),
-    )
-    def test_create_service_with_volume_supports_host_path(
-        self, mock_fake_docker: Mock, _: Mock
-    ):
+    def test_create_service_with_volume_supports_host_path(self):
         create_service_payload = {
             "slug": "self-github",
             "image": "gitea",
@@ -69,10 +56,9 @@ class DockerVolumeTests(AuthAPITestCase):
         created_volume: Volume = created_service.volumes.first()
         self.assertEqual("/etc/localtime", created_volume.host_path)
 
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        self.assertEqual(0, len(fake_docker_client.volume_map))
+        self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
-        fake_service = fake_docker_client.service_map[
+        fake_service = self.fake_docker_client.service_map[
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
@@ -80,14 +66,7 @@ class DockerVolumeTests(AuthAPITestCase):
         ]
         self.assertEqual(1, len(fake_service.attached_volumes))
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch(
-        "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClient(),
-    )
-    def test_create_service_with_volume_supports_access_mode(
-        self, mock_fake_docker: Mock, _: Mock
-    ):
+    def test_create_service_with_volume_supports_access_mode(self):
         create_service_payload = {
             "slug": "zane-on-zane",
             "image": "ghcr.io/zane-ops/zane-api",
@@ -117,8 +96,7 @@ class DockerVolumeTests(AuthAPITestCase):
         created_volume: Volume = created_service.volumes.first()
         self.assertEqual(Volume.VolumeMode.READ_ONLY, created_volume.mode)
 
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[
+        fake_service = self.fake_docker_client.service_map[
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
@@ -129,13 +107,8 @@ class DockerVolumeTests(AuthAPITestCase):
         )
         self.assertEqual("ro", fake_volume.get("mode"))
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch(
-        "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClient(),
-    )
     def test_create_service_with_volume_supports_default_access_mode_is_read_write(
-        self, mock_fake_docker: Mock, _: Mock
+        self,
     ):
         create_service_payload = {
             "slug": "zane-on-zane",
@@ -165,8 +138,7 @@ class DockerVolumeTests(AuthAPITestCase):
         created_volume: Volume = created_service.volumes.first()
         self.assertEqual(Volume.VolumeMode.READ_WRITE, created_volume.mode)
 
-        fake_docker_client: FakeDockerClient = mock_fake_docker.return_value
-        fake_service = fake_docker_client.service_map[
+        fake_service = self.fake_docker_client.service_map[
             get_docker_service_resource_name(
                 service_id=created_service.id,
                 project_id=created_service.project.id,
@@ -177,14 +149,7 @@ class DockerVolumeTests(AuthAPITestCase):
         )
         self.assertEqual("rw", fake_volume.get("mode"))
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch(
-        "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClient(),
-    )
-    def test_create_service_with_volume_name_is_optional(
-        self, mock_fake_docker: Mock, _: Mock
-    ):
+    def test_create_service_with_volume_name_is_optional(self):
         create_service_payload = {
             "slug": "self-github",
             "image": "gitea",
@@ -213,14 +178,7 @@ class DockerVolumeTests(AuthAPITestCase):
         created_volume: Volume = created_service.volumes.first()
         self.assertIsNotNone(created_volume.name)
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch(
-        "zane_api.docker_operations.get_docker_client",
-        return_value=FakeDockerClient(),
-    )
-    def test_create_service_with_volume_only_absolute_path_for_host_path(
-        self, mock_fake_docker: Mock, _: Mock
-    ):
+    def test_create_service_with_volume_only_absolute_path_for_host_path(self):
         create_service_payload = {
             "slug": "self-github",
             "image": "gitea",
@@ -247,10 +205,7 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.create(slug="zane-ops", owner=owner)
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_get_volume_size(self, _: Mock):
+    def test_get_volume_size(self):
         volume = Volume.objects.create(
             name="postgres DB Data",
         )
@@ -262,10 +217,7 @@ class VolumeGetSizeViewTests(AuthAPITestCase):
         data = response.json()
         self.assertIsNotNone(data.get("size"))
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_non_existant_volume(self, _: Mock):
+    def test_non_existant_volume(self):
         response = self.client.get(
             reverse("zane_api:volume.size", kwargs={"volume_id": "abcDefGh1jk"})
         )
