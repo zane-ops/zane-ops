@@ -1,5 +1,3 @@
-from unittest.mock import patch, Mock
-
 from django.urls import reverse
 from rest_framework import status
 
@@ -11,10 +9,7 @@ class DockerViewTests(AuthAPITestCase):
         super().setUp()
         self.loginUser()
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_search_docker_images(self, mock_fake_docker: Mock):
+    def test_search_docker_images(self):
         response = self.client.get(
             reverse("zane_api:docker.image_search"), QUERY_STRING="q=caddy"
         )
@@ -25,17 +20,11 @@ class DockerViewTests(AuthAPITestCase):
         self.assertEqual(images[0]["full_image"], "library/caddy:latest")
         self.assertEqual(images[1]["full_image"], "siwecos/caddy:latest")
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_search_query_empty(self, _: Mock):
+    def test_search_query_empty(self):
         response = self.client.get(reverse("zane_api:docker.image_search"))
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_success_validate_credentials(self, _: Mock):
+    def test_success_validate_credentials(self):
         response = self.client.post(
             reverse("zane_api:docker.login"),
             data={
@@ -46,10 +35,7 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_bad_credentials(self, _: Mock):
+    def test_bad_credentials(self):
         response = self.client.post(
             reverse("zane_api:docker.login"),
             data={
@@ -60,10 +46,7 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_bad_request_for_credentials(self, _: Mock):
+    def test_bad_request_for_credentials(self):
         response = self.client.post(
             reverse("zane_api:docker.login"),
             data={
@@ -75,10 +58,7 @@ class DockerViewTests(AuthAPITestCase):
 
 
 class DockerPortMappingViewTests(AuthAPITestCase):
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_successfull(self, _: Mock):
+    def test_successfull(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:docker.check_port_mapping"),
@@ -89,10 +69,7 @@ class DockerPortMappingViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(response.json().get("available"), True)
 
-    @patch(
-        "zane_api.docker_operations.get_docker_client", return_value=FakeDockerClient()
-    )
-    def test_unavailable_port(self, _: Mock):
+    def test_unavailable_port(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:docker.check_port_mapping"),

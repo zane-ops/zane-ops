@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from typing import Any, List
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import docker.errors
 from django.contrib.auth.models import User
@@ -110,6 +110,18 @@ class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
+        self.fake_docker_client = FakeDockerClient()
+
+        # these functions are always patched
+        patch("zane_api.tasks.expose_docker_service_to_http").start()
+        patch("zane_api.tasks.unexpose_docker_service_from_http").start()
+        patch("zane_api.tasks.expose_docker_service_deployment_to_http").start()
+        patch(
+            "zane_api.docker_operations.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+
+        self.addCleanup(patch.stopall)
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
