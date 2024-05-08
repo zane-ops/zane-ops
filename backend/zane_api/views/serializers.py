@@ -302,7 +302,7 @@ class DockerServiceUpdateRequestSerializer(serializers.Serializer):
 
 
 class DockerServiceDeployRequestSerializer(serializers.Serializer):
-    tag = serializers.CharField(required=False)
+    image_tag = serializers.CharField(required=False)
     command = serializers.CharField(required=False)
     credentials = DockerCredentialsRequestSerializer(required=False)
     urls = URLRequestSerializer(many=True, required=False)
@@ -311,10 +311,14 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
     volumes = VolumeRequestSerializer(many=True, required=False)
     healthcheck = HealthCheckRequestSerializer(required=False)
 
+    def __init__(self, image_repository: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.image_repository = image_repository
+
     def validate(self, data: dict):
         credentials = data.get("credentials")
-        image = data.get("image")
         healthcheck = data.get("healthcheck")
+        image_tag = data.get("image_tag")
 
         if credentials is not None:
             try:
@@ -324,27 +328,29 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
                     {"credentials": [f"Invalid credentials for the specified registry"]}
                 )
 
-        do_image_exists = check_if_docker_image_exists(
-            image,
-            credentials=dict(credentials) if credentials is not None else None,
-        )
-        if not do_image_exists:
-            registry_url = (
-                credentials.get("registry_url") if credentials is not None else None
+        if image_tag is not None:
+            image = f"{self.image_repository}:{self.image_tag}"
+            do_image_exists = check_if_docker_image_exists(
+                image,
+                credentials=dict(credentials) if credentials is not None else None,
             )
-            if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
-                registry_str = "on Docker Hub"
-            else:
-                registry_str = f"in the specified registry"
-            raise serializers.ValidationError(
-                {
-                    "image": [
-                        f"Either the image `{image}` does not exist `{registry_str}`"
-                        f" or the credentials are invalid for this image."
-                        f" Have you forgotten to include the credentials ?"
-                    ]
-                }
-            )
+            if not do_image_exists:
+                registry_url = (
+                    credentials.get("registry_url") if credentials is not None else None
+                )
+                if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
+                    registry_str = "on Docker Hub"
+                else:
+                    registry_str = f"in the specified registry"
+                raise serializers.ValidationError(
+                    {
+                        "image": [
+                            f"Either the image `{image}` does not exist `{registry_str}`"
+                            f" or the credentials are invalid for this image."
+                            f" Have you forgotten to include the credentials ?"
+                        ]
+                    }
+                )
 
         urls = data.get("urls", [])
         ports = data.get("ports", [])
@@ -367,7 +373,7 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
                     {
                         "healthcheck": {
                             "path": [
-                                f"healthcheck requires that at least one `url` or one `port` is provided"
+                                f"path healthcheck requires that at least one `url` or one `port` is provided"
                             ]
                         }
                     }
