@@ -141,6 +141,7 @@ class DockerEnvVariable(BaseEnvVariable):
 
 
 class DockerRegistryService(BaseService):
+    ID_PREFIX = "srv_dkr_"
     image_repository = models.CharField(max_length=510, null=False, blank=False)
     command = models.TextField(null=True, blank=True)
     docker_credentials_username = models.CharField(
@@ -153,7 +154,7 @@ class DockerRegistryService(BaseService):
         length=11,
         max_length=255,
         primary_key=True,
-        prefix="srv_dkr_",
+        prefix=ID_PREFIX,
     )
 
     def __str__(self):
@@ -161,7 +162,7 @@ class DockerRegistryService(BaseService):
 
     @property
     def unprefixed_id(self):
-        return self.id.replace("srv_dkr_", "") if self.id is not None else None
+        return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
 
     @property
     def network_aliases(self):
@@ -207,6 +208,13 @@ class DockerRegistryService(BaseService):
 
 
 class GitRepositoryService(BaseService):
+    ID_PREFIX = "srv_git_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
     previews_enabled = models.BooleanField(default=True)
     auto_deploy = models.BooleanField(default=True)
     preview_protected = models.BooleanField(default=True)
@@ -219,12 +227,10 @@ class GitRepositoryService(BaseService):
     dockerfile_path = models.CharField(max_length=255, default="./Dockerfile")
     docker_build_context_dir = models.CharField(max_length=255, default=".")
     docker_cmd = models.CharField(max_length=255, null=True, blank=True)
-    id = ShortUUIDField(
-        length=11,
-        max_length=255,
-        primary_key=True,
-        prefix="srv_git_",
-    )
+
+    @property
+    def unprefixed_id(self):
+        return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
 
 
 class GitEnvVariable(BaseEnvVariable):
@@ -239,6 +245,9 @@ class GitEnvVariable(BaseEnvVariable):
 
 
 class Volume(TimestampedModel):
+    ID_PREFIX = "vol_"
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
+
     class VolumeMode(models.TextChoices):
         READ_ONLY = "READ_ONLY", _("Read-Only")
         READ_WRITE = "READ_WRITE", _("Read-Write")
@@ -254,7 +263,6 @@ class Volume(TimestampedModel):
     host_path = models.CharField(
         max_length=255, null=True, validators=[validate_url_path]
     )
-    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix="vol_")
 
     def __str__(self):
         return f"Volume({self.name})"
@@ -275,6 +283,9 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
+    HASH_PREFIX = "dpl_dkr_"
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
+
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
     class DeploymentStatus(models.TextChoices):
@@ -308,7 +319,6 @@ class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
     )
-    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_dkr_")
     image_tag = models.CharField(max_length=255, default="latest")
     monitor_task = models.ForeignKey(
         to=PeriodicTask, null=True, on_delete=models.SET_NULL
@@ -320,7 +330,7 @@ class DockerDeployment(BaseDeployment):
 
     @property
     def unprefixed_hash(self):
-        return None if self.hash is None else self.hash.replace("dpl_dkr_", "")
+        return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
 
     @property
     def network_aliases(self):
@@ -333,6 +343,9 @@ class DockerDeployment(BaseDeployment):
 
 
 class GitDeployment(BaseDeployment):
+    HASH_PREFIX = "dpl_git_"
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
+
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
     class BuildStatus(models.TextChoices):
@@ -387,7 +400,6 @@ class GitDeployment(BaseDeployment):
     service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
     commit_author_username = models.CharField(max_length=255)
     commit_author_avatar_url = models.URLField(null=True)
-    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix="dpl_git_")
 
     # @property
     # def image_tags(self) -> List[str]:
@@ -411,7 +423,11 @@ class GitDeployment(BaseDeployment):
     #     return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
 
     def __str__(self):
-        return f"{self.branch} - {self.commit_hash[:7]} - {self.build_status}"
+        return f"GitDeployment(branch={self.branch} - commit_ha={self.commit_hash[:7]} - status={self.build_status})"
+
+    @property
+    def unprefixed_hash(self):
+        return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
 
 
 class Log(models.Model):
