@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..models import Project, DockerDeployment
+from ..models import Project, DockerDeployment, DockerRegistryService
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -34,6 +34,28 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
         self.assertEqual(1, len(data))
+
+    def test_create_service_set_deployment_slot(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "valkey",
+            "image": "valkey:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="valkey"
+        ).first()
+        self.assertIsNotNone(created_service)
+        latest_deployment = created_service.get_latest_deployment()
+        self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, latest_deployment.slot)
 
     def test_filter_deployments_succesful(self):
         owner = self.loginUser()

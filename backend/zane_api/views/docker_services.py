@@ -355,6 +355,9 @@ class CreateDockerServiceAPIView(APIView):
                             else None
                         ),
                     )
+
+                    service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+                    service.save()
                 except IntegrityError:
                     raise ResourceConflict(
                         detail=f"A service with the slug `{service_slug}` already exists."

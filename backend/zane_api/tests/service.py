@@ -955,6 +955,48 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
 
+    def test_create_service_set_network_alias(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "valkey",
+            "image": "valkey:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="valkey"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertIsNotNone(created_service.network_alias)
+
+    def test_create_service_set_network_aliases_on_docker(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "valkey",
+            "image": "valkey:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="valkey"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertIsNotNone(created_service.network_alias)
+
 
 class DockerServicesDeploymentViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
