@@ -1,51 +1,41 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   ArrowDown,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ChevronsUpDown,
   Folder,
   Rocket,
   Search,
   Settings,
   Trash,
-  X
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { MetaTitle } from "~/components/meta-title";
 import { Input } from "~/components/ui/input";
 
-import { Button } from "~/components/ui/button";
 import {
   Menubar,
   MenubarContent,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "~/components/ui/select";
+
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { MenubarContentItem } from "../_dashboard";
+import { StatusBadge } from "~/components/status-badge";
+import { getBadgeColor } from "~/components/helper/get-badge-color";
+import Pagination from "~/components/pagination";
+import { useState } from "react";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -68,32 +58,43 @@ function AuthedView() {
 
 const projects = [
   {
+    id: 1,
     name: "ZaneOps",
     updated_at: "Jan 13, 2024",
     status: "0/5 Services Up",
     actions: "Settings",
-    statusIcon: <X size={14} />,
-    tracker: 0
+    tracker: 0,
   },
   {
+    id: 2,
     name: "ZaneOps",
     updated_at: "Jan 13, 2024",
     status: "5/5 Services Up",
     actions: "Settings",
-    statusIcon: <Check size={14} />,
-    tracker: 1
+    tracker: 1,
   },
   {
+    id: 3,
     name: "ZaneOps",
     updated_at: "Jan 13, 2024",
     status: "2/5 Services Up",
     actions: "Settings",
-    statusIcon: <AlertTriangle size={14} />,
-    tracker: 2
-  }
+    tracker: 2,
+  },
 ];
 
 export function ProjectList() {
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [perPage, setPerPage] = useState<number>(10);
+
+  const handleChangePage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleChangePerPage = (perPage: number) => {
+    setPerPage(perPage);
+  };
+
   return (
     <main>
       <div className="md:my-10 my-5">
@@ -140,40 +141,16 @@ export function ProjectList() {
         </TableHeader>
         <TableBody>
           {projects.map((project) => (
-            <TableRow
-              className="border-border cursor-pointer"
-              key={project.name}
-            >
+            <TableRow className="border-border cursor-pointer" key={project.id}>
               <TableCell className="font-medium flex items-center gap-3">
                 <Folder size={18} />
                 {project.name}
               </TableCell>
               <TableCell>{project.updated_at}</TableCell>
               <TableCell>
-                <div
-                  className={`flex border md:w-fit w-40 px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2 ${
-                    project.tracker === 1
-                      ? "border-green-600  bg-green-600 bg-opacity-10 text-statusgreen"
-                      : project.tracker === 0
-                        ? "border-red-600 bg-red-600 bg-opacity-10 text-statusred"
-                        : project.tracker === 2
-                          ? "border-yellow-600 bg-yellow-600 bg-opacity-10 text-statusyellow"
-                          : ""
-                  }`}
-                >
-                  <div
-                    className={`border w-2 h-2 text-white  border-transparent p-0.5 rounded-full ${
-                      project.tracker === 1
-                        ? "bg-green-600"
-                        : project.tracker === 0
-                          ? "bg-red-600"
-                          : project.tracker === 2
-                            ? "bg-yellow-600"
-                            : ""
-                    }`}
-                  ></div>
+                <StatusBadge color={getBadgeColor(project.tracker)}>
                   {project.status}
-                </div>
+                </StatusBadge>
               </TableCell>
               <TableCell className="flex justify-end">
                 <div className="w-fit flex items-center gap-3">
@@ -187,54 +164,14 @@ export function ProjectList() {
       </Table>
 
       <div className="my-4">
-        <DatatablePagination />
+        <Pagination
+          totalPages={10}
+          currentPage={currentPage}
+          perPage={perPage}
+          onChangePage={handleChangePage}
+          onChangePerPage={handleChangePerPage}
+        />
       </div>
     </main>
-  );
-}
-
-function DatatablePagination() {
-  return (
-    <div className="flex  items-center justify-end px-2">
-      <div className="flex items-center space-x-2">
-        <p className="text-sm font-medium">Rows per page</p>
-        <Select value="10">
-          <SelectTrigger className="h-8 w-[70px]">
-            <SelectValue placeholder="10" />
-          </SelectTrigger>
-          <SelectContent className="border border-border" side="top">
-            {[10, 20, 30, 40, 50].map((pageSize) => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
-                {pageSize}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex  items-center space-x-6 lg:space-x-8">
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page of 10
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex">
-            <span className="sr-only">Go to first page</span>
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" className="h-8 w-8 p-0">
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" className="h-8 w-8 p-0">
-            <span className="sr-only">Go to next page</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex">
-            <span className="sr-only">Go to last page</span>
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }
