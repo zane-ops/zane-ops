@@ -1,9 +1,9 @@
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock
 
 from django.urls import reverse
 from rest_framework import status
 
-from .base import AuthAPITestCase, FakeDockerClient
+from .base import AuthAPITestCase
 from ..models import Project, DockerDeployment
 
 
@@ -57,7 +57,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
                     "service_slug": "cache-db",
                 },
             )
-            + "?deployment_status=OFFLINE"
+            + "?status=OFFLINE"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
@@ -292,10 +292,8 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
             service__slug="cache-db"
         ).first()
         self.assertIsNotNone(deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, deployment.deployment_status
-        )
-        self.assertEqual(str(exception), deployment.deployment_status_reason)
+        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
+        self.assertEqual(str(exception), deployment.status_reason)
 
     def test_scale_down_the_service_for_the_deployment_when_the_task_fails(self):
         owner = self.loginUser()
@@ -326,8 +324,6 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
             service__slug="cache-db"
         ).first()
         self.assertIsNotNone(deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, deployment.deployment_status
-        )
-        self.assertEqual(str(exception), deployment.deployment_status_reason)
+        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
+        self.assertEqual(str(exception), deployment.status_reason)
         fake_service.scale.assert_called_with(0)

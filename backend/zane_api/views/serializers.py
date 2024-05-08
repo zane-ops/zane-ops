@@ -278,13 +278,13 @@ class DockerServiceResponseSerializer(serializers.Serializer):
 
 
 class DockerServiceDeploymentFilter(django_filters.FilterSet):
-    deployment_status = django_filters.MultipleChoiceFilter(
+    status = django_filters.MultipleChoiceFilter(
         choices=DockerDeployment.DeploymentStatus.choices
     )
 
     class Meta:
         model = DockerDeployment
-        fields = ["deployment_status", "created_at", "hash"]
+        fields = ["status", "created_at", "hash"]
 
 
 # ==============================

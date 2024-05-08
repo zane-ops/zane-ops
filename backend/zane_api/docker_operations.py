@@ -778,7 +778,7 @@ def get_updated_docker_service_deployment_status(
         )
 
         if len(task_list) == 0:
-            if deployment.deployment_status in [
+            if deployment.status in [
                 DockerDeployment.DeploymentStatus.HEALTHY,
                 DockerDeployment.DeploymentStatus.STARTING,
                 DockerDeployment.DeploymentStatus.RESTARTING,
