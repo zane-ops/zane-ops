@@ -1,18 +1,18 @@
-import React from "react";
 import {
-  ChevronsLeft,
   ChevronLeft,
   ChevronRight,
-  ChevronsRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
+import React from "react";
+import { Button } from "./ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "./ui/select";
-import { Button } from "./ui/button";
 
 export type PaginationProps = {
   totalPages: number;
@@ -29,7 +29,7 @@ const Pagination: React.FC<PaginationProps> = ({
   perPage,
   className = "",
   onChangePage,
-  onChangePerPage,
+  onChangePerPage
 }) => {
   return (
     <div className={`flex items-center justify-end px-2 ${className}`}>
@@ -59,7 +59,9 @@ const Pagination: React.FC<PaginationProps> = ({
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
-            className={`hidden h-8 w-8 p-0 lg:flex ${currentPage === 1 ? "opacity-50 pointer-events-none" : ""}`}
+            className={`hidden h-8 w-8 p-0 lg:flex ${
+              currentPage === 1 ? "opacity-50 pointer-events-none" : ""
+            }`}
             onClick={() => onChangePage(1)}
             disabled={currentPage === 1}
           >
@@ -68,7 +70,9 @@ const Pagination: React.FC<PaginationProps> = ({
           </Button>
           <Button
             variant="outline"
-            className={`h-8 w-8 p-0 ${currentPage === 1 ? "opacity-50 pointer-events-none" : ""}`}
+            className={`h-8 w-8 p-0 ${
+              currentPage === 1 ? "opacity-50 pointer-events-none" : ""
+            }`}
             onClick={() => onChangePage(currentPage - 1)}
             disabled={currentPage === 1}
           >
@@ -77,7 +81,9 @@ const Pagination: React.FC<PaginationProps> = ({
           </Button>
           <Button
             variant="outline"
-            className={`h-8 w-8 p-0 ${currentPage === totalPages ? "opacity-50 pointer-events-none" : ""}`}
+            className={`h-8 w-8 p-0 ${
+              currentPage === totalPages ? "opacity-50 pointer-events-none" : ""
+            }`}
             onClick={() => onChangePage(currentPage + 1)}
             disabled={currentPage === totalPages}
           >
@@ -86,7 +92,9 @@ const Pagination: React.FC<PaginationProps> = ({
           </Button>
           <Button
             variant="outline"
-            className={`hidden h-8 w-8 p-0 lg:flex ${currentPage === totalPages ? "opacity-50 pointer-events-none" : ""}`}
+            className={`hidden h-8 w-8 p-0 lg:flex ${
+              currentPage === totalPages ? "opacity-50 pointer-events-none" : ""
+            }`}
             onClick={() => onChangePage(totalPages)}
             disabled={currentPage === totalPages}
           >

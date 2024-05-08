@@ -9,7 +9,7 @@ interface StatusBadgeProps {
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   color,
-  children,
+  children
 }) => {
   let borderColor = "";
   let bgColor = "";
