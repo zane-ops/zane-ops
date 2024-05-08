@@ -174,8 +174,8 @@ def delete_resources_for_docker_service(archived_service_id: id):
         raise ArchivedDockerService.DoesNotExist(
             f"Cannot execute a ressource deletion a non existent archived service with id={archived_service_id}."
         )
-    cleanup_docker_service_resources(archived_service)
     unexpose_docker_service_from_http(archived_service)
+    cleanup_docker_service_resources(archived_service)
 
 
 @shared_task
