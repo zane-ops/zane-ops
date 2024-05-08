@@ -2,7 +2,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight,
+  ChevronsRight
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -10,7 +10,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "./ui/select";
 
 export type PaginationProps = {
@@ -28,7 +28,7 @@ export function Pagination({
   perPage,
   className = "",
   onChangePage,
-  onChangePerPage,
+  onChangePerPage
 }: PaginationProps) {
   return (
     <div className={`flex items-center justify-end px-2 ${className}`}>
