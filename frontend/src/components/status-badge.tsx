@@ -1,4 +1,5 @@
 import React, { type ReactNode } from "react";
+import { cn } from "~/lib/utils";
 
 type TrackerColor = "red" | "green" | "yellow";
 
@@ -20,7 +21,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     case "red":
       borderColor = "border-red-600";
       bgColor = "bg-red-600 bg-opacity-10";
-      textColor = "text-statusred";
+      textColor = "text-status-red";
       roundedColor = "bg-red-600";
       break;
     case "green":
@@ -41,10 +42,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   return (
     <div
-      className={`flex border md:w-fit w-40 px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2 ${borderColor} ${bgColor} ${textColor}`}
+      className={cn(
+        "flex border md:w-fit w-40 px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2",
+        borderColor,
+        bgColor,
+        textColor
+      )}
     >
       <div
-        className={`border w-2 h-2 text-white border-transparent p-0.5 rounded-full ${roundedColor}`}
+        className={cn(
+          "border w-2 h-2 text-white border-transparent p-0.5 rounded-full",
+          roundedColor
+        )}
       ></div>
       {children}
     </div>

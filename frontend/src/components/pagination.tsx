@@ -4,7 +4,6 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from "lucide-react";
-import React from "react";
 import { Button } from "./ui/button";
 import {
   Select,
@@ -23,14 +22,14 @@ export type PaginationProps = {
   onChangePerPage: (perPage: number) => void;
 };
 
-const Pagination: React.FC<PaginationProps> = ({
+export function Pagination({
   totalPages,
   currentPage,
   perPage,
   className = "",
   onChangePage,
   onChangePerPage
-}) => {
+}: PaginationProps) {
   return (
     <div className={`flex items-center justify-end px-2 ${className}`}>
       <div className="flex items-center space-x-2">
@@ -105,6 +104,4 @@ const Pagination: React.FC<PaginationProps> = ({
       </div>
     </div>
   );
-};
-
-export default Pagination;
+}

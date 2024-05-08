@@ -20,9 +20,8 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 
-import { useState } from "react";
-import { getBadgeColor } from "~/components/helper/get-badge-color";
-import Pagination from "~/components/pagination";
+import React from "react";
+import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Table,
@@ -83,9 +82,23 @@ const projects = [
   }
 ];
 
+type TrackerColor = "red" | "green" | "yellow";
+function getBadgeColor(tracker: number): TrackerColor {
+  switch (tracker) {
+    case 0:
+      return "red";
+    case 1:
+      return "green";
+    case 2:
+      return "yellow";
+    default:
+      return "green";
+  }
+}
+
 export function ProjectList() {
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [perPage, setPerPage] = useState<number>(10);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [perPage, setPerPage] = React.useState(10);
 
   const handleChangePage = (page: number) => {
     setCurrentPage(page);
