@@ -40,11 +40,11 @@ export function Pagination({
           onValueChange={(value) => onChangePerPage(Number(value))}
         >
           <SelectTrigger className="h-8 w-[70px]">
-            <SelectValue placeholder={`${perPage}`} />
+            <SelectValue placeholder={perPage.toString()} />
           </SelectTrigger>
           <SelectContent className="border border-border" side="top">
             {[10, 20, 30, 40, 50].map((pageSize) => (
-              <SelectItem key={pageSize} value={`${pageSize}`}>
+              <SelectItem key={pageSize} value={pageSize.toString()}>
                 {pageSize}
               </SelectItem>
             ))}

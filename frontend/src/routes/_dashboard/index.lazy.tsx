@@ -109,10 +109,10 @@ export function ProjectList() {
       </div>
 
       <div className="flex my-3 flex-wrap items-center md:gap-3 gap-1">
-        <div className="flex md:my-5 md:w-[30%] w-[100%]  items-center">
+        <div className="flex md:my-5 md:w-[30%] w-full  items-center">
           <Search size={20} className="relative left-5" />
           <Input
-            className="px-14 placeholder:text-gray-400  -mx-5 w-full my-1 text-sm focus-visible:right-0"
+            className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
             placeholder="Ex: ZaneOps"
           />
         </div>
@@ -124,7 +124,7 @@ export function ProjectList() {
                 Status
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
-              <MenubarContent className=" border min-w-[23rem] border-border md:min-w-6">
+              <MenubarContent className=" border  w-[calc(var(--radix-menubar-trigger-width)+0.5rem)]  border-border md:min-w-6  md:w-auto">
                 <MenubarContentItem icon={Rocket} text="Active" />
                 <MenubarContentItem icon={Trash} text="Archived" />
               </MenubarContent>
@@ -174,8 +174,8 @@ export function ProjectList() {
           totalPages={10}
           currentPage={currentPage}
           perPage={perPage}
-          onChangePage={() => setCurrentPage(currentPage + 1)}
-          onChangePerPage={() => setPerPage(perPage)}
+          onChangePage={(page) => setCurrentPage(page)}
+          onChangePerPage={(perPage) => setPerPage(perPage)}
         />
       </div>
     </main>

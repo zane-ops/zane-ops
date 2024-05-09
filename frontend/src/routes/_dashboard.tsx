@@ -189,7 +189,7 @@ function Header() {
                         <ChevronsUpDown className="w-4" />
                       </MenubarTrigger>
 
-                      <MenubarContent className=" border min-w-[22.7rem] border-border ">
+                      <MenubarContent className=" border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border ">
                         <MenubarContentItem icon={Folder} text="Project" />
                         <MenubarContentItem icon={Globe} text="Web Service" />
                         <MenubarContentItem icon={Hammer} text="Worker" />
@@ -206,7 +206,7 @@ function Header() {
               </div>
 
               <button
-                className="p-2 rounded-md border border-destructive-foreground text-center"
+                className="p-2 rounded-md border border-card-foreground text-center"
                 onClick={() => mutate()}
                 disabled={isPending}
               >
