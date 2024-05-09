@@ -19,7 +19,7 @@ export function StatusBadge({ color, children }: StatusBadgeProps) {
           "border-red-600 bg-red-600 bg-opacity-10 text-status-error":
             color === "red",
           "border-yellow-600 bg-yellow-600 bg-opacity-10 text-status-warning":
-            color === "yellow",
+            color === "yellow"
         }
       )}
     >
@@ -29,7 +29,7 @@ export function StatusBadge({ color, children }: StatusBadgeProps) {
           {
             "bg-green-600 ": color === "green",
             "bg-red-600": color === "red",
-            "bg-yellow-600": color === "yellow",
+            "bg-yellow-600": color === "yellow"
           }
         )}
       ></div>

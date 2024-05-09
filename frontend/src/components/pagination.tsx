@@ -2,17 +2,17 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight,
+  ChevronsRight
 } from "lucide-react";
+import { cn } from "~/lib/utils";
 import { Button } from "./ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "./ui/select";
-import { cn } from "~/lib/utils";
 
 export type PaginationProps = {
   totalPages: number;
@@ -29,7 +29,7 @@ export function Pagination({
   perPage,
   className,
   onChangePage,
-  onChangePerPage,
+  onChangePerPage
 }: PaginationProps) {
   return (
     <div className={cn("flex items-center justify-end px-2", className)}>
@@ -60,7 +60,7 @@ export function Pagination({
           <Button
             variant="outline"
             className={cn("hidden h-8 w-8 p-0 lg:flex", {
-              "opacity-50 pointer-events-none": currentPage === 1,
+              "opacity-50 pointer-events-none": currentPage === 1
             })}
             onClick={() => onChangePage(1)}
             disabled={currentPage === 1}
@@ -71,7 +71,7 @@ export function Pagination({
           <Button
             variant="outline"
             className={cn("h-8 w-8 p-0", {
-              "opacity-50 pointer-events-none": currentPage === 1,
+              "opacity-50 pointer-events-none": currentPage === 1
             })}
             onClick={() => onChangePage(currentPage - 1)}
             disabled={currentPage === 1}
@@ -82,7 +82,7 @@ export function Pagination({
           <Button
             variant="outline"
             className={cn("h-8 w-8 p-0", {
-              "opacity-50 pointer-events-none": currentPage === totalPages,
+              "opacity-50 pointer-events-none": currentPage === totalPages
             })}
             onClick={() => onChangePage(currentPage + 1)}
             disabled={currentPage === totalPages}
@@ -93,7 +93,7 @@ export function Pagination({
           <Button
             variant="outline"
             className={cn("hidden h-8 w-8 p-0 lg:flex", {
-              "opacity-50 pointer-events-none": currentPage === totalPages,
+              "opacity-50 pointer-events-none": currentPage === totalPages
             })}
             onClick={() => onChangePage(totalPages)}
             disabled={currentPage === totalPages}
