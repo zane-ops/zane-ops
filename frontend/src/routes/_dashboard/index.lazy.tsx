@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash,
+  Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,7 +18,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -30,11 +30,11 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -62,7 +62,7 @@ const projects = [
     updated_at: "Jan 13, 2024",
     status: "0/5 Services Up",
     actions: "Settings",
-    tracker: 0,
+    tracker: 0
   },
   {
     id: 2,
@@ -70,7 +70,7 @@ const projects = [
     updated_at: "Jan 13, 2024",
     status: "5/5 Services Up",
     actions: "Settings",
-    tracker: 1,
+    tracker: 1
   },
   {
     id: 3,
@@ -78,8 +78,8 @@ const projects = [
     updated_at: "Jan 13, 2024",
     status: "2/5 Services Up",
     actions: "Settings",
-    tracker: 2,
-  },
+    tracker: 2
+  }
 ];
 
 // TODO: to remove

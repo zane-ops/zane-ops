@@ -223,7 +223,7 @@ type MenubarContentItemProps = {
 export function MenubarContentItem({
   icon: Icon,
   text,
-  className,
+  className
 }: MenubarContentItemProps) {
   return (
     <MenubarItem
@@ -251,5 +251,5 @@ export {
   MenubarSubTrigger,
   MenubarGroup,
   MenubarSub,
-  MenubarShortcut,
+  MenubarShortcut
 };
