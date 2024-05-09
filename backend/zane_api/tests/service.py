@@ -955,6 +955,48 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
 
+    def test_create_service_set_network_alias(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "valkey",
+            "image": "valkey:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="valkey"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertIsNotNone(created_service.network_alias)
+
+    def test_create_service_set_network_aliases_on_docker(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "valkey",
+            "image": "valkey:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="valkey"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertIsNotNone(created_service.network_alias)
+
 
 class DockerServicesDeploymentViewTest(AuthAPITestCase):
     @patch("zane_api.tasks.expose_docker_service_to_http")
@@ -1131,10 +1173,8 @@ class DockerServicesDeploymentViewTest(AuthAPITestCase):
             service__slug="cache-db"
         ).first()
         self.assertIsNotNone(deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, deployment.deployment_status
-        )
-        self.assertEqual(str(exception), deployment.deployment_status_reason)
+        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
+        self.assertEqual(str(exception), deployment.status_reason)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -1173,10 +1213,8 @@ class DockerServicesDeploymentViewTest(AuthAPITestCase):
             service__slug="cache-db"
         ).first()
         self.assertIsNotNone(deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, deployment.deployment_status
-        )
-        self.assertEqual(str(exception), deployment.deployment_status_reason)
+        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
+        self.assertEqual(str(exception), deployment.status_reason)
         fake_service.scale.assert_called_with(0)
 
 
@@ -1227,7 +1265,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            initial_deployment.deployment_status,
+            initial_deployment.status,
         )
         self.assertIsNotNone(initial_deployment.monitor_task)
         self.assertEqual(15, initial_deployment.monitor_task.interval.every)
@@ -1417,7 +1455,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @responses.activate
@@ -1459,7 +1497,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_create_service_with_healtheck_cmd_success(
@@ -1519,7 +1557,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_create_service_without_healthcheck_succeed_when_service_is_working_correctly_by_default(
@@ -1543,7 +1581,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @patch("zane_api.docker_operations.sleep")
@@ -1580,7 +1618,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @patch("zane_api.docker_operations.sleep")
@@ -1615,7 +1653,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         fake_service.scale.assert_called_with(0)
 
@@ -1648,7 +1686,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         self.assertIsNone(latest_deployment.monitor_task)
 
@@ -2033,14 +2071,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_restart_is_set_after_multiple_tasks_deployments(self):
@@ -2102,14 +2140,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.RESTARTING,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_succesful_restart_deploymen_flow(self):
@@ -2171,14 +2209,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @patch("zane_api.docker_operations.sleep")
@@ -2290,14 +2328,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_service_fail_outside_of_zane_control(self):
@@ -2326,16 +2364,16 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
-        latest_deployment.deployment_status = DockerDeployment.DeploymentStatus.HEALTHY
+        latest_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
         latest_deployment.save()
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
 
@@ -2397,7 +2435,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
                     "service_slug": "cache-db",
                 },
             )
-            + "?deployment_status=OFFLINE"
+            + "?status=OFFLINE"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()

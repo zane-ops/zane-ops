@@ -281,6 +281,7 @@ CELERY_CACHE_BACKEND = "default"
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_RESULT_CACHE_MAX = 1_000
 
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
@@ -291,6 +292,7 @@ ZANE_APP_SERVICE_HOST_FROM_PROXY = (
     if ENVIRONMENT != PRODUCTION_ENV
     else "zane-api.zaneops.internal:8000"
 )
+ZANE_PRIVATE_DOMAIN = "zaneops.internal"
 
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds

@@ -3,7 +3,6 @@
 import uuid
 
 import django.db.models.deletion
-import zane_api.models
 from django.db import migrations, models
 
 
@@ -20,7 +19,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('name', models.CharField(max_length=255)),
-                ('schedule', models.CharField(max_length=255, validators=[zane_api.models.validate_crontab])),
+                ('schedule', models.CharField(max_length=255, validators=[])),
                 ('archived', models.BooleanField(default=False)),
             ],
         ),

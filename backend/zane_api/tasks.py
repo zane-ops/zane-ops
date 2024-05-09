@@ -17,6 +17,7 @@ from .docker_operations import (
     unexpose_docker_service_from_http,
     get_updated_docker_service_deployment_status,
     scale_down_docker_service,
+    expose_docker_service_deployment_to_http,
 )
 from .models import (
     DockerDeployment,
@@ -42,8 +43,8 @@ def docker_service_deploy_failure(
         hash=deployment_hash
     ).first()
     if deployment is not None:
-        deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
-        deployment.deployment_status_reason = str(exc)
+        deployment.status = DockerDeployment.DeploymentStatus.FAILED
+        deployment.status_reason = str(exc)
         scale_down_docker_service(deployment)
         deployment.save()
 
@@ -71,10 +72,8 @@ def deploy_docker_service(
                     "Cannot execute a deploy a non existent deployment."
                 )
 
-            if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
-                deployment.deployment_status = (
-                    DockerDeployment.DeploymentStatus.PREPARING
-                )
+            if deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
+                deployment.status = DockerDeployment.DeploymentStatus.PREPARING
                 deployment.save()
 
             # TODO (#67) : send system logs when the resources are created
@@ -87,7 +86,7 @@ def deploy_docker_service(
                 host__isnull=True
             ).first()
             if http_port is not None:
-                expose_docker_service_to_http(deployment)
+                expose_docker_service_deployment_to_http(deployment)
 
             deployment_status, deployment_status_reason = (
                 get_updated_docker_service_deployment_status(
@@ -97,7 +96,7 @@ def deploy_docker_service(
                 )
             )
             if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
-                deployment.deployment_status = deployment_status
+                deployment.status = deployment_status
                 healthcheck = service.healthcheck
 
                 deployment.monitor_task = PeriodicTask.objects.create(
@@ -118,19 +117,19 @@ def deploy_docker_service(
                         }
                     ),
                 )
+
+                if http_port is not None:
+                    expose_docker_service_to_http(deployment)
             else:
-                deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
+                deployment.status = DockerDeployment.DeploymentStatus.FAILED
                 scale_down_docker_service(deployment)
 
-            deployment.deployment_status_reason = deployment_status_reason
+            deployment.status_reason = deployment_status_reason
             deployment.save()
     except LockAcquisitionError as e:
         # Use the countdown from the exception for retrying
         self.retry(countdown=e.countdown, exc=e)
         return "retrying due to lock acquisistion error"
-    except Exception as exc:
-        # Handle other exceptions potentially by re-raising or logging
-        raise exc
 
 
 @shared_task(
@@ -196,16 +195,16 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
 
     if (
         deployment is not None
-        and deployment.deployment_status != DockerDeployment.DeploymentStatus.OFFLINE
+        and deployment.status != DockerDeployment.DeploymentStatus.OFFLINE
     ):
         try:
             deployment_status, deployment_status_reason = (
                 get_updated_docker_service_deployment_status(deployment, auth_token)
             )
-            deployment.deployment_status = deployment_status
-            deployment.deployment_status_reason = deployment_status_reason
+            deployment.status = deployment_status
+            deployment.status_reason = deployment_status_reason
         except TimeoutError as e:
-            deployment.deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
-            deployment.deployment_status_reason = str(e)
+            deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+            deployment.status_reason = str(e)
         finally:
             deployment.save()
