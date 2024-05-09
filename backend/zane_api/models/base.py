@@ -1,5 +1,4 @@
 import uuid
-from typing import List
 
 from django.conf import settings
 from django.db import models
@@ -96,6 +95,7 @@ class BaseService(TimestampedModel):
     healthcheck = models.ForeignKey(
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
+    network_alias = models.CharField(max_length=300, null=True)
 
     class Meta:
         abstract = True
@@ -254,6 +254,7 @@ class BaseDeployment(models.Model):
     logs = models.ManyToManyField(to="SimpleLog")
     http_logs = models.ManyToManyField(to="HttpLog")
     url = models.URLField(null=True)
+    network_alias = models.CharField(max_length=300, null=True)
 
     class Meta:
         abstract = True
@@ -273,12 +274,22 @@ class DockerDeployment(BaseDeployment):
         UNHEALTHY = "UNHEALTHY", _("Unhealthy")
         OFFLINE = "OFFLINE", _("Offline")
 
-    deployment_status = models.CharField(
+    class DeploymentSlot(models.TextChoices):
+        BLUE = "BLUE", _("Blue")
+        GREEN = "GREEN", _("Green")
+
+    slot = models.CharField(
+        max_length=10,
+        choices=DeploymentSlot.choices,
+        default=DeploymentSlot.BLUE,
+    )
+
+    status = models.CharField(
         max_length=10,
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.QUEUED,
     )
-    deployment_status_reason = models.TextField(null=True, blank=True)
+    status_reason = models.TextField(null=True, blank=True)
     is_current_production = models.BooleanField(default=True)
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
@@ -467,126 +478,3 @@ class ServiceCommandCRON(CRON):
 
     def __str__(self):
         return f"HTTP CRON {self.name}"
-
-
-class Worker(models.Model):
-    idle_timeout_in_seconds = models.PositiveIntegerField()
-    archived = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255)
-    is_public = models.BooleanField(default=False)
-    domain = models.URLField(max_length=1000, null=True, blank=True)
-    project = models.ForeignKey(
-        to=Project,
-        on_delete=models.CASCADE,
-    )
-    # TODO : when working with workers
-    # env_variables = models.ManyToManyField(to=EnvVariable)
-
-    class Meta:
-        abstract = True
-        unique_together = (
-            "slug",
-            "project",
-        )
-
-    def __str__(self):
-        return f"Worker ({self.name})"
-
-
-class DockerRegistryWorker(Worker):
-    base_image = models.CharField(max_length=255)
-    docker_credentials_email = models.CharField(max_length=255, null=True, blank=True)
-    docker_credentials_password = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-
-    def __str__(self):
-        return f"Worker {self.name} based on {self.base_image}"
-
-
-class GitRepositoryWorker(Worker):
-    auto_deploy = models.BooleanField(default=True)
-    repository_url = models.URLField(max_length=1000)
-
-    # for docker build context
-    dockerfile_path = models.CharField(max_length=255, default="./Dockerfile")
-    docker_build_context_dir = models.CharField(max_length=255, default=".")
-    docker_cmd = models.CharField(max_length=255, null=True, blank=True)
-
-    def __str__(self):
-        return f"Worker {self.name} from git repository: ({self.repository_url})"
-
-
-class BaseWorkerDeployment(models.Model):
-    class DeploymentStatus(models.TextChoices):
-        ERROR = "ERROR", _("Error")
-        SUCCESS = "SUCCESS", _("Success")
-        PENDING = "PENDING", _("Pending")
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_production = models.BooleanField(default=True)
-    status = models.CharField(
-        max_length=10,
-        choices=DeploymentStatus.choices,
-        default=DeploymentStatus.PENDING,
-    )
-    logs = models.ManyToManyField(to="SimpleLog")
-
-    class Meta:
-        abstract = True
-
-
-class DockerWorkerDeployment(BaseWorkerDeployment):
-    worker = models.ForeignKey(to=DockerRegistryWorker, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = (
-            "is_production",
-            "worker",
-        )
-
-
-class GitWorkerDeployment(BaseWorkerDeployment):
-    commit_hash = models.CharField(
-        max_length=40
-    )  # Typical length of a Git commit hash, but we will use the short version
-    commit_message = models.TextField(blank=True)
-    build_duration_in_ms = models.PositiveIntegerField()
-    worker = models.ForeignKey(to=GitRepositoryWorker, on_delete=models.CASCADE)
-    commit_author_username = models.CharField(max_length=255)
-    commit_author_avatar_url = models.URLField(null=True)
-
-    @property
-    def image_tags(self) -> List[str]:
-        tags = []  # type: List[str]
-        if self.is_production:
-            tags.append("latest")
-        tags.append(f"{self.commit_hash}")
-        return list(map(tags, lambda tag: f"{self.image_name}:{tag}"))
-
-    @property
-    def image_name(self):
-        project_prefix = self.worker.project.slug
-        service_prefix = self.worker.slug
-        return f"{project_prefix}-{service_prefix}"
-
-    @property
-    def domain(self):
-        if not self.worker.is_public:
-            return None
-
-        if self.is_production:
-            return self.worker.domain
-
-        return f"{self.project.slug}-{self.worker.slug}-{self.commit_hash}.{self.worker.domain}"
-
-    class Meta:
-        unique_together = (
-            "is_production",
-            "worker",
-        )
-
-    def __str__(self):
-        return f"{self.worker.slug} - {self.commit_hash[:7]} - {self.status}"

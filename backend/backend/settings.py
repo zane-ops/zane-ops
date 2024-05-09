@@ -281,6 +281,7 @@ CELERY_CACHE_BACKEND = "default"
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_RESULT_CACHE_MAX = 1_000
 
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(

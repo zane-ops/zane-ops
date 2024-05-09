@@ -1227,7 +1227,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            initial_deployment.deployment_status,
+            initial_deployment.status,
         )
         self.assertIsNotNone(initial_deployment.monitor_task)
         self.assertEqual(15, initial_deployment.monitor_task.interval.every)
@@ -1417,7 +1417,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @responses.activate
@@ -1459,7 +1459,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_create_service_with_healtheck_cmd_success(
@@ -1519,7 +1519,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_create_service_without_healthcheck_succeed_when_service_is_working_correctly_by_default(
@@ -1543,7 +1543,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @patch("zane_api.docker_operations.sleep")
@@ -1580,7 +1580,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @patch("zane_api.docker_operations.sleep")
@@ -1615,7 +1615,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         fake_service.scale.assert_called_with(0)
 
@@ -1648,7 +1648,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         self.assertIsNone(latest_deployment.monitor_task)
 
@@ -2033,14 +2033,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_restart_is_set_after_multiple_tasks_deployments(self):
@@ -2102,14 +2102,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.RESTARTING,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_succesful_restart_deploymen_flow(self):
@@ -2171,14 +2171,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     @patch("zane_api.docker_operations.sleep")
@@ -2290,14 +2290,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
     def test_service_fail_outside_of_zane_control(self):
@@ -2326,16 +2326,16 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
-        latest_deployment.deployment_status = DockerDeployment.DeploymentStatus.HEALTHY
+        latest_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
         latest_deployment.save()
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
         latest_deployment = created_service.get_latest_deployment()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
-            latest_deployment.deployment_status,
+            latest_deployment.status,
         )
 
 

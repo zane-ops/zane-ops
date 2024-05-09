@@ -42,8 +42,8 @@ def docker_service_deploy_failure(
         hash=deployment_hash
     ).first()
     if deployment is not None:
-        deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
-        deployment.deployment_status_reason = str(exc)
+        deployment.status = DockerDeployment.DeploymentStatus.FAILED
+        deployment.status_reason = str(exc)
         scale_down_docker_service(deployment)
         deployment.save()
 
@@ -71,10 +71,8 @@ def deploy_docker_service(
                     "Cannot execute a deploy a non existent deployment."
                 )
 
-            if deployment.deployment_status == DockerDeployment.DeploymentStatus.QUEUED:
-                deployment.deployment_status = (
-                    DockerDeployment.DeploymentStatus.PREPARING
-                )
+            if deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
+                deployment.status = DockerDeployment.DeploymentStatus.PREPARING
                 deployment.save()
 
             # TODO (#67) : send system logs when the resources are created
@@ -97,7 +95,7 @@ def deploy_docker_service(
                 )
             )
             if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
-                deployment.deployment_status = deployment_status
+                deployment.status = deployment_status
                 healthcheck = service.healthcheck
 
                 deployment.monitor_task = PeriodicTask.objects.create(
@@ -119,10 +117,10 @@ def deploy_docker_service(
                     ),
                 )
             else:
-                deployment.deployment_status = DockerDeployment.DeploymentStatus.FAILED
+                deployment.status = DockerDeployment.DeploymentStatus.FAILED
                 scale_down_docker_service(deployment)
 
-            deployment.deployment_status_reason = deployment_status_reason
+            deployment.status_reason = deployment_status_reason
             deployment.save()
     except LockAcquisitionError as e:
         # Use the countdown from the exception for retrying
@@ -196,16 +194,16 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
 
     if (
         deployment is not None
-        and deployment.deployment_status != DockerDeployment.DeploymentStatus.OFFLINE
+        and deployment.status != DockerDeployment.DeploymentStatus.OFFLINE
     ):
         try:
             deployment_status, deployment_status_reason = (
                 get_updated_docker_service_deployment_status(deployment, auth_token)
             )
-            deployment.deployment_status = deployment_status
-            deployment.deployment_status_reason = deployment_status_reason
+            deployment.status = deployment_status
+            deployment.status_reason = deployment_status_reason
         except TimeoutError as e:
-            deployment.deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
-            deployment.deployment_status_reason = str(e)
+            deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+            deployment.status_reason = str(e)
         finally:
             deployment.save()

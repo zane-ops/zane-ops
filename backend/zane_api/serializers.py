@@ -133,7 +133,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "is_redeploy_of",
             "hash",
             "image_tag",
-            "deployment_status",
-            "deployment_status_reason",
+            "status",
+            "status_reason",
             "url",
         ]
