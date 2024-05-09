@@ -101,7 +101,9 @@ class DockerServiceSerializer(ModelSerializer):
     )
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
     healthcheck = HealthCheckSerializer(read_only=True)
-    network_aliases = serializers.ReadOnlyField()
+    network_aliases = serializers.ListField(
+        child=serializers.CharField(), read_only=True
+    )
 
     class Meta:
         model = models.DockerRegistryService
@@ -127,7 +129,9 @@ class CaseInsensitiveChoiceField(serializers.ChoiceField):
 
 
 class DockerServiceDeploymentSerializer(ModelSerializer):
-    network_aliases = serializers.ReadOnlyField()
+    network_aliases = serializers.ListField(
+        child=serializers.CharField(), read_only=True
+    )
 
     class Meta:
         model = models.DockerDeployment
