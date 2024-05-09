@@ -93,6 +93,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/LoginSuccessResponse'
           description: ''
+        '302':
+          description: No response body
   /api/auth/logout/:
     delete:
       operationId: logout
@@ -157,6 +159,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetAuthedUserErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthedSuccessResponse'
+          description: ''
+  /api/auth/me/with-token/:
+    get:
+      operationId: getAuthedUserWithToken
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAuthedUserWithTokenErrorResponse400'
           description: ''
         '401':
           content:
@@ -918,6 +977,8 @@ paths:
           items:
             type: string
             enum:
+            - CANCELLED
+            - FAILED
             - HEALTHY
             - OFFLINE
             - PREPARING
@@ -927,6 +988,8 @@ paths:
             - UNHEALTHY
         description: |-
           * `QUEUED` - Queued
+          * `CANCELLED` - Cancelled
+          * `FAILED` - Failed
           * `PREPARING` - Preparing
           * `STARTING` - Starting
           * `RESTARTING` - Restarting
@@ -1779,6 +1842,13 @@ components:
       - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXHostPathErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXModeErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckTypeErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckValueErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckTimeoutSecondsErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckIntervalSecondsErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -1805,6 +1875,13 @@ components:
           volumes.INDEX.non_field_errors: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
           volumes.INDEX.name: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
           volumes.INDEX.mount_path: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
+          volumes.INDEX.host_path: '#/components/schemas/CreateDockerServiceVolumesINDEXHostPathErrorComponent'
+          volumes.INDEX.mode: '#/components/schemas/CreateDockerServiceVolumesINDEXModeErrorComponent'
+          healthcheck.non_field_errors: '#/components/schemas/CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
+          healthcheck.type: '#/components/schemas/CreateDockerServiceHealthcheckTypeErrorComponent'
+          healthcheck.value: '#/components/schemas/CreateDockerServiceHealthcheckValueErrorComponent'
+          healthcheck.timeout_seconds: '#/components/schemas/CreateDockerServiceHealthcheckTimeoutSecondsErrorComponent'
+          healthcheck.interval_seconds: '#/components/schemas/CreateDockerServiceHealthcheckIntervalSecondsErrorComponent'
     CreateDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateDockerServiceValidationError'
@@ -1814,6 +1891,138 @@ components:
         mapping:
           validation_error: '#/components/schemas/CreateDockerServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    CreateDockerServiceHealthcheckIntervalSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.interval_seconds
+          type: string
+          description: '* `healthcheck.interval_seconds` - healthcheck.interval_seconds'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.non_field_errors
+          type: string
+          description: '* `healthcheck.non_field_errors` - healthcheck.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceHealthcheckTimeoutSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.timeout_seconds
+          type: string
+          description: '* `healthcheck.timeout_seconds` - healthcheck.timeout_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceHealthcheckTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.type
+          type: string
+          description: '* `healthcheck.type` - healthcheck.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceHealthcheckValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.value
+          type: string
+          description: '* `healthcheck.value` - healthcheck.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateDockerServiceImageErrorComponent:
       type: object
       properties:
@@ -2123,6 +2332,58 @@ components:
       required:
       - errors
       - type
+    CreateDockerServiceVolumesINDEXHostPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.host_path
+          type: string
+          description: '* `volumes.INDEX.host_path` - volumes.INDEX.host_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateDockerServiceVolumesINDEXModeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.mode
+          type: string
+          description: '* `volumes.INDEX.mode` - volumes.INDEX.mode'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateDockerServiceVolumesINDEXMountPathErrorComponent:
       type: object
       properties:
@@ -2170,7 +2431,6 @@ components:
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -2179,7 +2439,6 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -2313,6 +2572,8 @@ components:
     DeploymentStatusEnum:
       enum:
       - QUEUED
+      - CANCELLED
+      - FAILED
       - PREPARING
       - STARTING
       - RESTARTING
@@ -2322,6 +2583,8 @@ components:
       type: string
       description: |-
         * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `FAILED` - Failed
         * `PREPARING` - Preparing
         * `STARTING` - Starting
         * `RESTARTING` - Restarting
@@ -2350,12 +2613,8 @@ components:
         key:
           type: string
           maxLength: 255
-        value:
-          type: string
-          maxLength: 255
       required:
       - key
-      - value
     DockerImage:
       type: object
       properties:
@@ -2594,13 +2853,20 @@ components:
           items:
             $ref: '#/components/schemas/PortConfiguration'
           readOnly: true
+          default: []
         env_variables:
           type: array
           items:
             $ref: '#/components/schemas/DockerEnvVariable'
+          readOnly: true
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/HealthCheck'
+          readOnly: true
       required:
       - created_at
       - env_variables
+      - healthcheck
       - image_repository
       - ports
       - slug
@@ -2639,6 +2905,8 @@ components:
           items:
             $ref: '#/components/schemas/VolumeRequest'
           default: []
+        healthcheck:
+          $ref: '#/components/schemas/HealthCheckRequest'
       required:
       - image
     DockerServiceDeployment:
@@ -2664,7 +2932,11 @@ components:
         deployment_status_reason:
           type: string
           nullable: true
-          maxLength: 255
+        url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
       required:
       - created_at
     DockerServiceResponse:
@@ -2810,6 +3082,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetAuthedUserWithTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetCSRFErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -2859,6 +3138,56 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    HealthCheck:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/HealthCheckTypeEnum'
+        value:
+          type: string
+          maxLength: 255
+        timeout_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        interval_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+    HealthCheckRequest:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/HealthCheckRequestTypeEnum'
+        value:
+          type: string
+          maxLength: 255
+        timeout_seconds:
+          type: integer
+          minimum: 5
+          default: 60
+        interval_seconds:
+          type: string
+          default: '30'
+      required:
+      - type
+      - value
+    HealthCheckRequestTypeEnum:
+      enum:
+      - path
+      - command
+      type: string
+      description: |-
+        * `path` - path
+        * `command` - command
+    HealthCheckTypeEnum:
+      enum:
+      - COMMAND
+      - PATH
+      type: string
+      description: |-
+        * `COMMAND` - Command
+        * `PATH` - Path
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -2951,6 +3280,8 @@ components:
       properties:
         success:
           type: boolean
+        token:
+          type: string
       required:
       - success
     LoginUsernameErrorComponent:
@@ -3006,6 +3337,14 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ModeEnum:
+      enum:
+      - ro
+      - rw
+      type: string
+      description: |-
+        * `ro` - READ_ONLY
+        * `rw` - READ_WRITE
     ParseError:
       type: object
       properties:
@@ -3340,10 +3679,6 @@ components:
         last_name:
           type: string
           maxLength: 150
-        is_staff:
-          type: boolean
-          title: Staff status
-          description: Designates whether the user can log into this admin site.
       required:
       - username
     ValidationErrorEnum:
@@ -3368,11 +3703,15 @@ components:
         name:
           type: string
           maxLength: 255
-        containerPath:
+        container_path:
           type: string
           maxLength: 255
+        host_path:
+          type: string
+          nullable: true
+          maxLength: 255
       required:
-      - containerPath
+      - container_path
       - created_at
       - name
       - updated_at
@@ -3392,11 +3731,24 @@ components:
         mount_path:
           type: string
           maxLength: 255
+        host_path:
+          type: string
+          maxLength: 255
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          default: rw
       required:
       - mount_path
-      - name
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
       name: sessionid
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
+servers:
+- url: https://zaneops.fredkiss.dev

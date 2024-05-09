@@ -1,16 +1,89 @@
+import json
 from dataclasses import dataclass
 from typing import Any, List
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import docker.errors
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from docker.types import EndpointSpec
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project
+
+
+class CustomAPIClient(APIClient):
+    def __init__(self, parent: TestCase, **defaults):
+        super().__init__(enforce_csrf_checks=False, **defaults)
+        self.parent = parent
+
+    def post(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) is dict:
+            data = json.dumps(data)
+
+        with self.parent.captureOnCommitCallbacks(execute=True) as callbacks:
+            response = super().post(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    def put(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) is dict:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().put(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    def patch(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) is dict:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().patch(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    def delete(
+        self, path, data=None, format=None, content_type=None, follow=False, **extra
+    ):
+        if type(data) == dict:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().delete(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
 
 
 @override_settings(
@@ -26,7 +99,8 @@ from ..models import Project
     CELERY_TASK_STORE_EAGER_RESULT=True,
 )
 class APITestCase(TestCase):
-    client = APIClient(enforce_csrf_checks=True, content_type="application/json")
+    def setUp(self):
+        self.client = CustomAPIClient(parent=self)
 
     def tearDown(self):
         cache.clear()
@@ -34,11 +108,26 @@ class APITestCase(TestCase):
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):
+        super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
+        self.fake_docker_client = FakeDockerClient()
+
+        # these functions are always patched
+        patch("zane_api.tasks.expose_docker_service_to_http").start()
+        patch("zane_api.tasks.unexpose_docker_service_from_http").start()
+        patch("zane_api.tasks.expose_docker_service_deployment_to_http").start()
+        patch(
+            "zane_api.docker_operations.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+
+        self.addCleanup(patch.stopall)
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
-        return User.objects.get(username="Fredkiss3")
+        user = User.objects.get(username="Fredkiss3")
+        Token.objects.get_or_create(user=user)
+        return user
 
 
 class FakeDockerClient:
@@ -65,7 +154,7 @@ class FakeDockerClient:
             self,
             parent: "FakeDockerClient",
             name: str,
-            volumes: dict[str, str] = None,
+            volumes: dict[str, dict[str, str]] = None,
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
         ):
@@ -82,18 +171,7 @@ class FakeDockerClient:
             self.env = {} if env is None else env
             self.endpoint = endpoint
             self.id = name
-
-        def remove(self):
-            self.parent.services_remove(self.name)
-
-        def update(self, networks: list):
-            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
-                {"Target": network} for network in networks
-            ]
-
-        @staticmethod
-        def tasks(*args, **kwargs):
-            return [
+            self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
                     "Version": {"Index": 15078},
@@ -105,6 +183,7 @@ class FakeDockerClient:
                         "Message": "started",
                         # "Err": "task: non-zero exit (127)",
                         "ContainerStatus": {
+                            "ContainerID": "abcd",
                             "ExitCode": 0,
                         },
                     },
@@ -112,7 +191,31 @@ class FakeDockerClient:
                 }
             ]
 
+        def remove(self):
+            self.parent.services_remove(self.name)
+
+        def update(self, networks: list):
+            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
+                {"Target": network} for network in networks
+            ]
+
+        def tasks(self, *args, **kwargs):
+            return self.swarm_tasks
+
+        def scale(self, replicas: int):
+            """do nothing for now"""
+            if replicas == 0:
+                self.swarm_tasks = []
+
+    class FakeContainer:
+        @staticmethod
+        def exec_run(cmd: str, *args, **kwargs):
+            if cmd == FakeDockerClient.FAILING_CMD:
+                return 1, b"connection refused"
+            return 0, b"connection succesful"
+
     PORT_USED_BY_HOST = 8080
+    FAILING_CMD = "invalid"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -125,6 +228,7 @@ class FakeDockerClient:
         self.images.search = self.images_search
         self.images.pull = self.images_pull
         self.containers.run = self.containers_run
+        self.containers.get = self.containers_get
         self.images.get_registry_data = self.image_get_registry_data
         self.services.create = self.services_create
         self.services.get = self.services_get
@@ -154,6 +258,9 @@ class FakeDockerClient:
 
     def events(self, decode: bool, filters: dict):
         return []
+
+    def containers_get(self, container_id: str):
+        return FakeDockerClient.FakeContainer()
 
     def containers_run(self, command: str, *args, **kwargs):
         ports: dict[str, tuple[str, int]] = kwargs.get("ports")
@@ -200,21 +307,21 @@ class FakeDockerClient:
         mounts: list[str],
         env: list[str],
         endpoint_spec: Any,
-        networks: list[str],
         image: str,
-        restart_policy: Any,
-        update_config: Any,
-        command: str | None,
-        labels: dict[str, str],
+        *args,
+        **kwargs,
     ):
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")
-        volumes: dict[str, str] = {}
+        volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
-            volume_name, mount_path, _ = mount.split(":")
-            if volume_name not in self.volume_map:
+            volume_name, mount_path, mode = mount.split(":")
+            if not volume_name.startswith("/") and volume_name not in self.volume_map:
                 raise docker.errors.NotFound("Volume not created")
-            volumes[volume_name] = mount_path
+            volumes[volume_name] = {
+                "mount_path": mount_path,
+                "mode": mode,
+            }
 
         envs: dict[str, str] = {}
         for var in env:

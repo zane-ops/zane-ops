@@ -3,12 +3,15 @@ import time
 import django_filters
 import docker.errors
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import Q, QuerySet
+from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import status, exceptions
+from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -32,9 +35,11 @@ from ..models import (
     DockerEnvVariable,
     ArchivedProject,
     ArchivedDockerService,
+    HealthCheck,
 )
 from ..tasks import deploy_docker_service, delete_resources_for_docker_service
 from ..utils import strip_slash_if_exists
+from ..validators import validate_url_path
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
@@ -49,8 +54,16 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 
 
 class VolumeRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100)
+    name = serializers.CharField(max_length=100, required=False)
     mount_path = serializers.CharField(max_length=255)
+    host_path = serializers.URLPathField(max_length=255, required=False)
+    VOLUME_MODE_CHOICES = (
+        ("ro", _("READ_ONLY")),
+        ("rw", _("READ_WRITE")),
+    )
+    mode = serializers.ChoiceField(
+        required=False, choices=VOLUME_MODE_CHOICES, default="rw"
+    )
 
 
 class URLRequestSerializer(serializers.Serializer):
@@ -100,6 +113,27 @@ class URLRequestSerializer(serializers.Serializer):
         return url
 
 
+class HealthCheckRequestSerializer(serializers.Serializer):
+    HEALTCHECK_CHOICES = (
+        ("path", _("path")),
+        ("command", _("command")),
+    )
+    type = serializers.CaseInsensitiveChoiceField(
+        required=True, choices=HEALTCHECK_CHOICES
+    )
+    value = serializers.CharField(max_length=255, required=True)
+    timeout_seconds = serializers.IntegerField(required=False, default=60, min_value=5)
+    interval_seconds = serializers.CharField(required=False, default=30)
+
+    def validate(self, data: dict):
+        if data["type"] == "path":
+            try:
+                validate_url_path(data["value"])
+            except ValidationError as e:
+                raise serializers.ValidationError({"value": e.messages})
+        return data
+
+
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
@@ -109,11 +143,12 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeRequestSerializer(many=True, required=False, default=[])
-    # TODO : add healthcheck (path or command ?)
+    healthcheck = HealthCheckRequestSerializer(required=False)
 
     def validate(self, data: dict):
         credentials = data.get("credentials")
         image = data.get("image")
+        healthcheck = data.get("healthcheck")
 
         if credentials is not None:
             try:
@@ -138,7 +173,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "image": [
-                        f"Either the image `{image}` does not exist {registry_str}"
+                        f"Either the image `{image}` does not exist `{registry_str}`"
                         f" or the credentials are invalid for this image."
                         f" Have you forgotten to include the credentials ?"
                     ]
@@ -160,6 +195,17 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                         }
                     )
 
+        if healthcheck is not None and healthcheck["type"].lower() == "path":
+            if len(ports) == 0 and len(urls) == 0:
+                raise serializers.ValidationError(
+                    {
+                        "healthcheck": {
+                            "path": [
+                                f"healthcheck requires that at least one `url` or one `port` is provided"
+                            ]
+                        }
+                    }
+                )
         return data
 
     def validate_credentials(self, value: dict):
@@ -282,6 +328,7 @@ class CreateDockerServiceAPIView(APIView):
                     if len(docker_image_parts) == 2:
                         docker_image, docker_image_tag = docker_image_parts
 
+                    healthcheck = data.get("healthcheck")
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
@@ -297,6 +344,16 @@ class CreateDockerServiceAPIView(APIView):
                             if docker_credentials is not None
                             else None
                         ),
+                        healthcheck=(
+                            HealthCheck.objects.create(
+                                type=healthcheck["type"].upper(),
+                                value=healthcheck["value"],
+                                timeout_seconds=healthcheck["timeout_seconds"],
+                                interval_seconds=healthcheck["interval_seconds"],
+                            )
+                            if healthcheck is not None
+                            else None
+                        ),
                     )
                 except IntegrityError:
                     raise ResourceConflict(
@@ -305,11 +362,17 @@ class CreateDockerServiceAPIView(APIView):
 
                 # Create volumes if exists
                 volumes_request = data.get("volumes", [])
+                volume_mode_map = {
+                    "rw": Volume.VolumeMode.READ_WRITE,
+                    "ro": Volume.VolumeMode.READ_ONLY,
+                }
                 created_volumes = Volume.objects.bulk_create(
                     [
                         Volume(
-                            name=volume["name"],
-                            containerPath=volume["mount_path"],
+                            name=volume.get("name", fake.slug().lower()),
+                            container_path=volume["mount_path"],
+                            host_path=volume.get("host_path"),
+                            mode=volume_mode_map[volume.get("mode")],
                         )
                         for volume in volumes_request
                     ]
@@ -407,6 +470,9 @@ class CreateDockerServiceAPIView(APIView):
                 first_deployment = DockerDeployment.objects.create(
                     service=service, image_tag=docker_image_tag
                 )
+                if len(service.urls.all()) > 0:
+                    first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+                    first_deployment.save()
 
                 # Create envs if exists
                 envs_from_request: dict[str, str] = data.get("env", {})
@@ -418,10 +484,17 @@ class CreateDockerServiceAPIView(APIView):
                     ]
                 )
 
+                token = Token.objects.get(user=request.user)
                 # Run celery deployment task
-                deploy_docker_service.apply_async(
-                    kwargs=dict(deployment_hash=first_deployment.hash),
-                    task_id=first_deployment.task_id,
+                transaction.on_commit(
+                    lambda: deploy_docker_service.apply_async(
+                        kwargs=dict(
+                            deployment_hash=first_deployment.hash,
+                            service_id=service.id,
+                            auth_token=token.key,
+                        ),
+                        task_id=first_deployment.task_id,
+                    )
                 )
 
                 response = DockerServiceResponseSerializer({"service": service})
@@ -589,12 +662,16 @@ class ArchiveDockerServiceAPIView(APIView):
         archived_service = ArchivedDockerService.create_from_service(
             service, archived_project
         )
-        delete_resources_for_docker_service.apply_async(
-            kwargs=dict(archived_service_id=archived_service.id),
-            task_id=service.archive_task_id,
-        )
 
+        archive_task_id = service.archive_task_id
         service.delete_resources()
         service.delete()
+
+        transaction.on_commit(
+            lambda: delete_resources_for_docker_service.apply_async(
+                kwargs=dict(archived_service_id=archived_service.id),
+                task_id=archive_task_id,
+            )
+        )
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

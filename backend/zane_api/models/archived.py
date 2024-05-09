@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from .base import Project, DockerRegistryService, DockerDeployment
 from ..utils import strip_slash_if_exists
@@ -77,8 +78,19 @@ class ArchivedURL(models.Model):
 
 
 class ArchivedVolume(TimestampArchivedModel):
+    class VolumeMode(models.TextChoices):
+        READ_ONLY = "READ_ONLY", _("Read-Only")
+        READ_WRITE = "READ_WRITE", _("Read-Write")
+
+    mode = models.CharField(
+        max_length=255,
+        null=False,
+        choices=VolumeMode.choices,
+        default=VolumeMode.READ_WRITE,
+    )
     name = models.CharField(max_length=255)
-    containerPath = models.CharField(max_length=255)
+    container_path = models.CharField(max_length=255)
+    host_path = models.CharField(max_length=255, null=True)
     original_id = models.CharField(max_length=255)
 
     def __str__(self):
@@ -117,6 +129,10 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
     )
 
 
+class DeploymentURL(models.Model):
+    domain = models.URLField(null=False)
+
+
 class ArchivedDockerService(ArchivedBaseService):
     image_repository = models.CharField(max_length=510, null=False, blank=False)
     image_tag = models.CharField(max_length=255, default="latest")
@@ -130,6 +146,7 @@ class ArchivedDockerService(ArchivedBaseService):
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
     )
+    deployment_urls = models.ManyToManyField(to=DeploymentURL)
 
     @classmethod
     def create_from_service(
@@ -160,8 +177,10 @@ class ArchivedDockerService(ArchivedBaseService):
             [
                 ArchivedVolume(
                     name=volume.name,
-                    containerPath=volume.containerPath,
+                    container_path=volume.container_path,
+                    host_path=volume.host_path,
                     original_id=volume.id,
+                    mode=volume.mode,
                 )
                 for volume in service.volumes.all()
             ]
@@ -195,8 +214,19 @@ class ArchivedDockerService(ArchivedBaseService):
             ]
         )
 
+        existing_deployments_urls: list[DockerDeployment] = list(
+            filter(lambda dpl: dpl.url is not None, service.deployments.all())
+        )
+        deployment_urls = DeploymentURL.objects.bulk_create(
+            [
+                DeploymentURL(domain=deployment.url)
+                for deployment in existing_deployments_urls
+            ]
+        )
+
         archived_service.volumes.add(*archived_volumes)
         archived_service.ports.add(*archived_ports)
         archived_service.urls.add(*archived_urls)
+        archived_service.deployment_urls.add(*deployment_urls)
 
         return archived_service

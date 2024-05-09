@@ -24,11 +24,12 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      DB_HOST: db
-      DB_PORT: 5432
-      CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
+    #    environment:
+    #      REDIS_URL: redis://redis:6379/0
+    #      DB_HOST: db
+    #      DB_PORT: 5432
+    #      CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
+    network_mode: 'host'
   celery-beat:
     build:
       context: ../backend
