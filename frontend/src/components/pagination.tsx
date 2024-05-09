@@ -2,7 +2,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -10,8 +10,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "./ui/select";
+import { cn } from "~/lib/utils";
 
 export type PaginationProps = {
   totalPages: number;
@@ -26,16 +27,16 @@ export function Pagination({
   totalPages,
   currentPage,
   perPage,
-  className = "",
+  className,
   onChangePage,
-  onChangePerPage
+  onChangePerPage,
 }: PaginationProps) {
   return (
-    <div className={`flex items-center justify-end px-2 ${className}`}>
+    <div className={cn("flex items-center justify-end px-2", className)}>
       <div className="flex items-center space-x-2">
         <p className="text-sm font-medium">Rows per page</p>
         <Select
-          value={`${perPage}`}
+          value={perPage.toString()}
           onValueChange={(value) => onChangePerPage(Number(value))}
         >
           <SelectTrigger className="h-8 w-[70px]">
@@ -58,9 +59,9 @@ export function Pagination({
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
-            className={`hidden h-8 w-8 p-0 lg:flex ${
-              currentPage === 1 ? "opacity-50 pointer-events-none" : ""
-            }`}
+            className={cn("hidden h-8 w-8 p-0 lg:flex", {
+              "opacity-50 pointer-events-none": currentPage === 1,
+            })}
             onClick={() => onChangePage(1)}
             disabled={currentPage === 1}
           >
@@ -69,9 +70,9 @@ export function Pagination({
           </Button>
           <Button
             variant="outline"
-            className={`h-8 w-8 p-0 ${
-              currentPage === 1 ? "opacity-50 pointer-events-none" : ""
-            }`}
+            className={cn("h-8 w-8 p-0", {
+              "opacity-50 pointer-events-none": currentPage === 1,
+            })}
             onClick={() => onChangePage(currentPage - 1)}
             disabled={currentPage === 1}
           >
@@ -80,9 +81,9 @@ export function Pagination({
           </Button>
           <Button
             variant="outline"
-            className={`h-8 w-8 p-0 ${
-              currentPage === totalPages ? "opacity-50 pointer-events-none" : ""
-            }`}
+            className={cn("h-8 w-8 p-0", {
+              "opacity-50 pointer-events-none": currentPage === totalPages,
+            })}
             onClick={() => onChangePage(currentPage + 1)}
             disabled={currentPage === totalPages}
           >
@@ -91,9 +92,9 @@ export function Pagination({
           </Button>
           <Button
             variant="outline"
-            className={`hidden h-8 w-8 p-0 lg:flex ${
-              currentPage === totalPages ? "opacity-50 pointer-events-none" : ""
-            }`}
+            className={cn("hidden h-8 w-8 p-0 lg:flex", {
+              "opacity-50 pointer-events-none": currentPage === totalPages,
+            })}
             onClick={() => onChangePage(totalPages)}
             disabled={currentPage === totalPages}
           >

@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -17,7 +17,7 @@ import {
   Menubar,
   MenubarContent,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -29,12 +29,12 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { MenubarContentItem } from "../_dashboard";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -62,7 +62,7 @@ const projects = [
     updated_at: "Jan 13, 2024",
     status: "0/5 Services Up",
     actions: "Settings",
-    tracker: 0
+    tracker: 0,
   },
   {
     id: 2,
@@ -70,7 +70,7 @@ const projects = [
     updated_at: "Jan 13, 2024",
     status: "5/5 Services Up",
     actions: "Settings",
-    tracker: 1
+    tracker: 1,
   },
   {
     id: 3,
@@ -78,10 +78,11 @@ const projects = [
     updated_at: "Jan 13, 2024",
     status: "2/5 Services Up",
     actions: "Settings",
-    tracker: 2
-  }
+    tracker: 2,
+  },
 ];
 
+// TODO: to remove
 type TrackerColor = "red" | "green" | "yellow";
 function getBadgeColor(tracker: number): TrackerColor {
   switch (tracker) {
@@ -99,14 +100,6 @@ function getBadgeColor(tracker: number): TrackerColor {
 export function ProjectList() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(10);
-
-  const handleChangePage = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleChangePerPage = (perPage: number) => {
-    setPerPage(perPage);
-  };
 
   return (
     <main>
@@ -181,8 +174,8 @@ export function ProjectList() {
           totalPages={10}
           currentPage={currentPage}
           perPage={perPage}
-          onChangePage={handleChangePage}
-          onChangePerPage={handleChangePerPage}
+          onChangePage={() => setCurrentPage(currentPage + 1)}
+          onChangePerPage={() => setPerPage(perPage)}
         />
       </div>
     </main>
