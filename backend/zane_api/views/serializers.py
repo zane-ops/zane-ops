@@ -310,10 +310,11 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
     env = serializers.DictField(child=serializers.CharField(), required=False)
     volumes = VolumeRequestSerializer(many=True, required=False)
     healthcheck = HealthCheckRequestSerializer(required=False)
+    image_repository = ""
 
-    def __init__(self, image_repository: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.image_repository = image_repository
+    # def __init__(self, image_repository: str, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.image_repository = image_repository
 
     def validate(self, data: dict):
         credentials = data.get("credentials")

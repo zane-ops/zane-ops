@@ -249,7 +249,7 @@ class CreateDockerServiceAPIView(APIView):
 
 
 class UpdateDockerServiceAPIView(APIView):
-    serializer = DockerServiceResponseSerializer
+    serializer_class = DockerServiceResponseSerializer
 
     @extend_schema(
         request=DockerServiceUpdateRequestSerializer,
@@ -260,7 +260,7 @@ class UpdateDockerServiceAPIView(APIView):
 
 
 class DeployDockerServiceAPIView(APIView):
-    serializer = DockerServiceResponseSerializer
+    serializer_class = DockerServiceResponseSerializer
 
     @extend_schema(
         request=DockerServiceDeployRequestSerializer,
