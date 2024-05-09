@@ -1173,10 +1173,8 @@ class DockerServicesDeploymentViewTest(AuthAPITestCase):
             service__slug="cache-db"
         ).first()
         self.assertIsNotNone(deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, deployment.deployment_status
-        )
-        self.assertEqual(str(exception), deployment.deployment_status_reason)
+        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
+        self.assertEqual(str(exception), deployment.status_reason)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
     @patch(
@@ -1215,10 +1213,8 @@ class DockerServicesDeploymentViewTest(AuthAPITestCase):
             service__slug="cache-db"
         ).first()
         self.assertIsNotNone(deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, deployment.deployment_status
-        )
-        self.assertEqual(str(exception), deployment.deployment_status_reason)
+        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
+        self.assertEqual(str(exception), deployment.status_reason)
         fake_service.scale.assert_called_with(0)
 
 
@@ -2439,7 +2435,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
                     "service_slug": "cache-db",
                 },
             )
-            + "?deployment_status=OFFLINE"
+            + "?status=OFFLINE"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
