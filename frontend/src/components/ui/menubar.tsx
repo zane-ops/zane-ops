@@ -214,6 +214,27 @@ const MenubarShortcut = ({
 };
 MenubarShortcut.displayname = "MenubarShortcut";
 
+type MenubarContentItemProps = {
+  icon: React.ElementType;
+  text: string;
+  className?: string;
+};
+
+export function MenubarContentItem({
+  icon: Icon,
+  text,
+  className,
+}: MenubarContentItemProps) {
+  return (
+    <MenubarItem
+      className={cn("flex pr-4 w-full gap-2 cursor-pointer", className)}
+    >
+      {Icon && <Icon className={cn("w-4 opacity-50", className)} />}
+      {text}
+    </MenubarItem>
+  );
+}
+
 export {
   Menubar,
   MenubarMenu,
@@ -230,5 +251,5 @@ export {
   MenubarSubTrigger,
   MenubarGroup,
   MenubarSub,
-  MenubarShortcut
+  MenubarShortcut,
 };
