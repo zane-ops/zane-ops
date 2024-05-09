@@ -55,6 +55,18 @@ module.exports = {
         toggle: {
           DEFAULT: "hsl(var(--toggle))",
           light: "hsl(var(--light))"
+        },
+        "status-success": {
+          DEFAULT: "hsl(var(--status-success))",
+          light: "hsl(var(--light))"
+        },
+        "status-error": {
+          DEFAULT: "hsl(var(--status-error))",
+          light: "hsl(var(--light))"
+        },
+        "status-warning": {
+          DEFAULT: "hsl(var(--status-warning))",
+          light: "hsl(var(--light))"
         }
       },
       borderRadius: {

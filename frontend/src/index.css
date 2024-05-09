@@ -32,7 +32,7 @@
     --popover: 164 62% 99%;
     --popover-foreground: 164 67% 0%;
     --card: 219, 40%, 18%;
-    --toggle: 164 62% 99%;
+    --toggle: 180, 23%, 95%;
     --card-foreground: 164 67% 0%;
     --border: 164 9% 90%;
     --input: 164 9% 90%;
@@ -47,6 +47,9 @@
     --ring: 164 61% 70%;
     --radius: 0.5rem;
     --loader: #003c57;
+    --status-success: #bbf7d0 ;
+    --status-error: #fecaca;
+    --status-warning: #fef08a ;
   }
 
   @media (prefers-color-scheme: dark) {
