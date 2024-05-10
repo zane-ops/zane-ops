@@ -3862,7 +3862,9 @@ components:
           - $ref: '#/components/schemas/HealthCheck'
           readOnly: true
         network_aliases:
-          type: string
+          type: array
+          items:
+            type: string
           readOnly: true
       required:
       - created_at
@@ -3940,7 +3942,9 @@ components:
           nullable: true
           maxLength: 200
         network_aliases:
-          type: string
+          type: array
+          items:
+            type: string
           readOnly: true
       required:
       - created_at
