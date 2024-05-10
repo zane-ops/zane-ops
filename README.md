@@ -59,6 +59,10 @@
 
 Interested in contributing? Check out the [contribution guidelines](./CONTRIBUTING.md).
 
+## 📝 Docs
+
+You can access the documentation [here](./docs/).
+
 ## Credits
 
 - [Plane](https://github.com/makeplane/plane): for giving us content for the contributions templates (contribution
