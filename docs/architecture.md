@@ -7,9 +7,9 @@ To run ZaneOps needs many components to run user's services and to run itself bu
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/architecture-dev-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="./images/architecture-dev-light.png">
-    <img src="./images/architecture-dev-dark.png" alt="Zane logo"  width="80%" />
+    <source media="(prefers-color-scheme: dark)" srcset="../images/architecture-dev-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="../images/architecture-dev-light.png">
+    <img src="../images/architecture-dev-dark.png" alt="Zane logo"  width="80%" />
   </picture>
 </p>
 
