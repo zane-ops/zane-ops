@@ -31,8 +31,8 @@ The main components needed to run ZaneOps are :
     1. In term of code, the images that celery use is the same as the API, it is on the same project as the API, but executed on another process.
 8. a local [**Registry**](https://registry.hub.docker.com/_/registry) docker image used for storing images and artifacts that we create when building images for the services you create.
 9.  a [**sablier**](https://github.com/acouvreur/sablier) docker image, sablier is a tool that allow to start containers on demand and shut them down automatically when there's no activity, it is compatible with Docker, Docker Swarm Mode and Kubernetes. 
-   1.  We use this preview deployments so that they don't take too much resources, they will be woken up when you hit the endpoint of the preview deployment
-   2.  We also use this specifically for services that you wish to run in _"serverless"_ mode, it means images services that can sleep when there is no activity
+       1.  We use this preview deployments so that they don't take too much resources, they will be woken up when you hit the endpoint of the preview deployment
+       2.  We also use this specifically for services that you wish to run in _"serverless"_ mode, it means images services that can sleep when there is no activity
 10. a local DNS server used only on DEV, so that generated urls for the services work, these URLs are generated at `*.zaneops.local`, on production this isn't used as you would tipycally use a real DNS server for mapping urls to IPs. It uses a docker container with the [dnsmasq](https://hub.docker.com/r/andyshinn/dnsmasq) image.
 
 ## Schema of a request going to create a service
