@@ -16,7 +16,28 @@
 
 ## 📸 Screenshots
 
-> *TODO: Screenshots will be added once available.*
+- **Login** :
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="./images/screen-login-light.png">
+    <source media="(prefers-color-scheme: dark)" srcset="./images/screen-login-dark.png">
+    <img src="./images/screen-login-dark.png" alt="Zane logo" />
+  </picture>
+</p>
+
+- **Dashboard** :
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="./images/screen-dashboard-light.png">
+    <source media="(prefers-color-scheme: dark)" srcset="./images/screen-dashboard-dark.png">
+    <img src="./images/screen-dashboard-dark.png" alt="Zane logo" />
+  </picture>
+</p>
+
+
+> TODO: More Screenshots will be added once available.
 
 ## 🚀 Features
 
