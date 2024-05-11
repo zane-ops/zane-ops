@@ -37,7 +37,7 @@
 </p>
 
 
-> TODO: More Screenshots will be added once available.
+> *TODO: More Screenshots will be added once available.*
 
 ## 🚀 Features
 
