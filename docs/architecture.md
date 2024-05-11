@@ -30,20 +30,21 @@ The main components needed to run ZaneOps are :
 5. a **REDIS** docker image used in tandem with the API for handling caching and session storage for the API and as an event Bus to communicate with celery workers and execute background and scheduled jobs.
    1. All the tasks related to spinning up or down some resources are sent as background jobs
 
-6. Multiple [celery](https://docs.celeryq.dev/en/stable/) **workers** for handling background and scheduled jobs, they receive tasks through the REDIS bus and execute them 
+6. Multiple [celery](https://docs.celeryq.dev/en/stable/) **workers** for handling background and scheduled jobs, they receive tasks through the REDIS bus and execute them
+   1. Among the tasks handled by celery there are : building services with docker, creating resources for services (volumes, networks) and exposing the service to HTTP by calling the caddy admin API, 
 
 7. A celery **beat** image which in sync with the database schedule jobs and tasks to send to the workers for them to execute, it is like a clocks which execute and read all the scheduled tasks created in the code and queue them in the message bus.
     1. In term of code, the images that celery use is the same as the API, it is on the same project as the API, but executed on another process.
 
 8. a local [**Registry**](https://registry.hub.docker.com/_/registry) docker image used for storing images and artifacts that we create when building images for the services you create.
 
-9. a [**sablier**](https://github.com/acouvreur/sablier) docker image, sablier is a tool that allow to start containers on demand and shut them down automatically when there's no activity, it is compatible with Docker, Docker Swarm Mode and Kubernetes. 
-   1.  We use this preview deployments so that they don't 
+9.  a [**sablier**](https://github.com/acouvreur/sablier) docker image, sablier is a tool that allow to start containers on demand and shut them down automatically when there's no activity, it is compatible with Docker, Docker Swarm Mode and Kubernetes. 
+   1.  We use this preview deployments so that they don't take too much resources, they will be woken up when you hit the endpoint of the preview deployment
    2.  We also use this specifically for services that you wish to run in _"serverless"_ mode, it means images services that can sleep when there is no activity
 
-## Schema of a request going to create a service
+10. a local DNS server used only on DEV, so that generated urls for the services work, these URLs are generated at `*.zaneops.local`, on production this isn't used as you would tipycally use a real DNS server for mapping urls to IPs. It uses a docker container with the [dnsmasq](https://hub.docker.com/r/andyshinn/dnsmasq) image.
 
-> TODO
+## Schema of a request going to create a service
 
 ```mermaid
 sequenceDiagram
@@ -54,17 +55,21 @@ sequenceDiagram
     participant Database
     participant REDIS
     participant Celery
+    participant Registry
     User->>Front: Create a service
     Front->>API: Create a service
     API->>Database: Save service in DB
     API->>REDIS: Dispatch message(Create docker service)
     API-->>Front: 201 Response (service created)
     REDIS->>Celery : deliver message
+    Celery->>Celery : Build service image
+    Celery->>Registry : Push built image
     create participant Service
-    Celery->>Service : Create docker service
+    Celery->>Service : Instanciate docker service with built image
     Celery->>Proxy : Create domain mapping for service
-
 ```
+
+> TODO
 
 ## How is this setup in production ?
 
