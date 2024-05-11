@@ -71,6 +71,7 @@ The cli will also be used for different tasks such as :
 - Updating zaneops
 - Shutting down ZaneOps and uninstalling ZaneOps
 - Shutting down the parts of zane-ops that take up too much space in case of an emergency where a service hogs up all of the resources, as well as shutting down some services manually.
+- and more...
 
 
 ## Multi-node setup
