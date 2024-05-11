@@ -37,7 +37,9 @@ The main components needed to run ZaneOps are :
 
 8. a local [**Registry**](https://registry.hub.docker.com/_/registry) docker image used for storing images and artifacts that we create when building images for the services you create.
 
-
+9. a [**sablier**](https://github.com/acouvreur/sablier) docker image, sablier is a tool that allow to start containers on demand and shut them down automatically when there's no activity, it is compatible with Docker, Docker Swarm Mode and Kubernetes. 
+   1.  We use this preview deployments so that they don't 
+   2.  We also use this specifically for services that you wish to run in _"serverless"_ mode, it means images services that can sleep when there is no activity
 
 ## Schema of a request going to create a service
 
