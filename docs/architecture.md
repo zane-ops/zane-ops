@@ -2,9 +2,11 @@
 
 ## Overview
 
-To run ZaneOps needs many components to run user's services and to run itself but the main point is that ZaneOps is built on docker and [docker swarm mode](https://docs.docker.com/engine/swarm/), the app itself runs on swarm and it controls all the other services using swarm also.
+ZaneOps is a platform built on Docker and Docker Swarm mode , allowing it to manage and run different applications types across one or multiple servers. 
 
-The reason why we use swarm mode is because we want to support multi server setup and service replication from the start, swarm mode is a project built into docker that gives us service orchestration and management without .
+Docker [Swarm Mode](https://docs.docker.com/engine/swarm/) acts as a manager for Docker containers that are distributed across several host machines. It handles the orchestration, enabling zero-downtime deployment, scaling, and communication of containers between those machines.
+
+Importantly, ZaneOps (API+frontend) is built as a container and deployed like any other service on swarm. This setup is utilized not only for deploying user-specified services but also for orchestrating the deployment of ZaneOps itself.
 
 
 <p align="center">
