@@ -21,6 +21,11 @@ urlpatterns = [
         name="projects.archived.list",
     ),
     re_path(
+        r"^projects/status-list/$",
+        views.ProjectStatusView.as_view(),
+        name="projects.status_list",
+    ),
+    re_path(
         r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/$",
         views.ProjectDetailsView.as_view(),
         name="projects.details",

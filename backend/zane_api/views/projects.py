@@ -1,7 +1,7 @@
 import time
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
@@ -19,6 +19,8 @@ from .serializers import (
     ArchivedProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
+    ProjectStatusResponseSerializer,
+    ProjectStatusRequestParamsSerializer,
 )
 from ..models import (
     Project,
@@ -28,6 +30,7 @@ from ..models import (
     PortConfiguration,
     URL,
     Volume,
+    DockerDeployment,
 )
 from ..serializers import ProjectSerializer, ArchivedProjectSerializer
 from ..tasks import (
@@ -80,6 +83,38 @@ class ProjectsListAPIView(ListCreateAPIView):
                 )
                 response = ProjectSerializer(new_project)
                 return Response(response.data, status=status.HTTP_201_CREATED)
+
+
+class ProjectStatusView(APIView):
+    serializer_class = ProjectStatusResponseSerializer
+
+    @extend_schema(
+        parameters=[
+            ProjectStatusRequestParamsSerializer,
+        ],
+        operation_id="getProjectStatusList",
+    )
+    def get(self, request: Request) -> Response:
+        slug_list = request.GET.getlist("slugs")
+        form = ProjectStatusRequestParamsSerializer(data={"slugs": slug_list})
+
+        if form.is_valid(raise_exception=True):
+            params = form.data
+            slugs: list = params["slugs"]
+
+            docker_services: QuerySet[DockerRegistryService] = (
+                DockerRegistryService.objects.filter(
+                    project__slug__in=slugs
+                ).select_related("project")
+            )
+            deployments_for_services: list[DockerDeployment] = (
+                DockerDeployment.objects.filter(
+                    service__in=docker_services, is_current_production=True
+                )
+            )
+            # TODO...
+
+            return Response(data={})
 
 
 class ArchivedProjectsListAPIView(ListAPIView):

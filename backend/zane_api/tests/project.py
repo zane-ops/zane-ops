@@ -1,3 +1,5 @@
+import json
+
 from django.urls import reverse
 from rest_framework import status
 
@@ -345,3 +347,28 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNone(self.fake_docker_client.get_network(p))
+
+
+class ProjectStatusViewTests(AuthAPITestCase):
+    def test_get_statuses_empty(self):
+        owner = self.loginUser()
+
+        projects = Project.objects.bulk_create(
+            [
+                Project(owner=owner, slug="thullo"),
+            ]
+        )
+
+        query_string = "&".join([f"slugs={project.slug}" for project in projects])
+        response = self.client.get(
+            reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
+        )
+        print(json.dumps(response.json(), indent=2))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        statuses = response.json().get("projects", {})
+        is_status_list_not_empty = bool(statuses)
+        self.assertTrue(is_status_list_not_empty)
+        self.assertIsNotNone(statuses.get("thullo"))
+        thullo_status = statuses.get("thullo")
+        self.assertEqual(0, thullo_status.get("total_services"))
+        self.assertEqual(0, thullo_status.get("active_services"))
