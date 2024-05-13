@@ -270,10 +270,6 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         return value
 
 
-class DockerServiceResponseSerializer(serializers.Serializer):
-    service = serializers.DockerServiceSerializer(read_only=True)
-
-
 # ==============================
 #       Docker deployments     #
 # ==============================

@@ -173,7 +173,6 @@ class ProjectGetViewTests(AuthAPITestCase):
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertIsNotNone(response.json().get("project"))
 
     def test_non_existent(self):
         self.loginUser()

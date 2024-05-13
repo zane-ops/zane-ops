@@ -16,7 +16,6 @@ from rest_framework.views import APIView
 from .base import EMPTY_RESPONSE, ResourceConflict
 from .serializers import (
     DockerServiceCreateRequestSerializer,
-    DockerServiceResponseSerializer,
     DockerServiceDeploymentFilterSet,
 )
 from ..models import (
@@ -31,16 +30,18 @@ from ..models import (
     ArchivedDockerService,
     HealthCheck,
 )
-from ..serializers import DockerServiceDeploymentSerializer
+from ..serializers import DockerServiceDeploymentSerializer, DockerServiceSerializer
 from ..tasks import deploy_docker_service, delete_resources_for_docker_service
 from ..utils import strip_slash_if_exists
 
 
 class CreateDockerServiceAPIView(APIView):
+    serializer_class = DockerServiceSerializer
+
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
-            201: DockerServiceResponseSerializer,
+            201: DockerServiceSerializer,
         },
         operation_id="createDockerService",
     )
@@ -241,13 +242,13 @@ class CreateDockerServiceAPIView(APIView):
                     )
                 )
 
-                response = DockerServiceResponseSerializer({"service": service})
+                response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
-            200: DockerServiceResponseSerializer,
+            200: DockerServiceSerializer,
         },
         operation_id="updateDockerService",
     )
@@ -256,7 +257,7 @@ class CreateDockerServiceAPIView(APIView):
 
 
 class GetDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceResponseSerializer
+    serializer_class = DockerServiceSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
@@ -284,7 +285,7 @@ class GetDockerServiceAPIView(APIView):
                 f" does not exist within the project `{project_slug}`"
             )
 
-        response = DockerServiceResponseSerializer({"service": service})
+        response = DockerServiceSerializer(service)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
