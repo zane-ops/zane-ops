@@ -55,6 +55,7 @@ class ArchivedProject(TimestampArchivedModel):
 
     class Meta:
         indexes = [models.Index(fields=["slug"])]
+        ordering = ["-archived_at"]
 
 
 class ArchivedURL(models.Model):

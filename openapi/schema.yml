@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZaneOps API
-  version: 1.0.0
+  version: 0.0.1-alpha
   description: "\n\n## Overview\n\nZaneOps is a self-hosted, open source platform\
     \ as a service for hosting static sites, web apps, \ndatabases, CRONS, Workers\
     \ using docker swarm as the engine.\n\n## Errors\n\n### 405 Method Not Allowed\n\
@@ -25,6 +25,112 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
+  /api/archived-projects/:
+    get:
+      operationId: archived_projects_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: slug
+        schema:
+          type: string
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -archived_at
+            - -slug
+            - archived_at
+            - slug
+        description: |-
+          Ordering
+
+          * `slug` - name
+          * `-slug` - name (descending)
+          * `archived_at` - Archived at
+          * `-archived_at` - Archived at (descending)
+        explode: false
+        style: form
+      tags:
+      - archived-projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchivedProjectsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArchivedProjectList'
+          description: ''
   /api/auth/login/:
     post:
       operationId: login
@@ -724,7 +830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectResponse'
+                $ref: '#/components/schemas/Project'
           description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
@@ -886,12 +992,6 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '201':
           content:
             application/json:
@@ -978,12 +1078,6 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '200':
           content:
@@ -1360,7 +1454,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleProjectResponse'
+                $ref: '#/components/schemas/Project'
           description: ''
     patch:
       operationId: updateProjectName
@@ -1442,11 +1536,11 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
+        '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse409'
+                $ref: '#/components/schemas/Project'
           description: ''
     delete:
       operationId: archiveSingleProject
@@ -1611,6 +1705,87 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ArchivedProject:
+      type: object
+      properties:
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - archived_at
+    ArchivedProjectsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ArchivedProjectsListSlugErrorComponent'
+      - $ref: '#/components/schemas/ArchivedProjectsListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          slug: '#/components/schemas/ArchivedProjectsListSlugErrorComponent'
+          sort_by: '#/components/schemas/ArchivedProjectsListSortByErrorComponent'
+    ArchivedProjectsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ArchivedProjectsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ArchivedProjectsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ArchivedProjectsListSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ArchivedProjectsListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ArchivedProjectsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivedProjectsListError'
+      required:
+      - errors
+      - type
     AuthedSuccessResponse:
       type: object
       properties:
@@ -3045,25 +3220,6 @@ components:
       - attr
       - code
       - detail
-    Error409:
-      type: object
-      properties:
-        code:
-          $ref: '#/components/schemas/Error409CodeEnum'
-        detail:
-          type: string
-        attr:
-          type: string
-          nullable: true
-      required:
-      - attr
-      - code
-      - detail
-    Error409CodeEnum:
-      enum:
-      - resource_conflict
-      type: string
-      description: '* `resource_conflict` - Resource Conflict'
     Error429:
       type: object
       properties:
@@ -3117,18 +3273,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Error404'
-      required:
-      - errors
-      - type
-    ErrorResponse409:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ClientErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error409'
       required:
       - errors
       - type
@@ -3399,6 +3543,26 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    PaginatedArchivedProjectList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArchivedProject'
     PaginatedDockerServiceDeploymentList:
       type: object
       properties:
@@ -3701,13 +3865,6 @@ components:
           type: integer
       required:
       - forwarded
-    SingleProjectResponse:
-      type: object
-      properties:
-        project:
-          $ref: '#/components/schemas/Project'
-      required:
-      - project
     StatusEnum:
       enum:
       - QUEUED

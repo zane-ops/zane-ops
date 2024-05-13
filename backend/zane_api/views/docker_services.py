@@ -19,7 +19,6 @@ from .serializers import (
     DockerServiceResponseSerializer,
     DockerServiceDeploymentFilterSet,
 )
-from .. import serializers
 from ..models import (
     Project,
     DockerRegistryService,
@@ -32,6 +31,7 @@ from ..models import (
     ArchivedDockerService,
     HealthCheck,
 )
+from ..serializers import DockerServiceDeploymentSerializer
 from ..tasks import deploy_docker_service, delete_resources_for_docker_service
 from ..utils import strip_slash_if_exists
 
@@ -40,7 +40,6 @@ class CreateDockerServiceAPIView(APIView):
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
-            409: serializers.ErrorResponse409Serializer,
             201: DockerServiceResponseSerializer,
         },
         operation_id="createDockerService",
@@ -248,7 +247,6 @@ class CreateDockerServiceAPIView(APIView):
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
-            409: serializers.ErrorResponse409Serializer,
             200: DockerServiceResponseSerializer,
         },
         operation_id="updateDockerService",
@@ -291,7 +289,7 @@ class GetDockerServiceAPIView(APIView):
 
 
 class DockerServiceDeploymentsAPIView(ListAPIView):
-    serializer_class = serializers.DockerServiceDeploymentSerializer
+    serializer_class = DockerServiceDeploymentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
     queryset = (
@@ -324,7 +322,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
 
 
 class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
-    serializer_class = serializers.DockerServiceDeploymentSerializer
+    serializer_class = DockerServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = (
         DockerDeployment.objects.all()

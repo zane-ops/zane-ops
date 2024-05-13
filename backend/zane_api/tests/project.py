@@ -1,5 +1,3 @@
-import datetime
-
 from django.urls import reverse
 from rest_framework import status
 
@@ -19,7 +17,7 @@ from ..models import (
 
 
 class ProjectListViewTests(AuthAPITestCase):
-    def test_default_no_include_archived(self):
+    def test_default(self):
         owner = self.loginUser()
 
         Project.objects.bulk_create(
@@ -28,137 +26,24 @@ class ProjectListViewTests(AuthAPITestCase):
             ]
         )
 
-        ArchivedProject.objects.bulk_create(
-            [
-                ArchivedProject(owner=owner, slug="gh-clone"),
-            ]
-        )
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        active_project_list: list = response.json().get("active").get("projects", [])
-        archived_project_list = response.json().get("archived").get("projects", [])
-        self.assertEqual(1, len(active_project_list))
-        self.assertEqual(0, len(archived_project_list))
+        project_list = response.json().get("results", [])
+        self.assertEqual(1, len(project_list))
 
     def test_list_archived(self):
         owner = self.loginUser()
 
-        Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="thullo"),
-            ]
-        )
-
         ArchivedProject.objects.bulk_create(
             [
                 ArchivedProject(owner=owner, slug="gh-clone"),
+                ArchivedProject(owner=owner, slug="gh-clone2"),
             ]
         )
-        response = self.client.get(
-            reverse("zane_api:projects.list"),
-            QUERY_STRING="status=archived",
-        )
+        response = self.client.get(reverse("zane_api:projects.archived.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        active_project_list: list = response.json().get("active").get("projects", [])
-        archived_project_list = response.json().get("archived").get("projects", [])
-        self.assertEqual(0, len(active_project_list))
-        self.assertEqual(1, len(archived_project_list))
-
-    def test_query_filter_active_projects(self):
-        owner = self.loginUser()
-
-        Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="thullo"),
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-            ]
-        )
-        ArchivedProject.objects.bulk_create(
-            [
-                ArchivedProject(owner=owner, slug="gh-clone"),
-            ]
-        )
-
-        response = self.client.get(
-            reverse("zane_api:projects.list"),
-            QUERY_STRING="query=gh",
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        active_project_list: list = response.json().get("active").get("projects", [])
-        archived_project_list = response.json().get("archived").get("projects", [])
-        self.assertEqual(2, len(active_project_list))
-        self.assertEqual(0, len(archived_project_list))
-
-    def test_query_filter_archived_projects(self):
-        owner = self.loginUser()
-
-        Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="thullo"),
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-            ]
-        )
-        ArchivedProject.objects.bulk_create(
-            [
-                ArchivedProject(owner=owner, slug="gh-clone"),
-                ArchivedProject(owner=owner, slug="gh-next"),
-                ArchivedProject(owner=owner, slug="zane"),
-            ]
-        )
-
-        response = self.client.get(
-            reverse("zane_api:projects.list"),
-            QUERY_STRING="query=gh&status=archived",
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        active_project_list: list = response.json().get("active").get("projects", [])
-        archived_project_list = response.json().get("archived").get("projects", [])
-        self.assertEqual(0, len(active_project_list))
-        self.assertEqual(2, len(archived_project_list))
-
-    def test_sorting_projects_by_slug(self):
-        owner = self.loginUser()
-
-        Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="thullo"),
-                Project(owner=owner, slug="gh-clone"),
-            ]
-        )
-        response = self.client.get(
-            reverse("zane_api:projects.list"),
-            QUERY_STRING="sort=slug_asc",
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        active_project_list: list = response.json().get("active").get("projects", [])
-        self.assertEqual("gh-clone", active_project_list[0]["slug"])
-
-    def test_sorting_projects_by_updated_at(self):
-        owner = self.loginUser()
-
-        Project.objects.bulk_create(
-            [
-                Project(
-                    owner=owner,
-                    slug="thullo",
-                    updated_at=datetime.datetime(year=2024, month=3, day=28),
-                ),
-                Project(
-                    owner=owner,
-                    slug="gh-clone",
-                    updated_at=datetime.datetime(year=2024, month=3, day=29),
-                ),
-            ]
-        )
-        response = self.client.get(
-            reverse("zane_api:projects.list"),
-            QUERY_STRING="sort=updated_at_desc",
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        active_project_list: list = response.json().get("active").get("projects", [])
-        self.assertEqual("gh-clone", active_project_list[0]["slug"])
+        project_list = response.json().get("results", [])
+        self.assertEqual(2, len(project_list))
 
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:projects.list"))

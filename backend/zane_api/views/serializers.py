@@ -327,6 +327,24 @@ class ProjectListPagination(pagination.PageNumberPagination):
 
 
 # ==============================
+#       Projects Create        #
+# ==============================
+
+
+class ProjectCreateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255, required=False)
+
+
+# ==============================
+#       Projects Update        #
+# ==============================
+
+
+class ProjectUpdateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255)
+
+
+# ==============================
 #    Docker services update    #
 # ==============================
 

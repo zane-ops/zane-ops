@@ -7,14 +7,19 @@ from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .base import EMPTY_RESPONSE, ResourceConflict
-from .serializers import ProjectListPagination, ProjectListFilterSet
-from .. import serializers
+from .serializers import (
+    ProjectListPagination,
+    ProjectListFilterSet,
+    ArchivedProjectListFilterSet,
+    ProjectCreateRequestSerializer,
+    ProjectUpdateRequestSerializer,
+)
 from ..models import (
     Project,
     ArchivedProject,
@@ -24,73 +29,15 @@ from ..models import (
     URL,
     Volume,
 )
+from ..serializers import ProjectSerializer, ArchivedProjectSerializer
 from ..tasks import (
     delete_docker_resources_for_project,
     create_docker_resources_for_project,
 )
 
 
-class ActiveProjectPaginatedSerializer(serializers.Serializer):
-    projects = serializers.ProjectSerializer(many=True)
-    total_count = serializers.IntegerField()
-
-
-class ArchivedProjectPaginatedSerializer(serializers.Serializer):
-    projects = serializers.ArchivedProjectSerializer(many=True)
-    total_count = serializers.IntegerField()
-
-
-class ProjectListResponseSerializer(serializers.Serializer):
-    active = ActiveProjectPaginatedSerializer()
-    archived = ArchivedProjectPaginatedSerializer()
-
-
-class SingleProjectResponseSerializer(serializers.Serializer):
-    project = serializers.ProjectSerializer()
-
-
-# class ProjectListSearchFiltersSerializer(serializers.Serializer):
-#     SORT_CHOICES = (
-#         ("slug_asc", _("slug ascending")),
-#         ("updated_at_desc", _("updated_at in descending order")),
-#     )
-#
-#     STATUS_CHOICES = (
-#         ("archived", _("archived")),
-#         ("active", _("active")),
-#     )
-#
-#     status = serializers.ChoiceField(
-#         choices=STATUS_CHOICES, required=False, default="active"
-#     )
-#     query = serializers.CharField(
-#         required=False, allow_blank=True, default="", trim_whitespace=True
-#     )
-#     sort = serializers.ChoiceField(
-#         choices=SORT_CHOICES, required=False, default="updated_at_desc"
-#     )
-#     page = serializers.IntegerField(required=False, default=1)
-#     per_page = serializers.IntegerField(required=False, default=30)
-#
-#     def validate_include_archived(self, value: str | bool):
-#         if isinstance(value, str):
-#             if value.lower() == "true":
-#                 return True
-#             return False
-#         return value
-#
-#     def validate_sort(self, value: str | None):
-#         if not value:
-#             return self.fields["sort"].default
-#         return value
-
-
-class ProjectCreateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255, required=False)
-
-
 class ProjectsListAPIView(ListCreateAPIView):
-    serializer_class = serializers.ProjectSerializer
+    serializer_class = ProjectSerializer
     pagination_class = ProjectListPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
@@ -99,7 +46,7 @@ class ProjectsListAPIView(ListCreateAPIView):
     @extend_schema(
         request=ProjectCreateRequestSerializer,
         responses={
-            201: SingleProjectResponseSerializer,
+            201: ProjectSerializer,
         },
         operation_id="createProject",
     )
@@ -131,88 +78,23 @@ class ProjectsListAPIView(ListCreateAPIView):
                         (slug,), task_id=new_project.create_task_id
                     )
                 )
-                response = SingleProjectResponseSerializer({"project": new_project})
+                response = ProjectSerializer(new_project)
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
 
-#
-# class ProjectsListView(APIView):
-#     @extend_schema(
-#         parameters=[
-#             ProjectListSearchFiltersSerializer,
-#         ],
-#         responses={
-#             200: ProjectListResponseSerializer,
-#         },
-#         operation_id="getProjectList",
-#     )
-#     def get(self, request: Request) -> Response:
-#         query_params = request.query_params.dict()
-#         form = ProjectListSearchFiltersSerializer(data=query_params)
-#         if form.is_valid(raise_exception=True):
-#             params = form.data
-#
-#             sort_by_map_to_fields = {
-#                 "slug_asc": "slug",
-#                 "updated_at_desc": "-updated_at",
-#             }
-#
-#             query_status = params.get("status")
-#             per_page = params.get("per_page")
-#
-#             if query_status == "active":
-#                 paginator = Paginator(
-#                     Project.objects.filter(
-#                         Q(owner=request.user)
-#                         & (Q(slug__startswith=params["query"].lower()))
-#                     ).order_by(sort_by_map_to_fields.get(params["sort"])),
-#                     per_page,
-#                 )
-#
-#                 page = paginator.get_page(params["page"])
-#                 response = ProjectListResponseSerializer(
-#                     {
-#                         "active": {
-#                             "projects": list(page),
-#                             "total_count": page.paginator.count,
-#                         },
-#                         "archived": {"projects": [], "total_count": 0},
-#                     }
-#                 )
-#             else:
-#                 paginator = Paginator(
-#                     ArchivedProject.objects.filter(
-#                         (Q(owner=request.user) | Q(owner__isnull=True))
-#                         & (Q(slug__startswith=params["query"].lower()))
-#                     ).order_by("-archived_at"),
-#                     per_page,
-#                 )
-#                 page = paginator.get_page(params["page"])
-#                 response = ProjectListResponseSerializer(
-#                     {
-#                         "archived": {
-#                             "projects": list(page),
-#                             "total_count": page.paginator.count,
-#                         },
-#                         "active": {"projects": [], "total_count": 0},
-#                     }
-#                 )
-#             return Response(response.data)
-#
-
-
-class ProjectUpdateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255)
+class ArchivedProjectsListAPIView(ListAPIView):
+    serializer_class = ArchivedProjectSerializer
+    pagination_class = ProjectListPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ArchivedProjectListFilterSet
+    queryset = ArchivedProject.objects.all()
 
 
 class ProjectDetailsView(APIView):
-    serializer_class = SingleProjectResponseSerializer
+    serializer_class = ProjectSerializer
 
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
-        responses={
-            409: serializers.ErrorResponse409Serializer,
-        },
         operation_id="updateProjectName",
     )
     def patch(self, request: Request, slug: str) -> Response:
@@ -233,7 +115,7 @@ class ProjectDetailsView(APIView):
                     detail=f"The slug `{slug}` is already used by another project."
                 )
             else:
-                response = SingleProjectResponseSerializer({"project": project})
+                response = ProjectSerializer(project)
                 return Response(response.data)
 
     @extend_schema(
@@ -246,7 +128,7 @@ class ProjectDetailsView(APIView):
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
             )
-        response = SingleProjectResponseSerializer({"project": project})
+        response = ProjectSerializer(project)
         return Response(response.data)
 
     @extend_schema(
