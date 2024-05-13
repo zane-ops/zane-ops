@@ -17,7 +17,7 @@ from .base import EMPTY_RESPONSE, ResourceConflict
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceResponseSerializer,
-    DockerServiceDeploymentFilter,
+    DockerServiceDeploymentFilterSet,
 )
 from .. import serializers
 from ..models import (
@@ -293,7 +293,7 @@ class GetDockerServiceAPIView(APIView):
 class DockerServiceDeploymentsAPIView(ListAPIView):
     serializer_class = serializers.DockerServiceDeploymentSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_class = DockerServiceDeploymentFilter
+    filterset_class = DockerServiceDeploymentFilterSet
     queryset = (
         DockerDeployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`

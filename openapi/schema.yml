@@ -543,47 +543,44 @@ paths:
           description: ''
   /api/projects/:
     get:
-      operationId: getProjectList
+      operationId: projects_list
       parameters:
-      - in: query
-        name: page
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
         schema:
           type: integer
-          default: 1
-      - in: query
-        name: per_page
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
         schema:
           type: integer
-          default: 30
       - in: query
-        name: query
+        name: slug
         schema:
           type: string
-          default: ''
       - in: query
-        name: sort
+        name: sort_by
         schema:
-          enum:
-          - slug_asc
-          - updated_at_desc
-          type: string
-          default: updated_at_desc
-          minLength: 1
+          type: array
+          items:
+            type: string
+            enum:
+            - -slug
+            - -updated_at
+            - slug
+            - updated_at
         description: |-
-          * `slug_asc` - slug ascending
-          * `updated_at_desc` - updated_at in descending order
-      - in: query
-        name: status
-        schema:
-          enum:
-          - archived
-          - active
-          type: string
-          default: active
-          minLength: 1
-        description: |-
-          * `archived` - archived
-          * `active` - active
+          Ordering
+
+          * `slug` - name
+          * `-slug` - name (descending)
+          * `updated_at` - Updated at
+          * `-updated_at` - Updated at (descending)
+        explode: false
+        style: form
       tags:
       - projects
       security:
@@ -593,7 +590,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetProjectListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -616,6 +613,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -634,7 +645,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectListResponse'
+                $ref: '#/components/schemas/PaginatedProjectList'
           description: ''
     post:
       operationId: createProject
@@ -681,6 +692,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -700,12 +725,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SingleProjectResponse'
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
@@ -1067,6 +1086,12 @@ paths:
         name: hash
         schema:
           type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
       - in: path
         name: project_slug
         schema:
@@ -1171,9 +1196,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/PaginatedDockerServiceDeploymentList'
           description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
     get:
@@ -1574,18 +1597,6 @@ paths:
           description: ''
 components:
   schemas:
-    ActiveProjectPaginated:
-      type: object
-      properties:
-        projects:
-          type: array
-          items:
-            $ref: '#/components/schemas/Project'
-        total_count:
-          type: integer
-      required:
-      - projects
-      - total_count
     ArchiveDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -1600,31 +1611,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ArchivedProject:
-      type: object
-      properties:
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        archived_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - archived_at
-    ArchivedProjectPaginated:
-      type: object
-      properties:
-        projects:
-          type: array
-          items:
-            $ref: '#/components/schemas/ArchivedProject'
-        total_count:
-          type: integer
-      required:
-      - projects
-      - total_count
     AuthedSuccessResponse:
       type: object
       properties:
@@ -3186,13 +3172,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetProjectListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetRootDomain:
       type: object
       properties:
@@ -3420,6 +3399,46 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    PaginatedDockerServiceDeploymentList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerServiceDeployment'
+    PaginatedProjectList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
     ParseError:
       type: object
       properties:
@@ -3498,16 +3517,74 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    ProjectListResponse:
+    ProjectsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsListSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          slug: '#/components/schemas/ProjectsListSlugErrorComponent'
+          sort_by: '#/components/schemas/ProjectsListSortByErrorComponent'
+    ProjectsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsListSlugErrorComponent:
       type: object
       properties:
-        active:
-          $ref: '#/components/schemas/ActiveProjectPaginated'
-        archived:
-          $ref: '#/components/schemas/ArchivedProjectPaginated'
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
       required:
-      - active
-      - archived
+      - attr
+      - code
+      - detail
+    ProjectsListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsListError'
+      required:
+      - errors
+      - type
     ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent:
       type: object
       properties:

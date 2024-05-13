@@ -3,6 +3,8 @@ import docker.errors
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django_filters import OrderingFilter
+from rest_framework import pagination
 
 from .. import serializers
 from ..docker_operations import (
@@ -11,7 +13,7 @@ from ..docker_operations import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
 )
-from ..models import URL, PortConfiguration, DockerDeployment
+from ..models import URL, PortConfiguration, DockerDeployment, Project, ArchivedProject
 from ..validators import validate_url_path
 
 
@@ -277,7 +279,7 @@ class DockerServiceResponseSerializer(serializers.Serializer):
 # ==============================
 
 
-class DockerServiceDeploymentFilter(django_filters.FilterSet):
+class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
         choices=DockerDeployment.DeploymentStatus.choices
     )
@@ -285,6 +287,43 @@ class DockerServiceDeploymentFilter(django_filters.FilterSet):
     class Meta:
         model = DockerDeployment
         fields = ["status", "created_at", "hash"]
+
+
+# ==============================
+#        Projects List         #
+# ==============================
+
+
+class ProjectListFilterSet(django_filters.FilterSet):
+    sort_by = OrderingFilter(
+        fields=["slug", "updated_at"],
+        field_labels={
+            "slug": "name",
+        },
+    )
+
+    class Meta:
+        model = Project
+        fields = ["slug"]
+
+
+class ArchivedProjectListFilterSet(django_filters.FilterSet):
+    sort_by = OrderingFilter(
+        fields=["slug", "archived_at"],
+        field_labels={
+            "slug": "name",
+        },
+    )
+
+    class Meta:
+        model = ArchivedProject
+        fields = ["slug"]
+
+
+class ProjectListPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
 
 
 # ==============================

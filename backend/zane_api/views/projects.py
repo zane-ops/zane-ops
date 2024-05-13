@@ -1,18 +1,19 @@
 import time
 
-from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .base import EMPTY_RESPONSE, ResourceConflict
+from .serializers import ProjectListPagination, ProjectListFilterSet
 from .. import serializers
 from ..models import (
     Project,
@@ -24,8 +25,8 @@ from ..models import (
     Volume,
 )
 from ..tasks import (
-    create_docker_resources_for_project,
     delete_docker_resources_for_project,
+    create_docker_resources_for_project,
 )
 
 
@@ -48,118 +49,67 @@ class SingleProjectResponseSerializer(serializers.Serializer):
     project = serializers.ProjectSerializer()
 
 
-class ProjectListSearchFiltersSerializer(serializers.Serializer):
-    SORT_CHOICES = (
-        ("slug_asc", _("slug ascending")),
-        ("updated_at_desc", _("updated_at in descending order")),
-    )
-
-    STATUS_CHOICES = (
-        ("archived", _("archived")),
-        ("active", _("active")),
-    )
-
-    status = serializers.ChoiceField(
-        choices=STATUS_CHOICES, required=False, default="active"
-    )
-    query = serializers.CharField(
-        required=False, allow_blank=True, default="", trim_whitespace=True
-    )
-    sort = serializers.ChoiceField(
-        choices=SORT_CHOICES, required=False, default="updated_at_desc"
-    )
-    page = serializers.IntegerField(required=False, default=1)
-    per_page = serializers.IntegerField(required=False, default=30)
-
-    def validate_include_archived(self, value: str | bool):
-        if isinstance(value, str):
-            if value.lower() == "true":
-                return True
-            return False
-        return value
-
-    def validate_sort(self, value: str | None):
-        if not value:
-            return self.fields["sort"].default
-        return value
+# class ProjectListSearchFiltersSerializer(serializers.Serializer):
+#     SORT_CHOICES = (
+#         ("slug_asc", _("slug ascending")),
+#         ("updated_at_desc", _("updated_at in descending order")),
+#     )
+#
+#     STATUS_CHOICES = (
+#         ("archived", _("archived")),
+#         ("active", _("active")),
+#     )
+#
+#     status = serializers.ChoiceField(
+#         choices=STATUS_CHOICES, required=False, default="active"
+#     )
+#     query = serializers.CharField(
+#         required=False, allow_blank=True, default="", trim_whitespace=True
+#     )
+#     sort = serializers.ChoiceField(
+#         choices=SORT_CHOICES, required=False, default="updated_at_desc"
+#     )
+#     page = serializers.IntegerField(required=False, default=1)
+#     per_page = serializers.IntegerField(required=False, default=30)
+#
+#     def validate_include_archived(self, value: str | bool):
+#         if isinstance(value, str):
+#             if value.lower() == "true":
+#                 return True
+#             return False
+#         return value
+#
+#     def validate_sort(self, value: str | None):
+#         if not value:
+#             return self.fields["sort"].default
+#         return value
 
 
 class ProjectCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
 
 
-class ProjectsListView(APIView):
-    @extend_schema(
-        parameters=[
-            ProjectListSearchFiltersSerializer,
-        ],
-        responses={
-            200: ProjectListResponseSerializer,
-        },
-        operation_id="getProjectList",
-    )
-    def get(self, request: Request) -> Response:
-        query_params = request.query_params.dict()
-        form = ProjectListSearchFiltersSerializer(data=query_params)
-        if form.is_valid(raise_exception=True):
-            params = form.data
-
-            sort_by_map_to_fields = {
-                "slug_asc": "slug",
-                "updated_at_desc": "-updated_at",
-            }
-
-            query_status = params.get("status")
-            per_page = params.get("per_page")
-
-            if query_status == "active":
-                paginator = Paginator(
-                    Project.objects.filter(
-                        Q(owner=request.user)
-                        & (Q(slug__startswith=params["query"].lower()))
-                    ).order_by(sort_by_map_to_fields.get(params["sort"])),
-                    per_page,
-                )
-
-                page = paginator.get_page(params["page"])
-                response = ProjectListResponseSerializer(
-                    {
-                        "active": {
-                            "projects": list(page),
-                            "total_count": page.paginator.count,
-                        },
-                        "archived": {"projects": [], "total_count": 0},
-                    }
-                )
-            else:
-                paginator = Paginator(
-                    ArchivedProject.objects.filter(
-                        (Q(owner=request.user) | Q(owner__isnull=True))
-                        & (Q(slug__startswith=params["query"].lower()))
-                    ).order_by("-archived_at"),
-                    per_page,
-                )
-                page = paginator.get_page(params["page"])
-                response = ProjectListResponseSerializer(
-                    {
-                        "archived": {
-                            "projects": list(page),
-                            "total_count": page.paginator.count,
-                        },
-                        "active": {"projects": [], "total_count": 0},
-                    }
-                )
-            return Response(response.data)
+class ProjectsListAPIView(ListCreateAPIView):
+    serializer_class = serializers.ProjectSerializer
+    pagination_class = ProjectListPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProjectListFilterSet
+    queryset = Project.objects.all()
 
     @extend_schema(
         request=ProjectCreateRequestSerializer,
         responses={
             201: SingleProjectResponseSerializer,
-            409: serializers.ErrorResponse409Serializer,
         },
         operation_id="createProject",
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    @transaction.atomic()
+    def create(
+        self, request: Request, *args, **kwargs
+    ):  # don't need to `self.request` since `request` is available as a parameter.
         form = ProjectCreateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             data = form.data
@@ -169,19 +119,86 @@ class ProjectsListView(APIView):
             fake = Faker()
             slug = data.get("slug", fake.slug()).lower()
             try:
-                with transaction.atomic():
-                    new_project = Project.objects.create(slug=slug, owner=request.user)
+                new_project = Project.objects.create(slug=slug, owner=request.user)
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"
                     f" please use another one for this project."
                 )
             else:
-                create_docker_resources_for_project.apply_async(
-                    (slug,), task_id=new_project.create_task_id
+                transaction.on_commit(
+                    lambda: create_docker_resources_for_project.apply_async(
+                        (slug,), task_id=new_project.create_task_id
+                    )
                 )
                 response = SingleProjectResponseSerializer({"project": new_project})
                 return Response(response.data, status=status.HTTP_201_CREATED)
+
+
+#
+# class ProjectsListView(APIView):
+#     @extend_schema(
+#         parameters=[
+#             ProjectListSearchFiltersSerializer,
+#         ],
+#         responses={
+#             200: ProjectListResponseSerializer,
+#         },
+#         operation_id="getProjectList",
+#     )
+#     def get(self, request: Request) -> Response:
+#         query_params = request.query_params.dict()
+#         form = ProjectListSearchFiltersSerializer(data=query_params)
+#         if form.is_valid(raise_exception=True):
+#             params = form.data
+#
+#             sort_by_map_to_fields = {
+#                 "slug_asc": "slug",
+#                 "updated_at_desc": "-updated_at",
+#             }
+#
+#             query_status = params.get("status")
+#             per_page = params.get("per_page")
+#
+#             if query_status == "active":
+#                 paginator = Paginator(
+#                     Project.objects.filter(
+#                         Q(owner=request.user)
+#                         & (Q(slug__startswith=params["query"].lower()))
+#                     ).order_by(sort_by_map_to_fields.get(params["sort"])),
+#                     per_page,
+#                 )
+#
+#                 page = paginator.get_page(params["page"])
+#                 response = ProjectListResponseSerializer(
+#                     {
+#                         "active": {
+#                             "projects": list(page),
+#                             "total_count": page.paginator.count,
+#                         },
+#                         "archived": {"projects": [], "total_count": 0},
+#                     }
+#                 )
+#             else:
+#                 paginator = Paginator(
+#                     ArchivedProject.objects.filter(
+#                         (Q(owner=request.user) | Q(owner__isnull=True))
+#                         & (Q(slug__startswith=params["query"].lower()))
+#                     ).order_by("-archived_at"),
+#                     per_page,
+#                 )
+#                 page = paginator.get_page(params["page"])
+#                 response = ProjectListResponseSerializer(
+#                     {
+#                         "archived": {
+#                             "projects": list(page),
+#                             "total_count": page.paginator.count,
+#                         },
+#                         "active": {"projects": [], "total_count": 0},
+#                     }
+#                 )
+#             return Response(response.data)
+#
 
 
 class ProjectUpdateRequestSerializer(serializers.Serializer):
