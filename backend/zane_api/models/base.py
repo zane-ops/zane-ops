@@ -30,6 +30,7 @@ class Project(TimestampedModel):
         primary_key=True,
         prefix="prj_",
     )
+    description = models.TextField(blank=True, null=True)
 
     @property
     def create_task_id(self):
