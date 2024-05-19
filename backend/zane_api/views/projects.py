@@ -1,7 +1,7 @@
 import time
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q, QuerySet
+from django.db.models import Q, Count, Case, When, IntegerField
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
@@ -31,6 +31,7 @@ from ..models import (
     URL,
     Volume,
     DockerDeployment,
+    GitDeployment,
 )
 from ..serializers import ProjectSerializer, ArchivedProjectSerializer
 from ..tasks import (
@@ -95,26 +96,102 @@ class ProjectStatusView(APIView):
         operation_id="getProjectStatusList",
     )
     def get(self, request: Request) -> Response:
-        slug_list = request.GET.getlist("slugs")
-        form = ProjectStatusRequestParamsSerializer(data={"slugs": slug_list})
+        id_list = request.GET.getlist("ids")
+        form = ProjectStatusRequestParamsSerializer(data={"ids": id_list})
 
         if form.is_valid(raise_exception=True):
             params = form.data
-            slugs: list = params["slugs"]
+            project_ids: list = params["ids"]
+            project_statuses = {}
 
-            docker_services: QuerySet[DockerRegistryService] = (
-                DockerRegistryService.objects.filter(
-                    project__slug__in=slugs
-                ).select_related("project")
-            )
-            deployments_for_services: list[DockerDeployment] = (
+            projects = Project.objects.filter(id__in=project_ids)
+
+            docker_status = (
                 DockerDeployment.objects.filter(
-                    service__in=docker_services, is_current_production=True
+                    service__project__in=projects, is_current_production=True
+                )
+                .values("service__project")
+                .annotate(
+                    healthy_services=Count(
+                        Case(
+                            When(
+                                status=DockerDeployment.DeploymentStatus.HEALTHY, then=1
+                            ),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    unhealthy_services=Count(
+                        Case(
+                            When(
+                                status=DockerDeployment.DeploymentStatus.UNHEALTHY,
+                                then=1,
+                            ),
+                            When(
+                                status=DockerDeployment.DeploymentStatus.FAILED,
+                                then=1,
+                            ),
+                            output_field=IntegerField(),
+                        )
+                    ),
                 )
             )
-            # TODO...
 
-            return Response(data={})
+            git_status = (
+                GitDeployment.objects.filter(
+                    service__project__in=projects, is_current_production=True
+                )
+                .values("service__project")
+                .annotate(
+                    healthy_services=Count(
+                        Case(
+                            When(
+                                status=GitDeployment.DeploymentStatus.HEALTHY,
+                                then=1,
+                            ),
+                            When(
+                                status=GitDeployment.DeploymentStatus.SLEEPING,
+                                then=1,
+                            ),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    unhealthy_services=Count(
+                        Case(
+                            When(
+                                status=GitDeployment.DeploymentStatus.UNHEALTHY,
+                                then=1,
+                            ),
+                            When(
+                                status=DockerDeployment.DeploymentStatus.FAILED,
+                                then=1,
+                            ),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                )
+            )
+
+            # Convert the aggregated data into a dictionary
+            docker_status_dict = {
+                item["service__project"]: item for item in docker_status
+            }
+            git_status_dict = {item["service__project"]: item for item in git_status}
+
+            for project in projects:
+                healthy_services = docker_status_dict.get(project.id, {}).get(
+                    "healthy_services", 0
+                ) + git_status_dict.get(project.id, {}).get("healthy_services", 0)
+                unhealthy_services = docker_status_dict.get(project.id, {}).get(
+                    "unhealthy_services", 0
+                ) + git_status_dict.get(project.id, {}).get("unhealthy_services", 0)
+
+                project_statuses[project.id] = {
+                    "healthy_services": healthy_services,
+                    "unhealthy_services": unhealthy_services,
+                }
+
+            serializer = ProjectStatusResponseSerializer({"projects": project_statuses})
+            return Response(serializer.data)
 
 
 class ArchivedProjectsListAPIView(ListAPIView):

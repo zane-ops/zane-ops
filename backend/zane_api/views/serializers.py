@@ -328,8 +328,8 @@ class ProjectListPagination(pagination.PageNumberPagination):
 
 
 class ProjectStatusSerializer(serializers.Serializer):
-    total_services = serializers.IntegerField(min_value=0)
-    active_services = serializers.IntegerField(min_value=0)
+    healthy_services = serializers.IntegerField(min_value=0)
+    unhealthy_services = serializers.IntegerField(min_value=0)
 
 
 class ProjectStatusResponseSerializer(serializers.Serializer):
@@ -337,7 +337,7 @@ class ProjectStatusResponseSerializer(serializers.Serializer):
 
 
 class ProjectStatusRequestParamsSerializer(serializers.Serializer):
-    slugs = serializers.ListField(child=serializers.SlugField(), required=True)
+    ids = serializers.ListField(child=serializers.CharField(), required=True)
 
 
 # ==============================

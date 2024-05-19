@@ -353,22 +353,159 @@ class ProjectStatusViewTests(AuthAPITestCase):
     def test_get_statuses_empty(self):
         owner = self.loginUser()
 
-        projects = Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="thullo"),
-            ]
+        thullo = Project.objects.create(owner=owner, slug="thullo")
+
+        query_string = f"ids={thullo.id}"
+        response = self.client.get(
+            reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        statuses = response.json().get("projects", {})
+        is_status_list_not_empty = bool(statuses)
+        self.assertTrue(is_status_list_not_empty)
+        self.assertIsNotNone(statuses.get(thullo.id))
+        thullo_status = statuses.get(thullo.id)
+        self.assertEqual(0, thullo_status.get("healthy_services"))
+        self.assertEqual(0, thullo_status.get("unhealthy_services"))
+
+    def test_with_succesful_deploy(self):
+        owner = self.loginUser()
+
+        sandbox = Project.objects.create(owner=owner, slug="sandbox")
+
+        # Creat service
+        create_service_payload = {
+            "slug": "redis",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        query_string = f"ids={sandbox.id}"
+        response = self.client.get(
+            reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        statuses = response.json().get("projects", {})
+
+        self.assertIsNotNone(statuses.get(sandbox.id))
+        project_status = statuses.get(sandbox.id)
+        self.assertEqual(1, project_status.get("healthy_services"))
+        self.assertEqual(0, project_status.get("unhealthy_services"))
+
+    def test_with_multiple_projects(self):
+        owner = self.loginUser()
+
+        sandbox = Project.objects.create(owner=owner, slug="sandbox")
+        sandbox2 = Project.objects.create(owner=owner, slug="sandbox-2")
+
+        # Creat service
+        create_service_payload = {
+            "slug": "redis",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        query_string = f"ids={sandbox.id}&ids={sandbox2.id}"
+        response = self.client.get(
+            reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        statuses = response.json().get("projects", {})
+        self.assertEqual(
+            {
+                sandbox.id: {"healthy_services": 1, "unhealthy_services": 0},
+                sandbox2.id: {"healthy_services": 0, "unhealthy_services": 0},
+            },
+            statuses,
         )
 
-        query_string = "&".join([f"slugs={project.slug}" for project in projects])
+    def test_with_failed_deployment(self):
+        owner = self.loginUser()
+
+        sandbox = Project.objects.create(owner=owner, slug="sandbox")
+
+        # Create service
+        create_service_payload = {
+            "slug": "redis",
+            "image": "redis:alpine",
+        }
+
+        def create_raise_error(*args, **kwargs):
+            raise Exception("Fake error")
+
+        self.fake_docker_client.services.create = create_raise_error
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        query_string = f"ids={sandbox.id}"
         response = self.client.get(
             reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
         )
         print(json.dumps(response.json(), indent=2))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         statuses = response.json().get("projects", {})
-        is_status_list_not_empty = bool(statuses)
-        self.assertTrue(is_status_list_not_empty)
-        self.assertIsNotNone(statuses.get("thullo"))
-        thullo_status = statuses.get("thullo")
-        self.assertEqual(0, thullo_status.get("total_services"))
-        self.assertEqual(0, thullo_status.get("active_services"))
+
+        self.assertIsNotNone(statuses.get(sandbox.id))
+        project_status = statuses.get(sandbox.id)
+
+        self.assertEqual(0, project_status.get("healthy_services"))
+        self.assertEqual(1, project_status.get("unhealthy_services"))
+
+    def test_with_unhealthy_deployment(self):
+        owner = self.loginUser()
+
+        sandbox = Project.objects.create(owner=owner, slug="sandbox")
+
+        # Create service
+        create_service_payload = {
+            "slug": "redis",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # make the deployment unhealthy
+        deployment: DockerDeployment = DockerDeployment.objects.filter(
+            service__slug="redis"
+        ).first()
+        deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+        deployment.save()
+
+        query_string = f"ids={sandbox.id}"
+        response = self.client.get(
+            reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        statuses = response.json().get("projects", {})
+        self.assertIsNotNone(statuses.get(sandbox.id))
+        project_status = statuses.get(sandbox.id)
+
+        self.assertEqual(0, project_status.get("healthy_services"))
+        self.assertEqual(1, project_status.get("unhealthy_services"))

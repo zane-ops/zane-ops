@@ -360,12 +360,12 @@ class GitDeployment(BaseDeployment):
         OFFLINE = "OFFLINE", _("Offline")
         SLEEPING = "SLEEPING", _("Sleeping")  # preview deploys
 
-    deployment_status = models.CharField(
+    status = models.CharField(
         max_length=10,
         choices=DeploymentStatus.choices,
         default=DeploymentStatus.QUEUED,
     )
-    deployment_status_reason = models.CharField(max_length=255, null=True)
+    status_reason = models.CharField(max_length=255, null=True)
 
     class DeploymentEnvironment(models.TextChoices):
         PRODUCTION = "PRODUCTION", _("Production")
