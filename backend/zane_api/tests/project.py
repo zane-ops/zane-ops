@@ -45,6 +45,23 @@ class ProjectListViewTests(AuthAPITestCase):
         project_list = response.json().get("results", [])
         self.assertEqual(2, len(project_list))
 
+    def test_list_filter_slug(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, slug="gh-clone"),
+                Project(owner=owner, slug="gh-next"),
+                Project(owner=owner, slug="zaneops"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"), QUERY_STRING="slug=gh"
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("results", [])
+        self.assertEqual(2, len(project_list))
+
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)

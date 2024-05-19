@@ -297,6 +297,7 @@ class ProjectListFilterSet(django_filters.FilterSet):
             "slug": "name",
         },
     )
+    slug = django_filters.CharFilter(lookup_expr="icontains")
 
     class Meta:
         model = Project
@@ -310,6 +311,7 @@ class ArchivedProjectListFilterSet(django_filters.FilterSet):
             "slug": "name",
         },
     )
+    slug = django_filters.CharFilter(lookup_expr="icontains")
 
     class Meta:
         model = ArchivedProject
