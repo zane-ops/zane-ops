@@ -20,6 +20,7 @@ class ArchivedProject(TimestampArchivedModel):
         null=True,
     )
     slug = models.SlugField(max_length=255, blank=True)
+    description = models.TextField(blank=True, null=True)
     active_version = models.OneToOneField(
         to=Project,
         on_delete=models.SET_NULL,
@@ -35,6 +36,7 @@ class ArchivedProject(TimestampArchivedModel):
             owner=project.owner,
             active_version=project,
             original_id=project.id,
+            description=project.description,
         )
 
     @classmethod
@@ -47,6 +49,7 @@ class ArchivedProject(TimestampArchivedModel):
                 slug=project.slug,
                 owner=project.owner,
                 original_id=project.id,
+                description=project.description,
             )
         return archived_version
 

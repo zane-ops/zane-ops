@@ -70,7 +70,9 @@ class ProjectsListAPIView(ListCreateAPIView):
             fake = Faker()
             slug = data.get("slug", fake.slug()).lower()
             try:
-                new_project = Project.objects.create(slug=slug, owner=request.user)
+                new_project = Project.objects.create(
+                    slug=slug, owner=request.user, description=data.get("description")
+                )
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"
@@ -220,7 +222,8 @@ class ProjectDetailsView(APIView):
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             try:
-                project.slug = form.data["slug"]
+                project.slug = form.data.get("slug", project.slug)
+                project.description = form.data.get("description", project.description)
                 project.save()
             except IntegrityError:
                 raise ResourceConflict(

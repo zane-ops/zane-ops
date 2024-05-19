@@ -1,5 +1,3 @@
-import json
-
 from django.urls import reverse
 from rest_framework import status
 
@@ -62,6 +60,23 @@ class ProjectCreateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertEqual(1, Project.objects.count())
 
+    def test_create_project_with_description(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={
+                "slug": "zane-ops",
+                "description": "self-hosted PaaS built on docker swarm",
+            },
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(1, Project.objects.count())
+
+        created_project: Project = Project.objects.filter().first()
+        self.assertEqual(
+            "self-hosted PaaS built on docker swarm", created_project.description
+        )
+
     def test_generate_slug_if_not_specified(self):
         self.loginUser()
         response = self.client.post(reverse("zane_api:projects.list"), data={})
@@ -114,6 +129,36 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         self.assertIsNotNone(updated_project)
         self.assertEqual("kisshub", updated_project.slug)
         self.assertNotEquals(previous_project.updated_at, updated_project.updated_at)
+
+    def test_sucessfully_update_project_description(self):
+        owner = self.loginUser()
+        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.details", kwargs={"slug": previous_project.slug}
+            ),
+            data={
+                "description": "Clone of Github built-on nextjs app router",
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_project: Project = Project.objects.filter(slug="gh-next").first()
+        self.assertIsNotNone(updated_project)
+        self.assertEqual(
+            "Clone of Github built-on nextjs app router", updated_project.description
+        )
+        self.assertNotEquals(previous_project.updated_at, updated_project.updated_at)
+
+    def test_prevent_empy_update(self):
+        owner = self.loginUser()
+        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.details", kwargs={"slug": previous_project.slug}
+            ),
+            data={},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_bad_request(self):
         owner = self.loginUser()
@@ -187,7 +232,9 @@ class ProjectGetViewTests(AuthAPITestCase):
 class ProjectArchiveViewTests(AuthAPITestCase):
     def test_sucessfully_archive_project(self):
         owner = self.loginUser()
-        Project.objects.create(slug="gh-clone", owner=owner),
+        Project.objects.create(
+            slug="gh-clone", owner=owner, description="Github clone"
+        ),
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
         )
@@ -201,6 +248,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(archived_project)
         self.assertNotEquals("", archived_project.original_id)
+        self.assertEqual("Github clone", archived_project.description)
 
     def test_non_existent(self):
         self.loginUser()
@@ -461,7 +509,6 @@ class ProjectStatusViewTests(AuthAPITestCase):
         response = self.client.get(
             reverse("zane_api:projects.status_list"), QUERY_STRING=query_string
         )
-        print(json.dumps(response.json(), indent=2))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         statuses = response.json().get("projects", {})
 

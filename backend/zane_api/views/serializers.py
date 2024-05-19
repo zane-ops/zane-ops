@@ -347,6 +347,7 @@ class ProjectStatusRequestParamsSerializer(serializers.Serializer):
 
 class ProjectCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
 
 
 # ==============================
@@ -355,7 +356,15 @@ class ProjectCreateRequestSerializer(serializers.Serializer):
 
 
 class ProjectUpdateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255)
+    slug = serializers.SlugField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+
+    def validate(self, attrs: dict[str, str]):
+        if not bool(attrs):
+            raise serializers.ValidationError(
+                "one of `slug` or `description` should be provided"
+            )
+        return attrs
 
 
 # ==============================
