@@ -398,7 +398,16 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
 
 
 class ProjectStatusViewTests(AuthAPITestCase):
-    def test_get_statuses_empty(self):
+    def test_get_statuses_no_project_specified(self):
+        self.loginUser()
+
+        response = self.client.get(reverse("zane_api:projects.status_list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        statuses = response.json().get("projects", {})
+        is_status_list_empty = not bool(statuses)
+        self.assertTrue(is_status_list_empty)
+
+    def test_get_statuses_for_single_empty_project(self):
         owner = self.loginUser()
 
         thullo = Project.objects.create(owner=owner, slug="thullo")

@@ -104,6 +104,11 @@ class ProjectStatusView(APIView):
         if form.is_valid(raise_exception=True):
             params = form.data
             project_ids: list = params["ids"]
+
+            if len(project_ids) == 0:
+                serializer = ProjectStatusResponseSerializer({"projects": {}})
+                return Response(serializer.data)
+
             project_statuses = {}
 
             projects = Project.objects.filter(id__in=project_ids)
