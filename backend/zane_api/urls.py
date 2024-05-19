@@ -6,11 +6,25 @@ app_name = "zane_api"
 
 urlpatterns = [
     re_path(r"^auth/me/?$", views.AuthedView.as_view(), name="auth.me"),
-    re_path(r"^auth/me/with-token/?$", views.TokenAuthedView.as_view(), name="auth.me.with_token"),
+    re_path(
+        r"^auth/me/with-token/?$",
+        views.TokenAuthedView.as_view(),
+        name="auth.me.with_token",
+    ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(r"^csrf/?$", views.CSRFCookieView.as_view(), name="csrf"),
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
-    re_path(r"^projects/?$", views.ProjectsListView.as_view(), name="projects.list"),
+    re_path(r"^projects/?$", views.ProjectsListAPIView.as_view(), name="projects.list"),
+    re_path(
+        r"^archived-projects/?$",
+        views.ArchivedProjectsListAPIView.as_view(),
+        name="projects.archived.list",
+    ),
+    re_path(
+        r"^projects/status-list/$",
+        views.ProjectStatusView.as_view(),
+        name="projects.status_list",
+    ),
     re_path(
         r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/$",
         views.ProjectDetailsView.as_view(),
