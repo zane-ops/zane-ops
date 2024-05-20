@@ -480,7 +480,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertIsNotNone(statuses.get(thullo.id))
         thullo_status = statuses.get(thullo.id)
         self.assertEqual(0, thullo_status.get("healthy_services"))
-        self.assertEqual(0, thullo_status.get("unhealthy_services"))
+        self.assertEqual(0, thullo_status.get("total_services"))
 
     def test_with_succesful_deploy(self):
         owner = self.loginUser()
@@ -511,7 +511,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertIsNotNone(statuses.get(sandbox.id))
         project_status = statuses.get(sandbox.id)
         self.assertEqual(1, project_status.get("healthy_services"))
-        self.assertEqual(0, project_status.get("unhealthy_services"))
+        self.assertEqual(1, project_status.get("total_services"))
 
     def test_with_multiple_projects(self):
         owner = self.loginUser()
@@ -541,8 +541,8 @@ class ProjectStatusViewTests(AuthAPITestCase):
         statuses = response.json().get("projects", {})
         self.assertEqual(
             {
-                sandbox.id: {"healthy_services": 1, "unhealthy_services": 0},
-                sandbox2.id: {"healthy_services": 0, "unhealthy_services": 0},
+                sandbox.id: {"healthy_services": 1, "total_services": 1},
+                sandbox2.id: {"healthy_services": 0, "total_services": 0},
             },
             statuses,
         )
@@ -582,7 +582,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project_status = statuses.get(sandbox.id)
 
         self.assertEqual(0, project_status.get("healthy_services"))
-        self.assertEqual(1, project_status.get("unhealthy_services"))
+        self.assertEqual(1, project_status.get("total_services"))
 
     def test_with_unhealthy_deployment(self):
         owner = self.loginUser()
@@ -621,4 +621,4 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project_status = statuses.get(sandbox.id)
 
         self.assertEqual(0, project_status.get("healthy_services"))
-        self.assertEqual(1, project_status.get("unhealthy_services"))
+        self.assertEqual(1, project_status.get("total_services"))

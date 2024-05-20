@@ -200,7 +200,7 @@ class ProjectStatusView(APIView):
 
                 project_statuses[project.id] = {
                     "healthy_services": healthy_services,
-                    "unhealthy_services": unhealthy_services,
+                    "total_services": healthy_services + unhealthy_services,
                 }
 
             serializer = ProjectStatusResponseSerializer({"projects": project_statuses})

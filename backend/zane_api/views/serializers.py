@@ -331,7 +331,7 @@ class ProjectListPagination(pagination.PageNumberPagination):
 
 class ProjectStatusSerializer(serializers.Serializer):
     healthy_services = serializers.IntegerField(min_value=0)
-    unhealthy_services = serializers.IntegerField(min_value=0)
+    total_services = serializers.IntegerField(min_value=0)
 
 
 class ProjectStatusResponseSerializer(serializers.Serializer):
