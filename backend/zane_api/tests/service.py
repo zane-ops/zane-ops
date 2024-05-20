@@ -45,7 +45,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        data = response.json().get("service")
+        data = response.json()
         self.assertIsNotNone(data)
 
         created_service: DockerRegistryService = DockerRegistryService.objects.filter(
@@ -1072,7 +1072,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             content_type="application/json",
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = response.json().get("service")
+        service = response.json()
         self.assertIsNotNone(service.get("healthcheck"))
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
         self.assertIsNotNone(created_service.healthcheck)
@@ -1487,8 +1487,6 @@ class DockerGetServiceViewTest(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        data = response.json().get("service")
-        self.assertIsNotNone(data)
 
     def test_get_service_non_existing(self):
         owner = self.loginUser()

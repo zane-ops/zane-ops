@@ -3,6 +3,8 @@ import docker.errors
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django_filters import OrderingFilter
+from rest_framework import pagination
 
 from .. import serializers
 from ..docker_operations import (
@@ -11,7 +13,7 @@ from ..docker_operations import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
 )
-from ..models import URL, PortConfiguration, DockerDeployment
+from ..models import URL, PortConfiguration, DockerDeployment, Project, ArchivedProject
 from ..validators import validate_url_path
 
 
@@ -268,16 +270,12 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         return value
 
 
-class DockerServiceResponseSerializer(serializers.Serializer):
-    service = serializers.DockerServiceSerializer(read_only=True)
-
-
 # ==============================
 #       Docker deployments     #
 # ==============================
 
 
-class DockerServiceDeploymentFilter(django_filters.FilterSet):
+class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
         choices=DockerDeployment.DeploymentStatus.choices
     )
@@ -285,6 +283,90 @@ class DockerServiceDeploymentFilter(django_filters.FilterSet):
     class Meta:
         model = DockerDeployment
         fields = ["status", "created_at", "hash"]
+
+
+# ==============================
+#        Projects List         #
+# ==============================
+
+
+class ProjectListFilterSet(django_filters.FilterSet):
+    sort_by = OrderingFilter(
+        fields=["slug", "updated_at"],
+        field_labels={
+            "slug": "name",
+        },
+    )
+    slug = django_filters.CharFilter(lookup_expr="istartswith")
+
+    class Meta:
+        model = Project
+        fields = ["slug"]
+
+
+class ArchivedProjectListFilterSet(django_filters.FilterSet):
+    sort_by = OrderingFilter(
+        fields=["slug", "archived_at"],
+        field_labels={
+            "slug": "name",
+        },
+    )
+    slug = django_filters.CharFilter(lookup_expr="istartswith")
+
+    class Meta:
+        model = ArchivedProject
+        fields = ["slug"]
+
+
+class ProjectListPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
+
+
+# ==============================
+#      Projects Statuses       #
+# ==============================
+
+
+class ProjectStatusSerializer(serializers.Serializer):
+    healthy_services = serializers.IntegerField(min_value=0)
+    total_services = serializers.IntegerField(min_value=0)
+
+
+class ProjectStatusResponseSerializer(serializers.Serializer):
+    projects = serializers.DictField(child=ProjectStatusSerializer())
+
+
+class ProjectStatusRequestParamsSerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.CharField(), required=True)
+
+
+# ==============================
+#       Projects Create        #
+# ==============================
+
+
+class ProjectCreateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+
+
+# ==============================
+#       Projects Update        #
+# ==============================
+
+
+class ProjectUpdateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+
+    def validate(self, attrs: dict[str, str]):
+        if not bool(attrs):
+            raise serializers.ValidationError(
+                "one of `slug` or `description` should be provided"
+            )
+        return attrs
 
 
 # ==============================
