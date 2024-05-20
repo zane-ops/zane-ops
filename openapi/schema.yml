@@ -3788,12 +3788,12 @@ components:
         healthy_services:
           type: integer
           minimum: 0
-        unhealthy_services:
+        total_services:
           type: integer
           minimum: 0
       required:
       - healthy_services
-      - unhealthy_services
+      - total_services
     ProjectStatusResponse:
       type: object
       properties:
