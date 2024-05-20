@@ -12,7 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .base import EMPTY_RESPONSE, ResourceConflict
+from .base import EMPTY_RESPONSE, EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListPagination,
     ProjectListFilterSet,
@@ -46,6 +46,12 @@ class ProjectsListAPIView(ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
     queryset = Project.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound:
+            return Response(EMPTY_PAGINATED_RESPONSE)
 
     @extend_schema(
         request=ProjectCreateRequestSerializer,
@@ -194,7 +200,7 @@ class ProjectStatusView(APIView):
 
                 project_statuses[project.id] = {
                     "healthy_services": healthy_services,
-                    "unhealthy_services": unhealthy_services,
+                    "total_services": healthy_services + unhealthy_services,
                 }
 
             serializer = ProjectStatusResponseSerializer({"projects": project_statuses})
@@ -207,6 +213,12 @@ class ArchivedProjectsListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ArchivedProjectListFilterSet
     queryset = ArchivedProject.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound:
+            return Response(EMPTY_PAGINATED_RESPONSE)
 
 
 class ProjectDetailsView(APIView):

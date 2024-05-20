@@ -297,6 +297,7 @@ class ProjectListFilterSet(django_filters.FilterSet):
             "slug": "name",
         },
     )
+    slug = django_filters.CharFilter(lookup_expr="istartswith")
 
     class Meta:
         model = Project
@@ -310,6 +311,7 @@ class ArchivedProjectListFilterSet(django_filters.FilterSet):
             "slug": "name",
         },
     )
+    slug = django_filters.CharFilter(lookup_expr="istartswith")
 
     class Meta:
         model = ArchivedProject
@@ -329,7 +331,7 @@ class ProjectListPagination(pagination.PageNumberPagination):
 
 class ProjectStatusSerializer(serializers.Serializer):
     healthy_services = serializers.IntegerField(min_value=0)
-    unhealthy_services = serializers.IntegerField(min_value=0)
+    total_services = serializers.IntegerField(min_value=0)
 
 
 class ProjectStatusResponseSerializer(serializers.Serializer):

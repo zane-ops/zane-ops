@@ -14,6 +14,7 @@ from ..models import (
     PortConfiguration,
     URL,
 )
+from ..views import EMPTY_PAGINATED_RESPONSE
 
 
 class ProjectListViewTests(AuthAPITestCase):
@@ -31,6 +32,45 @@ class ProjectListViewTests(AuthAPITestCase):
         project_list = response.json().get("results", [])
         self.assertEqual(1, len(project_list))
 
+    def test_pagination(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, slug="gh-clone"),
+                Project(owner=owner, slug="gh-next"),
+                Project(owner=owner, slug="zaneops"),
+            ]
+        )
+
+        response = self.client.get(
+            reverse("zane_api:projects.list"), QUERY_STRING="per_page=2&page=2"
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("results", [])
+        self.assertEqual(1, len(project_list))
+
+    def test_pagination_out_of_bands_returns_empty_page(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, slug="gh-clone"),
+                Project(owner=owner, slug="gh-next"),
+                Project(owner=owner, slug="zaneops"),
+            ]
+        )
+
+        response = self.client.get(
+            reverse("zane_api:projects.list"),
+            QUERY_STRING="per_page=2&page=3",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(
+            EMPTY_PAGINATED_RESPONSE,
+            response.json(),
+        )
+
     def test_list_archived(self):
         owner = self.loginUser()
 
@@ -41,6 +81,23 @@ class ProjectListViewTests(AuthAPITestCase):
             ]
         )
         response = self.client.get(reverse("zane_api:projects.archived.list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json().get("results", [])
+        self.assertEqual(2, len(project_list))
+
+    def test_list_filter_slug(self):
+        owner = self.loginUser()
+
+        Project.objects.bulk_create(
+            [
+                Project(owner=owner, slug="gh-clone"),
+                Project(owner=owner, slug="gh-next"),
+                Project(owner=owner, slug="zaneops"),
+            ]
+        )
+        response = self.client.get(
+            reverse("zane_api:projects.list"), QUERY_STRING="slug=gh"
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json().get("results", [])
         self.assertEqual(2, len(project_list))
@@ -423,7 +480,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertIsNotNone(statuses.get(thullo.id))
         thullo_status = statuses.get(thullo.id)
         self.assertEqual(0, thullo_status.get("healthy_services"))
-        self.assertEqual(0, thullo_status.get("unhealthy_services"))
+        self.assertEqual(0, thullo_status.get("total_services"))
 
     def test_with_succesful_deploy(self):
         owner = self.loginUser()
@@ -454,7 +511,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertIsNotNone(statuses.get(sandbox.id))
         project_status = statuses.get(sandbox.id)
         self.assertEqual(1, project_status.get("healthy_services"))
-        self.assertEqual(0, project_status.get("unhealthy_services"))
+        self.assertEqual(1, project_status.get("total_services"))
 
     def test_with_multiple_projects(self):
         owner = self.loginUser()
@@ -484,8 +541,8 @@ class ProjectStatusViewTests(AuthAPITestCase):
         statuses = response.json().get("projects", {})
         self.assertEqual(
             {
-                sandbox.id: {"healthy_services": 1, "unhealthy_services": 0},
-                sandbox2.id: {"healthy_services": 0, "unhealthy_services": 0},
+                sandbox.id: {"healthy_services": 1, "total_services": 1},
+                sandbox2.id: {"healthy_services": 0, "total_services": 0},
             },
             statuses,
         )
@@ -525,7 +582,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project_status = statuses.get(sandbox.id)
 
         self.assertEqual(0, project_status.get("healthy_services"))
-        self.assertEqual(1, project_status.get("unhealthy_services"))
+        self.assertEqual(1, project_status.get("total_services"))
 
     def test_with_unhealthy_deployment(self):
         owner = self.loginUser()
@@ -564,4 +621,4 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project_status = statuses.get(sandbox.id)
 
         self.assertEqual(0, project_status.get("healthy_services"))
-        self.assertEqual(1, project_status.get("unhealthy_services"))
+        self.assertEqual(1, project_status.get("total_services"))

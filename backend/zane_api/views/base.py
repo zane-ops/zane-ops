@@ -1,7 +1,12 @@
+from collections import OrderedDict
+
 from drf_standardized_errors.handler import ExceptionHandler
 from rest_framework import exceptions, status
 
 EMPTY_RESPONSE = {}
+EMPTY_PAGINATED_RESPONSE = OrderedDict(
+    [("count", 0), ("next", None), ("previous", None), ("results", [])]
+)
 
 
 class CustomThrottledException(exceptions.Throttled):
