@@ -17,8 +17,7 @@ from .base import EMPTY_RESPONSE, ResourceConflict
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
-    DockerServiceUpdateRequestSerializer,
-    DockerServiceDeployRequestSerializer,
+    DockerServiceUpdateResponseSerializer,
 )
 from ..models import (
     Project,
@@ -365,6 +364,13 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
+
+
+class DeployDockerServiceAPIView(APIView):
+    serializer_class = DockerServiceUpdateResponseSerializer
+
+    def patch(self, request: Request, project_slug: str, service_slug: str):
+        return Response()
 
 
 class ArchiveDockerServiceAPIView(APIView):
