@@ -208,9 +208,7 @@ class CreateDockerServiceAPIView(APIView):
                         service.urls.add(*created_urls)
 
                 # Create first deployment
-                first_deployment = DockerDeployment.objects.create(
-                    service=service
-                )
+                first_deployment = DockerDeployment.objects.create(service=service)
                 if len(service.urls.all()) > 0:
                     first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
                     first_deployment.save()
