@@ -48,6 +48,13 @@ class Project(TimestampedModel):
 
 
 class URL(models.Model):
+    ID_PREFIX = "url_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
     domain = models.CharField(
         max_length=1000, null=True, blank=True, validators=[validate_url_domain]
     )
@@ -72,6 +79,14 @@ class URL(models.Model):
 
 
 class HealthCheck(models.Model):
+    ID_PREFIX = "htc_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+
     class HealthCheckType(models.TextChoices):
         COMMAND = "COMMAND", _("Command")
         PATH = "PATH", _("Path")
@@ -114,6 +129,13 @@ class BaseService(TimestampedModel):
 
 
 class PortConfiguration(models.Model):
+    ID_PREFIX = "prt_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
 
@@ -131,6 +153,13 @@ class BaseEnvVariable(models.Model):
 
 
 class DockerEnvVariable(BaseEnvVariable):
+    ID_PREFIX = "env_dkr_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
     service = models.ForeignKey(
         to="DockerRegistryService",
         on_delete=models.CASCADE,
@@ -324,6 +353,7 @@ class DockerDeployment(BaseDeployment):
     monitor_task = models.ForeignKey(
         to=PeriodicTask, null=True, on_delete=models.SET_NULL
     )
+    service_snapshot = models.JSONField()
 
     @property
     def task_id(self):
@@ -341,6 +371,37 @@ class DockerDeployment(BaseDeployment):
                 f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_PRIVATE_DOMAIN}",
             ]
         return aliases
+
+
+class DockerDeploymentChange(TimestampedModel):
+    ID_PREFIX = "chg_dkr_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+
+    class ChangeType(models.TextChoices):
+        UPDATE = "UPDATE", _("update")
+        DELETE = "DELETE", _("delete")
+        ADD = "ADD", _("add")
+
+    type = models.CharField(
+        max_length=10,
+        choices=ChangeType.choices,
+    )
+    field = models.CharField(max_length=255)
+    item_id = models.CharField(max_length=255, null=True)
+    old_value = models.JSONField(null=True)
+    new_value = models.JSONField(null=True)
+
+    service = models.ForeignKey(
+        to=DockerRegistryService, on_delete=models.CASCADE, related_name="changesets"
+    )
+    deployment = models.ForeignKey(
+        to=DockerDeployment, on_delete=models.CASCADE, related_name="changes", null=True
+    )
 
 
 class GitDeployment(BaseDeployment):
