@@ -345,8 +345,7 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
         }
 
     client.images.pull(
-        repository=service.image_repository,
-        tag=deployment.image_tag,
+        repository=service.image,
         auth_config=auth_config,
     )
 
@@ -391,7 +390,7 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
     client.services.create(
-        image=f"{service.image_repository}:{deployment.image_tag}",
+        image=service.image,
         name=get_docker_service_resource_name(
             service_id=service.id,
             project_id=service.project.id,

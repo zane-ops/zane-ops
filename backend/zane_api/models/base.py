@@ -172,19 +172,19 @@ class DockerEnvVariable(BaseEnvVariable):
 
 class DockerRegistryService(BaseService):
     ID_PREFIX = "srv_dkr_"
-    image_repository = models.CharField(max_length=510, null=False, blank=False)
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+    image = models.CharField(max_length=510, null=False, blank=False)
     command = models.TextField(null=True, blank=True)
     docker_credentials_username = models.CharField(
         max_length=255, null=True, blank=True
     )
     docker_credentials_password = models.CharField(
         max_length=255, null=True, blank=True
-    )
-    id = ShortUUIDField(
-        length=11,
-        max_length=255,
-        primary_key=True,
-        prefix=ID_PREFIX,
     )
 
     def __str__(self):
@@ -349,7 +349,6 @@ class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
     )
-    image_tag = models.CharField(max_length=255, default="latest")
     monitor_task = models.ForeignKey(
         to=PeriodicTask, null=True, on_delete=models.SET_NULL
     )

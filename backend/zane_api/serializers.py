@@ -108,7 +108,7 @@ class DockerServiceSerializer(ModelSerializer):
     class Meta:
         model = models.DockerRegistryService
         fields = [
-            "image_repository",
+            "image",
             "slug",
             "urls",
             "created_at",
@@ -140,7 +140,6 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "created_at",
             "is_redeploy_of",
             "hash",
-            "image_tag",
             "status",
             "status_reason",
             "url",

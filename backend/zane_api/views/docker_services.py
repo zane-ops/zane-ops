@@ -66,16 +66,11 @@ class CreateDockerServiceAPIView(APIView):
                 service_slug = data.get("slug", fake.slug()).lower()
                 docker_image_tag = "latest"
                 try:
-                    docker_image = data["image"]
-                    docker_image_parts = docker_image.split(":", 1)
-                    if len(docker_image_parts) == 2:
-                        docker_image, docker_image_tag = docker_image_parts
-
                     healthcheck = data.get("healthcheck")
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
-                        image_repository=docker_image,
+                        image=data["image"],
                         command=data.get("command"),
                         docker_credentials_username=(
                             docker_credentials.get("username")
