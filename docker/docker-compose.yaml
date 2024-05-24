@@ -24,11 +24,6 @@ services:
     depends_on:
       - db
       - redis
-    #    environment:
-    #      REDIS_URL: redis://redis:6379/0
-    #      DB_HOST: db
-    #      DB_PORT: 5432
-    #      CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
     network_mode: 'host'
   celery-beat:
     build:
@@ -100,15 +95,15 @@ services:
       - "8089:5540"
     volumes:
       - redisinsight:/data
-  sablier:
-    image: acouvreur/sablier:1.6.0
-    container_name: zane-sablier
-    restart: unless-stopped
-    command:
-      - start
-      - --provider.name=swarm
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
+#  sablier:
+#    image: acouvreur/sablier:1.6.0
+#    container_name: zane-sablier
+#    restart: unless-stopped
+#    command:
+#      - start
+#      - --provider.name=swarm
+#    volumes:
+#      - "/var/run/docker.sock:/var/run/docker.sock"
 volumes:
   db-data:
   redis-data:

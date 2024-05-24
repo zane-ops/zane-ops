@@ -15,7 +15,7 @@ from .base import EMPTY_RESPONSE, ResourceConflict
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
-    DockerServiceUpdateResponseSerializer,
+    DockerServiceChangesRequestSerializer,
 )
 from ..models import (
     Project,
@@ -25,7 +25,11 @@ from ..models import (
     ArchivedDockerService,
     DockerDeploymentChange,
 )
-from ..serializers import DockerServiceDeploymentSerializer, DockerServiceSerializer
+from ..serializers import (
+    DockerServiceDeploymentSerializer,
+    DockerServiceSerializer,
+    HealthCheckSerializer,
+)
 from ..tasks import delete_resources_for_docker_service
 
 
@@ -95,18 +99,72 @@ class CreateDockerServiceAPIView(APIView):
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
 
-class UpdateDockerServiceAPIView(APIView):
+class DockerServiceDeploymentChangesAPIView(APIView):
     serializer_class = DockerServiceSerializer
 
     @extend_schema(
-        request=DockerServiceCreateRequestSerializer,
+        request=DockerServiceChangesRequestSerializer,
         responses={
             200: DockerServiceSerializer,
         },
-        operation_id="updateDockerService",
+        operation_id="updateDeploymentChanges",
     )
-    def put(self, request: Request, project_slug: str, service_slug: str):
-        return Response()
+    def patch(self, request: Request, project_slug: str, service_slug: str):
+        project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        form = DockerServiceChangesRequestSerializer(
+            data=request.data, context={"service": service}
+        )
+        if form.is_valid(raise_exception=True):
+            data = form.data
+            new_changes: list[DockerDeploymentChange] = []
+            for field, value in data.items():  # type: str, dict|list[dict]
+                match field:
+                    case "image" | "command" | "credentials":
+                        change = DockerDeploymentChange(
+                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                            field=field,
+                            old_value=getattr(service, field),
+                            new_value=value["new_value"],
+                            service=service,
+                        )
+                        new_changes.append(change)
+                    case "healthcheck":
+                        change = DockerDeploymentChange(
+                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                            field=field,
+                            old_value=(
+                                HealthCheckSerializer(service.healthcheck).data
+                                if service.healthcheck is not None
+                                else None
+                            ),
+                            new_value=value["new_value"],
+                            service=service,
+                        )
+                        new_changes.append(change)
+                    case "volumes" | "urls" | "ports" | "env_variables":
+                        for field_change in value:
+                            change = DockerDeploymentChange(
+                                type=field_change["type"],
+                                field=field,
+                                new_value=field_change["new_value"],
+                                service=service,
+                            )
+                            new_changes.append(change)
+
+            service.add_changes(new_changes)
+
+        response = DockerServiceSerializer(service)
+        return Response(
+            response.data,
+        )
 
 
 class GetDockerServiceAPIView(APIView):
@@ -129,7 +187,7 @@ class GetDockerServiceAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "ports", "urls")
+            .prefetch_related("volumes", "ports", "urls", "env_variables")
         ).first()
 
         if service is None:
@@ -212,13 +270,6 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
-
-
-class DeployDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceUpdateResponseSerializer
-
-    def patch(self, request: Request, project_slug: str, service_slug: str):
-        return Response()
 
 
 class ArchiveDockerServiceAPIView(APIView):

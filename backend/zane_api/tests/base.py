@@ -117,6 +117,12 @@ class APITestCase(TestCase):
     def tearDown(self):
         cache.clear()
 
+    def assertDictContainsSubset(self, subset: dict, parent: dict, msg: object = None):
+        extracted_subset = dict(
+            [(key, parent[key]) for key in subset.keys() if key in parent.keys()]
+        )
+        self.assertEqual(subset, extracted_subset, msg)
+
 
 class AuthAPITestCase(APITestCase):
     def setUp(self):

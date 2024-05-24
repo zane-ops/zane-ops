@@ -8,12 +8,17 @@ from rest_framework import pagination
 
 from .. import serializers
 from ..docker_operations import (
-    DOCKER_HUB_REGISTRY_URL,
     login_to_docker_registry,
     check_if_docker_image_exists,
 )
-from ..models import URL, DockerDeployment, Project, ArchivedProject
-from ..validators import validate_url_path
+from ..models import (
+    URL,
+    DockerDeployment,
+    Project,
+    ArchivedProject,
+    DockerRegistryService,
+)
+from ..validators import validate_url_path, validate_env_name
 
 
 # ==============================
@@ -24,19 +29,6 @@ from ..validators import validate_url_path
 class DockerCredentialsRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=100)
     password = serializers.CharField(max_length=100)
-    registry_url = serializers.URLField(required=False, default=DOCKER_HUB_REGISTRY_URL)
-
-    def validate(self, attrs: dict[str, str]):
-        try:
-            login_to_docker_registry(
-                username=attrs["username"],
-                password=attrs["password"],
-                registry_url=attrs.get("registry_url"),
-            )
-        except docker.errors.APIError:
-            raise serializers.ValidationError("Invalid docker credentials")
-        else:
-            return attrs
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
@@ -49,11 +41,11 @@ class VolumeRequestSerializer(serializers.Serializer):
     mount_path = serializers.CharField(max_length=255)
     host_path = serializers.URLPathField(max_length=255, required=False)
     VOLUME_MODE_CHOICES = (
-        ("ro", _("READ_ONLY")),
-        ("rw", _("READ_WRITE")),
+        ("READ_ONLY", _("READ_ONLY")),
+        ("READ_WRITE", _("READ_WRITE")),
     )
     mode = serializers.ChoiceField(
-        required=False, choices=VOLUME_MODE_CHOICES, default="rw"
+        required=False, choices=VOLUME_MODE_CHOICES, default="READ_WRITE"
     )
 
 
@@ -106,23 +98,26 @@ class URLRequestSerializer(serializers.Serializer):
 
 class HealthCheckRequestSerializer(serializers.Serializer):
     HEALTCHECK_CHOICES = (
-        ("path", _("path")),
-        ("command", _("command")),
+        ("PATH", _("path")),
+        ("COMMAND", _("command")),
     )
-    type = serializers.CaseInsensitiveChoiceField(
-        required=True, choices=HEALTCHECK_CHOICES
-    )
+    type = serializers.ChoiceField(required=True, choices=HEALTCHECK_CHOICES)
     value = serializers.CharField(max_length=255, required=True)
     timeout_seconds = serializers.IntegerField(required=False, default=60, min_value=5)
-    interval_seconds = serializers.CharField(required=False, default=30)
+    interval_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
 
     def validate(self, data: dict):
-        if data["type"] == "path":
+        if data["type"] == "PATH":
             try:
                 validate_url_path(data["value"])
             except ValidationError as e:
                 raise serializers.ValidationError({"value": e.messages})
         return data
+
+
+class EnvRequestSerializer(serializers.Serializer):
+    key = serializers.CharField(required=True, validators=[validate_env_name])
+    value = serializers.CharField(required=True)
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
@@ -154,17 +149,10 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             credentials=dict(credentials) if credentials is not None else None,
         )
         if not do_image_exists:
-            registry_url = (
-                credentials.get("registry_url") if credentials is not None else None
-            )
-            if registry_url == DOCKER_HUB_REGISTRY_URL or registry_url is None:
-                registry_str = "on Docker Hub"
-            else:
-                registry_str = f"in the specified registry"
             raise serializers.ValidationError(
                 {
                     "image": [
-                        f"Either the image `{image}` does not exist `{registry_str}`"
+                        f"Either the image `{image}` does not exist in the specified registry"
                         f" or the credentials are invalid for this image."
                         f" Have you forgotten to include the credentials ?"
                     ]
@@ -388,7 +376,7 @@ class DockerServiceUpdateResponseSerializer(serializers.Serializer):
 
 
 class BaseChangeItemSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["add", "delete", "update"])
+    type = serializers.ChoiceField(choices=["ADD", "DELETE", "UPDATE"], required=True)
     item_id = serializers.CharField(max_length=255, required=False)
     new_value = serializers.SerializerMethodField()
 
@@ -398,9 +386,9 @@ class BaseChangeItemSerializer(serializers.Serializer):
         )
 
     def validate(self, attrs: dict[str, str | None]):
-        item_id = attrs["item_id"]
+        item_id = attrs.get("item_id")
         change_type = attrs["type"]
-        if change_type == "delete" or change_type == "update":
+        if change_type in ["DELETE", "UPDATE"]:
             if item_id is None:
                 raise serializers.ValidationError(
                     {
@@ -413,7 +401,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
 
 
 class BaseChangeFieldSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["update"], required=False, default="update")
+    type = serializers.ChoiceField(choices=["UPDATE"], required=False, default="UPDATE")
     new_value = serializers.SerializerMethodField()
 
     def get_new_value(self, obj):
@@ -431,9 +419,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
 
 
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
-    new_value = serializers.DictField(
-        child=serializers.CharField(), required=True, allow_null=True
-    )
+    new_value = EnvRequestSerializer()
 
 
 class PortItemChangeSerializer(BaseChangeItemSerializer):
@@ -457,14 +443,21 @@ class HealthcheckChangeFieldSerializer(BaseChangeFieldSerializer):
 
 
 class DockerServiceChangesRequestSerializer(serializers.Serializer):
-    image = DockerImageChangeFieldSerializer(required=True)
-    command = DockerCommandChangeFieldSerializer(required=True)
-    credentials = DockerCredentialsChangeFieldSerializer(required=True)
-    urls = URLItemChangeSerializer(many=True, required=True)
-    ports = PortItemChangeSerializer(many=True, required=True)
-    env = EnvItemChangeSerializer(many=True, required=True)
-    volumes = VolumeItemChangeSerializer(many=True, required=True)
-    healthcheck = HealthcheckChangeFieldSerializer(required=True)
+    image = DockerImageChangeFieldSerializer(required=False)
+    credentials = DockerCredentialsChangeFieldSerializer(required=False)
+    command = DockerCommandChangeFieldSerializer(required=False)
+    healthcheck = HealthcheckChangeFieldSerializer(required=False)
+    urls = URLItemChangeSerializer(many=True, required=False)
+    ports = PortItemChangeSerializer(many=True, required=False)
+    env_variables = EnvItemChangeSerializer(many=True, required=False)
+    volumes = VolumeItemChangeSerializer(many=True, required=False)
+
+    def validate(self, attrs: dict[str, dict | list[dict]]):
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+
+        return attrs
 
     # def validate_ports(self, changes: list[dict[str, dict[str, int]]]):
     #     new_ports = map(

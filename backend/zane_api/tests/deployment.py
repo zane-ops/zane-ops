@@ -1,6 +1,6 @@
-import json
 from unittest.mock import MagicMock
 
+from django.db.models import Q
 from django.urls import reverse
 from rest_framework import status
 
@@ -397,7 +397,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
@@ -424,11 +423,9 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/",
             },
             change.new_value,
         )
-        print(json.dumps(response.json(), indent=2))
 
     def test_create_service_returns_changes_in_response(self):
         owner = self.loginUser()
@@ -448,3 +445,155 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(data)
 
         self.assertTrue("unapplied_changes" in data)
+
+    def test_request_simple_field_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zaneops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "image": {
+                "type": "UPDATE",
+                "new_value": "ghcr.io/zane-ops/app",
+            },
+            "credentials": {
+                "type": "UPDATE",
+                "new_value": {
+                    "username": "fredkiss3",
+                    "password": "s3cret",
+                },
+            },
+            "healthcheck": {
+                "type": "UPDATE",
+                "new_value": {
+                    "type": "PATH",
+                    "value": "/status",
+                },
+            },
+            "command": {
+                "type": "UPDATE",
+                "new_value": "gunicorn --workers 3 --bind 0.0.0.0:8000 backend.wsgi",
+            },
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(4, DockerDeploymentChange.objects.count())
+        changes = DockerDeploymentChange.objects.filter(service__slug="app")
+        self.assertEqual(
+            "ghcr.io/zane-ops/app", changes.filter(field="image").first().new_value
+        )
+        self.assertEqual(
+            "gunicorn --workers 3 --bind 0.0.0.0:8000 backend.wsgi",
+            changes.filter(field="command").first().new_value,
+        )
+        self.assertEqual(
+            {
+                "username": "fredkiss3",
+                "password": "s3cret",
+            },
+            changes.filter(field="credentials").first().new_value,
+        )
+        self.assertDictContainsSubset(
+            {
+                "type": "PATH",
+                "value": "/status",
+            },
+            changes.filter(field="healthcheck").first().new_value,
+        )
+
+    def test_request_compound_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-logs",
+                        "mount_path": "/etc/logs/zane",
+                    },
+                },
+            ],
+            "urls": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "domain": "labs.fredkiss.dev",
+                    },
+                },
+            ],
+            "env_variables": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "key": "SECRET_KEY",
+                        "value": "super5EC4TK4YYY",
+                    },
+                },
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "key": "ENVIRONMENT",
+                        "value": "PRODUCTION",
+                    },
+                },
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "key": "ROOT_DOMAIN",
+                        "value": "labs.fredkiss.dev",
+                    },
+                },
+            ],
+            "ports": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "forwarded": 8000,
+                    },
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        changes = DockerDeploymentChange.objects.filter(
+            Q(service__slug="app") & ~Q(field="image")
+        )
+        self.assertEqual(6, changes.count())

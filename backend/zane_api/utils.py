@@ -1,4 +1,5 @@
 import datetime
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -143,3 +144,10 @@ def format_seconds(seconds: float):
         return f"{minutes}m{remaining_seconds:02}s"
     else:
         return f"{remaining_seconds}s"
+
+
+def jprint(value):
+    """
+    Print & format value as JSON
+    """
+    return print(json.dumps(value, indent=2))

@@ -238,7 +238,35 @@ class DockerRegistryService(BaseService):
 
     @property
     def unapplied_changes(self):
-        return self.changes.filter(applied=False).all()
+        return self.changes.filter(applied=False)
+
+    @property
+    def credentials(self):
+        if (
+            self.docker_credentials_password is None
+            and self.docker_credentials_password is None
+        ):
+            return None
+        return {
+            "username": self.docker_credentials_username,
+            "password": self.docker_credentials_password,
+        }
+
+    def add_changes(self, changes: list["DockerDeploymentChange"]):
+        for change in changes:
+            existing_changes = self.unapplied_changes.filter(field=change.field)
+            match change.field:
+                case "image" | "command" | "credentials" | "healthcheck":
+                    change_for_field: "DockerDeploymentChange" = (
+                        existing_changes.first()
+                    )
+                    if change_for_field is not None:
+                        change_for_field.new_value = change.new_value
+                    else:
+                        change_for_field = change
+                    change_for_field.save()
+                case "volumes" | "urls" | "ports" | "env_variables":
+                    change.save()
 
 
 class GitRepositoryService(BaseService):
@@ -407,8 +435,20 @@ class DockerDeploymentChange(TimestampedModel):
     )
     applied = models.BooleanField(default=False)
 
+    def __str__(self):
+        return (
+            f"DockerDeploymentChange("
+            f"\n\ttype={self.type},"
+            f"\n\tfield={repr(self.field)},"
+            f"\n\titem_id={repr(self.item_id)},"
+            f"\n\told_value={repr(self.old_value)},"
+            f"\n\tnew_value={repr(self.new_value)},"
+            f"\n\tapplied={repr(self.applied)}"
+            f"\n)"
+        )
+
     class Meta:
-        indexes = [models.Index(fields=["field"])]
+        indexes = [models.Index(fields=["field"]), models.Index(fields=["applied"])]
 
 
 class GitDeployment(BaseDeployment):

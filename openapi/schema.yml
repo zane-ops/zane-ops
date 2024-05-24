@@ -998,84 +998,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/deploy-service/docker/{service_slug}/:
-    patch:
-      operationId: projects_deploy_service_docker_partial_update
-      parameters:
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsDeployServiceDockerPartialUpdateErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          description: No response body
   /api/projects/{project_slug}/service-details/docker/{service_slug}/:
     get:
       operationId: getDockerService
@@ -1372,8 +1294,8 @@ paths:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
   /api/projects/{project_slug}/update-service/docker/{service_slug}/:
-    put:
-      operationId: updateDockerService
+    patch:
+      operationId: updateDeploymentChanges
       parameters:
       - in: path
         name: project_slug
@@ -1393,14 +1315,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/PatchedDockerServiceChangesRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/PatchedDockerServiceChangesRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedDockerServiceChangesRequest'
       security:
       - cookieAuth: []
       responses:
@@ -1408,7 +1329,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/UpdateDeploymentChangesErrorResponse400'
           description: ''
         '401':
           content:
@@ -2025,34 +1946,6 @@ components:
       - client_error
       type: string
       description: '* `client_error` - Client Error'
-    CreateDockerServiceCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - command
-          type: string
-          description: '* `command` - command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -2167,123 +2060,25 @@ components:
       - attr
       - code
       - detail
-    CreateDockerServiceEnvErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - env
-          type: string
-          description: '* `env` - env'
-        code:
-          enum:
-          - not_a_dict
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_dict` - not_a_dict
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceEnvKEYErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - env.KEY
-          type: string
-          description: '* `env.KEY` - env.KEY'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceError:
       oneOf:
       - $ref: '#/components/schemas/CreateDockerServiceNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceSlugErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceImageErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceCommandErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsRegistryUrlErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceUrlsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXDomainErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXBasePathErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceUrlsINDEXStripPrefixErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServicePortsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServicePortsINDEXPublicErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServicePortsINDEXForwardedErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceEnvErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceEnvKEYErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceVolumesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXHostPathErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceVolumesINDEXModeErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckTypeErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckValueErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckTimeoutSecondsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceHealthcheckIntervalSecondsErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/CreateDockerServiceNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/CreateDockerServiceSlugErrorComponent'
           image: '#/components/schemas/CreateDockerServiceImageErrorComponent'
-          command: '#/components/schemas/CreateDockerServiceCommandErrorComponent'
           credentials.non_field_errors: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
           credentials.registry_url: '#/components/schemas/CreateDockerServiceCredentialsRegistryUrlErrorComponent'
-          urls.non_field_errors: '#/components/schemas/CreateDockerServiceUrlsNonFieldErrorsErrorComponent'
-          urls.INDEX.non_field_errors: '#/components/schemas/CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent'
-          urls.INDEX.domain: '#/components/schemas/CreateDockerServiceUrlsINDEXDomainErrorComponent'
-          urls.INDEX.base_path: '#/components/schemas/CreateDockerServiceUrlsINDEXBasePathErrorComponent'
-          urls.INDEX.strip_prefix: '#/components/schemas/CreateDockerServiceUrlsINDEXStripPrefixErrorComponent'
-          ports.non_field_errors: '#/components/schemas/CreateDockerServicePortsNonFieldErrorsErrorComponent'
-          ports.INDEX.non_field_errors: '#/components/schemas/CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent'
-          ports.INDEX.public: '#/components/schemas/CreateDockerServicePortsINDEXPublicErrorComponent'
-          ports.INDEX.forwarded: '#/components/schemas/CreateDockerServicePortsINDEXForwardedErrorComponent'
-          env: '#/components/schemas/CreateDockerServiceEnvErrorComponent'
-          env.KEY: '#/components/schemas/CreateDockerServiceEnvKEYErrorComponent'
-          volumes.non_field_errors: '#/components/schemas/CreateDockerServiceVolumesNonFieldErrorsErrorComponent'
-          volumes.INDEX.non_field_errors: '#/components/schemas/CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
-          volumes.INDEX.name: '#/components/schemas/CreateDockerServiceVolumesINDEXNameErrorComponent'
-          volumes.INDEX.mount_path: '#/components/schemas/CreateDockerServiceVolumesINDEXMountPathErrorComponent'
-          volumes.INDEX.host_path: '#/components/schemas/CreateDockerServiceVolumesINDEXHostPathErrorComponent'
-          volumes.INDEX.mode: '#/components/schemas/CreateDockerServiceVolumesINDEXModeErrorComponent'
-          healthcheck.non_field_errors: '#/components/schemas/CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
-          healthcheck.type: '#/components/schemas/CreateDockerServiceHealthcheckTypeErrorComponent'
-          healthcheck.value: '#/components/schemas/CreateDockerServiceHealthcheckValueErrorComponent'
-          healthcheck.timeout_seconds: '#/components/schemas/CreateDockerServiceHealthcheckTimeoutSecondsErrorComponent'
-          healthcheck.interval_seconds: '#/components/schemas/CreateDockerServiceHealthcheckIntervalSecondsErrorComponent'
     CreateDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateDockerServiceValidationError'
@@ -2293,138 +2088,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/CreateDockerServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    CreateDockerServiceHealthcheckIntervalSecondsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - healthcheck.interval_seconds
-          type: string
-          description: '* `healthcheck.interval_seconds` - healthcheck.interval_seconds'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceHealthcheckNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - healthcheck.non_field_errors
-          type: string
-          description: '* `healthcheck.non_field_errors` - healthcheck.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceHealthcheckTimeoutSecondsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - healthcheck.timeout_seconds
-          type: string
-          description: '* `healthcheck.timeout_seconds` - healthcheck.timeout_seconds'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceHealthcheckTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - healthcheck.type
-          type: string
-          description: '* `healthcheck.type` - healthcheck.type'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceHealthcheckValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - healthcheck.value
-          type: string
-          description: '* `healthcheck.value` - healthcheck.value'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceImageErrorComponent:
       type: object
       properties:
@@ -2474,100 +2137,6 @@ components:
       - attr
       - code
       - detail
-    CreateDockerServicePortsINDEXForwardedErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - ports.INDEX.forwarded
-          type: string
-          description: '* `ports.INDEX.forwarded` - ports.INDEX.forwarded'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServicePortsINDEXNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - ports.INDEX.non_field_errors
-          type: string
-          description: '* `ports.INDEX.non_field_errors` - ports.INDEX.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServicePortsINDEXPublicErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - ports.INDEX.public
-          type: string
-          description: '* `ports.INDEX.public` - ports.INDEX.public'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServicePortsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - ports.non_field_errors
-          type: string
-          description: '* `ports.non_field_errors` - ports.non_field_errors'
-        code:
-          enum:
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceSlugErrorComponent:
       type: object
       properties:
@@ -2598,130 +2167,6 @@ components:
       - attr
       - code
       - detail
-    CreateDockerServiceUrlsINDEXBasePathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - urls.INDEX.base_path
-          type: string
-          description: '* `urls.INDEX.base_path` - urls.INDEX.base_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceUrlsINDEXDomainErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - urls.INDEX.domain
-          type: string
-          description: '* `urls.INDEX.domain` - urls.INDEX.domain'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - urls.INDEX.non_field_errors
-          type: string
-          description: '* `urls.INDEX.non_field_errors` - urls.INDEX.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceUrlsINDEXStripPrefixErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - urls.INDEX.strip_prefix
-          type: string
-          description: '* `urls.INDEX.strip_prefix` - urls.INDEX.strip_prefix'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceUrlsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - urls.non_field_errors
-          type: string
-          description: '* `urls.non_field_errors` - urls.non_field_errors'
-        code:
-          enum:
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceValidationError:
       type: object
       properties:
@@ -2734,164 +2179,6 @@ components:
       required:
       - errors
       - type
-    CreateDockerServiceVolumesINDEXHostPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.INDEX.host_path
-          type: string
-          description: '* `volumes.INDEX.host_path` - volumes.INDEX.host_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceVolumesINDEXModeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.INDEX.mode
-          type: string
-          description: '* `volumes.INDEX.mode` - volumes.INDEX.mode'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceVolumesINDEXMountPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.INDEX.mount_path
-          type: string
-          description: '* `volumes.INDEX.mount_path` - volumes.INDEX.mount_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceVolumesINDEXNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.INDEX.name
-          type: string
-          description: '* `volumes.INDEX.name` - volumes.INDEX.name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.INDEX.non_field_errors
-          type: string
-          description: '* `volumes.INDEX.non_field_errors` - volumes.INDEX.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceVolumesNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.non_field_errors
-          type: string
-          description: '* `volumes.non_field_errors` - volumes.non_field_errors'
-        code:
-          enum:
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -3001,6 +2288,31 @@ components:
       required:
       - errors
       - type
+    DockerCommandChangeField:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeAf8Enum'
+          default: UPDATE
+        new_value:
+          type: string
+          nullable: true
+      required:
+      - new_value
+    DockerCredentialsChangeField:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeAf8Enum'
+          default: UPDATE
+        new_value:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredentialsRequest'
+          nullable: true
+      required:
+      - new_value
     DockerCredentialsRequest:
       type: object
       properties:
@@ -3017,14 +2329,49 @@ components:
       required:
       - password
       - username
+    DockerDeploymentChange:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
+        field:
+          type: string
+          maxLength: 255
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+      required:
+      - field
+      - type
+    DockerDeploymentChangeTypeEnum:
+      enum:
+      - UPDATE
+      - DELETE
+      - ADD
+      type: string
+      description: |-
+        * `UPDATE` - update
+        * `DELETE` - delete
+        * `ADD` - add
     DockerEnvVariable:
       type: object
       properties:
+        id:
+          type: string
+          maxLength: 255
         key:
+          type: string
+          maxLength: 255
+        value:
           type: string
           maxLength: 255
       required:
       - key
+      - value
     DockerImage:
       type: object
       properties:
@@ -3036,6 +2383,18 @@ components:
       required:
       - description
       - full_image
+    DockerImageChangeField:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeAf8Enum'
+          default: UPDATE
+        new_value:
+          type: string
+          nullable: true
+      required:
+      - new_value
     DockerImageSearchResponse:
       type: object
       properties:
@@ -3230,8 +2589,12 @@ components:
     DockerService:
       type: object
       properties:
-        image_repository:
+        id:
           type: string
+          maxLength: 255
+        image:
+          type: string
+          nullable: true
           maxLength: 510
         slug:
           type: string
@@ -3278,14 +2641,19 @@ components:
           items:
             type: string
           readOnly: true
+        unapplied_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerDeploymentChange'
+          readOnly: true
       required:
       - created_at
       - env_variables
       - healthcheck
-      - image_repository
       - network_aliases
       - ports
       - slug
+      - unapplied_changes
       - updated_at
       - urls
       - volumes
@@ -3298,31 +2666,8 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         image:
           type: string
-        command:
-          type: string
         credentials:
           $ref: '#/components/schemas/DockerCredentialsRequest'
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLRequest'
-          default: []
-        ports:
-          type: array
-          items:
-            $ref: '#/components/schemas/ServicePortsRequest'
-          default: []
-        env:
-          type: object
-          additionalProperties:
-            type: string
-        volumes:
-          type: array
-          items:
-            $ref: '#/components/schemas/VolumeRequest'
-          default: []
-        healthcheck:
-          $ref: '#/components/schemas/HealthCheckRequest'
       required:
       - image
     DockerServiceDeployment:
@@ -3338,9 +2683,6 @@ components:
           type: integer
           nullable: true
         hash:
-          type: string
-          maxLength: 255
-        image_tag:
           type: string
           maxLength: 255
         status:
@@ -3361,6 +2703,29 @@ components:
       required:
       - created_at
       - network_aliases
+    EnvItemChange:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeF7eEnum'
+        item_id:
+          type: string
+          maxLength: 255
+        new_value:
+          $ref: '#/components/schemas/EnvRequest'
+      required:
+      - new_value
+      - type
+    EnvRequest:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - key
+      - value
     Error401:
       type: object
       properties:
@@ -3523,6 +2888,9 @@ components:
     HealthCheck:
       type: object
       properties:
+        id:
+          type: string
+          maxLength: 255
         type:
           $ref: '#/components/schemas/HealthCheckTypeEnum'
         value:
@@ -3570,6 +2938,19 @@ components:
       description: |-
         * `COMMAND` - Command
         * `PATH` - Path
+    HealthcheckChangeField:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/TypeAf8Enum'
+          default: UPDATE
+        new_value:
+          allOf:
+          - $ref: '#/components/schemas/HealthCheckRequest'
+          nullable: true
+      required:
+      - new_value
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -3810,6 +3191,36 @@ components:
       required:
       - errors
       - type
+    PatchedDockerServiceChangesRequest:
+      type: object
+      properties:
+        image:
+          $ref: '#/components/schemas/DockerImageChangeField'
+        command:
+          $ref: '#/components/schemas/DockerCommandChangeField'
+        credentials:
+          $ref: '#/components/schemas/DockerCredentialsChangeField'
+        healthcheck:
+          $ref: '#/components/schemas/HealthcheckChangeField'
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLItemChange'
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortItemChange'
+        env:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvItemChange'
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VolumeItemChange'
+        service:
+          type: string
+          readOnly: true
     PatchedProjectUpdateRequest:
       type: object
       properties:
@@ -3822,6 +3233,9 @@ components:
     PortConfiguration:
       type: object
       properties:
+        id:
+          type: string
+          maxLength: 255
         host:
           type: integer
           maximum: 2147483647
@@ -3833,15 +3247,30 @@ components:
           minimum: 0
       required:
       - forwarded
+    PortItemChange:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeF7eEnum'
+        item_id:
+          type: string
+          maxLength: 255
+        new_value:
+          allOf:
+          - $ref: '#/components/schemas/ServicePortsRequest'
+          nullable: true
+      required:
+      - new_value
+      - type
     Project:
       type: object
       properties:
-        description:
-          type: string
-          nullable: true
         id:
           type: string
           maxLength: 255
+        description:
+          type: string
+          nullable: true
         slug:
           type: string
           maxLength: 255
@@ -3888,53 +3317,6 @@ components:
             $ref: '#/components/schemas/ProjectStatus'
       required:
       - projects
-    ProjectsDeployServiceDockerPartialUpdateError:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsDeployServiceDockerPartialUpdateNonFieldErrorsErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/ProjectsDeployServiceDockerPartialUpdateNonFieldErrorsErrorComponent'
-    ProjectsDeployServiceDockerPartialUpdateErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsDeployServiceDockerPartialUpdateValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ProjectsDeployServiceDockerPartialUpdateValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsDeployServiceDockerPartialUpdateNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsDeployServiceDockerPartialUpdateValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectsDeployServiceDockerPartialUpdateError'
-      required:
-      - errors
-      - type
     ProjectsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsListSlugErrorComponent'
@@ -4141,6 +3523,36 @@ components:
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
         * `OFFLINE` - Offline
+    TypeAf8Enum:
+      enum:
+      - UPDATE
+      type: string
+      description: '* `UPDATE` - UPDATE'
+    TypeF7eEnum:
+      enum:
+      - ADD
+      - DELETE
+      - UPDATE
+      type: string
+      description: |-
+        * `ADD` - ADD
+        * `DELETE` - DELETE
+        * `UPDATE` - UPDATE
+    URLItemChange:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeF7eEnum'
+        item_id:
+          type: string
+          maxLength: 255
+        new_value:
+          allOf:
+          - $ref: '#/components/schemas/URLRequest'
+          nullable: true
+      required:
+      - new_value
+      - type
     URLModel:
       type: object
       properties:
@@ -4168,14 +3580,140 @@ components:
           default: true
       required:
       - domain
-    UpdateDockerServiceCommandErrorComponent:
+    UpdateDeploymentChangesCommandNewValueErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - command
+          - command.new_value
           type: string
-          description: '* `command` - command'
+          description: '* `command.new_value` - command.new_value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - command.non_field_errors
+          type: string
+          description: '* `command.non_field_errors` - command.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesCommandTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - command.type
+          type: string
+          description: '* `command.type` - command.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesCredentialsNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.new_value.non_field_errors
+          type: string
+          description: '* `credentials.new_value.non_field_errors` - credentials.new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesCredentialsNewValuePasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.new_value.password
+          type: string
+          description: '* `credentials.new_value.password` - credentials.new_value.password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesCredentialsNewValueRegistryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.new_value.registry_url
+          type: string
+          description: '* `credentials.new_value.registry_url` - credentials.new_value.registry_url'
         code:
           enum:
           - blank
@@ -4196,7 +3734,39 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceCredentialsNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesCredentialsNewValueUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.new_value.username
+          type: string
+          description: '* `credentials.new_value.username` - credentials.new_value.username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4218,14 +3788,36 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceCredentialsPasswordErrorComponent:
+    UpdateDeploymentChangesCredentialsTypeErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - credentials.password
+          - credentials.type
           type: string
-          description: '* `credentials.password` - credentials.password'
+          description: '* `credentials.type` - credentials.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesEnvINDEXItemIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.INDEX.item_id
+          type: string
+          description: '* `env.INDEX.item_id` - env.INDEX.item_id'
         code:
           enum:
           - blank
@@ -4233,7 +3825,6 @@ components:
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -4242,7 +3833,6 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -4250,96 +3840,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceCredentialsRegistryUrlErrorComponent:
+    UpdateDeploymentChangesEnvINDEXNewValueKeyErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - credentials.registry_url
+          - env.INDEX.new_value.key
           type: string
-          description: '* `credentials.registry_url` - credentials.registry_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateDockerServiceCredentialsUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.username
-          type: string
-          description: '* `credentials.username` - credentials.username'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateDockerServiceEnvErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - env
-          type: string
-          description: '* `env` - env'
-        code:
-          enum:
-          - not_a_dict
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_dict` - not_a_dict
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateDockerServiceEnvKEYErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - env.KEY
-          type: string
-          description: '* `env.KEY` - env.KEY'
+          description: '* `env.INDEX.new_value.key` - env.INDEX.new_value.key'
         code:
           enum:
           - blank
@@ -4362,88 +3870,252 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceError:
+    UpdateDeploymentChangesEnvINDEXNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.INDEX.new_value.non_field_errors
+          type: string
+          description: '* `env.INDEX.new_value.non_field_errors` - env.INDEX.new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesEnvINDEXNewValueValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.INDEX.new_value.value
+          type: string
+          description: '* `env.INDEX.new_value.value` - env.INDEX.new_value.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesEnvINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.INDEX.non_field_errors
+          type: string
+          description: '* `env.INDEX.non_field_errors` - env.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesEnvINDEXTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.INDEX.type
+          type: string
+          description: '* `env.INDEX.type` - env.INDEX.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesEnvNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env.non_field_errors
+          type: string
+          description: '* `env.non_field_errors` - env.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesError:
       oneOf:
-      - $ref: '#/components/schemas/UpdateDockerServiceNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceSlugErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceImageErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceCommandErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceCredentialsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceCredentialsUsernameErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceCredentialsPasswordErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceCredentialsRegistryUrlErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceUrlsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceUrlsINDEXDomainErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceUrlsINDEXBasePathErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceUrlsINDEXStripPrefixErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServicePortsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServicePortsINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServicePortsINDEXPublicErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServicePortsINDEXForwardedErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceEnvErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceEnvKEYErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceVolumesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceVolumesINDEXNameErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceVolumesINDEXMountPathErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceVolumesINDEXHostPathErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceVolumesINDEXModeErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceHealthcheckTypeErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceHealthcheckValueErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceHealthcheckTimeoutSecondsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDockerServiceHealthcheckIntervalSecondsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesImageNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesImageTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesImageNewValueErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandNewValueErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueUsernameErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValuePasswordErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueRegistryUrlErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueValueErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueTimeoutSecondsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueIntervalSecondsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXItemIdErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueDomainErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueBasePathErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueStripPrefixErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXItemIdErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValuePublicErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueForwardedErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXItemIdErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueKeyErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueValueErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueMountPathErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/UpdateDockerServiceNonFieldErrorsErrorComponent'
-          slug: '#/components/schemas/UpdateDockerServiceSlugErrorComponent'
-          image: '#/components/schemas/UpdateDockerServiceImageErrorComponent'
-          command: '#/components/schemas/UpdateDockerServiceCommandErrorComponent'
-          credentials.non_field_errors: '#/components/schemas/UpdateDockerServiceCredentialsNonFieldErrorsErrorComponent'
-          credentials.username: '#/components/schemas/UpdateDockerServiceCredentialsUsernameErrorComponent'
-          credentials.password: '#/components/schemas/UpdateDockerServiceCredentialsPasswordErrorComponent'
-          credentials.registry_url: '#/components/schemas/UpdateDockerServiceCredentialsRegistryUrlErrorComponent'
-          urls.non_field_errors: '#/components/schemas/UpdateDockerServiceUrlsNonFieldErrorsErrorComponent'
-          urls.INDEX.non_field_errors: '#/components/schemas/UpdateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent'
-          urls.INDEX.domain: '#/components/schemas/UpdateDockerServiceUrlsINDEXDomainErrorComponent'
-          urls.INDEX.base_path: '#/components/schemas/UpdateDockerServiceUrlsINDEXBasePathErrorComponent'
-          urls.INDEX.strip_prefix: '#/components/schemas/UpdateDockerServiceUrlsINDEXStripPrefixErrorComponent'
-          ports.non_field_errors: '#/components/schemas/UpdateDockerServicePortsNonFieldErrorsErrorComponent'
-          ports.INDEX.non_field_errors: '#/components/schemas/UpdateDockerServicePortsINDEXNonFieldErrorsErrorComponent'
-          ports.INDEX.public: '#/components/schemas/UpdateDockerServicePortsINDEXPublicErrorComponent'
-          ports.INDEX.forwarded: '#/components/schemas/UpdateDockerServicePortsINDEXForwardedErrorComponent'
-          env: '#/components/schemas/UpdateDockerServiceEnvErrorComponent'
-          env.KEY: '#/components/schemas/UpdateDockerServiceEnvKEYErrorComponent'
-          volumes.non_field_errors: '#/components/schemas/UpdateDockerServiceVolumesNonFieldErrorsErrorComponent'
-          volumes.INDEX.non_field_errors: '#/components/schemas/UpdateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent'
-          volumes.INDEX.name: '#/components/schemas/UpdateDockerServiceVolumesINDEXNameErrorComponent'
-          volumes.INDEX.mount_path: '#/components/schemas/UpdateDockerServiceVolumesINDEXMountPathErrorComponent'
-          volumes.INDEX.host_path: '#/components/schemas/UpdateDockerServiceVolumesINDEXHostPathErrorComponent'
-          volumes.INDEX.mode: '#/components/schemas/UpdateDockerServiceVolumesINDEXModeErrorComponent'
-          healthcheck.non_field_errors: '#/components/schemas/UpdateDockerServiceHealthcheckNonFieldErrorsErrorComponent'
-          healthcheck.type: '#/components/schemas/UpdateDockerServiceHealthcheckTypeErrorComponent'
-          healthcheck.value: '#/components/schemas/UpdateDockerServiceHealthcheckValueErrorComponent'
-          healthcheck.timeout_seconds: '#/components/schemas/UpdateDockerServiceHealthcheckTimeoutSecondsErrorComponent'
-          healthcheck.interval_seconds: '#/components/schemas/UpdateDockerServiceHealthcheckIntervalSecondsErrorComponent'
-    UpdateDockerServiceErrorResponse400:
+          non_field_errors: '#/components/schemas/UpdateDeploymentChangesNonFieldErrorsErrorComponent'
+          image.non_field_errors: '#/components/schemas/UpdateDeploymentChangesImageNonFieldErrorsErrorComponent'
+          image.type: '#/components/schemas/UpdateDeploymentChangesImageTypeErrorComponent'
+          image.new_value: '#/components/schemas/UpdateDeploymentChangesImageNewValueErrorComponent'
+          command.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent'
+          command.type: '#/components/schemas/UpdateDeploymentChangesCommandTypeErrorComponent'
+          command.new_value: '#/components/schemas/UpdateDeploymentChangesCommandNewValueErrorComponent'
+          credentials.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCredentialsNonFieldErrorsErrorComponent'
+          credentials.type: '#/components/schemas/UpdateDeploymentChangesCredentialsTypeErrorComponent'
+          credentials.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueNonFieldErrorsErrorComponent'
+          credentials.new_value.username: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueUsernameErrorComponent'
+          credentials.new_value.password: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValuePasswordErrorComponent'
+          credentials.new_value.registry_url: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueRegistryUrlErrorComponent'
+          healthcheck.non_field_errors: '#/components/schemas/UpdateDeploymentChangesHealthcheckNonFieldErrorsErrorComponent'
+          healthcheck.type: '#/components/schemas/UpdateDeploymentChangesHealthcheckTypeErrorComponent'
+          healthcheck.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueNonFieldErrorsErrorComponent'
+          healthcheck.new_value.type: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueTypeErrorComponent'
+          healthcheck.new_value.value: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueValueErrorComponent'
+          healthcheck.new_value.timeout_seconds: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueTimeoutSecondsErrorComponent'
+          healthcheck.new_value.interval_seconds: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueIntervalSecondsErrorComponent'
+          urls.non_field_errors: '#/components/schemas/UpdateDeploymentChangesUrlsNonFieldErrorsErrorComponent'
+          urls.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNonFieldErrorsErrorComponent'
+          urls.INDEX.type: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXTypeErrorComponent'
+          urls.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXItemIdErrorComponent'
+          urls.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueNonFieldErrorsErrorComponent'
+          urls.INDEX.new_value.domain: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueDomainErrorComponent'
+          urls.INDEX.new_value.base_path: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueBasePathErrorComponent'
+          urls.INDEX.new_value.strip_prefix: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNewValueStripPrefixErrorComponent'
+          ports.non_field_errors: '#/components/schemas/UpdateDeploymentChangesPortsNonFieldErrorsErrorComponent'
+          ports.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNonFieldErrorsErrorComponent'
+          ports.INDEX.type: '#/components/schemas/UpdateDeploymentChangesPortsINDEXTypeErrorComponent'
+          ports.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesPortsINDEXItemIdErrorComponent'
+          ports.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueNonFieldErrorsErrorComponent'
+          ports.INDEX.new_value.public: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValuePublicErrorComponent'
+          ports.INDEX.new_value.forwarded: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueForwardedErrorComponent'
+          env.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvNonFieldErrorsErrorComponent'
+          env.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNonFieldErrorsErrorComponent'
+          env.INDEX.type: '#/components/schemas/UpdateDeploymentChangesEnvINDEXTypeErrorComponent'
+          env.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesEnvINDEXItemIdErrorComponent'
+          env.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueNonFieldErrorsErrorComponent'
+          env.INDEX.new_value.key: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueKeyErrorComponent'
+          env.INDEX.new_value.value: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueValueErrorComponent'
+          volumes.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent'
+          volumes.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent'
+          volumes.INDEX.type: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXTypeErrorComponent'
+          volumes.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent'
+          volumes.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent'
+          volumes.INDEX.new_value.name: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent'
+          volumes.INDEX.new_value.mount_path: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueMountPathErrorComponent'
+          volumes.INDEX.new_value.host_path: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent'
+          volumes.INDEX.new_value.mode: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent'
+    UpdateDeploymentChangesErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/UpdateDockerServiceValidationError'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/UpdateDockerServiceValidationError'
+          validation_error: '#/components/schemas/UpdateDeploymentChangesValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    UpdateDockerServiceHealthcheckIntervalSecondsErrorComponent:
+    UpdateDeploymentChangesHealthcheckNewValueIntervalSecondsErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - healthcheck.interval_seconds
+          - healthcheck.new_value.interval_seconds
           type: string
-          description: '* `healthcheck.interval_seconds` - healthcheck.interval_seconds'
+          description: '* `healthcheck.new_value.interval_seconds` - healthcheck.new_value.interval_seconds'
         code:
           enum:
           - blank
@@ -4464,7 +4136,111 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceHealthcheckNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesHealthcheckNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.new_value.non_field_errors
+          type: string
+          description: '* `healthcheck.new_value.non_field_errors` - healthcheck.new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesHealthcheckNewValueTimeoutSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.new_value.timeout_seconds
+          type: string
+          description: '* `healthcheck.new_value.timeout_seconds` - healthcheck.new_value.timeout_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesHealthcheckNewValueTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.new_value.type
+          type: string
+          description: '* `healthcheck.new_value.type` - healthcheck.new_value.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesHealthcheckNewValueValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - healthcheck.new_value.value
+          type: string
+          description: '* `healthcheck.new_value.value` - healthcheck.new_value.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesHealthcheckNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4486,33 +4262,7 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceHealthcheckTimeoutSecondsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - healthcheck.timeout_seconds
-          type: string
-          description: '* `healthcheck.timeout_seconds` - healthcheck.timeout_seconds'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateDockerServiceHealthcheckTypeErrorComponent:
+    UpdateDeploymentChangesHealthcheckTypeErrorComponent:
       type: object
       properties:
         attr:
@@ -4524,32 +4274,28 @@ components:
           enum:
           - invalid_choice
           - 'null'
-          - required
           type: string
           description: |-
             * `invalid_choice` - invalid_choice
             * `null` - null
-            * `required` - required
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    UpdateDockerServiceHealthcheckValueErrorComponent:
+    UpdateDeploymentChangesImageNewValueErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - healthcheck.value
+          - image.new_value
           type: string
-          description: '* `healthcheck.value` - healthcheck.value'
+          description: '* `image.new_value` - image.new_value'
         code:
           enum:
           - blank
           - invalid
-          - max_length
-          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
@@ -4557,8 +4303,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -4568,37 +4312,51 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceImageErrorComponent:
+    UpdateDeploymentChangesImageNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - image
+          - image.non_field_errors
           type: string
-          description: '* `image` - image'
+          description: '* `image.non_field_errors` - image.non_field_errors'
         code:
           enum:
-          - blank
           - invalid
           - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    UpdateDockerServiceNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesImageTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - image.type
+          type: string
+          description: '* `image.type` - image.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4617,14 +4375,44 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServicePortsINDEXForwardedErrorComponent:
+    UpdateDeploymentChangesPortsINDEXItemIdErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - ports.INDEX.forwarded
+          - ports.INDEX.item_id
           type: string
-          description: '* `ports.INDEX.forwarded` - ports.INDEX.forwarded'
+          description: '* `ports.INDEX.item_id` - ports.INDEX.item_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesPortsINDEXNewValueForwardedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.new_value.forwarded
+          type: string
+          description: '* `ports.INDEX.new_value.forwarded` - ports.INDEX.new_value.forwarded'
         code:
           enum:
           - invalid
@@ -4643,7 +4431,53 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServicePortsINDEXNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesPortsINDEXNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.new_value.non_field_errors
+          type: string
+          description: '* `ports.INDEX.new_value.non_field_errors` - ports.INDEX.new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesPortsINDEXNewValuePublicErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.new_value.public
+          type: string
+          description: '* `ports.INDEX.new_value.public` - ports.INDEX.new_value.public'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesPortsINDEXNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4665,31 +4499,31 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServicePortsINDEXPublicErrorComponent:
+    UpdateDeploymentChangesPortsINDEXTypeErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - ports.INDEX.public
+          - ports.INDEX.type
           type: string
-          description: '* `ports.INDEX.public` - ports.INDEX.public'
+          description: '* `ports.INDEX.type` - ports.INDEX.type'
         code:
           enum:
-          - invalid
-          - max_string_length
+          - invalid_choice
           - 'null'
+          - required
           type: string
           description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
+            * `invalid_choice` - invalid_choice
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    UpdateDockerServicePortsNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesPortsNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4711,14 +4545,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceSlugErrorComponent:
+    UpdateDeploymentChangesUrlsINDEXItemIdErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - slug
+          - urls.INDEX.item_id
           type: string
-          description: '* `slug` - slug'
+          description: '* `urls.INDEX.item_id` - urls.INDEX.item_id'
         code:
           enum:
           - blank
@@ -4741,14 +4575,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceUrlsINDEXBasePathErrorComponent:
+    UpdateDeploymentChangesUrlsINDEXNewValueBasePathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - urls.INDEX.base_path
+          - urls.INDEX.new_value.base_path
           type: string
-          description: '* `urls.INDEX.base_path` - urls.INDEX.base_path'
+          description: '* `urls.INDEX.new_value.base_path` - urls.INDEX.new_value.base_path'
         code:
           enum:
           - blank
@@ -4769,14 +4603,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceUrlsINDEXDomainErrorComponent:
+    UpdateDeploymentChangesUrlsINDEXNewValueDomainErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - urls.INDEX.domain
+          - urls.INDEX.new_value.domain
           type: string
-          description: '* `urls.INDEX.domain` - urls.INDEX.domain'
+          description: '* `urls.INDEX.new_value.domain` - urls.INDEX.new_value.domain'
         code:
           enum:
           - blank
@@ -4799,7 +4633,51 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceUrlsINDEXNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesUrlsINDEXNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.INDEX.new_value.non_field_errors
+          type: string
+          description: '* `urls.INDEX.new_value.non_field_errors` - urls.INDEX.new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesUrlsINDEXNewValueStripPrefixErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - urls.INDEX.new_value.strip_prefix
+          type: string
+          description: '* `urls.INDEX.new_value.strip_prefix` - urls.INDEX.new_value.strip_prefix'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesUrlsINDEXNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4821,29 +4699,31 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceUrlsINDEXStripPrefixErrorComponent:
+    UpdateDeploymentChangesUrlsINDEXTypeErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - urls.INDEX.strip_prefix
+          - urls.INDEX.type
           type: string
-          description: '* `urls.INDEX.strip_prefix` - urls.INDEX.strip_prefix'
+          description: '* `urls.INDEX.type` - urls.INDEX.type'
         code:
           enum:
-          - invalid
+          - invalid_choice
           - 'null'
+          - required
           type: string
           description: |-
-            * `invalid` - invalid
+            * `invalid_choice` - invalid_choice
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    UpdateDockerServiceUrlsNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesUrlsNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4865,7 +4745,7 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceValidationError:
+    UpdateDeploymentChangesValidationError:
       type: object
       properties:
         type:
@@ -4873,18 +4753,18 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/UpdateDockerServiceError'
+            $ref: '#/components/schemas/UpdateDeploymentChangesError'
       required:
       - errors
       - type
-    UpdateDockerServiceVolumesINDEXHostPathErrorComponent:
+    UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - volumes.INDEX.host_path
+          - volumes.INDEX.item_id
           type: string
-          description: '* `volumes.INDEX.host_path` - volumes.INDEX.host_path'
+          description: '* `volumes.INDEX.item_id` - volumes.INDEX.item_id'
         code:
           enum:
           - blank
@@ -4907,14 +4787,44 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceVolumesINDEXModeErrorComponent:
+    UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - volumes.INDEX.mode
+          - volumes.INDEX.new_value.host_path
           type: string
-          description: '* `volumes.INDEX.mode` - volumes.INDEX.mode'
+          description: '* `volumes.INDEX.new_value.host_path` - volumes.INDEX.new_value.host_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.new_value.mode
+          type: string
+          description: '* `volumes.INDEX.new_value.mode` - volumes.INDEX.new_value.mode'
         code:
           enum:
           - invalid_choice
@@ -4929,14 +4839,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceVolumesINDEXMountPathErrorComponent:
+    UpdateDeploymentChangesVolumesINDEXNewValueMountPathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - volumes.INDEX.mount_path
+          - volumes.INDEX.new_value.mount_path
           type: string
-          description: '* `volumes.INDEX.mount_path` - volumes.INDEX.mount_path'
+          description: '* `volumes.INDEX.new_value.mount_path` - volumes.INDEX.new_value.mount_path'
         code:
           enum:
           - blank
@@ -4961,14 +4871,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceVolumesINDEXNameErrorComponent:
+    UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - volumes.INDEX.name
+          - volumes.INDEX.new_value.name
           type: string
-          description: '* `volumes.INDEX.name` - volumes.INDEX.name'
+          description: '* `volumes.INDEX.new_value.name` - volumes.INDEX.new_value.name'
         code:
           enum:
           - blank
@@ -4991,7 +4901,29 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceVolumesINDEXNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.new_value.non_field_errors
+          type: string
+          description: '* `volumes.INDEX.new_value.non_field_errors` - volumes.INDEX.new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -5013,7 +4945,31 @@ components:
       - attr
       - code
       - detail
-    UpdateDockerServiceVolumesNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesVolumesINDEXTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.type
+          type: string
+          description: '* `volumes.INDEX.type` - volumes.INDEX.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -5204,6 +5160,21 @@ components:
           type: integer
       required:
       - size
+    VolumeItemChange:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeF7eEnum'
+        item_id:
+          type: string
+          maxLength: 255
+        new_value:
+          allOf:
+          - $ref: '#/components/schemas/VolumeRequest'
+          nullable: true
+      required:
+      - new_value
+      - type
     VolumeModeEnum:
       enum:
       - READ_ONLY

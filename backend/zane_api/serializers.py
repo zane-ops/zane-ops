@@ -59,8 +59,6 @@ class VolumeSerializer(ModelSerializer):
     class Meta:
         model = models.Volume
         fields = [
-            "created_at",
-            "updated_at",
             "id",
             "name",
             "container_path",
@@ -78,7 +76,7 @@ class URLModelSerializer(ModelSerializer):
 class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
         model = models.DockerEnvVariable
-        fields = ["id", "key"]
+        fields = ["id", "key", "value"]
 
 
 class PortConfigurationSerializer(ModelSerializer):
