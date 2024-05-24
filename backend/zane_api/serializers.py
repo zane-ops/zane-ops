@@ -46,7 +46,7 @@ class UserSerializer(ModelSerializer):
 class ProjectSerializer(ModelSerializer):
     class Meta:
         model = models.Project
-        fields = ["description", "id", "slug", "created_at", "updated_at"]
+        fields = ["id", "description", "slug", "created_at", "updated_at"]
 
 
 class ArchivedProjectSerializer(ModelSerializer):

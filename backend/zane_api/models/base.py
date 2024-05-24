@@ -178,7 +178,7 @@ class DockerRegistryService(BaseService):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    image = models.CharField(max_length=510, null=False, blank=False)
+    image = models.CharField(max_length=510, null=True)
     command = models.TextField(null=True, blank=True)
     docker_credentials_username = models.CharField(
         max_length=255, null=True, blank=True

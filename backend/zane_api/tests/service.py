@@ -75,9 +75,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             slug="main-app"
         ).first()
         self.assertIsNotNone(created_service)
-        self.assertEqual("fredkiss3", created_service.docker_credentials_username)
-        self.assertEqual("s3cret", created_service.docker_credentials_password)
-
         self.assertTrue(self.fake_docker_client.is_logged_in)
 
     def test_create_service_slug_is_created_if_not_specified(self):

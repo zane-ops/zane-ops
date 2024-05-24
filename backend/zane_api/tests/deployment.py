@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock
 
 from django.urls import reverse
@@ -427,6 +428,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             },
             change.new_value,
         )
+        print(json.dumps(response.json(), indent=2))
 
     def test_create_service_returns_changes_in_response(self):
         owner = self.loginUser()

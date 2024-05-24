@@ -61,17 +61,6 @@ class CreateDockerServiceAPIView(APIView):
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
-                        image=data["image"],
-                        docker_credentials_username=(
-                            docker_credentials.get("username")
-                            if docker_credentials is not None
-                            else None
-                        ),
-                        docker_credentials_password=(
-                            docker_credentials.get("password")
-                            if docker_credentials is not None
-                            else None
-                        ),
                     )
 
                     service.network_alias = f"{service.slug}-{service.unprefixed_id}"
