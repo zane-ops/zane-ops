@@ -78,19 +78,25 @@ class URLModelSerializer(ModelSerializer):
 class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
         model = models.DockerEnvVariable
-        fields = ["key"]
+        fields = ["id", "key"]
 
 
 class PortConfigurationSerializer(ModelSerializer):
     class Meta:
         model = models.PortConfiguration
-        fields = ["host", "forwarded"]
+        fields = ["id", "host", "forwarded"]
 
 
 class HealthCheckSerializer(ModelSerializer):
     class Meta:
         model = models.HealthCheck
-        fields = ["type", "value", "timeout_seconds", "interval_seconds"]
+        fields = ["id", "type", "value", "timeout_seconds", "interval_seconds"]
+
+
+class DockerDeploymentChangeSerializer(ModelSerializer):
+    class Meta:
+        model = models.DockerDeploymentChange
+        fields = ["id", "type", "field", "new_value", "old_value"]
 
 
 class DockerServiceSerializer(ModelSerializer):
@@ -104,10 +110,12 @@ class DockerServiceSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.DockerRegistryService
         fields = [
+            "id",
             "image",
             "slug",
             "urls",
@@ -119,6 +127,7 @@ class DockerServiceSerializer(ModelSerializer):
             "env_variables",
             "healthcheck",
             "network_aliases",
+            "unapplied_changes",
         ]
 
 

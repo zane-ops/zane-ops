@@ -4,7 +4,12 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..models import Project, DockerDeployment, DockerRegistryService
+from ..models import (
+    Project,
+    DockerDeployment,
+    DockerRegistryService,
+    DockerDeploymentChange,
+)
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -349,3 +354,95 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
         self.assertEqual(str(exception), deployment.status_reason)
         fake_service.scale.assert_called_with(0)
+
+
+class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
+
+    def test_create_service_with_image_creates_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache-db"
+        ).first()
+        self.assertIsNotNone(created_service)
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service=created_service
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual("image", change.field)
+        self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(None, change.old_value)
+        self.assertEqual("redis:alpine", change.new_value)
+
+    def test_create_service_with_custom_registry_creates_credential_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="gh-clone", owner=owner)
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": "dcr.fredkiss.dev/gh-next:latest",
+            "credentials": {
+                "username": "fredkiss3",
+                "password": "s3cret",
+                "registry_url": "https://dcr.fredkiss.dev/",
+            },
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertEqual(
+            2, DockerDeploymentChange.objects.filter(service=created_service).count()
+        )
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service=created_service, field="credentials"
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(None, change.old_value)
+        self.assertEqual(
+            {
+                "username": "fredkiss3",
+                "password": "s3cret",
+                "registry_url": "https://dcr.fredkiss.dev/",
+            },
+            change.new_value,
+        )
+
+    def test_create_service_returns_changes_in_response(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        create_service_payload = {
+            "slug": "cache-db",
+            "image": "redis:alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json()
+        self.assertIsNotNone(data)
+
+        self.assertTrue("unapplied_changes" in data)

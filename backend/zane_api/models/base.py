@@ -236,6 +236,10 @@ class DockerRegistryService(BaseService):
             .first()
         )
 
+    @property
+    def unapplied_changes(self):
+        return self.changes.filter(applied=False).all()
+
 
 class GitRepositoryService(BaseService):
     ID_PREFIX = "srv_git_"
@@ -396,11 +400,15 @@ class DockerDeploymentChange(TimestampedModel):
     new_value = models.JSONField(null=True)
 
     service = models.ForeignKey(
-        to=DockerRegistryService, on_delete=models.CASCADE, related_name="changesets"
+        to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"
     )
     deployment = models.ForeignKey(
         to=DockerDeployment, on_delete=models.CASCADE, related_name="changes", null=True
     )
+    applied = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [models.Index(fields=["field"])]
 
 
 class GitDeployment(BaseDeployment):
