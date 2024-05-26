@@ -541,7 +541,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                     "type": "ADD",
                     "new_value": {
                         "name": "zane-logs",
-                        "mount_path": "/etc/logs/zane",
+                        "container_path": "/etc/logs/zane",
                     },
                 },
             ],
@@ -658,7 +658,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_credentials_without_an_image_provided(self):
@@ -682,10 +681,9 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_volume_cannot_specify_the_same_mount_path_twice(self):
+    def test_validate_volume_cannot_specify_the_same_container_path_twice(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
 
@@ -706,14 +704,14 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                     "type": "ADD",
                     "new_value": {
                         "name": "zane-logs",
-                        "mount_path": "/etc/logs/zane",
+                        "container_path": "/etc/logs/zane",
                     },
                 },
                 {
                     "type": "ADD",
                     "new_value": {
                         "name": "zane-logs2",
-                        "mount_path": "/etc/logs/zane",
+                        "container_path": "/etc/logs/zane",
                     },
                 },
             ],
@@ -725,10 +723,9 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_volume_cannot_specify_the_same_mount_path_twice_with_pending_changes(
+    def test_validate_volume_cannot_specify_the_same_container_path_twice_with_pending_changes(
         self,
     ):
         owner = self.loginUser()
@@ -739,7 +736,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             type=DockerDeploymentChange.ChangeType.ADD,
             new_value={
                 "name": "zane-logs",
-                "mount_path": "/etc/logs/zane",
+                "container_path": "/etc/logs/zane",
             },
             service=service,
         )
@@ -750,7 +747,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                     "type": "ADD",
                     "new_value": {
                         "name": "zane-logs2",
-                        "mount_path": "/etc/logs/zane",
+                        "container_path": "/etc/logs/zane",
                     },
                 },
             ],
@@ -764,7 +761,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_volume_cannot_specify_the_same_mount_path_twice_with_existing_volumes(
+    def test_validate_volume_cannot_specify_the_same_container_path_twice_with_existing_volumes(
         self,
     ):
         owner = self.loginUser()
@@ -781,11 +778,89 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                     "type": "ADD",
                     "new_value": {
                         "name": "zane-logs2",
-                        "mount_path": "/etc/logs/zane",
+                        "container_path": "/etc/logs/zane",
                     },
                 },
             ],
         }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_conflicting_changes_in_the_same_request(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "UPDATE",
+                    "item_id": v.id,
+                    "new_value": {
+                        "name": "zane-logs",
+                        "container_path": "/etc/logs/zane",
+                    },
+                },
+                {
+                    "type": "DELETE",
+                    "item_id": v.id,
+                },
+            ],
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_conflicting_changes_with_previous_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
+        service.volumes.add(v)
+
+        DockerDeploymentChange.objects.create(
+            field="volumes",
+            type=DockerDeploymentChange.ChangeType.UPDATE,
+            item_id=v.id,
+            new_value={
+                "name": "zane-logs",
+                "container_path": "/etc/logs/zane",
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "DELETE",
+                    "item_id": v.id,
+                },
+            ],
+        }
+
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.deployment_changes",

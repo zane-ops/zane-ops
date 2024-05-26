@@ -34,13 +34,13 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
-    public = serializers.IntegerField(required=False, default=80)
+    host = serializers.IntegerField(required=False, default=80)
     forwarded = serializers.IntegerField(required=True)
 
 
 class VolumeRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100, required=False)
-    mount_path = serializers.CharField(max_length=255)
+    container_path = serializers.CharField(max_length=255)
     host_path = serializers.URLPathField(max_length=255, required=False)
     VOLUME_MODE_CHOICES = (
         ("READ_ONLY", _("READ_ONLY")),
@@ -374,6 +374,12 @@ class BaseChangeItemSerializer(serializers.Serializer):
     item_id = serializers.CharField(max_length=255, required=False)
     new_value = serializers.SerializerMethodField()
 
+    def get_service(self):
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+        return service
+
     def get_new_value(self, obj):
         raise NotImplementedError(
             "This field should be subclassed by specific child classes"
@@ -382,7 +388,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
     def validate(self, attrs: dict[str, str | None]):
         item_id = attrs.get("item_id")
         change_type = attrs["type"]
-        new_value = attrs["new_value"]
+        new_value = attrs.get("new_value")
         if change_type in ["DELETE", "UPDATE"]:
             if item_id is None:
                 raise serializers.ValidationError(
@@ -403,6 +409,43 @@ class BaseChangeItemSerializer(serializers.Serializer):
         return attrs
 
 
+class BaseListChangeSerializer(serializers.ListSerializer):
+    child = BaseChangeItemSerializer()
+
+    def get_service(self):
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+        return service
+
+    @property
+    def current_field(self) -> str:
+        raise NotImplementedError("This should be implemented in child classes.")
+
+    def validate(self, attrs: list[dict]):
+        service = self.get_service()
+        existing_changes = service.unapplied_changes.filter(
+            field=self.current_field, type__in=["UPDATE", "DELETE"]
+        ).all()
+
+        id_set = set(
+            map(
+                lambda field_change: field_change.item_id,
+                existing_changes,
+            )
+        )
+        for change in attrs:
+            if change["type"] in ["UPDATE", "DELETE"]:
+                item_id = change["item_id"]
+
+                if item_id in id_set:
+                    raise serializers.ValidationError(
+                        "Cannot make conflicting changes for this field"
+                    )
+                id_set.add(item_id)
+        return attrs
+
+
 class BaseChangeFieldSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["UPDATE"], required=False, default="UPDATE")
     new_value = serializers.SerializerMethodField()
@@ -418,12 +461,13 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
 
     def validate(self, attrs: dict):
         super().validate(attrs)
+        service = self.get_service()
         change_type = attrs["type"]
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
             try:
-                URL.objects.get(id=item_id)
+                service.urls.get(id=item_id)
             except URL.DoesNotExist:
                 raise serializers.ValidationError(
                     {
@@ -435,17 +479,26 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
+class URLListChangeSerialiazer(BaseListChangeSerializer):
+    child = URLItemChangeSerializer()
+
+    @property
+    def current_field(self) -> str:
+        return "urls"
+
+
 class VolumeItemChangeSerializer(BaseChangeItemSerializer):
-    new_value = VolumeRequestSerializer(required=True, allow_null=True)
+    new_value = VolumeRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
+        service = self.get_service()
         change_type = attrs["type"]
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
             try:
-                Volume.objects.get(id=item_id)
+                service.volumes.get(id=item_id)
             except Volume.DoesNotExist:
                 raise serializers.ValidationError(
                     {"item_id": [f"Volume with id `{item_id}` does not exist."]}
@@ -453,17 +506,26 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
+class VolumeListChangeSerialiazer(BaseListChangeSerializer):
+    child = VolumeItemChangeSerializer()
+
+    @property
+    def current_field(self) -> str:
+        return "volumes"
+
+
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
     new_value = EnvRequestSerializer()
 
     def validate(self, attrs: dict):
         super().validate(attrs)
+        service = self.get_service()
         change_type = attrs["type"]
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
             try:
-                DockerEnvVariable.objects.get(id=item_id)
+                service.env_variables.get(id=item_id)
             except DockerEnvVariable.DoesNotExist:
                 raise serializers.ValidationError(
                     {"item_id": [f"Env variable with id `{item_id}` does not exist."]}
@@ -471,17 +533,26 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
+class EnvListChangeSerialiazer(BaseListChangeSerializer):
+    child = EnvItemChangeSerializer()
+
+    @property
+    def current_field(self) -> str:
+        return "env_variables"
+
+
 class PortItemChangeSerializer(BaseChangeItemSerializer):
     new_value = ServicePortsRequestSerializer(required=True, allow_null=True)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
+        service = self.get_service()
         change_type = attrs["type"]
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
             try:
-                PortConfiguration.objects.get(id=item_id)
+                service.ports.get(id=item_id)
             except PortConfiguration.DoesNotExist:
                 raise serializers.ValidationError(
                     {
@@ -491,6 +562,14 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
         return attrs
+
+
+class PortListChangeSerialiazer(BaseListChangeSerializer):
+    child = PortItemChangeSerializer()
+
+    @property
+    def current_field(self) -> str:
+        return "ports"
 
 
 class DockerCredentialsChangeFieldSerializer(BaseChangeFieldSerializer):
@@ -514,10 +593,10 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
     credentials = DockerCredentialsChangeFieldSerializer(required=False)
     command = DockerCommandChangeFieldSerializer(required=False)
     healthcheck = HealthcheckChangeFieldSerializer(required=False)
-    urls = URLItemChangeSerializer(many=True, required=False)
-    ports = PortItemChangeSerializer(many=True, required=False)
-    env_variables = EnvItemChangeSerializer(many=True, required=False)
-    volumes = VolumeItemChangeSerializer(many=True, required=False)
+    volumes = VolumeListChangeSerialiazer(required=False)
+    urls = URLListChangeSerialiazer(required=False)
+    ports = PortListChangeSerialiazer(required=False)
+    env_variables = EnvListChangeSerialiazer(required=False)
 
     def get_service(self):
         service: DockerRegistryService = self.context.get("service")
@@ -536,7 +615,7 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         return attrs
 
     def validate_volumes(self, changes: list[dict]):
-        if len(changes) == 0:
+        if changes is None or len(changes) == 0:
             return changes
 
         mount_path_set = set()
@@ -546,10 +625,11 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         )
         volumes = service.volumes.all()
 
+        # Validate double `container_path`
         existing_mount_path_set = set(
             map(
                 lambda v_change: (
-                    v_change.new_value.get("mount_path")
+                    v_change.new_value.get("container_path")
                     if v_change.new_value is not None
                     else None
                 ),
@@ -565,14 +645,14 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         )
 
         for change in changes:
-            current_mount_path = change["new_value"]["mount_path"]
+            current_mount_path = change["new_value"]["container_path"]
 
             if (
                 current_mount_path in mount_path_set
                 or current_mount_path in existing_mount_path_set
             ):
                 raise serializers.ValidationError(
-                    "Cannot specify two volumes with the same mount path for this service"
+                    "Cannot specify two volumes with the same container path for this service"
                 )
 
             mount_path_set.add(current_mount_path)

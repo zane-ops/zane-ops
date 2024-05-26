@@ -29,6 +29,10 @@ from ..serializers import (
     DockerServiceDeploymentSerializer,
     DockerServiceSerializer,
     HealthCheckSerializer,
+    VolumeSerializer,
+    URLModelSerializer,
+    PortConfigurationSerializer,
+    DockerEnvVariableSerializer,
 )
 from ..tasks import delete_resources_for_docker_service
 
@@ -149,11 +153,64 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                             service=service,
                         )
                         new_changes.append(change)
-                    case "volumes" | "urls" | "ports" | "env_variables":
+                    case "volumes":
                         for field_change in value:
+                            old_value = None
+                            if field_change["type"] in ["UPDATE", "DELETE"]:
+                                old_value = VolumeSerializer(
+                                    service.volumes.get(id=field_change["item_id"])
+                                ).data
                             change = DockerDeploymentChange(
                                 type=field_change["type"],
                                 field=field,
+                                old_value=old_value,
+                                new_value=field_change["new_value"],
+                                service=service,
+                            )
+                            new_changes.append(change)
+                    case "urls":
+                        for field_change in value:
+                            old_value = None
+                            if field_change["type"] in ["UPDATE", "DELETE"]:
+                                old_value = URLModelSerializer(
+                                    service.urls.get(id=field_change["item_id"])
+                                ).data
+                            change = DockerDeploymentChange(
+                                type=field_change["type"],
+                                field=field,
+                                old_value=old_value,
+                                new_value=field_change["new_value"],
+                                service=service,
+                            )
+                            new_changes.append(change)
+                    case "ports":
+                        for field_change in value:
+                            old_value = None
+                            if field_change["type"] in ["UPDATE", "DELETE"]:
+                                old_value = PortConfigurationSerializer(
+                                    service.volumes.get(id=field_change["item_id"])
+                                ).data
+                            change = DockerDeploymentChange(
+                                type=field_change["type"],
+                                field=field,
+                                old_value=old_value,
+                                new_value=field_change["new_value"],
+                                service=service,
+                            )
+                            new_changes.append(change)
+                    case "env_variables":
+                        for field_change in value:
+                            old_value = None
+                            if field_change["type"] in ["UPDATE", "DELETE"]:
+                                old_value = DockerEnvVariableSerializer(
+                                    service.env_variables.get(
+                                        id=field_change["item_id"]
+                                    )
+                                ).data
+                            change = DockerDeploymentChange(
+                                type=field_change["type"],
+                                field=field,
+                                old_value=old_value,
                                 new_value=field_change["new_value"],
                                 service=service,
                             )

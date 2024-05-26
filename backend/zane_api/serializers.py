@@ -70,7 +70,7 @@ class VolumeSerializer(ModelSerializer):
 class URLModelSerializer(ModelSerializer):
     class Meta:
         model = models.URL
-        fields = ["domain", "base_path", "strip_prefix"]
+        fields = ["id", "domain", "base_path", "strip_prefix"]
 
 
 class DockerEnvVariableSerializer(ModelSerializer):

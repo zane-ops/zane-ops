@@ -222,6 +222,8 @@ class FakeDockerClient:
 
     PORT_USED_BY_HOST = 8080
     FAILING_CMD = "invalid"
+    NONEXISTANT_IMAGE = "nonexistant"
+    NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -368,13 +370,14 @@ class FakeDockerClient:
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
-            if not image.startswith("dcr.fredkiss.dev"):
+            username, password = auth_config["username"], auth_config["password"]
+            if username != "fredkiss3" or password != "s3cret":
                 raise docker.errors.APIError("Invalid credentials")
 
-            if not image.startswith("dcr.fredkiss.dev/gh-next"):
+            if image == self.NONEXISTANT_PRIVATE_IMAGE:
                 raise docker.errors.NotFound("This image does not exist")
         else:
-            if image == "nonexistent":
+            if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
 
     def docker_create_network(self, name: str, **kwargs):
