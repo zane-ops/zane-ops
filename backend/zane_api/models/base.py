@@ -425,7 +425,11 @@ class BaseDeploymentChange(TimestampedModel):
 
     class Meta:
         abstract = True
-        indexes = [models.Index(fields=["field"]), models.Index(fields=["applied"])]
+        indexes = [
+            models.Index(fields=["field"]),
+            models.Index(fields=["type"]),
+            models.Index(fields=["applied"]),
+        ]
 
 
 class DockerDeploymentChange(BaseDeploymentChange):
