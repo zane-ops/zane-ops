@@ -602,23 +602,21 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         mount_path_set = set()
         service = self.get_service()
         volume_changes: list[DockerDeploymentChange] = list(
-            service.unapplied_changes.filter(field="volumes").all()
+            service.unapplied_changes.filter(
+                field="volumes", new_value__isnull=False
+            ).all()
         )
         volumes = service.volumes.all()
 
         # Validate double `container_path`
-        existing_mount_path_set = set(
+        existing_container_path_set = set(
             map(
-                lambda v_change: (
-                    v_change.new_value.get("container_path")
-                    if v_change.new_value is not None
-                    else None
-                ),
+                lambda v_change: (v_change.new_value.get("container_path")),
                 volume_changes,
             )
         )
 
-        existing_mount_path_set.update(
+        existing_container_path_set.update(
             map(
                 lambda volume: volume.container_path,
                 volumes,
@@ -626,11 +624,14 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         )
 
         for change in changes:
-            current_mount_path = change["new_value"]["container_path"]
+            current_mount_path = change.get("new_value", {}).get("container_path")
+
+            if current_mount_path is None:
+                continue
 
             if (
                 current_mount_path in mount_path_set
-                or current_mount_path in existing_mount_path_set
+                or current_mount_path in existing_container_path_set
             ):
                 raise serializers.ValidationError(
                     "Cannot specify two volumes with the same container path for this service"

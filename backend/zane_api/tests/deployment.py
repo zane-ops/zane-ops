@@ -495,6 +495,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(4, DockerDeploymentChange.objects.count())
         changes = DockerDeploymentChange.objects.filter(service__slug="app")
