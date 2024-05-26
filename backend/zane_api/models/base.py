@@ -330,7 +330,10 @@ class Volume(TimestampedModel):
         return f"Volume({self.name})"
 
     class Meta:
-        indexes = [models.Index(fields=["host_path"])]
+        indexes = [
+            models.Index(fields=["host_path"]),
+            models.Index(fields=["container_path"]),
+        ]
 
 
 class BaseDeployment(models.Model):
@@ -404,15 +407,7 @@ class DockerDeployment(BaseDeployment):
         return aliases
 
 
-class DockerDeploymentChange(TimestampedModel):
-    ID_PREFIX = "chg_dkr_"
-    id = ShortUUIDField(
-        length=11,
-        max_length=255,
-        primary_key=True,
-        prefix=ID_PREFIX,
-    )
-
+class BaseDeploymentChange(TimestampedModel):
     class ChangeType(models.TextChoices):
         UPDATE = "UPDATE", _("update")
         DELETE = "DELETE", _("delete")
@@ -426,6 +421,21 @@ class DockerDeploymentChange(TimestampedModel):
     item_id = models.CharField(max_length=255, null=True)
     old_value = models.JSONField(null=True)
     new_value = models.JSONField(null=True)
+    applied = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+        indexes = [models.Index(fields=["field"]), models.Index(fields=["applied"])]
+
+
+class DockerDeploymentChange(BaseDeploymentChange):
+    ID_PREFIX = "chg_dkr_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
 
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"
@@ -433,7 +443,6 @@ class DockerDeploymentChange(TimestampedModel):
     deployment = models.ForeignKey(
         to=DockerDeployment, on_delete=models.CASCADE, related_name="changes", null=True
     )
-    applied = models.BooleanField(default=False)
 
     def __str__(self):
         return (
@@ -446,9 +455,6 @@ class DockerDeploymentChange(TimestampedModel):
             f"\n\tapplied={repr(self.applied)}"
             f"\n)"
         )
-
-    class Meta:
-        indexes = [models.Index(fields=["field"]), models.Index(fields=["applied"])]
 
 
 class GitDeployment(BaseDeployment):
