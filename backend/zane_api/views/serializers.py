@@ -392,11 +392,11 @@ class BaseChangeItemSerializer(serializers.Serializer):
                         ]
                     }
                 )
-        if change_type == "ADD" and new_value is None:
+        if change_type != "DELETE" and new_value is None:
             raise serializers.ValidationError(
                 {
                     "new_value": [
-                        "`new_value` should be provided when the change type is `ADD`"
+                        "`new_value` should be provided when the change type is `ADD` or `UPDATE`"
                     ]
                 }
             )
