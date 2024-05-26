@@ -11,6 +11,7 @@ from ..models import (
     DockerRegistryService,
     DockerDeploymentChange,
 )
+from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -597,3 +598,38 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             Q(service__slug="app") & ~Q(field="image")
         )
         self.assertEqual(6, changes.count())
+
+    def test_validate_credentials_with_previous_image(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "credentials": {
+                "type": "UPDATE",
+                "new_value": {
+                    "username": "fredkiss3",
+                    "password": "bad",
+                },
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(1, DockerDeploymentChange.objects.count())

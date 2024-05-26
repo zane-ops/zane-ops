@@ -1,5 +1,4 @@
 import django_filters
-import docker.errors
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -8,7 +7,6 @@ from rest_framework import pagination
 
 from .. import serializers
 from ..docker_operations import (
-    login_to_docker_registry,
     check_if_docker_image_exists,
 )
 from ..models import (
@@ -17,6 +15,7 @@ from ..models import (
     Project,
     ArchivedProject,
     DockerRegistryService,
+    DockerDeploymentChange,
 )
 from ..validators import validate_url_path, validate_env_name
 
@@ -135,14 +134,6 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials = data.get("credentials")
         image = data.get("image")
         # healthcheck = data.get("healthcheck")
-
-        if credentials is not None:
-            try:
-                login_to_docker_registry(**dict(credentials))
-            except docker.errors.APIError:
-                raise serializers.ValidationError(
-                    {"credentials": [f"Invalid credentials for the specified registry"]}
-                )
 
         do_image_exists = check_if_docker_image_exists(
             image,
@@ -452,12 +443,48 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
     env_variables = EnvItemChangeSerializer(many=True, required=False)
     volumes = VolumeItemChangeSerializer(many=True, required=False)
 
-    def validate(self, attrs: dict[str, dict | list[dict]]):
+    def get_service(self):
         service: DockerRegistryService = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
+        return service
+
+    def validate(self, attrs: dict[str, dict | list[dict]]):
+        service = self.get_service()
+
+        if not bool(attrs):
+            raise serializers.ValidationError("please provide at least one change")
 
         return attrs
+
+    def validate_credentials(self, change: dict):
+        credentials = change.get("new_value")
+        if credentials is None:
+            return credentials
+
+        service = self.get_service()
+        image = service.image
+        if image is None:
+            image_change: DockerDeploymentChange = service.unapplied_changes.filter(
+                field="image"
+            ).first()
+            image = image_change.new_value
+
+            if image is None:
+                raise serializers.ValidationError(
+                    "Cannot provide `credentials` without an existing image for the service."
+                )
+
+        do_image_exists = check_if_docker_image_exists(
+            image,
+            credentials=dict(credentials),
+        )
+        if not do_image_exists:
+            raise serializers.ValidationError(
+                f"The credentials are invalid for the image `{image}` which is set in the service."
+            )
+
+        return change
 
     # def validate_ports(self, changes: list[dict[str, dict[str, int]]]):
     #     new_ports = map(

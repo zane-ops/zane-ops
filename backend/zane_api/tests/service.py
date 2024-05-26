@@ -201,7 +201,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "bad",
-                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
