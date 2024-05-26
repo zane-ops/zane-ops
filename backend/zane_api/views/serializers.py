@@ -450,29 +450,36 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         return service
 
     def validate(self, attrs: dict[str, dict | list[dict]]):
-        service = self.get_service()
-
         if not bool(attrs):
             raise serializers.ValidationError("please provide at least one change")
 
+        credential_changes = attrs.get("credentials")
+        self._validate_credentials(credential_changes, attrs)
+
         return attrs
 
-    def validate_credentials(self, change: dict):
+    def _validate_credentials(self, change: dict, attrs: dict[str, dict | list[dict]]):
         credentials = change.get("new_value")
         if credentials is None:
             return credentials
 
         service = self.get_service()
-        image = service.image
+        image = service.image or attrs.get("image", {}).get("new_value")
+
         if image is None:
             image_change: DockerDeploymentChange = service.unapplied_changes.filter(
                 field="image"
             ).first()
-            image = image_change.new_value
+
+            image = image_change.new_value if image_change is not None else None
 
             if image is None:
                 raise serializers.ValidationError(
-                    "Cannot provide `credentials` without an existing image for the service."
+                    {
+                        "credentials": [
+                            "Cannot provide `credentials` without a provided image for the service."
+                        ]
+                    }
                 )
 
         do_image_exists = check_if_docker_image_exists(
@@ -481,7 +488,11 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
         )
         if not do_image_exists:
             raise serializers.ValidationError(
-                f"The credentials are invalid for the image `{image}` which is set in the service."
+                {
+                    "credentials": [
+                        f"The credentials are invalid for the image `{image}` provided for the service."
+                    ]
+                }
             )
 
         return change

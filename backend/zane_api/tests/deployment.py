@@ -630,6 +630,32 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertEqual(1, DockerDeploymentChange.objects.count())
+
+    def test_validate_credentials_with_image_in_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "image": {
+                "new_value": "ghcr.io/zane-ops/app",
+            },
+            "credentials": {
+                "new_value": {
+                    "username": "fredkiss3",
+                    "password": "bad",
+                },
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
