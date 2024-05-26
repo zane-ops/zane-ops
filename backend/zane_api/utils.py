@@ -143,22 +143,3 @@ def format_seconds(seconds: float):
         return f"{minutes}m{remaining_seconds:02}s"
     else:
         return f"{remaining_seconds}s"
-
-
-def excerpt(text: str, max_length=100):
-    _ellipsis = "..."
-
-    # If text is already within the maximum length, return it as is.
-    if len(text) <= max_length:
-        return text
-
-    # Adjust max_length to account for ellipsis
-    excerpt_length = max_length - len(_ellipsis)
-
-    # Ensure the excerpt ends at a word boundary
-    if " " in text[:excerpt_length]:
-        excerpt_text = text[:excerpt_length].rsplit(" ", 1)[0]
-    else:
-        excerpt_text = text[:excerpt_length]
-
-    return excerpt_text + _ellipsis
