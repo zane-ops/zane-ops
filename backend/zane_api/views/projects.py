@@ -1,7 +1,7 @@
 import time
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q, Count, Case, When, IntegerField
+from django.db.models import Q, Count, Case, When, IntegerField, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
@@ -19,8 +19,6 @@ from .serializers import (
     ArchivedProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
-    ProjectStatusResponseSerializer,
-    ProjectStatusRequestParamsSerializer,
 )
 from ..models import (
     Project,
@@ -45,7 +43,70 @@ class ProjectsListAPIView(ListCreateAPIView):
     pagination_class = ProjectListPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
-    queryset = Project.objects.all()
+    queryset = (
+        Project.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_queryset(self) -> QuerySet[Project]:
+        queryset = Project.objects.filter(owner=self.request.user).order_by(
+            "-updated_at"
+        )
+
+        docker_healthy = DockerDeployment.objects.filter(
+            is_current_production=True, status=DockerDeployment.DeploymentStatus.HEALTHY
+        ).values("service__project")
+
+        docker_total = DockerDeployment.objects.filter(
+            Q(is_current_production=True)
+            & (
+                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
+                | Q(status=DockerDeployment.DeploymentStatus.UNHEALTHY)
+                | Q(status=DockerDeployment.DeploymentStatus.FAILED)
+            )
+        ).values("service__project")
+
+        git_healthy = GitDeployment.objects.filter(
+            Q(is_current_production=True)
+            & (
+                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
+                | Q(status=GitDeployment.DeploymentStatus.SLEEPING)
+            )
+        ).values("service__project")
+
+        git_total = GitDeployment.objects.filter(
+            Q(is_current_production=True)
+            & (
+                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
+                | Q(status=GitDeployment.DeploymentStatus.SLEEPING)
+                | Q(status=GitDeployment.DeploymentStatus.UNHEALTHY)
+                | Q(status=GitDeployment.DeploymentStatus.FAILED)
+            )
+        ).values("service__project")
+
+        queryset = queryset.annotate(
+            healthy_services=Count(
+                Case(
+                    When(
+                        id__in=[item["service__project"] for item in docker_healthy]
+                        + [item["service__project"] for item in git_healthy],
+                        then=1,
+                    ),
+                    output_field=IntegerField(),
+                )
+            ),
+            total_services=Count(
+                Case(
+                    When(
+                        Q(id__in=[item["service__project"] for item in docker_total])
+                        | Q(id__in=[item["service__project"] for item in git_total]),
+                        then=1,
+                    ),
+                    output_field=IntegerField(),
+                )
+            ),
+        )
+
+        return queryset
 
     def get(self, request, *args, **kwargs):
         try:
@@ -92,119 +153,6 @@ class ProjectsListAPIView(ListCreateAPIView):
                 )
                 response = ProjectSerializer(new_project)
                 return Response(response.data, status=status.HTTP_201_CREATED)
-
-
-class ProjectStatusView(APIView):
-    serializer_class = ProjectStatusResponseSerializer
-
-    @extend_schema(
-        parameters=[
-            ProjectStatusRequestParamsSerializer,
-        ],
-        operation_id="getProjectStatusList",
-    )
-    def get(self, request: Request) -> Response:
-        id_list = request.GET.getlist("ids")
-        form = ProjectStatusRequestParamsSerializer(data={"ids": id_list})
-
-        if form.is_valid(raise_exception=True):
-            params = form.data
-            project_ids: list = params["ids"]
-
-            if len(project_ids) == 0:
-                serializer = ProjectStatusResponseSerializer({"projects": {}})
-                return Response(serializer.data)
-
-            project_statuses = {}
-
-            projects = Project.objects.filter(id__in=project_ids)
-
-            docker_status = (
-                DockerDeployment.objects.filter(
-                    service__project__in=projects, is_current_production=True
-                )
-                .values("service__project")
-                .annotate(
-                    healthy_services=Count(
-                        Case(
-                            When(
-                                status=DockerDeployment.DeploymentStatus.HEALTHY, then=1
-                            ),
-                            output_field=IntegerField(),
-                        )
-                    ),
-                    unhealthy_services=Count(
-                        Case(
-                            When(
-                                status=DockerDeployment.DeploymentStatus.UNHEALTHY,
-                                then=1,
-                            ),
-                            When(
-                                status=DockerDeployment.DeploymentStatus.FAILED,
-                                then=1,
-                            ),
-                            output_field=IntegerField(),
-                        )
-                    ),
-                )
-            )
-
-            git_status = (
-                GitDeployment.objects.filter(
-                    service__project__in=projects, is_current_production=True
-                )
-                .values("service__project")
-                .annotate(
-                    healthy_services=Count(
-                        Case(
-                            When(
-                                status=GitDeployment.DeploymentStatus.HEALTHY,
-                                then=1,
-                            ),
-                            When(
-                                status=GitDeployment.DeploymentStatus.SLEEPING,
-                                then=1,
-                            ),
-                            output_field=IntegerField(),
-                        )
-                    ),
-                    unhealthy_services=Count(
-                        Case(
-                            When(
-                                status=GitDeployment.DeploymentStatus.UNHEALTHY,
-                                then=1,
-                            ),
-                            When(
-                                status=DockerDeployment.DeploymentStatus.FAILED,
-                                then=1,
-                            ),
-                            output_field=IntegerField(),
-                        )
-                    ),
-                )
-            )
-
-            # Convert the aggregated data into a dictionary
-            docker_status_dict = {
-                item["service__project"]: item for item in docker_status
-            }
-            git_status_dict = {item["service__project"]: item for item in git_status}
-
-            for project in projects:
-                healthy_services = docker_status_dict.get(project.id, {}).get(
-                    "healthy_services", 0
-                ) + git_status_dict.get(project.id, {}).get("healthy_services", 0)
-                unhealthy_services = docker_status_dict.get(project.id, {}).get(
-                    "unhealthy_services", 0
-                ) + git_status_dict.get(project.id, {}).get("unhealthy_services", 0)
-
-                project_statuses[project.id] = {
-                    "healthy_services": healthy_services,
-                    "total_services": healthy_services + unhealthy_services,
-                }
-
-            serializer = ProjectStatusResponseSerializer({"projects": project_statuses})
-            return Response(serializer.data)
 
 
 class ArchivedProjectsListAPIView(ListAPIView):
