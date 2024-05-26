@@ -10,6 +10,7 @@ from ..models import (
     DockerDeployment,
     DockerRegistryService,
     DockerDeploymentChange,
+    Volume,
 )
 from ..utils import jprint
 
@@ -673,6 +674,117 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                     "password": "bad",
                 },
             },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_cannot_specify_the_same_mount_path_twice(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zaneops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-logs",
+                        "mount_path": "/etc/logs/zane",
+                    },
+                },
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-logs2",
+                        "mount_path": "/etc/logs/zane",
+                    },
+                },
+            ],
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_cannot_specify_the_same_mount_path_twice_with_pending_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.create(
+            field="volumes",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "name": "zane-logs",
+                "mount_path": "/etc/logs/zane",
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-logs2",
+                        "mount_path": "/etc/logs/zane",
+                    },
+                },
+            ],
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_cannot_specify_the_same_mount_path_twice_with_existing_volumes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        volume = Volume.objects.create(
+            name="zane-logs", container_path="/etc/logs/zane"
+        )
+        service.volumes.add(volume)
+
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-logs2",
+                        "mount_path": "/etc/logs/zane",
+                    },
+                },
+            ],
         }
         response = self.client.patch(
             reverse(

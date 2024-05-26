@@ -16,6 +16,9 @@ from ..models import (
     ArchivedProject,
     DockerRegistryService,
     DockerDeploymentChange,
+    Volume,
+    DockerEnvVariable,
+    PortConfiguration,
 )
 from ..validators import validate_url_path, validate_env_name
 
@@ -379,15 +382,24 @@ class BaseChangeItemSerializer(serializers.Serializer):
     def validate(self, attrs: dict[str, str | None]):
         item_id = attrs.get("item_id")
         change_type = attrs["type"]
+        new_value = attrs["new_value"]
         if change_type in ["DELETE", "UPDATE"]:
             if item_id is None:
                 raise serializers.ValidationError(
                     {
                         "item_id": [
-                            "`item_id` should be provided when the change `type` is `delete` or `update`"
+                            "`item_id` should be provided when the change type is `DELETE` or `UPDATE`"
                         ]
                     }
                 )
+        if change_type == "ADD" and new_value is None:
+            raise serializers.ValidationError(
+                {
+                    "new_value": [
+                        "`new_value` should be provided when the change type is `ADD`"
+                    ]
+                }
+            )
         return attrs
 
 
@@ -404,17 +416,81 @@ class BaseChangeFieldSerializer(serializers.Serializer):
 class URLItemChangeSerializer(BaseChangeItemSerializer):
     new_value = URLRequestSerializer(required=True, allow_null=True)
 
+    def validate(self, attrs: dict):
+        super().validate(attrs)
+        change_type = attrs["type"]
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = attrs["item_id"]
+
+            try:
+                URL.objects.get(id=item_id)
+            except URL.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": [
+                            f"URL configuration item with id `{item_id}` does not exist."
+                        ]
+                    }
+                )
+        return attrs
+
 
 class VolumeItemChangeSerializer(BaseChangeItemSerializer):
     new_value = VolumeRequestSerializer(required=True, allow_null=True)
+
+    def validate(self, attrs: dict):
+        super().validate(attrs)
+        change_type = attrs["type"]
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = attrs["item_id"]
+
+            try:
+                Volume.objects.get(id=item_id)
+            except Volume.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"item_id": [f"Volume with id `{item_id}` does not exist."]}
+                )
+        return attrs
 
 
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
     new_value = EnvRequestSerializer()
 
+    def validate(self, attrs: dict):
+        super().validate(attrs)
+        change_type = attrs["type"]
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = attrs["item_id"]
+
+            try:
+                DockerEnvVariable.objects.get(id=item_id)
+            except DockerEnvVariable.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"item_id": [f"Env variable with id `{item_id}` does not exist."]}
+                )
+        return attrs
+
 
 class PortItemChangeSerializer(BaseChangeItemSerializer):
     new_value = ServicePortsRequestSerializer(required=True, allow_null=True)
+
+    def validate(self, attrs: dict):
+        super().validate(attrs)
+        change_type = attrs["type"]
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = attrs["item_id"]
+
+            try:
+                PortConfiguration.objects.get(id=item_id)
+            except PortConfiguration.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": [
+                            f"Port configuration item with id `{item_id}` does not exist."
+                        ]
+                    }
+                )
+        return attrs
 
 
 class DockerCredentialsChangeFieldSerializer(BaseChangeFieldSerializer):
@@ -426,7 +502,7 @@ class DockerCommandChangeFieldSerializer(BaseChangeFieldSerializer):
 
 
 class DockerImageChangeFieldSerializer(BaseChangeFieldSerializer):
-    new_value = serializers.CharField(required=True, allow_null=True)
+    new_value = serializers.CharField(required=True)
 
 
 class HealthcheckChangeFieldSerializer(BaseChangeFieldSerializer):
@@ -454,9 +530,53 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError("please provide at least one change")
 
         credential_changes = attrs.get("credentials")
-        self._validate_credentials(credential_changes, attrs)
+        if credential_changes is not None:
+            self._validate_credentials(credential_changes, attrs)
 
         return attrs
+
+    def validate_volumes(self, changes: list[dict]):
+        if len(changes) == 0:
+            return changes
+
+        mount_path_set = set()
+        service = self.get_service()
+        volume_changes: list[DockerDeploymentChange] = list(
+            service.unapplied_changes.filter(field="volumes").all()
+        )
+        volumes = service.volumes.all()
+
+        existing_mount_path_set = set(
+            map(
+                lambda v_change: (
+                    v_change.new_value.get("mount_path")
+                    if v_change.new_value is not None
+                    else None
+                ),
+                volume_changes,
+            )
+        )
+
+        existing_mount_path_set.update(
+            map(
+                lambda volume: volume.container_path,
+                volumes,
+            )
+        )
+
+        for change in changes:
+            current_mount_path = change["new_value"]["mount_path"]
+
+            if (
+                current_mount_path in mount_path_set
+                or current_mount_path in existing_mount_path_set
+            ):
+                raise serializers.ValidationError(
+                    "Cannot specify two volumes with the same mount path for this service"
+                )
+
+            mount_path_set.add(current_mount_path)
+        return changes
 
     def _validate_credentials(self, change: dict, attrs: dict[str, dict | list[dict]]):
         credentials = change.get("new_value")
