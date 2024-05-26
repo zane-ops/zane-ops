@@ -44,9 +44,20 @@ class UserSerializer(ModelSerializer):
 
 
 class ProjectSerializer(ModelSerializer):
+    healthy_services = serializers.IntegerField(read_only=True)
+    total_services = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = models.Project
-        fields = ["description", "id", "slug", "created_at", "updated_at"]
+        fields = [
+            "description",
+            "id",
+            "slug",
+            "created_at",
+            "updated_at",
+            "healthy_services",
+            "total_services",
+        ]
 
 
 class ArchivedProjectSerializer(ModelSerializer):
