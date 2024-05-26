@@ -126,12 +126,6 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
     credentials = DockerCredentialsRequestSerializer(required=False)
-    # command = serializers.CharField(required=False)
-    # urls = URLRequestSerializer(many=True, required=False, default=[])
-    # ports = ServicePortsRequestSerializer(required=False, many=True, default=[])
-    # env = serializers.DictField(child=serializers.CharField(), required=False)
-    # volumes = VolumeRequestSerializer(many=True, required=False, default=[])
-    # healthcheck = HealthCheckRequestSerializer(required=False)
 
     def validate(self, data: dict):
         credentials = data.get("credentials")
@@ -352,19 +346,6 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
 
 
 # ==============================
-#    Docker services update    #
-# ==============================
-
-
-class DockerServiceUpdateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255, required=True)
-
-
-class DockerServiceUpdateResponseSerializer(serializers.Serializer):
-    pass
-
-
-# ==============================
 #    Docker services changes   #
 # ==============================
 
@@ -457,7 +438,7 @@ class BaseChangeFieldSerializer(serializers.Serializer):
 
 
 class URLItemChangeSerializer(BaseChangeItemSerializer):
-    new_value = URLRequestSerializer(required=True, allow_null=True)
+    new_value = URLRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -515,7 +496,7 @@ class VolumeListChangeSerialiazer(BaseListChangeSerializer):
 
 
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
-    new_value = EnvRequestSerializer()
+    new_value = EnvRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -542,7 +523,7 @@ class EnvListChangeSerialiazer(BaseListChangeSerializer):
 
 
 class PortItemChangeSerializer(BaseChangeItemSerializer):
-    new_value = ServicePortsRequestSerializer(required=True, allow_null=True)
+    new_value = ServicePortsRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
