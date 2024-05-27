@@ -332,6 +332,12 @@ class DockerDeployment(BaseDeployment):
             ]
         return aliases
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["is_current_production"]),
+        ]
+
 
 class GitDeployment(BaseDeployment):
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
@@ -413,6 +419,12 @@ class GitDeployment(BaseDeployment):
 
     def __str__(self):
         return f"{self.branch} - {self.commit_hash[:7]} - {self.build_status}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["is_current_production"]),
+        ]
 
 
 class Log(models.Model):
