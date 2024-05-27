@@ -47,6 +47,7 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
     """
     Mark all response outputs as required in the openAPI specification,
     because DRF spectucular was mistakenly making non read only fields as optional
+    solution copied from : https://github.com/tfranzel/drf-spectacular/issues/480#issuecomment-898488288
     """
     schemas = result.get("components", {}).get("schemas", {})
     for name, schema in schemas.items():
