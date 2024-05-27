@@ -95,15 +95,6 @@ services:
       - "8089:5540"
     volumes:
       - redisinsight:/data
-#  sablier:
-#    image: acouvreur/sablier:1.6.0
-#    container_name: zane-sablier
-#    restart: unless-stopped
-#    command:
-#      - start
-#      - --provider.name=swarm
-#    volumes:
-#      - "/var/run/docker.sock:/var/run/docker.sock"
 volumes:
   db-data:
   redis-data:
