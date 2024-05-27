@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,7 +18,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -32,13 +32,13 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -72,7 +72,7 @@ export function ProjectList() {
 
   return (
     <>
-      {projectList?.length === 0 ? (
+      {projectList.length === 0 ? (
         <main className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
