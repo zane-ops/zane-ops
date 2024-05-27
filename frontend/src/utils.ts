@@ -25,7 +25,7 @@ export function deleteCookie(name: string): void {
 }
 
 export function formattedDate(dateInput: string | Date): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const date = new Date(dateInput);
   const formattedDate = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
