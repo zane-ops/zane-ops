@@ -23,3 +23,29 @@ export function deleteCookie(name: string): void {
   // Delete the cookie by setting the expiration date in the past
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 }
+
+function getMonthName(monthNumber: number) {
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return monthNames[monthNumber - 1];
+}
+
+export function formatedDate(x: string) {
+  const date = new Date(x);
+  const year = date.getFullYear();
+  const month = getMonthName(date.getMonth());
+  const day = date.getDate();
+  return `${month} ${day}, ${year}`;
+}
