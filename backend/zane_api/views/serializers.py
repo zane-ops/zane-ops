@@ -301,24 +301,6 @@ class ProjectListPagination(pagination.PageNumberPagination):
 
 
 # ==============================
-#      Projects Statuses       #
-# ==============================
-
-
-class ProjectStatusSerializer(serializers.Serializer):
-    healthy_services = serializers.IntegerField(min_value=0)
-    total_services = serializers.IntegerField(min_value=0)
-
-
-class ProjectStatusResponseSerializer(serializers.Serializer):
-    projects = serializers.DictField(child=ProjectStatusSerializer())
-
-
-class ProjectStatusRequestParamsSerializer(serializers.Serializer):
-    ids = serializers.ListField(child=serializers.CharField(), required=True)
-
-
-# ==============================
 #       Projects Create        #
 # ==============================
 

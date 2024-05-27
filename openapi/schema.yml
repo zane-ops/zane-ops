@@ -1619,69 +1619,6 @@ paths:
           description: ''
         '200':
           description: No response body
-  /api/projects/status-list/:
-    get:
-      operationId: getProjectStatusList
-      parameters:
-      - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: string
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetProjectStatusListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectStatusResponse'
-          description: ''
   /api/volumes/{volume_id}/size/:
     get:
       operationId: getVolumeSize
@@ -2850,13 +2787,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetProjectStatusListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetRootDomain:
       type: object
       properties:
@@ -3283,9 +3213,17 @@ components:
           type: string
           format: date-time
           readOnly: true
+        healthy_services:
+          type: integer
+          readOnly: true
+        total_services:
+          type: integer
+          readOnly: true
       required:
       - created_at
+      - healthy_services
       - slug
+      - total_services
       - updated_at
     ProjectCreateRequest:
       type: object
@@ -3296,27 +3234,6 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         description:
           type: string
-    ProjectStatus:
-      type: object
-      properties:
-        healthy_services:
-          type: integer
-          minimum: 0
-        total_services:
-          type: integer
-          minimum: 0
-      required:
-      - healthy_services
-      - total_services
-    ProjectStatusResponse:
-      type: object
-      properties:
-        projects:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/ProjectStatus'
-      required:
-      - projects
     ProjectsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsListSlugErrorComponent'

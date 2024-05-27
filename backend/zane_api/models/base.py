@@ -406,6 +406,12 @@ class DockerDeployment(BaseDeployment):
             ]
         return aliases
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["is_current_production"]),
+        ]
+
 
 class BaseDeploymentChange(TimestampedModel):
     class ChangeType(models.TextChoices):
@@ -547,6 +553,12 @@ class GitDeployment(BaseDeployment):
     @property
     def unprefixed_hash(self):
         return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["is_current_production"]),
+        ]
 
 
 class Log(models.Model):
