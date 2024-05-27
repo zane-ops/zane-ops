@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash,
+  Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,7 +18,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -32,13 +32,13 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
-import { formattedDate } from "~/utils";
 import { useProjectList } from "~/lib/hooks/use-project-list";
+import { formattedDate } from "~/utils";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {

@@ -15,6 +15,6 @@ export function useProjectList() {
         return TEN_SECONDS;
       }
       return false;
-    },
+    }
   });
 }
