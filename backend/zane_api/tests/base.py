@@ -366,7 +366,10 @@ class FakeDockerClient:
         ]
 
     def images_pull(self, repository: str, tag: str = None, *args, **kwargs):
-        self.pulled_images.add(f"{repository}:{tag}")
+        if tag is not None:
+            self.pulled_images.add(f"{repository}:{tag}")
+        else:
+            self.pulled_images.add(repository)
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
@@ -375,10 +378,14 @@ class FakeDockerClient:
                 raise docker.errors.APIError("Invalid credentials")
 
             if image == self.NONEXISTANT_PRIVATE_IMAGE:
-                raise docker.errors.NotFound("This image does not exist")
+                raise docker.errors.NotFound(
+                    "This image does not exist in the registry"
+                )
+            self.is_logged_in = True
         else:
             if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
+
 
     def docker_create_network(self, name: str, **kwargs):
         created_network = FakeDockerClient.FakeNetwork(name=name, id=name, parent=self)

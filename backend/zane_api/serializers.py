@@ -140,12 +140,6 @@ class DockerServiceSerializer(ModelSerializer):
         ]
 
 
-class CaseInsensitiveChoiceField(serializers.ChoiceField):
-    def to_internal_value(self, data: str):
-        data = super().to_internal_value(data.lower())
-        return data
-
-
 class DockerServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True

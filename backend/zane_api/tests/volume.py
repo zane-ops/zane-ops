@@ -34,7 +34,7 @@ class DockerVolumeTests(AuthAPITestCase):
                 {
                     "name": "Local time",
                     "host_path": "/etc/localtime",
-                    "mount_path": "/etc/localtime",
+                    "container_path": "/etc/localtime",
                 }
             ],
         }
@@ -73,8 +73,8 @@ class DockerVolumeTests(AuthAPITestCase):
             "volumes": [
                 {
                     "name": "Docker Socket",
-                    "mount_path": "/var/run/docker.sock",
-                    "mode": "ro",
+                    "container_path": "/var/run/docker.sock",
+                    "mode": "READ_ONLY",
                 }
             ],
         }
@@ -116,7 +116,7 @@ class DockerVolumeTests(AuthAPITestCase):
             "volumes": [
                 {
                     "name": "Docker Socket",
-                    "mount_path": "/var/run/docker.sock",
+                    "container_path": "/var/run/docker.sock",
                 }
             ],
         }
@@ -156,7 +156,7 @@ class DockerVolumeTests(AuthAPITestCase):
             "volumes": [
                 {
                     "host_path": "/etc/localtime",
-                    "mount_path": "/etc/localtime",
+                    "container_path": "/etc/localtime",
                 }
             ],
         }
@@ -185,7 +185,7 @@ class DockerVolumeTests(AuthAPITestCase):
             "volumes": [
                 {
                     "host_path": "./etc/localtime",
-                    "mount_path": "/etc/localtime",
+                    "container_path": "/etc/localtime",
                 }
             ],
         }

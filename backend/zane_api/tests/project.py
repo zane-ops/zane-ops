@@ -349,7 +349,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
             "urls": [{"domain": "gitea.zane.local", "base_path": "/"}],
             "ports": [{"forwarded": 3000}],
             "env": {"USER_UID": "1000", "USER_GID": "1000"},
-            "volumes": [{"name": "gitea", "mount_path": "/data"}],
+            "volumes": [{"name": "gitea", "container_path": "/data"}],
         }
 
         # create the service

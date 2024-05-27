@@ -12,7 +12,6 @@ from ..models import (
     DockerDeploymentChange,
     Volume,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -187,46 +186,6 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-
-    def test_use_specific_tag_for_deployment_with_the_user_specifed_one(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="cache-db"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertEqual("alpine", deployment.image_tag)
-
-    def test_use_latest_tag_for_deployment_when_no_tag_specifed(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="cache-db"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertEqual("latest", deployment.image_tag)
 
     def test_add_deployment_url_when_url_is_provided(self):
         owner = self.loginUser()
@@ -495,7 +454,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(4, DockerDeploymentChange.objects.count())
         changes = DockerDeploymentChange.objects.filter(service__slug="app")
@@ -869,5 +827,4 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

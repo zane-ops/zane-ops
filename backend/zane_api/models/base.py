@@ -387,7 +387,7 @@ class DockerDeployment(BaseDeployment):
     monitor_task = models.ForeignKey(
         to=PeriodicTask, null=True, on_delete=models.SET_NULL
     )
-    service_snapshot = models.JSONField()
+    service_snapshot = models.JSONField(null=True)
 
     @property
     def task_id(self):

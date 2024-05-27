@@ -225,11 +225,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         create_service_payload = {
             "slug": "main-app",
-            "image": "dcr.fredkiss.dev/nonexistent:latest",
+            "image": self.fake_docker_client.NONEXISTANT_PRIVATE_IMAGE,
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
@@ -245,8 +244,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNone(created_service)
 
-        self.assertTrue(self.fake_docker_client.is_logged_in)
-
     def test_create_service_credentials_do_not_correspond_to_image(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="gh-clone", owner=owner)
@@ -256,8 +253,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "image": "gcr.io/redis:latest",
             "credentials": {
                 "username": "fredkiss3",
-                "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/",
+                "password": "bad",
             },
         }
 
@@ -279,7 +275,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         create_service_payload = {
             "slug": "main-app",
-            "image": "nonexistent",
+            "image": self.fake_docker_client.NONEXISTANT_IMAGE,
         }
 
         response = self.client.post(
@@ -301,7 +297,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     create_service_payload = {
     #         "slug": "cache-db",
     #         "image": "redis:alpine",
-    #         "volumes": [{"name": "REDIS Data volume", "mount_path": "/data"}],
+    #         "volumes": [{"name": "REDIS Data volume", "container_path": "/data"}],
     #     }
     #
     #     response = self.client.post(
@@ -373,7 +369,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     create_service_payload = {
     #         "slug": "nosql-db",
     #         "image": "redis:alpine",
-    #         "ports": [{"public": 6383, "forwarded": 6379}],
+    #         "ports": [{"host": 6383, "forwarded": 6379}],
     #     }
     #
     #     response = self.client.post(
@@ -413,7 +409,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #         "slug": "nosql-db",
     #         "image": "redis:alpine",
     #         "ports": [
-    #             {"public": FakeDockerClient.PORT_USED_BY_HOST, "forwarded": 6379},
+    #             {"host": FakeDockerClient.PORT_USED_BY_HOST, "forwarded": 6379},
     #         ],
     #     }
     #
@@ -436,7 +432,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     p = Project.objects.create(slug="kiss-cam", owner=owner)
     #
     #     service = DockerRegistryService.objects.create(
-    #         slug="cache-db", image_repository="redis", project=p
+    #         slug="cache-db", image="redis", project=p
     #     )
     #
     #     used_port = PortConfiguration(
@@ -449,7 +445,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     create_service_payload = {
     #         "slug": "adminer",
     #         "image": "adminer:latest",
-    #         "ports": [{"public": used_port.host, "forwarded": 8080}],
+    #         "ports": [{"host": used_port.host, "forwarded": 8080}],
     #     }
     #
     #     response = self.client.post(
@@ -736,7 +732,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     create_service_payload = {
     #         "slug": "public-database",
     #         "image": "postgres:12-alpine",
-    #         "ports": [{"public": 5433, "forwarded": 5432}],
+    #         "ports": [{"host": 5433, "forwarded": 5432}],
     #     }
     #
     #     response = self.client.post(
@@ -759,7 +755,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     create_service_payload = {
     #         "slug": "adminer-ui",
     #         "image": "adminer:latest",
-    #         "ports": [{"public": random.choice([443, 80]), "forwarded": 8080}],
+    #         "ports": [{"host": random.choice([443, 80]), "forwarded": 8080}],
     #     }
     #
     #     response = self.client.post(
@@ -782,8 +778,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #         "slug": "adminer-ui",
     #         "image": "adminer:latest",
     #         "ports": [
-    #             {"public": 443, "forwarded": 8080},
-    #             {"public": 80, "forwarded": 8080},
+    #             {"host": 443, "forwarded": 8080},
+    #             {"host": 80, "forwarded": 8080},
     #         ],
     #     }
     #
@@ -802,8 +798,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #         "slug": "adminer-ui",
     #         "image": "adminer:latest",
     #         "ports": [
-    #             {"public": 8081, "forwarded": 8080},
-    #             {"public": 8081, "forwarded": 8080},
+    #             {"host": 8081, "forwarded": 8080},
+    #             {"host": 8081, "forwarded": 8080},
     #         ],
     #     }
     #
@@ -845,8 +841,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #         "slug": "gitea",
     #         "image": "gitea/gitea:latest",
     #         "volumes": [
-    #             {"name": "gitea data", "mount_path": "/data"},
-    #             {"name": "gitea config", "mount_path": "/data"},
+    #             {"name": "gitea data", "container_path": "/data"},
+    #             {"name": "gitea config", "container_path": "/data"},
     #         ],
     #     }
     #
@@ -892,7 +888,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #             {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
     #         ],
     #         "ports": [
-    #             {"public": 8099, "forwarded": 8080},
+    #             {"host": 8099, "forwarded": 8080},
     #         ],
     #     }
     #
@@ -937,7 +933,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     p = Project.objects.create(slug="kiss-cam", owner=owner)
     #
     #     existing_service = DockerRegistryService.objects.create(
-    #         slug="redis", image_repository="redis", project=p
+    #         slug="redis", image="redis", project=p
     #     )
     #     url = URL.objects.bulk_create(
     #         [
@@ -990,7 +986,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "slug": "cache-db",
             "image": "redis:alpine",
             "healthcheck": {
-                "type": "command",
+                "type": "COMMAND",
                 "value": "redis-cli PING",
                 "timeout_seconds": 30,
                 "interval_seconds": 15,
@@ -1022,7 +1018,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "image": "caddy",
             "ports": [{"forwarded": 80}],
             "healthcheck": {
-                "type": "command",
+                "type": "COMMAND",
                 "value": "caddy validate",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1078,7 +1074,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "image": "caddy:alpine",
             "ports": [{"forwarded": 80}],
             "healthcheck": {
-                "type": "path",
+                "type": "PATH",
                 "value": "dcr.fredkiss.dev/",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1092,36 +1088,6 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    @responses.activate
-    def test_create_service_with_healtheck_path_ignore_case(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "simple-webserver",
-            "image": "caddy:alpine",
-            "ports": [{"forwarded": 80}],
-            "healthcheck": {
-                "type": "PaTh",
-                "value": "/",
-                "timeout_seconds": 30,
-                "interval_seconds": 5,
-            },
-        }
-
-        responses.add(
-            responses.GET,
-            url=re.compile("^(https?)*"),
-            status=status.HTTP_200_OK,
-        )
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
     def test_create_service_with_healtheck_path_require_url_or_port(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
@@ -1130,7 +1096,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "slug": "simple-webserver",
             "image": "caddy:alpine",
             "healthcheck": {
-                "type": "path",
+                "type": "PATH",
                 "value": "/",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1152,7 +1118,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "slug": "simple-webserver",
             "image": "redis:alpine",
             "healthcheck": {
-                "type": "command",
+                "type": "COMMAND",
                 "value": "redis-cli PING",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1176,7 +1142,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "image": "caddy:alpine",
             "ports": [{"forwarded": 80}],
             "healthcheck": {
-                "type": "path",
+                "type": "PATH",
                 "value": "/",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1217,7 +1183,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "image": "caddy:alpine",
             "ports": [{"forwarded": 80}],
             "healthcheck": {
-                "type": "path",
+                "type": "PATH",
                 "value": "/",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1253,7 +1219,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "slug": "simple-webserver",
             "image": "redis:alpine",
             "healthcheck": {
-                "type": "command",
+                "type": "COMMAND",
                 "value": "redis-cli PING",
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1281,7 +1247,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             "slug": "cache",
             "image": "redis:alpine",
             "healthcheck": {
-                "type": "command",
+                "type": "COMMAND",
                 "value": FakeDockerClient.FAILING_CMD,
                 "timeout_seconds": 30,
                 "interval_seconds": 5,
@@ -1440,7 +1406,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            slug="cache-db", image_repository="redis", project=p
+            slug="cache-db", image="redis", project=p
         )
 
         response = self.client.get(
@@ -1469,7 +1435,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p2 = Project.objects.create(slug="camly", owner=owner)
 
         service = DockerRegistryService.objects.create(
-            slug="cache-db", image_repository="redis", project=p1
+            slug="cache-db", image="redis", project=p1
         )
 
         response = self.client.get(
@@ -1532,7 +1498,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         create_service_payload = {
             "slug": "cache-db",
             "image": "redis:alpine",
-            "volumes": [{"name": "REDIS Data volume", "mount_path": "/data"}],
+            "volumes": [{"name": "REDIS Data volume", "container_path": "/data"}],
         }
 
         # create
@@ -1622,7 +1588,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         create_service_payload = {
             "slug": "cache-db",
             "image": "redis:alpine",
-            "ports": [{"public": 6383, "forwarded": 6379}],
+            "ports": [{"host": 6383, "forwarded": 6379}],
         }
 
         # create
@@ -1726,39 +1692,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-
-    def test_archive_should_have_deployment_tag_and_service_image_repository(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-
-        # then delete
-        response = self.client.delete(
-            reverse(
-                "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
-            ),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-
-        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug="cache-db"
-        ).first()
-        self.assertIsNotNone(archived_service)
-
-        self.assertEqual("redis", archived_service.image_repository)
-        self.assertEqual("alpine", archived_service.image_tag)
 
     def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
         owner = self.loginUser()
