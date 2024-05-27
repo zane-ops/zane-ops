@@ -37,7 +37,7 @@ function getMonthName(monthNumber: number) {
     "Sep",
     "Oct",
     "Nov",
-    "Dec",
+    "Dec"
   ];
   return monthNames[monthNumber - 1];
 }
