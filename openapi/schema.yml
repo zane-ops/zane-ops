@@ -2201,7 +2201,7 @@ components:
       properties:
         type:
           allOf:
-          - $ref: '#/components/schemas/TypeAf8Enum'
+          - $ref: '#/components/schemas/Type20aEnum'
           default: UPDATE
         new_value:
           type: string
@@ -2214,7 +2214,7 @@ components:
       properties:
         type:
           allOf:
-          - $ref: '#/components/schemas/TypeAf8Enum'
+          - $ref: '#/components/schemas/Type20aEnum'
           default: UPDATE
         new_value:
           allOf:
@@ -2299,7 +2299,7 @@ components:
       properties:
         type:
           allOf:
-          - $ref: '#/components/schemas/TypeAf8Enum'
+          - $ref: '#/components/schemas/Type20aEnum'
           default: UPDATE
         new_value:
           type: string
@@ -2632,7 +2632,7 @@ components:
       type: object
       properties:
         type:
-          $ref: '#/components/schemas/TypeF7eEnum'
+          $ref: '#/components/schemas/Type676Enum'
         item_id:
           type: string
           minLength: 1
@@ -2871,7 +2871,7 @@ components:
       properties:
         type:
           allOf:
-          - $ref: '#/components/schemas/TypeAf8Enum'
+          - $ref: '#/components/schemas/Type20aEnum'
           default: UPDATE
         new_value:
           allOf:
@@ -3196,7 +3196,7 @@ components:
       type: object
       properties:
         type:
-          $ref: '#/components/schemas/TypeF7eEnum'
+          $ref: '#/components/schemas/Type676Enum'
         item_id:
           type: string
           minLength: 1
@@ -3457,26 +3457,26 @@ components:
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
         * `OFFLINE` - Offline
-    TypeAf8Enum:
+    Type20aEnum:
       enum:
       - UPDATE
       type: string
-      description: '* `UPDATE` - UPDATE'
-    TypeF7eEnum:
+      description: '* `UPDATE` - Update'
+    Type676Enum:
       enum:
       - ADD
       - DELETE
       - UPDATE
       type: string
       description: |-
-        * `ADD` - ADD
-        * `DELETE` - DELETE
-        * `UPDATE` - UPDATE
+        * `ADD` - Add
+        * `DELETE` - Delete
+        * `UPDATE` - Update
     URLItemChangeRequest:
       type: object
       properties:
         type:
-          $ref: '#/components/schemas/TypeF7eEnum'
+          $ref: '#/components/schemas/Type676Enum'
         item_id:
           type: string
           minLength: 1
@@ -5075,7 +5075,7 @@ components:
       type: object
       properties:
         type:
-          $ref: '#/components/schemas/TypeF7eEnum'
+          $ref: '#/components/schemas/Type676Enum'
         item_id:
           type: string
           minLength: 1
