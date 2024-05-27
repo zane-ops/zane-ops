@@ -140,13 +140,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/LoginRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/LoginRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/LoginRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -405,13 +405,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerPortCheckRequest'
+              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerPortCheckRequest'
+              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerPortCheckRequest'
+              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -534,13 +534,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerLoginRequest'
+              $ref: '#/components/schemas/DockerLoginRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerLoginRequest'
+              $ref: '#/components/schemas/DockerLoginRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerLoginRequest'
+              $ref: '#/components/schemas/DockerLoginRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -761,13 +761,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ProjectCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ProjectCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -926,13 +926,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -1315,13 +1315,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceChangesRequest'
+              $ref: '#/components/schemas/PatchedDockerServiceChangesRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceChangesRequest'
+              $ref: '#/components/schemas/PatchedDockerServiceChangesRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceChangesRequest'
+              $ref: '#/components/schemas/PatchedDockerServiceChangesRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -1477,13 +1477,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -1724,6 +1724,7 @@ components:
           readOnly: true
       required:
       - archived_at
+      - slug
     ArchivedProjectsListError:
       oneOf:
       - $ref: '#/components/schemas/ArchivedProjectsListSlugErrorComponent'
@@ -1937,34 +1938,6 @@ components:
       - attr
       - code
       - detail
-    CreateDockerServiceCredentialsRegistryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.registry_url
-          type: string
-          description: '* `credentials.registry_url` - credentials.registry_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceCredentialsUsernameErrorComponent:
       type: object
       properties:
@@ -2005,7 +1978,6 @@ components:
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceCredentialsRegistryUrlErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -2015,7 +1987,6 @@ components:
           credentials.non_field_errors: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
-          credentials.registry_url: '#/components/schemas/CreateDockerServiceCredentialsRegistryUrlErrorComponent'
     CreateDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateDockerServiceValidationError'
@@ -2225,7 +2196,7 @@ components:
       required:
       - errors
       - type
-    DockerCommandChangeField:
+    DockerCommandChangeFieldRequest:
       type: object
       properties:
         type:
@@ -2235,9 +2206,10 @@ components:
         new_value:
           type: string
           nullable: true
+          minLength: 1
       required:
       - new_value
-    DockerCredentialsChangeField:
+    DockerCredentialsChangeFieldRequest:
       type: object
       properties:
         type:
@@ -2246,23 +2218,21 @@ components:
           default: UPDATE
         new_value:
           allOf:
-          - $ref: '#/components/schemas/DockerCredentialsRequest'
+          - $ref: '#/components/schemas/DockerCredentialsRequestRequest'
           nullable: true
       required:
       - new_value
-    DockerCredentialsRequest:
+    DockerCredentialsRequestRequest:
       type: object
       properties:
         username:
           type: string
+          minLength: 1
           maxLength: 100
         password:
           type: string
+          minLength: 1
           maxLength: 100
-        registry_url:
-          type: string
-          format: uri
-          default: registry-1.docker.io/v2
       required:
       - password
       - username
@@ -2283,6 +2253,9 @@ components:
           nullable: true
       required:
       - field
+      - id
+      - new_value
+      - old_value
       - type
     DockerDeploymentChangeTypeEnum:
       enum:
@@ -2307,6 +2280,7 @@ components:
           type: string
           maxLength: 255
       required:
+      - id
       - key
       - value
     DockerImage:
@@ -2320,7 +2294,7 @@ components:
       required:
       - description
       - full_image
-    DockerImageChangeField:
+    DockerImageChangeFieldRequest:
       type: object
       properties:
         type:
@@ -2329,7 +2303,7 @@ components:
           default: UPDATE
         new_value:
           type: string
-          nullable: true
+          minLength: 1
       required:
       - new_value
     DockerImageSearchResponse:
@@ -2442,18 +2416,21 @@ components:
       - attr
       - code
       - detail
-    DockerLoginRequest:
+    DockerLoginRequestRequest:
       type: object
       properties:
         username:
           type: string
+          minLength: 1
           maxLength: 255
         password:
           type: string
+          minLength: 1
           maxLength: 255
         registry_url:
           type: string
           format: uri
+          minLength: 1
       required:
       - password
       - username
@@ -2508,7 +2485,7 @@ components:
       required:
       - errors
       - type
-    DockerPortCheckRequest:
+    DockerPortCheckRequestRequest:
       type: object
       properties:
         port:
@@ -2584,9 +2561,12 @@ components:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
       required:
+      - command
       - created_at
       - env_variables
       - healthcheck
+      - id
+      - image
       - network_aliases
       - ports
       - slug
@@ -2594,17 +2574,19 @@ components:
       - updated_at
       - urls
       - volumes
-    DockerServiceCreateRequest:
+    DockerServiceCreateRequestRequest:
       type: object
       properties:
         slug:
           type: string
+          minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         image:
           type: string
+          minLength: 1
         credentials:
-          $ref: '#/components/schemas/DockerCredentialsRequest'
+          $ref: '#/components/schemas/DockerCredentialsRequestRequest'
       required:
       - image
     DockerServiceDeployment:
@@ -2639,27 +2621,35 @@ components:
           readOnly: true
       required:
       - created_at
+      - hash
+      - is_current_production
+      - is_redeploy_of
       - network_aliases
-    EnvItemChange:
+      - status
+      - status_reason
+      - url
+    EnvItemChangeRequest:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/TypeF7eEnum'
         item_id:
           type: string
+          minLength: 1
           maxLength: 255
         new_value:
-          $ref: '#/components/schemas/EnvRequest'
+          $ref: '#/components/schemas/EnvRequestRequest'
       required:
-      - new_value
       - type
-    EnvRequest:
+    EnvRequestRequest:
       type: object
       properties:
         key:
           type: string
+          minLength: 1
         value:
           type: string
+          minLength: 1
       required:
       - key
       - value
@@ -2834,32 +2824,40 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-    HealthCheckRequest:
+      required:
+      - id
+      - interval_seconds
+      - timeout_seconds
+      - type
+      - value
+    HealthCheckRequestRequest:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/HealthCheckRequestTypeEnum'
         value:
           type: string
+          minLength: 1
           maxLength: 255
         timeout_seconds:
           type: integer
           minimum: 5
           default: 60
         interval_seconds:
-          type: string
-          default: '30'
+          type: integer
+          minimum: 5
+          default: 30
       required:
       - type
       - value
     HealthCheckRequestTypeEnum:
       enum:
-      - path
-      - command
+      - PATH
+      - COMMAND
       type: string
       description: |-
-        * `path` - path
-        * `command` - command
+        * `PATH` - path
+        * `COMMAND` - command
     HealthCheckTypeEnum:
       enum:
       - COMMAND
@@ -2868,7 +2866,7 @@ components:
       description: |-
         * `COMMAND` - Command
         * `PATH` - Path
-    HealthcheckChangeField:
+    HealthcheckChangeFieldRequest:
       type: object
       properties:
         type:
@@ -2877,7 +2875,7 @@ components:
           default: UPDATE
         new_value:
           allOf:
-          - $ref: '#/components/schemas/HealthCheckRequest'
+          - $ref: '#/components/schemas/HealthCheckRequestRequest'
           nullable: true
       required:
       - new_value
@@ -2954,17 +2952,17 @@ components:
       - attr
       - code
       - detail
-    LoginRequest:
+    LoginRequestRequest:
       type: object
       properties:
         username:
           type: string
-          maxLength: 255
           minLength: 1
+          maxLength: 255
         password:
           type: string
-          maxLength: 255
           minLength: 1
+          maxLength: 255
       required:
       - password
       - username
@@ -2977,6 +2975,7 @@ components:
           type: string
       required:
       - success
+      - token
     LoginUsernameErrorComponent:
       type: object
       properties:
@@ -3050,6 +3049,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedDockerServiceDeploymentList:
       type: object
       properties:
@@ -3070,6 +3074,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DockerServiceDeployment'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedProjectList:
       type: object
       properties:
@@ -3090,6 +3099,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+      required:
+      - count
+      - next
+      - previous
+      - results
     ParseError:
       type: object
       properties:
@@ -3121,45 +3135,44 @@ components:
       required:
       - errors
       - type
-    PatchedDockerServiceChangesRequest:
+    PatchedDockerServiceChangesRequestRequest:
       type: object
       properties:
         image:
-          $ref: '#/components/schemas/DockerImageChangeField'
-        command:
-          $ref: '#/components/schemas/DockerCommandChangeField'
+          $ref: '#/components/schemas/DockerImageChangeFieldRequest'
         credentials:
-          $ref: '#/components/schemas/DockerCredentialsChangeField'
+          $ref: '#/components/schemas/DockerCredentialsChangeFieldRequest'
+        command:
+          $ref: '#/components/schemas/DockerCommandChangeFieldRequest'
         healthcheck:
-          $ref: '#/components/schemas/HealthcheckChangeField'
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLItemChange'
-        ports:
-          type: array
-          items:
-            $ref: '#/components/schemas/PortItemChange'
-        env:
-          type: array
-          items:
-            $ref: '#/components/schemas/EnvItemChange'
+          $ref: '#/components/schemas/HealthcheckChangeFieldRequest'
         volumes:
           type: array
           items:
-            $ref: '#/components/schemas/VolumeItemChange'
-        service:
-          type: string
-          readOnly: true
-    PatchedProjectUpdateRequest:
+            $ref: '#/components/schemas/VolumeItemChangeRequest'
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLItemChangeRequest'
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortItemChangeRequest'
+        env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvItemChangeRequest'
+    PatchedProjectUpdateRequestRequest:
       type: object
       properties:
         slug:
           type: string
+          minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         description:
           type: string
+          minLength: 1
     PortConfiguration:
       type: object
       properties:
@@ -3177,30 +3190,30 @@ components:
           minimum: 0
       required:
       - forwarded
-    PortItemChange:
+      - host
+      - id
+    PortItemChangeRequest:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/TypeF7eEnum'
         item_id:
           type: string
+          minLength: 1
           maxLength: 255
         new_value:
-          allOf:
-          - $ref: '#/components/schemas/ServicePortsRequest'
-          nullable: true
+          $ref: '#/components/schemas/ServicePortsRequestRequest'
       required:
-      - new_value
       - type
     Project:
       type: object
       properties:
-        id:
-          type: string
-          maxLength: 255
         description:
           type: string
           nullable: true
+        id:
+          type: string
+          maxLength: 255
         slug:
           type: string
           maxLength: 255
@@ -3221,19 +3234,23 @@ components:
           readOnly: true
       required:
       - created_at
+      - description
       - healthy_services
+      - id
       - slug
       - total_services
       - updated_at
-    ProjectCreateRequest:
+    ProjectCreateRequestRequest:
       type: object
       properties:
         slug:
           type: string
+          minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         description:
           type: string
+          minLength: 1
     ProjectsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsListSlugErrorComponent'
@@ -3408,10 +3425,10 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ServicePortsRequest:
+    ServicePortsRequestRequest:
       type: object
       properties:
-        public:
+        host:
           type: integer
           default: 80
         forwarded:
@@ -3455,24 +3472,25 @@ components:
         * `ADD` - ADD
         * `DELETE` - DELETE
         * `UPDATE` - UPDATE
-    URLItemChange:
+    URLItemChangeRequest:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/TypeF7eEnum'
         item_id:
           type: string
+          minLength: 1
           maxLength: 255
         new_value:
-          allOf:
-          - $ref: '#/components/schemas/URLRequest'
-          nullable: true
+          $ref: '#/components/schemas/URLRequestRequest'
       required:
-      - new_value
       - type
     URLModel:
       type: object
       properties:
+        id:
+          type: string
+          maxLength: 255
         domain:
           type: string
           nullable: true
@@ -3483,14 +3501,19 @@ components:
         strip_prefix:
           type: boolean
       required:
+      - base_path
       - domain
-    URLRequest:
+      - id
+      - strip_prefix
+    URLRequestRequest:
       type: object
       properties:
         domain:
           type: string
+          minLength: 1
         base_path:
           type: string
+          minLength: 1
           default: /
         strip_prefix:
           type: boolean
@@ -3623,34 +3646,6 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesCredentialsNewValueRegistryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.new_value.registry_url
-          type: string
-          description: '* `credentials.new_value.registry_url` - credentials.new_value.registry_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     UpdateDeploymentChangesCredentialsNewValueUsernameErrorComponent:
       type: object
       properties:
@@ -3727,14 +3722,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvINDEXItemIdErrorComponent:
+    UpdateDeploymentChangesEnvVariablesINDEXItemIdErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.INDEX.item_id
+          - env_variables.INDEX.item_id
           type: string
-          description: '* `env.INDEX.item_id` - env.INDEX.item_id'
+          description: '* `env_variables.INDEX.item_id` - env_variables.INDEX.item_id'
         code:
           enum:
           - blank
@@ -3757,14 +3752,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvINDEXNewValueKeyErrorComponent:
+    UpdateDeploymentChangesEnvVariablesINDEXNewValueKeyErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.INDEX.new_value.key
+          - env_variables.INDEX.new_value.key
           type: string
-          description: '* `env.INDEX.new_value.key` - env.INDEX.new_value.key'
+          description: '* `env_variables.INDEX.new_value.key` - env_variables.INDEX.new_value.key'
         code:
           enum:
           - blank
@@ -3787,38 +3782,36 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvINDEXNewValueNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesEnvVariablesINDEXNewValueNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.INDEX.new_value.non_field_errors
+          - env_variables.INDEX.new_value.non_field_errors
           type: string
-          description: '* `env.INDEX.new_value.non_field_errors` - env.INDEX.new_value.non_field_errors'
+          description: '* `env_variables.INDEX.new_value.non_field_errors` - env_variables.INDEX.new_value.non_field_errors'
         code:
           enum:
           - invalid
           - 'null'
-          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
-            * `required` - required
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvINDEXNewValueValueErrorComponent:
+    UpdateDeploymentChangesEnvVariablesINDEXNewValueValueErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.INDEX.new_value.value
+          - env_variables.INDEX.new_value.value
           type: string
-          description: '* `env.INDEX.new_value.value` - env.INDEX.new_value.value'
+          description: '* `env_variables.INDEX.new_value.value` - env_variables.INDEX.new_value.value'
         code:
           enum:
           - blank
@@ -3841,36 +3834,38 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvINDEXNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesEnvVariablesINDEXNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.INDEX.non_field_errors
+          - env_variables.INDEX.non_field_errors
           type: string
-          description: '* `env.INDEX.non_field_errors` - env.INDEX.non_field_errors'
+          description: '* `env_variables.INDEX.non_field_errors` - env_variables.INDEX.non_field_errors'
         code:
           enum:
           - invalid
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvINDEXTypeErrorComponent:
+    UpdateDeploymentChangesEnvVariablesINDEXTypeErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.INDEX.type
+          - env_variables.INDEX.type
           type: string
-          description: '* `env.INDEX.type` - env.INDEX.type'
+          description: '* `env_variables.INDEX.type` - env_variables.INDEX.type'
         code:
           enum:
           - invalid_choice
@@ -3887,14 +3882,14 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesEnvNonFieldErrorsErrorComponent:
+    UpdateDeploymentChangesEnvVariablesNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - env.non_field_errors
+          - env_variables.non_field_errors
           type: string
-          description: '* `env.non_field_errors` - env.non_field_errors'
+          description: '* `env_variables.non_field_errors` - env_variables.non_field_errors'
         code:
           enum:
           - not_a_list
@@ -3915,15 +3910,14 @@ components:
       - $ref: '#/components/schemas/UpdateDeploymentChangesImageNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesImageTypeErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesImageNewValueErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandTypeErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandNewValueErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsTypeErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueUsernameErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValuePasswordErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueRegistryUrlErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesCommandNewValueErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckTypeErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueNonFieldErrorsErrorComponent'
@@ -3931,6 +3925,15 @@ components:
       - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueValueErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueTimeoutSecondsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueIntervalSecondsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueContainerPathErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXTypeErrorComponent'
@@ -3944,24 +3947,15 @@ components:
       - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXTypeErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXItemIdErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValuePublicErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueHostErrorComponent'
       - $ref: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueForwardedErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXTypeErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXItemIdErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueKeyErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueValueErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXTypeErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueMountPathErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent'
-      - $ref: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXTypeErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXItemIdErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNewValueKeyErrorComponent'
+      - $ref: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNewValueValueErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -3969,15 +3963,14 @@ components:
           image.non_field_errors: '#/components/schemas/UpdateDeploymentChangesImageNonFieldErrorsErrorComponent'
           image.type: '#/components/schemas/UpdateDeploymentChangesImageTypeErrorComponent'
           image.new_value: '#/components/schemas/UpdateDeploymentChangesImageNewValueErrorComponent'
-          command.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent'
-          command.type: '#/components/schemas/UpdateDeploymentChangesCommandTypeErrorComponent'
-          command.new_value: '#/components/schemas/UpdateDeploymentChangesCommandNewValueErrorComponent'
           credentials.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCredentialsNonFieldErrorsErrorComponent'
           credentials.type: '#/components/schemas/UpdateDeploymentChangesCredentialsTypeErrorComponent'
           credentials.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueNonFieldErrorsErrorComponent'
           credentials.new_value.username: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueUsernameErrorComponent'
           credentials.new_value.password: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValuePasswordErrorComponent'
-          credentials.new_value.registry_url: '#/components/schemas/UpdateDeploymentChangesCredentialsNewValueRegistryUrlErrorComponent'
+          command.non_field_errors: '#/components/schemas/UpdateDeploymentChangesCommandNonFieldErrorsErrorComponent'
+          command.type: '#/components/schemas/UpdateDeploymentChangesCommandTypeErrorComponent'
+          command.new_value: '#/components/schemas/UpdateDeploymentChangesCommandNewValueErrorComponent'
           healthcheck.non_field_errors: '#/components/schemas/UpdateDeploymentChangesHealthcheckNonFieldErrorsErrorComponent'
           healthcheck.type: '#/components/schemas/UpdateDeploymentChangesHealthcheckTypeErrorComponent'
           healthcheck.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueNonFieldErrorsErrorComponent'
@@ -3985,6 +3978,15 @@ components:
           healthcheck.new_value.value: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueValueErrorComponent'
           healthcheck.new_value.timeout_seconds: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueTimeoutSecondsErrorComponent'
           healthcheck.new_value.interval_seconds: '#/components/schemas/UpdateDeploymentChangesHealthcheckNewValueIntervalSecondsErrorComponent'
+          volumes.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent'
+          volumes.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent'
+          volumes.INDEX.type: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXTypeErrorComponent'
+          volumes.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent'
+          volumes.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent'
+          volumes.INDEX.new_value.name: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent'
+          volumes.INDEX.new_value.container_path: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueContainerPathErrorComponent'
+          volumes.INDEX.new_value.host_path: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent'
+          volumes.INDEX.new_value.mode: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent'
           urls.non_field_errors: '#/components/schemas/UpdateDeploymentChangesUrlsNonFieldErrorsErrorComponent'
           urls.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXNonFieldErrorsErrorComponent'
           urls.INDEX.type: '#/components/schemas/UpdateDeploymentChangesUrlsINDEXTypeErrorComponent'
@@ -3998,24 +4000,15 @@ components:
           ports.INDEX.type: '#/components/schemas/UpdateDeploymentChangesPortsINDEXTypeErrorComponent'
           ports.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesPortsINDEXItemIdErrorComponent'
           ports.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueNonFieldErrorsErrorComponent'
-          ports.INDEX.new_value.public: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValuePublicErrorComponent'
+          ports.INDEX.new_value.host: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueHostErrorComponent'
           ports.INDEX.new_value.forwarded: '#/components/schemas/UpdateDeploymentChangesPortsINDEXNewValueForwardedErrorComponent'
-          env.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvNonFieldErrorsErrorComponent'
-          env.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNonFieldErrorsErrorComponent'
-          env.INDEX.type: '#/components/schemas/UpdateDeploymentChangesEnvINDEXTypeErrorComponent'
-          env.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesEnvINDEXItemIdErrorComponent'
-          env.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueNonFieldErrorsErrorComponent'
-          env.INDEX.new_value.key: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueKeyErrorComponent'
-          env.INDEX.new_value.value: '#/components/schemas/UpdateDeploymentChangesEnvINDEXNewValueValueErrorComponent'
-          volumes.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesNonFieldErrorsErrorComponent'
-          volumes.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNonFieldErrorsErrorComponent'
-          volumes.INDEX.type: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXTypeErrorComponent'
-          volumes.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXItemIdErrorComponent'
-          volumes.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNonFieldErrorsErrorComponent'
-          volumes.INDEX.new_value.name: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent'
-          volumes.INDEX.new_value.mount_path: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueMountPathErrorComponent'
-          volumes.INDEX.new_value.host_path: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent'
-          volumes.INDEX.new_value.mode: '#/components/schemas/UpdateDeploymentChangesVolumesINDEXNewValueModeErrorComponent'
+          env_variables.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvVariablesNonFieldErrorsErrorComponent'
+          env_variables.INDEX.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNonFieldErrorsErrorComponent'
+          env_variables.INDEX.type: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXTypeErrorComponent'
+          env_variables.INDEX.item_id: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXItemIdErrorComponent'
+          env_variables.INDEX.new_value.non_field_errors: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNewValueNonFieldErrorsErrorComponent'
+          env_variables.INDEX.new_value.key: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNewValueKeyErrorComponent'
+          env_variables.INDEX.new_value.value: '#/components/schemas/UpdateDeploymentChangesEnvVariablesINDEXNewValueValueErrorComponent'
     UpdateDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/UpdateDeploymentChangesValidationError'
@@ -4035,18 +4028,16 @@ components:
           description: '* `healthcheck.new_value.interval_seconds` - healthcheck.new_value.interval_seconds'
         code:
           enum:
-          - blank
           - invalid
+          - max_string_length
+          - min_value
           - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -4213,6 +4204,7 @@ components:
           enum:
           - blank
           - invalid
+          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
@@ -4220,6 +4212,7 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -4348,6 +4341,30 @@ components:
       - attr
       - code
       - detail
+    UpdateDeploymentChangesPortsINDEXNewValueHostErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ports.INDEX.new_value.host
+          type: string
+          description: '* `ports.INDEX.new_value.host` - ports.INDEX.new_value.host'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     UpdateDeploymentChangesPortsINDEXNewValueNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -4359,34 +4376,10 @@ components:
         code:
           enum:
           - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateDeploymentChangesPortsINDEXNewValuePublicErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - ports.INDEX.new_value.public
-          type: string
-          description: '* `ports.INDEX.new_value.public` - ports.INDEX.new_value.public'
-        code:
-          enum:
-          - invalid
-          - max_string_length
           - 'null'
           type: string
           description: |-
             * `invalid` - invalid
-            * `max_string_length` - max_string_length
             * `null` - null
         detail:
           type: string
@@ -4406,10 +4399,12 @@ components:
           enum:
           - invalid
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -4561,11 +4556,11 @@ components:
         code:
           enum:
           - invalid
-          - required
+          - 'null'
           type: string
           description: |-
             * `invalid` - invalid
-            * `required` - required
+            * `null` - null
         detail:
           type: string
       required:
@@ -4606,10 +4601,12 @@ components:
           enum:
           - invalid
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -4704,6 +4701,38 @@ components:
       - attr
       - code
       - detail
+    UpdateDeploymentChangesVolumesINDEXNewValueContainerPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - volumes.INDEX.new_value.container_path
+          type: string
+          description: '* `volumes.INDEX.new_value.container_path` - volumes.INDEX.new_value.container_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     UpdateDeploymentChangesVolumesINDEXNewValueHostPathErrorComponent:
       type: object
       properties:
@@ -4756,38 +4785,6 @@ components:
       - attr
       - code
       - detail
-    UpdateDeploymentChangesVolumesINDEXNewValueMountPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - volumes.INDEX.new_value.mount_path
-          type: string
-          description: '* `volumes.INDEX.new_value.mount_path` - volumes.INDEX.new_value.mount_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     UpdateDeploymentChangesVolumesINDEXNewValueNameErrorComponent:
       type: object
       properties:
@@ -4829,11 +4826,11 @@ components:
         code:
           enum:
           - invalid
-          - required
+          - 'null'
           type: string
           description: |-
             * `invalid` - invalid
-            * `required` - required
+            * `null` - null
         detail:
           type: string
       required:
@@ -4852,10 +4849,12 @@ components:
           enum:
           - invalid
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -5033,6 +5032,8 @@ components:
           type: string
           maxLength: 150
       required:
+      - first_name
+      - last_name
       - username
     ValidationErrorEnum:
       enum:
@@ -5042,14 +5043,6 @@ components:
     Volume:
       type: object
       properties:
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
         id:
           type: string
           maxLength: 255
@@ -5067,9 +5060,10 @@ components:
           $ref: '#/components/schemas/VolumeModeEnum'
       required:
       - container_path
-      - created_at
+      - host_path
+      - id
+      - mode
       - name
-      - updated_at
     VolumeGetSizeResponse:
       type: object
       properties:
@@ -5077,20 +5071,18 @@ components:
           type: integer
       required:
       - size
-    VolumeItemChange:
+    VolumeItemChangeRequest:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/TypeF7eEnum'
         item_id:
           type: string
+          minLength: 1
           maxLength: 255
         new_value:
-          allOf:
-          - $ref: '#/components/schemas/VolumeRequest'
-          nullable: true
+          $ref: '#/components/schemas/VolumeRequestRequest'
       required:
-      - new_value
       - type
     VolumeModeEnum:
       enum:
@@ -5100,32 +5092,35 @@ components:
       description: |-
         * `READ_ONLY` - Read-Only
         * `READ_WRITE` - Read-Write
-    VolumeRequest:
+    VolumeRequestModeEnum:
+      enum:
+      - READ_ONLY
+      - READ_WRITE
+      type: string
+      description: |-
+        * `READ_ONLY` - READ_ONLY
+        * `READ_WRITE` - READ_WRITE
+    VolumeRequestRequest:
       type: object
       properties:
         name:
           type: string
+          minLength: 1
           maxLength: 100
-        mount_path:
+        container_path:
           type: string
+          minLength: 1
           maxLength: 255
         host_path:
           type: string
+          minLength: 1
           maxLength: 255
         mode:
           allOf:
           - $ref: '#/components/schemas/VolumeRequestModeEnum'
-          default: rw
+          default: READ_WRITE
       required:
-      - mount_path
-    VolumeRequestModeEnum:
-      enum:
-      - ro
-      - rw
-      type: string
-      description: |-
-        * `ro` - READ_ONLY
-        * `rw` - READ_WRITE
+      - container_path
   securitySchemes:
     cookieAuth:
       type: apiKey
