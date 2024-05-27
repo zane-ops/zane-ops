@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,11 +18,10 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
-import { useProjectList } from "~/components/helper/use-project-list";
 import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
@@ -33,12 +32,13 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
-import { formatedDate } from "~/utils";
+import { formattedDate } from "~/utils";
+import { useProjectList } from "~/lib/hooks/use-project-list";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -126,7 +126,7 @@ export function ProjectList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projectList?.map((project: any) => (
+              {projectList.map((project) => (
                 <TableRow
                   className="border-border cursor-pointer"
                   key={project.id}
@@ -136,14 +136,13 @@ export function ProjectList() {
                     {project.slug}
                   </TableCell>
                   <TableCell>{project.description}</TableCell>
-                  <TableCell>{formatedDate(project.updated_at)}</TableCell>
+                  <TableCell>{formattedDate(project.updated_at)}</TableCell>
                   <TableCell>
                     <StatusBadge
                       color={
                         project.healthy_services === project.total_services
                           ? "green"
-                          : project.healthy_services === 0 &&
-                              project.total_services > 0
+                          : project.healthy_services === 0
                             ? "red"
                             : "yellow"
                       }

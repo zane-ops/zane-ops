@@ -24,28 +24,13 @@ export function deleteCookie(name: string): void {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 }
 
-function getMonthName(monthNumber: number) {
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-  ];
-  return monthNames[monthNumber - 1];
-}
+export function formattedDate(dateInput: string | Date): string {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
 
-export function formatedDate(x: string) {
-  const date = new Date(x);
-  const year = date.getFullYear();
-  const month = getMonthName(date.getMonth());
-  const day = date.getDate();
-  return `${month} ${day}, ${year}`;
+  return formattedDate;
 }
