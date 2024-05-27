@@ -14,6 +14,6 @@ export function useProjectList() {
         return TWO_MINUTES;
       }
       return false;
-    },
+    }
   });
 }
