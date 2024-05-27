@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Any
 
 from drf_standardized_errors.handler import ExceptionHandler
 from rest_framework import exceptions, status
@@ -40,3 +41,16 @@ class CustomExceptionHandler(ExceptionHandler):
                 detail="Authentication required. Please log in to access this resource.",
             )
         return super().convert_known_exceptions(exc)
+
+
+def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
+    """
+    Mark all response outputs as required in the openAPI specification,
+    because DRF spectucular was mistakenly making non read only fields as optional
+    """
+    schemas = result.get("components", {}).get("schemas", {})
+    for name, schema in schemas.items():
+        if name.endswith("Request") or "properties" not in schema:
+            continue
+        schema["required"] = sorted(schema["properties"].keys())
+    return result

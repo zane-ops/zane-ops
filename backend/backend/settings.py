@@ -263,8 +263,11 @@ SPECTACULAR_SETTINGS = {
         "ErrorCode500Enum": "drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices",
     },
     "POSTPROCESSING_HOOKS": [
-        "drf_standardized_errors.openapi_hooks.postprocess_schema_enums"
+        "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",
+        "zane_api.views.drf_spectular_mark_all_outputs_required",
     ],
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENFORCE_NON_BLANK_FIELDS": True,
 }
 
 # For having colorized output in tests
