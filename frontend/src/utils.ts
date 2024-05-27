@@ -23,3 +23,14 @@ export function deleteCookie(name: string): void {
   // Delete the cookie by setting the expiration date in the past
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 }
+
+export function formattedDate(dateInput: string | Date): string {
+  const date = new Date(dateInput);
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+
+  return formattedDate;
+}
