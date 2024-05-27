@@ -526,27 +526,6 @@ class GitDeployment(BaseDeployment):
     commit_author_username = models.CharField(max_length=255)
     commit_author_avatar_url = models.URLField(null=True)
 
-    # @property
-    # def image_tags(self) -> List[str]:
-    #     tags = []  # type: List[str]
-    #     if self.is_current_production:
-    #         tags.append("latest")
-    #     tags.append(f"{self.branch}-{self.commit_hash}")
-    #     return list(map(tags, lambda tag: f"{self.image_name}:{tag}"))
-    #
-    # @property
-    # def image_name(self):
-    #     project_prefix = self.service.project.slug
-    #     service_prefix = self.service.slug
-    #     return f"{project_prefix}-{service_prefix}"
-
-    # @property
-    # def domain(self):
-    #     if self.is_production:
-    #         return self.service.base_domain
-    #
-    #     return f"{self.service.project.slug}-{self.service.slug}-{self.commit_hash}.{self.service.base_domain}"
-
     def __str__(self):
         return f"GitDeployment(branch={self.branch} - commit_ha={self.commit_hash[:7]} - status={self.build_status})"
 
