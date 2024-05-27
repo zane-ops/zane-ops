@@ -140,13 +140,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/LoginRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/LoginRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/LoginRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -405,13 +405,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerPortCheckRequest'
+              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerPortCheckRequest'
+              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerPortCheckRequest'
+              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -534,13 +534,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerLoginRequest'
+              $ref: '#/components/schemas/DockerLoginRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerLoginRequest'
+              $ref: '#/components/schemas/DockerLoginRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerLoginRequest'
+              $ref: '#/components/schemas/DockerLoginRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -761,13 +761,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ProjectCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ProjectCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -926,13 +926,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -1013,13 +1013,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceCreateRequest'
+              $ref: '#/components/schemas/DockerServiceCreateRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -1471,13 +1471,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+              $ref: '#/components/schemas/PatchedProjectUpdateRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -1718,6 +1718,7 @@ components:
           readOnly: true
       required:
       - archived_at
+      - slug
     ArchivedProjectsListError:
       oneOf:
       - $ref: '#/components/schemas/ArchivedProjectsListSlugErrorComponent'
@@ -2853,18 +2854,21 @@ components:
       required:
       - errors
       - type
-    DockerCredentialsRequest:
+    DockerCredentialsRequestRequest:
       type: object
       properties:
         username:
           type: string
+          minLength: 1
           maxLength: 100
         password:
           type: string
+          minLength: 1
           maxLength: 100
         registry_url:
           type: string
           format: uri
+          minLength: 1
           default: registry-1.docker.io/v2
       required:
       - password
@@ -2998,18 +3002,21 @@ components:
       - attr
       - code
       - detail
-    DockerLoginRequest:
+    DockerLoginRequestRequest:
       type: object
       properties:
         username:
           type: string
+          minLength: 1
           maxLength: 255
         password:
           type: string
+          minLength: 1
           maxLength: 255
         registry_url:
           type: string
           format: uri
+          minLength: 1
       required:
       - password
       - username
@@ -3064,7 +3071,7 @@ components:
       required:
       - errors
       - type
-    DockerPortCheckRequest:
+    DockerPortCheckRequestRequest:
       type: object
       properties:
         port:
@@ -3131,6 +3138,7 @@ components:
             type: string
           readOnly: true
       required:
+      - command
       - created_at
       - env_variables
       - healthcheck
@@ -3141,40 +3149,44 @@ components:
       - updated_at
       - urls
       - volumes
-    DockerServiceCreateRequest:
+    DockerServiceCreateRequestRequest:
       type: object
       properties:
         slug:
           type: string
+          minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         image:
           type: string
+          minLength: 1
         command:
           type: string
+          minLength: 1
         credentials:
-          $ref: '#/components/schemas/DockerCredentialsRequest'
+          $ref: '#/components/schemas/DockerCredentialsRequestRequest'
         urls:
           type: array
           items:
-            $ref: '#/components/schemas/URLRequest'
+            $ref: '#/components/schemas/URLRequestRequest'
           default: []
         ports:
           type: array
           items:
-            $ref: '#/components/schemas/ServicePortsRequest'
+            $ref: '#/components/schemas/ServicePortsRequestRequest'
           default: []
         env:
           type: object
           additionalProperties:
             type: string
+            minLength: 1
         volumes:
           type: array
           items:
-            $ref: '#/components/schemas/VolumeRequest'
+            $ref: '#/components/schemas/VolumeRequestRequest'
           default: []
         healthcheck:
-          $ref: '#/components/schemas/HealthCheckRequest'
+          $ref: '#/components/schemas/HealthCheckRequestRequest'
       required:
       - image
     DockerServiceDeployment:
@@ -3212,7 +3224,14 @@ components:
           readOnly: true
       required:
       - created_at
+      - hash
+      - image_tag
+      - is_current_production
+      - is_redeploy_of
       - network_aliases
+      - status
+      - status_reason
+      - url
     Error401:
       type: object
       properties:
@@ -3381,13 +3400,19 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-    HealthCheckRequest:
+      required:
+      - interval_seconds
+      - timeout_seconds
+      - type
+      - value
+    HealthCheckRequestRequest:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/HealthCheckRequestTypeEnum'
         value:
           type: string
+          minLength: 1
           maxLength: 255
         timeout_seconds:
           type: integer
@@ -3395,6 +3420,7 @@ components:
           default: 60
         interval_seconds:
           type: string
+          minLength: 1
           default: '30'
       required:
       - type
@@ -3488,17 +3514,17 @@ components:
       - attr
       - code
       - detail
-    LoginRequest:
+    LoginRequestRequest:
       type: object
       properties:
         username:
           type: string
-          maxLength: 255
           minLength: 1
+          maxLength: 255
         password:
           type: string
-          maxLength: 255
           minLength: 1
+          maxLength: 255
       required:
       - password
       - username
@@ -3511,6 +3537,7 @@ components:
           type: string
       required:
       - success
+      - token
     LoginUsernameErrorComponent:
       type: object
       properties:
@@ -3584,6 +3611,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedDockerServiceDeploymentList:
       type: object
       properties:
@@ -3604,6 +3636,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DockerServiceDeployment'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedProjectList:
       type: object
       properties:
@@ -3624,6 +3661,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+      required:
+      - count
+      - next
+      - previous
+      - results
     ParseError:
       type: object
       properties:
@@ -3655,15 +3697,17 @@ components:
       required:
       - errors
       - type
-    PatchedProjectUpdateRequest:
+    PatchedProjectUpdateRequestRequest:
       type: object
       properties:
         slug:
           type: string
+          minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         description:
           type: string
+          minLength: 1
     PortConfiguration:
       type: object
       properties:
@@ -3678,6 +3722,7 @@ components:
           minimum: 0
       required:
       - forwarded
+      - host
     Project:
       type: object
       properties:
@@ -3707,19 +3752,23 @@ components:
           readOnly: true
       required:
       - created_at
+      - description
       - healthy_services
+      - id
       - slug
       - total_services
       - updated_at
-    ProjectCreateRequest:
+    ProjectCreateRequestRequest:
       type: object
       properties:
         slug:
           type: string
+          minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         description:
           type: string
+          minLength: 1
     ProjectsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsListSlugErrorComponent'
@@ -3894,7 +3943,7 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ServicePortsRequest:
+    ServicePortsRequestRequest:
       type: object
       properties:
         public:
@@ -3939,14 +3988,18 @@ components:
         strip_prefix:
           type: boolean
       required:
+      - base_path
       - domain
-    URLRequest:
+      - strip_prefix
+    URLRequestRequest:
       type: object
       properties:
         domain:
           type: string
+          minLength: 1
         base_path:
           type: string
+          minLength: 1
           default: /
         strip_prefix:
           type: boolean
@@ -4945,6 +4998,8 @@ components:
           type: string
           maxLength: 150
       required:
+      - first_name
+      - last_name
       - username
     ValidationErrorEnum:
       enum:
@@ -4980,6 +5035,9 @@ components:
       required:
       - container_path
       - created_at
+      - host_path
+      - id
+      - mode
       - name
       - updated_at
     VolumeGetSizeResponse:
@@ -4997,24 +5055,6 @@ components:
       description: |-
         * `READ_ONLY` - Read-Only
         * `READ_WRITE` - Read-Write
-    VolumeRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 100
-        mount_path:
-          type: string
-          maxLength: 255
-        host_path:
-          type: string
-          maxLength: 255
-        mode:
-          allOf:
-          - $ref: '#/components/schemas/VolumeRequestModeEnum'
-          default: rw
-      required:
-      - mount_path
     VolumeRequestModeEnum:
       enum:
       - ro
@@ -5023,6 +5063,27 @@ components:
       description: |-
         * `ro` - READ_ONLY
         * `rw` - READ_WRITE
+    VolumeRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        mount_path:
+          type: string
+          minLength: 1
+          maxLength: 255
+        host_path:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/VolumeRequestModeEnum'
+          default: rw
+      required:
+      - mount_path
   securitySchemes:
     cookieAuth:
       type: apiKey
