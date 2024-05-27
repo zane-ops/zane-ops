@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,14 +18,11 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
-import {
-  useProjectList,
-  useProjectStatus
-} from "~/components/helper/use-project-list";
+import { useProjectList } from "~/components/helper/use-project-list";
 import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
@@ -36,11 +33,11 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -61,21 +58,6 @@ function AuthedView() {
   );
 }
 
-// TODO: to remove
-type TrackerColor = "red" | "green" | "yellow";
-function getBadgeColor(tracker: number): TrackerColor {
-  switch (tracker) {
-    case 0:
-      return "red";
-    case 1:
-      return "green";
-    case 2:
-      return "yellow";
-    default:
-      return "green";
-  }
-}
-
 export function ProjectList() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(10);
@@ -89,7 +71,7 @@ export function ProjectList() {
 
   return (
     <>
-      {projectList.length === 0 ? (
+      {(projectList?.length ?? 0) === 0 ? (
         <main className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
@@ -143,7 +125,7 @@ export function ProjectList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projectList.map((project: any) => (
+              {projectList?.map((project: any) => (
                 <TableRow
                   className="border-border cursor-pointer"
                   key={project.id}
@@ -155,8 +137,20 @@ export function ProjectList() {
                   <TableCell>{project.description}</TableCell>
                   <TableCell>{project.updated_at}</TableCell>
                   <TableCell>
-                    <StatusBadge color={getBadgeColor(project.tracker)}>
-                      <ProjectStatus projectid={project.id} />
+                    <StatusBadge
+                      color={
+                        project.healthy_services === project.total_services
+                          ? "green"
+                          : project.healthy_services === 0 &&
+                              project.total_services > 0
+                            ? "red"
+                            : "yellow"
+                      }
+                    >
+                      <p>
+                        {project.healthy_services}/
+                        {`${project.total_services} Services Up`}
+                      </p>
                     </StatusBadge>
                   </TableCell>
                   <TableCell className="flex justify-end">
@@ -182,27 +176,5 @@ export function ProjectList() {
         </main>
       )}
     </>
-  );
-}
-
-function ProjectStatus({ projectid }: { projectid: string }) {
-  const queryProjectStatus = useProjectStatus(projectid);
-  if (queryProjectStatus.isLoading) {
-    return "loading";
-  }
-
-  console.log(queryProjectStatus.data?.data);
-
-  const projectData = queryProjectStatus.data?.data?.projects[projectid];
-  if (!projectData) {
-    return <p>No data available for project with ID {projectid}</p>;
-  }
-
-  const healthyServices = projectData.healthy_services;
-  const totalServices = projectData.total_services;
-  return (
-    <p>
-      {healthyServices}/{totalServices} Services Up
-    </p>
   );
 }

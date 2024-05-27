@@ -1,20 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 
+const TWO_MINUTES = 2 * 60 * 1000;
+
 export function useProjectList() {
   return useQuery({
     queryKey: ["PROJECT_LIST"],
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", { signal });
-    }
-  });
-}
-
-export function useProjectStatus(id: string) {
-  return useQuery({
-    queryKey: [id],
-    queryFn: ({ signal }) => {
-      return apiClient.GET(`/api/projects/status-list?ids=${id}`, { signal });
-    }
+    },
+    refetchInterval: (query) => {
+      if (query.state.data?.data?.results) {
+        return TWO_MINUTES;
+      }
+      return false;
+    },
   });
 }
