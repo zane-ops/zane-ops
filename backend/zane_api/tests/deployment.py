@@ -11,7 +11,9 @@ from ..models import (
     DockerRegistryService,
     DockerDeploymentChange,
     Volume,
+    PortConfiguration,
 )
+from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -723,4 +725,132 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_cannot_specify_the_same_host_port_twice(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.create(
+            field="ports",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "host": 8888,
+                "forwarded": 3000,
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "ADD",
+            "new_value": {
+                "host": 8888,
+                "forwarded": 8000,
+            },
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_cannot_use_unavailable_host_port(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(
+            slug="app", project=p, image="caddy:2.8-alpine"
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "ADD",
+            "new_value": {
+                "host": self.fake_docker_client.PORT_USED_BY_HOST,
+                "forwarded": 80,
+            },
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_cannot_use_port_already_used_by_other_services(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        redis = DockerRegistryService.objects.create(
+            slug="cache-db", image="redis", project=p
+        )
+        redis.ports.add(
+            PortConfiguration.objects.create(
+                host=8082,
+                forwarded=5540,
+            )
+        )
+
+        service = DockerRegistryService.objects.create(
+            slug="app", project=p, image="caddy:2.8-alpine"
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "ADD",
+            "new_value": {
+                "host": 8082,
+                "forwarded": 80,
+            },
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_cannot_specify_two_http_ports(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(
+            slug="app", project=p, image="caddy:2.8-alpine"
+        )
+        DockerDeploymentChange.objects.create(
+            field="ports",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "host": 443,
+                "forwarded": 3000,
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "ADD",
+            "new_value": {
+                "host": 80,
+                "forwarded": 80,
+            },
+        }
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

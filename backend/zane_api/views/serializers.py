@@ -502,7 +502,9 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         if len(volumes_with_same_container_path) >= 2:
             raise serializers.ValidationError(
                 {
-                    "new_value": "Cannot specify two volumes with the same `container path` for this service"
+                    "new_value": {
+                        "container_path": "Cannot specify two volumes with the same `container path` for this service"
+                    }
                 }
             )
 
@@ -518,7 +520,9 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         if len(volumes_with_same_host_path) >= 2:
             raise serializers.ValidationError(
                 {
-                    "new_value": "Cannot specify two volumes with the same `host path` for this service"
+                    "new_value": {
+                        "host_path": "Cannot specify two volumes with the same `host path` for this service"
+                    }
                 }
             )
 
@@ -556,7 +560,9 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
         if len(envs_with_same_host_path) >= 2:
             raise serializers.ValidationError(
                 {
-                    "new_value": "Cannot specify two env variables with the same `key` for this service"
+                    "new_value": {
+                        "key": "Cannot specify two env variables with the same `key` for this service"
+                    }
                 }
             )
         return attrs
@@ -583,6 +589,60 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                         ]
                     }
                 )
+
+        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        # validate double host port
+        ports_with_same_host = list(
+            filter(
+                lambda port: port.host is not None
+                and port.host == attrs.get("new_value", {}).get("host"),
+                snapshot.ports,
+            )
+        )
+        if len(ports_with_same_host) >= 2:
+            raise serializers.ValidationError(
+                {"new_value": {"host": "Duplicate `host` port values are not allowed."}}
+            )
+
+        # validate double http port
+        http_ports = [80, 443]
+        ports_exposed_to_http = list(
+            filter(
+                lambda port: port.host is not None and port.host in http_ports,
+                snapshot.ports,
+            )
+        )
+        if len(ports_exposed_to_http) >= 2:
+            raise serializers.ValidationError(
+                {"new_value": {"host": "Only one HTTP port is allowed"}}
+            )
+
+        # check if port is available
+        public_port = attrs.get("new_value", {}).get("host")
+        if public_port is not None and public_port not in http_ports:
+            is_port_available = check_if_port_is_available_on_host(public_port)
+            if not is_port_available:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "host": f"Port `{public_port}` is not available on the host machine."
+                        }
+                    }
+                )
+
+        # check if port is not already used by another service
+        already_existing_port: PortConfiguration = PortConfiguration.objects.filter(
+            host=public_port
+        ).first()
+        if already_existing_port is not None:
+            raise serializers.ValidationError(
+                {
+                    "new_value": {
+                        "host": f"host Port {already_existing_port.host} is already used by other services."
+                    }
+                }
+            )
+
         return attrs
 
 

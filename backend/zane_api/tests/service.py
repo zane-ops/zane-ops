@@ -401,64 +401,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     self.assertEqual(6383, port_in_docker["PublishedPort"])
     #     self.assertEqual(6379, port_in_docker["TargetPort"])
     #
-    # def test_create_service_should_not_work_with_unavailable_host_port(self):
-    #     owner = self.loginUser()
-    #     p = Project.objects.create(slug="kiss-cam", owner=owner)
-    #
-    #     create_service_payload = {
-    #         "slug": "nosql-db",
-    #         "image": "redis:alpine",
-    #         "ports": [
-    #             {"host": FakeDockerClient.PORT_USED_BY_HOST, "forwarded": 6379},
-    #         ],
-    #     }
-    #
-    #     response = self.client.post(
-    #         reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-    #         data=json.dumps(create_service_payload),
-    #         content_type="application/json",
-    #     )
-    #     self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-    #
-    #     created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-    #         slug="nosql-db"
-    #     ).first()
-    #     self.assertIsNone(created_service)
-    #
-    # def test_create_service_should_not_work_with_port_already_used_by_other_services(
-    #     self,
-    # ):
-    #     owner = self.loginUser()
-    #     p = Project.objects.create(slug="kiss-cam", owner=owner)
-    #
-    #     service = DockerRegistryService.objects.create(
-    #         slug="cache-db", image="redis", project=p
-    #     )
-    #
-    #     used_port = PortConfiguration(
-    #         host=8082,
-    #         forwarded=5540,
-    #     )
-    #     used_port.save()
-    #     service.ports.add(used_port)
-    #
-    #     create_service_payload = {
-    #         "slug": "adminer",
-    #         "image": "adminer:latest",
-    #         "ports": [{"host": used_port.host, "forwarded": 8080}],
-    #     }
-    #
-    #     response = self.client.post(
-    #         reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-    #         data=json.dumps(create_service_payload),
-    #         content_type="application/json",
-    #     )
-    #     self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-    #
-    #     created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-    #         slug="adminer"
-    #     ).first()
-    #     self.assertIsNone(created_service)
     #
     # def test_create_service_with_http_port(self):
     #     owner = self.loginUser()
@@ -770,45 +712,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #     ).first()
     #     self.assertEqual(1, created_service.urls.count())
     #
-    # def test_create_service_can_only_specify_one_http_port(self):
-    #     owner = self.loginUser()
-    #     p = Project.objects.create(slug="kiss-cam", owner=owner)
-    #
-    #     create_service_payload = {
-    #         "slug": "adminer-ui",
-    #         "image": "adminer:latest",
-    #         "ports": [
-    #             {"host": 443, "forwarded": 8080},
-    #             {"host": 80, "forwarded": 8080},
-    #         ],
-    #     }
-    #
-    #     response = self.client.post(
-    #         reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-    #         data=json.dumps(create_service_payload),
-    #         content_type="application/json",
-    #     )
-    #     self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-    #
-    # def test_create_service_cannot_specify_the_same_public_port_twice(self):
-    #     owner = self.loginUser()
-    #     p = Project.objects.create(slug="kiss-cam", owner=owner)
-    #
-    #     create_service_payload = {
-    #         "slug": "adminer-ui",
-    #         "image": "adminer:latest",
-    #         "ports": [
-    #             {"host": 8081, "forwarded": 8080},
-    #             {"host": 8081, "forwarded": 8080},
-    #         ],
-    #     }
-    #
-    #     response = self.client.post(
-    #         reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-    #         data=json.dumps(create_service_payload),
-    #         content_type="application/json",
-    #     )
-    #     self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
     #
     # def test_create_service_cannot_specify_the_same_url_twice(self):
     #     owner = self.loginUser()
@@ -823,26 +726,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     #         ],
     #         "ports": [
     #             {"forwarded": 8080},
-    #         ],
-    #     }
-    #
-    #     response = self.client.post(
-    #         reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-    #         data=json.dumps(create_service_payload),
-    #         content_type="application/json",
-    #     )
-    #     self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-    #
-    # def test_create_service_cannot_specify_the_same_volume_mount_path_twice(self):
-    #     owner = self.loginUser()
-    #     p = Project.objects.create(slug="kiss-cam", owner=owner)
-    #
-    #     create_service_payload = {
-    #         "slug": "gitea",
-    #         "image": "gitea/gitea:latest",
-    #         "volumes": [
-    #             {"name": "gitea data", "container_path": "/data"},
-    #             {"name": "gitea config", "container_path": "/data"},
     #         ],
     #     }
     #
