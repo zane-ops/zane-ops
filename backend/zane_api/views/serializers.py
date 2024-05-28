@@ -535,6 +535,23 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {"item_id": [f"Env variable with id `{item_id}` does not exist."]}
                 )
+
+        # validate double `key`
+        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        envs_with_same_host_path = list(
+            filter(
+                lambda env: env.key is not None
+                and env.key == attrs.get("new_value", {}).get("key"),
+                snapshot.env_variables,
+            )
+        )
+
+        if len(envs_with_same_host_path) >= 2:
+            raise serializers.ValidationError(
+                {
+                    "new_value": "Cannot specify two env variables with the same `key` for this service"
+                }
+            )
         return attrs
 
 

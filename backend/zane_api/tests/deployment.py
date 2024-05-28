@@ -660,17 +660,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
     def test_validate_env_cannot_specify_the_same_key_twice(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-
-        create_service_payload = {
-            "slug": "app",
-            "image": "ghcr.io/zaneops/app",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
         DockerDeploymentChange.objects.create(
             field="env_variables",
             type=DockerDeploymentChange.ChangeType.ADD,
@@ -678,6 +668,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                 "key": "SECRET_KEY",
                 "value": "super5EC4TK4YYY",
             },
+            service=service,
         )
 
         changes_payload = {
