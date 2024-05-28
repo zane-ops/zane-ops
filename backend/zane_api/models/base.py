@@ -169,6 +169,9 @@ class DockerEnvVariable(BaseEnvVariable):
     def __str__(self):
         return f"DockerEnvVariable({self.key})"
 
+    class Meta:
+        unique_together = ["key", "service"]
+
 
 class DockerRegistryService(BaseService):
     ID_PREFIX = "srv_dkr_"
