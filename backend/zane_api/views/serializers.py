@@ -502,17 +502,6 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                         }
                     )
 
-        ports_exposed_to_http = list(
-            filter(
-                lambda port: port.host is not None and port.host in http_ports,
-                snapshot.ports,
-            )
-        )
-        if attrs.get("new_value") is not None and len(ports_exposed_to_http) == 0:
-            raise serializers.ValidationError(
-                {"new_value": f"Cannot add a URL without a HTTP port (80/443)"}
-            )
-
         return attrs
 
 

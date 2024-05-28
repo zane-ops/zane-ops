@@ -954,25 +954,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_url_cannot_add_url_if_no_forwarded_http_port(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-
-        changes_payload = {
-            "field": "urls",
-            "type": "ADD",
-            "new_value": {"domain": "hello.com"},
-        }
-        response = self.client.patch(
-            reverse(
-                "zane_api:services.docker.deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
     def test_validate_url_cannot_specify_custom_url_and_public_port_at_the_same_time(
         self,
     ):
