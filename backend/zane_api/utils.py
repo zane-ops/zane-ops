@@ -146,7 +146,7 @@ def format_seconds(seconds: float):
         return f"{remaining_seconds}s"
 
 
-def jprint(value):
+def jprint(value: dict | list | str | int | float):
     """
     Print & format value as JSON
     """
