@@ -436,7 +436,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             service__slug="app", field="image"
@@ -516,48 +515,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertEqual(1, DockerDeploymentChange.objects.count())
 
-    def test_validate_volume_cannot_specify_the_same_container_path_twice(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-
-        create_service_payload = {
-            "slug": "app",
-            "image": "ghcr.io/zaneops/app",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        changes_payload = {
-            "volumes": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-logs",
-                        "container_path": "/etc/logs/zane",
-                    },
-                },
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-logs2",
-                        "container_path": "/etc/logs/zane",
-                    },
-                },
-            ],
-        }
-        response = self.client.patch(
-            reverse(
-                "zane_api:services.docker.deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
     def test_validate_volume_cannot_specify_the_same_container_path_twice_with_pending_changes(
         self,
     ):
@@ -568,6 +525,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             field="volumes",
             type=DockerDeploymentChange.ChangeType.ADD,
             new_value={
+                "mode": "READ_WRITE",
                 "name": "zane-logs",
                 "container_path": "/etc/logs/zane",
             },
@@ -575,16 +533,14 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
 
         changes_payload = {
-            "volumes": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-logs2",
-                        "container_path": "/etc/logs/zane",
-                    },
-                },
-            ],
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "zane-logs2",
+                "container_path": "/etc/logs/zane",
+            },
         }
+
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.deployment_changes",
@@ -606,15 +562,12 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         service.volumes.add(volume)
 
         changes_payload = {
-            "volumes": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-logs2",
-                        "container_path": "/etc/logs/zane",
-                    },
-                },
-            ],
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "zane-logs2",
+                "container_path": "/etc/logs/zane",
+            },
         }
         response = self.client.patch(
             reverse(
@@ -628,7 +581,18 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
     def test_validate_conflicting_changes_with_previous_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zaneops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug="app")
         v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
         service.volumes.add(v)
 
@@ -637,6 +601,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             type=DockerDeploymentChange.ChangeType.UPDATE,
             item_id=v.id,
             new_value={
+                "mode": "READ_ONLY",
                 "name": "zane-logs",
                 "container_path": "/etc/logs/zane",
             },
@@ -644,12 +609,9 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
 
         changes_payload = {
-            "volumes": [
-                {
-                    "type": "DELETE",
-                    "item_id": v.id,
-                },
-            ],
+            "field": "volumes",
+            "type": "DELETE",
+            "item_id": v.id,
         }
 
         response = self.client.patch(
@@ -659,6 +621,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_volume_cannot_specify_the_same_host_path_twice(self):
@@ -703,6 +666,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_env_cannot_specify_the_same_key_twice(self):

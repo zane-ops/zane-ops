@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import json
 from contextlib import contextmanager
@@ -150,4 +151,11 @@ def jprint(value: dict | list | str | int | float):
     """
     Print & format value as JSON
     """
-    return print(json.dumps(value, indent=2))
+    return print(json.dumps(value, indent=2, cls=EnhancedJSONEncoder))
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)

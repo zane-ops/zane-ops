@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import django_filters
@@ -7,6 +8,10 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from rest_framework import pagination
 
+from .helpers import (
+    compute_docker_service_snapshot_from_changes,
+    compute_all_deployment_changes,
+)
 from .. import serializers
 from ..docker_operations import (
     check_if_docker_image_exists,
@@ -22,6 +27,7 @@ from ..models import (
     DockerEnvVariable,
     PortConfiguration,
 )
+from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
 
 
@@ -388,6 +394,29 @@ class BaseChangeItemSerializer(serializers.Serializer):
             )
         if change_type == "DELETE":
             attrs["new_value"] = None
+
+        service = self.get_service()
+        changes = compute_all_deployment_changes(service, attrs)
+        items_with_same_id = list(
+            filter(
+                lambda c: c.item_id is not None and c.item_id == attrs.get("item_id"),
+                changes,
+            )
+        )
+        if len(items_with_same_id) >= 2:
+            raise serializers.ValidationError(
+                {
+                    "item_id": f"Cannot make conflicting changes for the field `{attrs['field']}` with id `{attrs.get('item_id')}`"
+                    + "\nattempted to apply these changes :\n"
+                    + "\n".join(
+                        [
+                            json.dumps(change, indent=2, cls=EnhancedJSONEncoder)
+                            for change in items_with_same_id
+                        ]
+                    )
+                }
+            )
+
         return attrs
 
 
@@ -438,12 +467,12 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
     new_value = VolumeRequestSerializer(required=False)
     field = serializers.ChoiceField(choices=["volumes"], required=True)
 
-    def validate(self, attrs: dict):
-        super().validate(attrs)
+    def validate(self, change: dict):
+        super().validate(change)
         service = self.get_service()
-        change_type = attrs["type"]
+        change_type = change["type"]
         if change_type in ["DELETE", "UPDATE"]:
-            item_id = attrs["item_id"]
+            item_id = change["item_id"]
 
             try:
                 service.volumes.get(id=item_id)
@@ -451,7 +480,26 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {"item_id": [f"Volume with id `{item_id}` does not exist."]}
                 )
-        return attrs
+
+        snapshot = compute_docker_service_snapshot_from_changes(service, change)
+
+        # validate double container paths
+        volumes_with_same_container_path = list(
+            filter(
+                lambda v: v.container_path is not None
+                and v.container_path
+                == change.get("new_value", {}).get("container_path"),
+                snapshot.volumes,
+            )
+        )
+        if len(volumes_with_same_container_path) >= 2:
+            raise serializers.ValidationError(
+                {
+                    "new_value": "Cannot specify two volumes with the same `container path` for this service"
+                }
+            )
+
+        return change
 
 
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
