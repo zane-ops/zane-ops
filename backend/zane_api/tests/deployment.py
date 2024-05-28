@@ -621,43 +621,32 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_volume_cannot_specify_the_same_host_path_twice(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-
-        create_service_payload = {
-            "slug": "app",
-            "image": "ghcr.io/zaneops/app",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.create(
+            field="volumes",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "mode": "READ_WRITE",
+                "name": "zane-logs",
+                "container_path": "/etc/localtime",
+                "host_path": "/etc/localtime",
+            },
+            service=service,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "volumes": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-logs",
-                        "container_path": "/etc/logs/zane",
-                        "host_path": "/etc/localtime",
-                    },
-                },
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-localtime",
-                        "container_path": "/etc/localtime",
-                        "host_path": "/etc/localtime",
-                    },
-                },
-            ],
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "zane-logs2",
+                "container_path": "/etc/logs/zane",
+                "host_path": "/etc/localtime",
+            },
         }
         response = self.client.patch(
             reverse(
@@ -666,7 +655,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_env_cannot_specify_the_same_key_twice(self):
@@ -683,25 +671,24 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        DockerDeploymentChange.objects.create(
+            field="env_variables",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "key": "SECRET_KEY",
+                "value": "super5EC4TK4YYY",
+            },
+        )
 
         changes_payload = {
-            "env_variables": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "key": "SECRET_KEY",
-                        "value": "super5EC4TK4YYY",
-                    },
-                },
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "key": "SECRET_KEY",
-                        "value": "super5EC4TK4YYY",
-                    },
-                },
-            ],
+            "field": "env_variables",
+            "type": "ADD",
+            "new_value": {
+                "key": "SECRET_KEY",
+                "value": "superS3c4t",
+            },
         }
+
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.deployment_changes",
@@ -709,4 +696,5 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

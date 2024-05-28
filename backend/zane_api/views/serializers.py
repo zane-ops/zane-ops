@@ -499,6 +499,22 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
+        # validate double host path
+        volumes_with_same_host_path = list(
+            filter(
+                lambda v: v.host_path is not None
+                and v.host_path == change.get("new_value", {}).get("host_path"),
+                snapshot.volumes,
+            )
+        )
+
+        if len(volumes_with_same_host_path) >= 2:
+            raise serializers.ValidationError(
+                {
+                    "new_value": "Cannot specify two volumes with the same `host path` for this service"
+                }
+            )
+
         return change
 
 
