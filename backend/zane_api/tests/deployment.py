@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
 from rest_framework import status
@@ -12,8 +13,8 @@ from ..models import (
     DockerDeploymentChange,
     Volume,
     PortConfiguration,
+    URL,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -817,7 +818,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_ports_cannot_specify_two_http_ports(self):
@@ -852,5 +852,197 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_specify_the_same_url_twice(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="urls",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "dcr.fredkiss.dev",
+                        "base_path": "/portainer",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="ports",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 9000},
+                    service=service,
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_use_zane_domain(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": settings.ZANE_APP_DOMAIN},
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_use_subdomain_if_wildcard_exists(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        redis = DockerRegistryService.objects.create(
+            slug="cache-db", image="redis", project=p
+        )
+        redis.urls.add(URL.objects.create(domain="*.gh.fredkiss.dev"))
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": "abc.gh.fredkiss.dev"},
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_use_zane_domain_as_wildcard(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": f"*.{settings.ZANE_APP_DOMAIN}"},
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_add_url_if_no_forwarded_http_port(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": "hello.com"},
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_specify_custom_url_and_public_port_at_the_same_time(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.create(
+            field="ports",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "host": 5430,
+                "forwarded": 3000,
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": "labs.idx.co"},
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_cannot_specify_custom_url_and_public_port_at_the_same_time(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="urls",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "labs.idx.co",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="ports",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 9000},
+                    service=service,
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "ADD",
+            "new_value": {
+                "host": 5430,
+                "forwarded": 3000,
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

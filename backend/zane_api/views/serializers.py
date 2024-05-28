@@ -74,6 +74,14 @@ class URLRequestSerializer(serializers.Serializer):
                     ]
                 }
             )
+        if url["domain"] == f"*.{settings.ZANE_APP_DOMAIN}":
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        "Using the domain where zaneOps is installed as a wildcard domain is not allowed."
+                    ]
+                }
+            )
         existing_urls = URL.objects.filter(
             domain=url["domain"].lower(), base_path=url["base_path"].lower()
         ).distinct()
@@ -98,7 +106,7 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        f"URL with domain `{url['domain']}` can't be used because it will be shadowed by the wildcard"
+                        f"URL with domain `{url['domain']}` cannot be used because it will be shadowed by the wildcard"
                         f" domain `{domain_as_wildcard}` which is already assigned to another service."
                     ]
                 }
@@ -171,7 +179,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                     raise serializers.ValidationError(
                         {
                             "urls": [
-                                f"Cannot specify both a custom URL and a public port other than a HTTP port (80/443)"
+                                f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
                             ]
                         }
                     )
@@ -205,7 +213,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             # Check for duplicate public ports
             if public_port in public_ports_seen:
                 raise serializers.ValidationError(
-                    "Duplicate public port values are not allowed."
+                    "Duplicate host port values are not allowed."
                 )
             if public_port not in http_ports:
                 public_ports_seen.add(public_port)
@@ -467,6 +475,44 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                         ]
                     }
                 )
+
+        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        # validate double host port
+        same_urls = list(
+            filter(
+                lambda url: url.domain is not None
+                and url.base_path is not None
+                and url.domain == attrs.get("new_value", {}).get("domain")
+                and url.base_path == attrs.get("new_value", {}).get("base_path"),
+                snapshot.urls,
+            )
+        )
+        if len(same_urls) >= 2:
+            raise serializers.ValidationError(
+                {"new_value": "Duplicate urls values for the service are not allowed."}
+            )
+
+        http_ports = [80, 443]
+        if len(snapshot.urls) > 0:
+            for port in snapshot.ports:
+                if port.host not in http_ports:
+                    raise serializers.ValidationError(
+                        {
+                            "new_value": f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
+                        }
+                    )
+
+        ports_exposed_to_http = list(
+            filter(
+                lambda port: port.host is not None and port.host in http_ports,
+                snapshot.ports,
+            )
+        )
+        if attrs.get("new_value") is not None and len(ports_exposed_to_http) == 0:
+            raise serializers.ValidationError(
+                {"new_value": f"Cannot add a URL without a HTTP port (80/443)"}
+            )
+
         return attrs
 
 
@@ -591,6 +637,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                 )
 
         snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+
         # validate double host port
         ports_with_same_host = list(
             filter(
@@ -614,8 +661,24 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         )
         if len(ports_exposed_to_http) >= 2:
             raise serializers.ValidationError(
-                {"new_value": {"host": "Only one HTTP port is allowed"}}
+                {
+                    "new_value": {
+                        "host": "Only one HTTP port (80/443) is allowed, we cannot forward the http requests to two distinct ports."
+                    }
+                }
             )
+
+        # validate that url & host ports don't clash
+        if len(snapshot.urls) > 0:
+            for port in snapshot.ports:
+                if port.host not in http_ports:
+                    raise serializers.ValidationError(
+                        {
+                            "new_value": {
+                                "host": f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
+                            }
+                        }
+                    )
 
         # check if port is available
         public_port = attrs.get("new_value", {}).get("host")

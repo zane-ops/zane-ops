@@ -143,6 +143,9 @@ class PortConfiguration(models.Model):
         host_port = 80 if self.host is None else self.host
         return f"PortConfiguration({host_port} -> {self.forwarded})"
 
+    class Meta:
+        indexes = [models.Index(fields=["host"])]
+
 
 class BaseEnvVariable(models.Model):
     key = models.CharField(max_length=255)

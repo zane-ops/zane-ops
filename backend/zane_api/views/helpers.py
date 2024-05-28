@@ -123,8 +123,8 @@ class EnvVariableDto:
 
 @dataclass
 class PortConfigurationDto:
-    host: str
     forwarded: int
+    host: Optional[int] = None
     id: Optional[str] = None
 
     @classmethod
