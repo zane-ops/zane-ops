@@ -595,6 +595,7 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
             return changes
 
         mount_path_set = set()
+        host_path_set = set()
         service = self.get_service()
         volume_changes: list[DockerDeploymentChange] = list(
             service.unapplied_changes.filter(
@@ -618,8 +619,29 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
             )
         )
 
+        existing_host_path_set = set(
+            filter(
+                lambda path: path is not None,
+                map(
+                    lambda v_change: (v_change.new_value.get("host_path")),
+                    volume_changes,
+                ),
+            )
+        )
+
+        existing_host_path_set.update(
+            filter(
+                lambda path: path is not None,
+                map(
+                    lambda volume: volume.host_path,
+                    volumes,
+                ),
+            )
+        )
+
         for change in changes:
             current_mount_path = change.get("new_value", {}).get("container_path")
+            current_host_path = change.get("new_value", {}).get("host_path")
 
             if current_mount_path is None:
                 continue
@@ -629,8 +651,19 @@ class DockerServiceChangesRequestSerializer(serializers.Serializer):
                 or current_mount_path in existing_container_path_set
             ):
                 raise serializers.ValidationError(
-                    "Cannot specify two volumes with the same container path for this service"
+                    "Cannot specify two volumes with the same `container path` for this service"
                 )
+
+            if current_host_path is not None:
+                if (
+                    current_host_path in host_path_set
+                    or current_host_path in existing_host_path_set
+                ):
+                    raise serializers.ValidationError(
+                        "Cannot specify two volumes with the same `host path` for this service"
+                    )
+
+                host_path_set.add(current_host_path)
 
             mount_path_set.add(current_mount_path)
         return changes

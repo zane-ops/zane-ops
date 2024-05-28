@@ -828,3 +828,47 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_cannot_specify_the_same_host_path_twice(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zaneops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "volumes": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-logs",
+                        "container_path": "/etc/logs/zane",
+                        "host_path": "/etc/localtime",
+                    },
+                },
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "name": "zane-localtime",
+                        "container_path": "/etc/localtime",
+                        "host_path": "/etc/localtime",
+                    },
+                },
+            ],
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
