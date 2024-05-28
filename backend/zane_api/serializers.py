@@ -108,6 +108,11 @@ class DockerDeploymentChangeSerializer(ModelSerializer):
         fields = ["id", "type", "field", "new_value", "old_value"]
 
 
+class DockerCredentialSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
+
+
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
@@ -120,6 +125,7 @@ class DockerServiceSerializer(ModelSerializer):
         child=serializers.CharField(), read_only=True
     )
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+    credentials = DockerCredentialSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService
@@ -137,6 +143,7 @@ class DockerServiceSerializer(ModelSerializer):
             "healthcheck",
             "network_aliases",
             "unapplied_changes",
+            "credentials",
         ]
 
 

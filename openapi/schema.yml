@@ -2833,6 +2833,16 @@ components:
       - command
       type: string
       description: '* `command` - command'
+    DockerCredential:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+      - password
+      - username
     DockerCredentialsChangeFieldFieldEnum:
       enum:
       - credentials
@@ -3169,9 +3179,15 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
+        credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredential'
+          readOnly: true
+          nullable: true
       required:
       - command
       - created_at
+      - credentials
       - env_variables
       - healthcheck
       - id
