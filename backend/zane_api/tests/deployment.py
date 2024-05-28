@@ -12,6 +12,7 @@ from ..models import (
     DockerDeploymentChange,
     Volume,
 )
+from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -423,28 +424,9 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "image": {
-                "type": "UPDATE",
-                "new_value": "ghcr.io/zane-ops/app",
-            },
-            "credentials": {
-                "type": "UPDATE",
-                "new_value": {
-                    "username": "fredkiss3",
-                    "password": "s3cret",
-                },
-            },
-            "healthcheck": {
-                "type": "UPDATE",
-                "new_value": {
-                    "type": "PATH",
-                    "value": "/status",
-                },
-            },
-            "command": {
-                "type": "UPDATE",
-                "new_value": "gunicorn --workers 3 --bind 0.0.0.0:8000 backend.wsgi",
-            },
+            "field": "image",
+            "type": "UPDATE",
+            "new_value": "ghcr.io/zane-ops/app",
         }
 
         response = self.client.patch(
@@ -454,30 +436,12 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(4, DockerDeploymentChange.objects.count())
-        changes = DockerDeploymentChange.objects.filter(service__slug="app")
-        self.assertEqual(
-            "ghcr.io/zane-ops/app", changes.filter(field="image").first().new_value
-        )
-        self.assertEqual(
-            "gunicorn --workers 3 --bind 0.0.0.0:8000 backend.wsgi",
-            changes.filter(field="command").first().new_value,
-        )
-        self.assertEqual(
-            {
-                "username": "fredkiss3",
-                "password": "s3cret",
-            },
-            changes.filter(field="credentials").first().new_value,
-        )
-        self.assertDictContainsSubset(
-            {
-                "type": "PATH",
-                "value": "/status",
-            },
-            changes.filter(field="healthcheck").first().new_value,
-        )
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app", field="image"
+        ).first()
+        self.assertEqual("ghcr.io/zane-ops/app", change.new_value)
 
     def test_request_compound_changes(self):
         owner = self.loginUser()
@@ -495,54 +459,12 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "volumes": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "name": "zane-logs",
-                        "container_path": "/etc/logs/zane",
-                    },
-                },
-            ],
-            "urls": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "domain": "labs.fredkiss.dev",
-                    },
-                },
-            ],
-            "env_variables": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "key": "SECRET_KEY",
-                        "value": "super5EC4TK4YYY",
-                    },
-                },
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "key": "ENVIRONMENT",
-                        "value": "PRODUCTION",
-                    },
-                },
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "key": "ROOT_DOMAIN",
-                        "value": "labs.fredkiss.dev",
-                    },
-                },
-            ],
-            "ports": [
-                {
-                    "type": "ADD",
-                    "new_value": {
-                        "forwarded": 8000,
-                    },
-                },
-            ],
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "zane-logs",
+                "container_path": "/etc/logs/zane",
+            },
         }
 
         response = self.client.patch(
@@ -554,10 +476,11 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        changes = DockerDeploymentChange.objects.filter(
-            Q(service__slug="app") & ~Q(field="image")
-        )
-        self.assertEqual(6, changes.count())
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            Q(service__slug="app") & Q(field="volumes")
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual(DockerDeploymentChange.ChangeType.ADD, change.type)
 
     def test_validate_credentials_with_previous_image(self):
         owner = self.loginUser()
@@ -592,55 +515,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertEqual(1, DockerDeploymentChange.objects.count())
-
-    def test_validate_credentials_with_image_in_changes(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-
-        DockerRegistryService.objects.create(slug="app", project=p)
-
-        changes_payload = {
-            "image": {
-                "new_value": "ghcr.io/zane-ops/app",
-            },
-            "credentials": {
-                "new_value": {
-                    "username": "fredkiss3",
-                    "password": "bad",
-                },
-            },
-        }
-        response = self.client.patch(
-            reverse(
-                "zane_api:services.docker.deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-    def test_validate_credentials_without_an_image_provided(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-
-        DockerRegistryService.objects.create(slug="app", project=p)
-
-        changes_payload = {
-            "credentials": {
-                "new_value": {
-                    "username": "fredkiss3",
-                    "password": "bad",
-                },
-            },
-        }
-        response = self.client.patch(
-            reverse(
-                "zane_api:services.docker.deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_volume_cannot_specify_the_same_container_path_twice(self):
         owner = self.loginUser()
@@ -751,48 +625,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_conflicting_changes_in_the_same_request(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-
-        create_service_payload = {
-            "slug": "app",
-            "image": "ghcr.io/zane-ops/app",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
-        changes_payload = {
-            "volumes": [
-                {
-                    "type": "UPDATE",
-                    "item_id": v.id,
-                    "new_value": {
-                        "name": "zane-logs",
-                        "container_path": "/etc/logs/zane",
-                    },
-                },
-                {
-                    "type": "DELETE",
-                    "item_id": v.id,
-                },
-            ],
-        }
-
-        response = self.client.patch(
-            reverse(
-                "zane_api:services.docker.deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
     def test_validate_conflicting_changes_with_previous_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
@@ -860,6 +692,48 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
                         "name": "zane-localtime",
                         "container_path": "/etc/localtime",
                         "host_path": "/etc/localtime",
+                    },
+                },
+            ],
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_env_cannot_specify_the_same_key_twice(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zaneops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "env_variables": [
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "key": "SECRET_KEY",
+                        "value": "super5EC4TK4YYY",
+                    },
+                },
+                {
+                    "type": "ADD",
+                    "new_value": {
+                        "key": "SECRET_KEY",
+                        "value": "super5EC4TK4YYY",
                     },
                 },
             ],

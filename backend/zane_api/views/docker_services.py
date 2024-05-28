@@ -327,7 +327,9 @@ class DockerServiceDeploymentChangesAPIView(APIView):
             form_serializer_class: type[Serializer] = field_serializer_map[
                 request_serializer.data["field"]
             ]
-            form = form_serializer_class(data=request.data)
+            form = form_serializer_class(
+                data=request.data, context={"service": service}
+            )
             if form.is_valid(raise_exception=True):
                 data = form.data
                 field = data["field"]
@@ -368,7 +370,7 @@ class DockerServiceDeploymentChangesAPIView(APIView):
 
                 service.add_change(
                     DockerDeploymentChange(
-                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        type=change_type,
                         field=field,
                         old_value=old_value,
                         new_value=new_value,
