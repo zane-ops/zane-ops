@@ -50,8 +50,17 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
     solution copied from : https://github.com/tfranzel/drf-spectacular/issues/480#issuecomment-898488288
     """
     schemas = result.get("components", {}).get("schemas", {})
-    for name, schema in schemas.items():
-        if name.endswith("Request") or "properties" not in schema:
+    for name, schema in schemas.items():  # type: str, Any
+        if "properties" not in schema:
+            continue
+        if name.endswith("ChangeFieldRequest") or name.endswith("ItemChangeRequest"):
+            if "required" in schema:
+                schema["required"] += ["field"]
+            else:
+                schema["required"] = ["field"]
+            if name.endswith("ChangeFieldRequest"):
+                schema["required"] += ["new_value"]
+        if name.endswith("Request"):
             continue
         schema["required"] = sorted(schema["properties"].keys())
     return result

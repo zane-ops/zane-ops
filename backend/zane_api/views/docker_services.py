@@ -1,23 +1,37 @@
 import time
+from typing import Any
 
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    extend_schema,
+    inline_serializer,
+    PolymorphicProxySerializer,
+)
 from faker import Faker
 from rest_framework import status, exceptions
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
 from .base import EMPTY_RESPONSE, ResourceConflict
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
-    DockerServiceChangesRequestSerializer,
+    VolumeItemChangeSerializer,
+    DockerCommandChangeFieldSerializer,
+    DockerImageChangeFieldSerializer,
+    URLItemChangeSerializer,
+    EnvItemChangeSerializer,
+    PortItemChangeSerializer,
+    DockerCredentialsChangeFieldSerializer,
+    HealthcheckChangeFieldSerializer,
+    DockerDeploymentChangeFieldRequestSerializer,
 )
 from ..models import (
     Project,
@@ -266,7 +280,20 @@ class DockerServiceDeploymentChangesAPIView(APIView):
     serializer_class = DockerServiceSerializer
 
     @extend_schema(
-        request=DockerServiceChangesRequestSerializer,
+        request=PolymorphicProxySerializer(
+            component_name="DeploymentChangeRequest",
+            serializers=[
+                URLItemChangeSerializer,
+                VolumeItemChangeSerializer,
+                EnvItemChangeSerializer,
+                PortItemChangeSerializer,
+                DockerCredentialsChangeFieldSerializer,
+                DockerCommandChangeFieldSerializer,
+                DockerImageChangeFieldSerializer,
+                HealthcheckChangeFieldSerializer,
+            ],
+            resource_type_field_name="field",
+        ),
         responses={
             200: DockerServiceSerializer,
         },
@@ -282,105 +309,77 @@ class DockerServiceDeploymentChangesAPIView(APIView):
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
 
-        form = DockerServiceChangesRequestSerializer(
-            data=request.data, context={"service": service}
+        field_serializer_map = {
+            "urls": URLItemChangeSerializer,
+            "volumes": VolumeItemChangeSerializer,
+            "env_variables": EnvItemChangeSerializer,
+            "ports": PortItemChangeSerializer,
+            "credentials": DockerCredentialsChangeFieldSerializer,
+            "command": DockerCommandChangeFieldSerializer,
+            "image": DockerImageChangeFieldSerializer,
+            "healthcheck": HealthcheckChangeFieldSerializer,
+        }
+
+        request_serializer = DockerDeploymentChangeFieldRequestSerializer(
+            data=request.data
         )
-        if form.is_valid(raise_exception=True):
-            data = form.data
-            new_changes: list[DockerDeploymentChange] = []
-            for field, value in data.items():  # type: str, dict|list[dict]
+        if request_serializer.is_valid(raise_exception=True):
+            form_serializer_class: type[Serializer] = field_serializer_map[
+                request_serializer.data["field"]
+            ]
+            form = form_serializer_class(data=request.data)
+            if form.is_valid(raise_exception=True):
+                data = form.data
+                field = data["field"]
+                new_value = data.get("new_value")
+                item_id = data.get("item_id")
+                change_type = data.get("type")
+                old_value: Any = None
                 match field:
                     case "image" | "command" | "credentials":
-                        change = DockerDeploymentChange(
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
-                            field=field,
-                            old_value=getattr(service, field),
-                            new_value=value["new_value"],
-                            service=service,
-                        )
-                        new_changes.append(change)
+                        old_value = getattr(service, field)
                     case "healthcheck":
-                        change = DockerDeploymentChange(
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
-                            field=field,
-                            old_value=(
-                                HealthCheckSerializer(service.healthcheck).data
-                                if service.healthcheck is not None
-                                else None
-                            ),
-                            new_value=value["new_value"],
-                            service=service,
+                        old_value = (
+                            HealthCheckSerializer(service.healthcheck).data
+                            if service.healthcheck is not None
+                            else None
                         )
-                        new_changes.append(change)
                     case "volumes":
-                        for field_change in value:
-                            old_value = None
-                            if field_change["type"] in ["UPDATE", "DELETE"]:
-                                old_value = VolumeSerializer(
-                                    service.volumes.get(id=field_change["item_id"])
-                                ).data
-                            change = DockerDeploymentChange(
-                                type=field_change["type"],
-                                field=field,
-                                old_value=old_value,
-                                new_value=field_change["new_value"],
-                                service=service,
-                            )
-                            new_changes.append(change)
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = VolumeSerializer(
+                                service.volumes.get(id=item_id)
+                            ).data
                     case "urls":
-                        for field_change in value:
-                            old_value = None
-                            if field_change["type"] in ["UPDATE", "DELETE"]:
-                                old_value = URLModelSerializer(
-                                    service.urls.get(id=field_change["item_id"])
-                                ).data
-                            change = DockerDeploymentChange(
-                                type=field_change["type"],
-                                field=field,
-                                old_value=old_value,
-                                new_value=field_change["new_value"],
-                                service=service,
-                            )
-                            new_changes.append(change)
+                        old_value = None
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = URLModelSerializer(
+                                service.urls.get(id=item_id)
+                            ).data
                     case "ports":
-                        for field_change in value:
-                            old_value = None
-                            if field_change["type"] in ["UPDATE", "DELETE"]:
-                                old_value = PortConfigurationSerializer(
-                                    service.volumes.get(id=field_change["item_id"])
-                                ).data
-                            change = DockerDeploymentChange(
-                                type=field_change["type"],
-                                field=field,
-                                old_value=old_value,
-                                new_value=field_change["new_value"],
-                                service=service,
-                            )
-                            new_changes.append(change)
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = PortConfigurationSerializer(
+                                service.volumes.get(id=item_id)
+                            ).data
                     case "env_variables":
-                        for field_change in value:
-                            old_value = None
-                            if field_change["type"] in ["UPDATE", "DELETE"]:
-                                old_value = DockerEnvVariableSerializer(
-                                    service.env_variables.get(
-                                        id=field_change["item_id"]
-                                    )
-                                ).data
-                            change = DockerDeploymentChange(
-                                type=field_change["type"],
-                                field=field,
-                                old_value=old_value,
-                                new_value=field_change["new_value"],
-                                service=service,
-                            )
-                            new_changes.append(change)
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = DockerEnvVariableSerializer(
+                                service.env_variables.get(id=item_id)
+                            ).data
 
-            service.add_changes(new_changes)
+                service.add_change(
+                    DockerDeploymentChange(
+                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        field=field,
+                        old_value=old_value,
+                        new_value=new_value,
+                        service=service,
+                    )
+                )
 
-        response = DockerServiceSerializer(service)
-        return Response(
-            response.data,
-        )
+                response = DockerServiceSerializer(service)
+                return Response(
+                    response.data,
+                )
 
 
 class GetDockerServiceAPIView(APIView):

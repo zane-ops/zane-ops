@@ -252,21 +252,18 @@ class DockerRegistryService(BaseService):
             "password": self.docker_credentials_password,
         }
 
-    def add_changes(self, changes: list["DockerDeploymentChange"]):
-        for change in changes:
-            existing_changes = self.unapplied_changes.filter(field=change.field)
-            match change.field:
-                case "image" | "command" | "credentials" | "healthcheck":
-                    change_for_field: "DockerDeploymentChange" = (
-                        existing_changes.first()
-                    )
-                    if change_for_field is not None:
-                        change_for_field.new_value = change.new_value
-                    else:
-                        change_for_field = change
-                    change_for_field.save()
-                case "volumes" | "urls" | "ports" | "env_variables":
-                    change.save()
+    def add_change(self, change: "DockerDeploymentChange"):
+        existing_changes = self.unapplied_changes.filter(field=change.field)
+        match change.field:
+            case "image" | "command" | "credentials" | "healthcheck":
+                change_for_field: "DockerDeploymentChange" = existing_changes.first()
+                if change_for_field is not None:
+                    change_for_field.new_value = change.new_value
+                else:
+                    change_for_field = change
+                change_for_field.save()
+            case _:
+                change.save()
 
 
 class GitRepositoryService(BaseService):

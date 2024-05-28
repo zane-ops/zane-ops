@@ -1,3 +1,5 @@
+from typing import Any
+
 import django_filters
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -16,7 +18,6 @@ from ..models import (
     Project,
     ArchivedProject,
     DockerRegistryService,
-    DockerDeploymentChange,
     Volume,
     DockerEnvVariable,
     PortConfiguration,
@@ -346,6 +347,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=ITEM_CHANGE_TYPE_CHOICES, required=True)
     item_id = serializers.CharField(max_length=255, required=False)
     new_value = serializers.SerializerMethodField()
+    field = serializers.SerializerMethodField()
 
     def get_service(self):
         service: DockerRegistryService = self.context.get("service")
@@ -354,6 +356,11 @@ class BaseChangeItemSerializer(serializers.Serializer):
         return service
 
     def get_new_value(self, obj):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
+
+    def get_field(self, obj: Any):
         raise NotImplementedError(
             "This field should be subclassed by specific child classes"
         )
@@ -379,43 +386,8 @@ class BaseChangeItemSerializer(serializers.Serializer):
                     ]
                 }
             )
-        return attrs
-
-
-class BaseListChangeSerializer(serializers.ListSerializer):
-    child = BaseChangeItemSerializer()
-
-    def get_service(self):
-        service: DockerRegistryService = self.context.get("service")
-        if service is None:
-            raise serializers.ValidationError("`service` is required in context.")
-        return service
-
-    @property
-    def current_field(self) -> str:
-        raise NotImplementedError("This should be implemented in child classes.")
-
-    def validate(self, attrs: list[dict]):
-        service = self.get_service()
-        existing_changes = service.unapplied_changes.filter(
-            field=self.current_field, type__in=["UPDATE", "DELETE"]
-        ).all()
-
-        id_set = set(
-            map(
-                lambda field_change: field_change.item_id,
-                existing_changes,
-            )
-        )
-        for change in attrs:
-            if change["type"] in ["UPDATE", "DELETE"]:
-                item_id = change["item_id"]
-
-                if item_id in id_set:
-                    raise serializers.ValidationError(
-                        "Cannot make conflicting changes for this field"
-                    )
-                id_set.add(item_id)
+        if change_type == "DELETE":
+            attrs["new_value"] = None
         return attrs
 
 
@@ -425,8 +397,14 @@ class BaseChangeFieldSerializer(serializers.Serializer):
         choices=FIELD_CHANGE_TYPE_CHOICES, required=False, default="UPDATE"
     )
     new_value = serializers.SerializerMethodField()
+    field = serializers.SerializerMethodField()
 
-    def get_new_value(self, obj):
+    def get_new_value(self, obj: Any):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
+
+    def get_field(self, obj: Any):
         raise NotImplementedError(
             "This field should be subclassed by specific child classes"
         )
@@ -434,6 +412,7 @@ class BaseChangeFieldSerializer(serializers.Serializer):
 
 class URLItemChangeSerializer(BaseChangeItemSerializer):
     new_value = URLRequestSerializer(required=False)
+    field = serializers.ChoiceField(choices=["urls"], required=True)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -455,16 +434,9 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
-class URLListChangeSerialiazer(BaseListChangeSerializer):
-    child = URLItemChangeSerializer()
-
-    @property
-    def current_field(self) -> str:
-        return "urls"
-
-
 class VolumeItemChangeSerializer(BaseChangeItemSerializer):
     new_value = VolumeRequestSerializer(required=False)
+    field = serializers.ChoiceField(choices=["volumes"], required=True)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -482,16 +454,9 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
-class VolumeListChangeSerialiazer(BaseListChangeSerializer):
-    child = VolumeItemChangeSerializer()
-
-    @property
-    def current_field(self) -> str:
-        return "volumes"
-
-
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
     new_value = EnvRequestSerializer(required=False)
+    field = serializers.ChoiceField(choices=["env_variables"], required=True)
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -509,15 +474,8 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
-class EnvListChangeSerialiazer(BaseListChangeSerializer):
-    child = EnvItemChangeSerializer()
-
-    @property
-    def current_field(self) -> str:
-        return "env_variables"
-
-
 class PortItemChangeSerializer(BaseChangeItemSerializer):
+    field = serializers.ChoiceField(choices=["ports"], required=True)
     new_value = ServicePortsRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
@@ -540,221 +498,37 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
-class PortListChangeSerialiazer(BaseListChangeSerializer):
-    child = PortItemChangeSerializer()
-
-    @property
-    def current_field(self) -> str:
-        return "ports"
-
-
 class DockerCredentialsChangeFieldSerializer(BaseChangeFieldSerializer):
+    field = serializers.ChoiceField(choices=["credentials"], required=True)
     new_value = DockerCredentialsRequestSerializer(required=True, allow_null=True)
 
 
 class DockerCommandChangeFieldSerializer(BaseChangeFieldSerializer):
+    field = serializers.ChoiceField(choices=["command"], required=True)
     new_value = serializers.CharField(required=True, allow_null=True)
 
 
 class DockerImageChangeFieldSerializer(BaseChangeFieldSerializer):
+    field = serializers.ChoiceField(choices=["image"], required=True)
     new_value = serializers.CharField(required=True)
 
 
 class HealthcheckChangeFieldSerializer(BaseChangeFieldSerializer):
+    field = serializers.ChoiceField(choices=["healthcheck"], required=True)
     new_value = HealthCheckRequestSerializer(required=True, allow_null=True)
 
 
-class DockerServiceChangesRequestSerializer(serializers.Serializer):
-    image = DockerImageChangeFieldSerializer(required=False)
-    credentials = DockerCredentialsChangeFieldSerializer(required=False)
-    command = DockerCommandChangeFieldSerializer(required=False)
-    healthcheck = HealthcheckChangeFieldSerializer(required=False)
-    volumes = VolumeListChangeSerialiazer(required=False)
-    urls = URLListChangeSerialiazer(required=False)
-    ports = PortListChangeSerialiazer(required=False)
-    env_variables = EnvListChangeSerialiazer(required=False)
-
-    def get_service(self):
-        service: DockerRegistryService = self.context.get("service")
-        if service is None:
-            raise serializers.ValidationError("`service` is required in context.")
-        return service
-
-    def validate(self, attrs: dict[str, dict | list[dict]]):
-        if not bool(attrs):
-            raise serializers.ValidationError("please provide at least one change")
-
-        credential_changes = attrs.get("credentials")
-        if credential_changes is not None:
-            self._validate_credentials(credential_changes, attrs)
-
-        return attrs
-
-    def validate_volumes(self, changes: list[dict]):
-        if changes is None or len(changes) == 0:
-            return changes
-
-        mount_path_set = set()
-        host_path_set = set()
-        service = self.get_service()
-        volume_changes: list[DockerDeploymentChange] = list(
-            service.unapplied_changes.filter(
-                field="volumes", new_value__isnull=False
-            ).all()
-        )
-        volumes = service.volumes.all()
-
-        # Validate double `container_path`
-        existing_container_path_set = set(
-            map(
-                lambda v_change: (v_change.new_value.get("container_path")),
-                volume_changes,
-            )
-        )
-
-        existing_container_path_set.update(
-            map(
-                lambda volume: volume.container_path,
-                volumes,
-            )
-        )
-
-        existing_host_path_set = set(
-            filter(
-                lambda path: path is not None,
-                map(
-                    lambda v_change: (v_change.new_value.get("host_path")),
-                    volume_changes,
-                ),
-            )
-        )
-
-        existing_host_path_set.update(
-            filter(
-                lambda path: path is not None,
-                map(
-                    lambda volume: volume.host_path,
-                    volumes,
-                ),
-            )
-        )
-
-        for change in changes:
-            current_mount_path = change.get("new_value", {}).get("container_path")
-            current_host_path = change.get("new_value", {}).get("host_path")
-
-            if current_mount_path is None:
-                continue
-
-            if (
-                current_mount_path in mount_path_set
-                or current_mount_path in existing_container_path_set
-            ):
-                raise serializers.ValidationError(
-                    "Cannot specify two volumes with the same `container path` for this service"
-                )
-
-            if current_host_path is not None:
-                if (
-                    current_host_path in host_path_set
-                    or current_host_path in existing_host_path_set
-                ):
-                    raise serializers.ValidationError(
-                        "Cannot specify two volumes with the same `host path` for this service"
-                    )
-
-                host_path_set.add(current_host_path)
-
-            mount_path_set.add(current_mount_path)
-        return changes
-
-    def _validate_credentials(self, change: dict, attrs: dict[str, dict | list[dict]]):
-        credentials = change.get("new_value")
-        if credentials is None:
-            return credentials
-
-        service = self.get_service()
-        image = service.image or attrs.get("image", {}).get("new_value")
-
-        if image is None:
-            image_change: DockerDeploymentChange = service.unapplied_changes.filter(
-                field="image"
-            ).first()
-
-            image = image_change.new_value if image_change is not None else None
-
-            if image is None:
-                raise serializers.ValidationError(
-                    {
-                        "credentials": [
-                            "Cannot provide `credentials` without a provided image for the service."
-                        ]
-                    }
-                )
-
-        do_image_exists = check_if_docker_image_exists(
-            image,
-            credentials=dict(credentials),
-        )
-        if not do_image_exists:
-            raise serializers.ValidationError(
-                {
-                    "credentials": [
-                        f"The credentials are invalid for the image `{image}` provided for the service."
-                    ]
-                }
-            )
-
-        return change
-
-    # def validate_ports(self, changes: list[dict[str, dict[str, int]]]):
-    #     new_ports = map(
-    #         lambda change: change["new_value"],
-    #         filter(lambda change: change["type"] == "add", changes),
-    #     )
-    #
-    #     no_of_http_ports = 0
-    #     http_ports = [80, 443]
-    #     public_ports_seen = set()
-    #     for port in new_ports:
-    #         public_port = port["public"]
-    #
-    #         # Check for only 1 http port
-    #         if public_port in http_ports:
-    #             no_of_http_ports += 1
-    #         if no_of_http_ports > 1:
-    #             raise serializers.ValidationError("Only one HTTP port is allowed")
-    #
-    #         # Check for duplicate public ports
-    #         if public_port in public_ports_seen:
-    #             raise serializers.ValidationError(
-    #                 "Duplicate public port values are not allowed."
-    #             )
-    #         if public_port not in http_ports:
-    #             public_ports_seen.add(public_port)
-    #
-    #         # check if port is available
-    #         if public_port not in http_ports:
-    #             is_port_available = check_if_port_is_available_on_host(public_port)
-    #             if not is_port_available:
-    #                 raise serializers.ValidationError(
-    #                     f"Port {public_port} is not available on the host machine."
-    #                 )
-    #
-    #     already_existing_ports = [
-    #         str(port.host)
-    #         for port in PortConfiguration.objects.filter(
-    #             host__in=list(public_ports_seen)
-    #         )
-    #     ]
-    #
-    #     if len(already_existing_ports) > 0:
-    #         ports_str = ", ".join(already_existing_ports)
-    #
-    #         if len(already_existing_ports) == 1:
-    #             message = f"Port {ports_str} is already used by other services."
-    #         else:
-    #             message = f"Ports {ports_str} are already used by other services."
-    #         raise serializers.ValidationError(message)
-    #
-    #     return changes
+class DockerDeploymentChangeFieldRequestSerializer(serializers.Serializer):
+    field = serializers.ChoiceField(
+        required=True,
+        choices=[
+            "urls",
+            "volumes",
+            "env_variables",
+            "ports",
+            "credentials",
+            "command",
+            "image",
+            "healthcheck",
+        ],
+    )
