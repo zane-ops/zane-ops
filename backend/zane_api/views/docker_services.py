@@ -24,14 +24,14 @@ from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
     VolumeItemChangeSerializer,
-    DockerCommandChangeFieldSerializer,
-    DockerImageChangeFieldSerializer,
+    DockerCommandFieldChangeSerializer,
+    DockerImageFieldChangeSerializer,
     URLItemChangeSerializer,
     EnvItemChangeSerializer,
     PortItemChangeSerializer,
-    DockerCredentialsChangeFieldSerializer,
-    HealthcheckChangeFieldSerializer,
-    DockerDeploymentChangeFieldRequestSerializer,
+    DockerCredentialsFieldChangeSerializer,
+    HealthcheckFieldChangeSerializer,
+    DockerDeploymentFieldChangeRequestSerializer,
 )
 from ..models import (
     Project,
@@ -287,10 +287,10 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                 VolumeItemChangeSerializer,
                 EnvItemChangeSerializer,
                 PortItemChangeSerializer,
-                DockerCredentialsChangeFieldSerializer,
-                DockerCommandChangeFieldSerializer,
-                DockerImageChangeFieldSerializer,
-                HealthcheckChangeFieldSerializer,
+                DockerCredentialsFieldChangeSerializer,
+                DockerCommandFieldChangeSerializer,
+                DockerImageFieldChangeSerializer,
+                HealthcheckFieldChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -314,13 +314,13 @@ class DockerServiceDeploymentChangesAPIView(APIView):
             "volumes": VolumeItemChangeSerializer,
             "env_variables": EnvItemChangeSerializer,
             "ports": PortItemChangeSerializer,
-            "credentials": DockerCredentialsChangeFieldSerializer,
-            "command": DockerCommandChangeFieldSerializer,
-            "image": DockerImageChangeFieldSerializer,
-            "healthcheck": HealthcheckChangeFieldSerializer,
+            "credentials": DockerCredentialsFieldChangeSerializer,
+            "command": DockerCommandFieldChangeSerializer,
+            "image": DockerImageFieldChangeSerializer,
+            "healthcheck": HealthcheckFieldChangeSerializer,
         }
 
-        request_serializer = DockerDeploymentChangeFieldRequestSerializer(
+        request_serializer = DockerDeploymentFieldChangeRequestSerializer(
             data=request.data
         )
         if request_serializer.is_valid(raise_exception=True):

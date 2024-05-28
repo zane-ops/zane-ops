@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from typing import Any
 
@@ -420,13 +421,19 @@ class BaseChangeItemSerializer(serializers.Serializer):
         return attrs
 
 
-class BaseChangeFieldSerializer(serializers.Serializer):
+class BaseFieldChangeSerializer(serializers.Serializer):
     FIELD_CHANGE_TYPE_CHOICES = (("UPDATE", _("Update")),)
     type = serializers.ChoiceField(
         choices=FIELD_CHANGE_TYPE_CHOICES, required=False, default="UPDATE"
     )
     new_value = serializers.SerializerMethodField()
     field = serializers.SerializerMethodField()
+
+    def get_service(self):
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+        return service
 
     def get_new_value(self, obj: Any):
         raise NotImplementedError(
@@ -579,27 +586,61 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
-class DockerCredentialsChangeFieldSerializer(BaseChangeFieldSerializer):
+class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["credentials"], required=True)
     new_value = DockerCredentialsRequestSerializer(required=True, allow_null=True)
 
+    def validate(self, attrs: dict):
+        service = self.get_service()
+        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
 
-class DockerCommandChangeFieldSerializer(BaseChangeFieldSerializer):
+        if snapshot.credentials is not None:
+            do_image_exists = check_if_docker_image_exists(
+                snapshot.image,
+                credentials=dataclasses.asdict(snapshot.credentials),
+            )
+            if not do_image_exists:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` provided for the service."
+                    }
+                )
+        return attrs
+
+
+class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["command"], required=True)
     new_value = serializers.CharField(required=True, allow_null=True)
 
 
-class DockerImageChangeFieldSerializer(BaseChangeFieldSerializer):
+class DockerImageFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["image"], required=True)
     new_value = serializers.CharField(required=True)
 
+    def validate(self, attrs: dict):
+        service = self.get_service()
+        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
 
-class HealthcheckChangeFieldSerializer(BaseChangeFieldSerializer):
+        if snapshot.credentials is not None:
+            do_image_exists = check_if_docker_image_exists(
+                snapshot.image,
+                credentials=dataclasses.asdict(snapshot.credentials),
+            )
+            if not do_image_exists:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` provided for the service."
+                    }
+                )
+        return attrs
+
+
+class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["healthcheck"], required=True)
     new_value = HealthCheckRequestSerializer(required=True, allow_null=True)
 
 
-class DockerDeploymentChangeFieldRequestSerializer(serializers.Serializer):
+class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
     field = serializers.ChoiceField(
         required=True,
         choices=[

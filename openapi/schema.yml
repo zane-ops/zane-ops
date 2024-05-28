@@ -2828,7 +2828,7 @@ components:
       required:
       - errors
       - type
-    DockerCommandChangeFieldFieldEnum:
+    DockerCommandFieldChangeFieldEnum:
       enum:
       - command
       type: string
@@ -2843,7 +2843,7 @@ components:
       required:
       - password
       - username
-    DockerCredentialsChangeFieldFieldEnum:
+    DockerCredentialsFieldChangeFieldEnum:
       enum:
       - credentials
       type: string
@@ -2920,7 +2920,7 @@ components:
       required:
       - description
       - full_image
-    DockerImageChangeFieldFieldEnum:
+    DockerImageFieldChangeFieldEnum:
       enum:
       - image
       type: string
@@ -3508,7 +3508,7 @@ components:
       description: |-
         * `COMMAND` - Command
         * `PATH` - Path
-    HealthcheckChangeFieldFieldEnum:
+    HealthcheckFieldChangeFieldEnum:
       enum:
       - healthcheck
       type: string
@@ -3775,15 +3775,15 @@ components:
       - $ref: '#/components/schemas/PatchedVolumeItemChangeRequest'
       - $ref: '#/components/schemas/PatchedEnvItemChangeRequest'
       - $ref: '#/components/schemas/PatchedPortItemChangeRequest'
-      - $ref: '#/components/schemas/PatchedDockerCredentialsChangeFieldRequest'
-      - $ref: '#/components/schemas/PatchedDockerCommandChangeFieldRequest'
-      - $ref: '#/components/schemas/PatchedDockerImageChangeFieldRequest'
-      - $ref: '#/components/schemas/PatchedHealthcheckChangeFieldRequest'
+      - $ref: '#/components/schemas/PatchedDockerCredentialsFieldChangeRequest'
+      - $ref: '#/components/schemas/PatchedDockerCommandFieldChangeRequest'
+      - $ref: '#/components/schemas/PatchedDockerImageFieldChangeRequest'
+      - $ref: '#/components/schemas/PatchedHealthcheckFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/PatchedHealthcheckChangeFieldRequest'
-    PatchedDockerCommandChangeFieldRequest:
+          null: '#/components/schemas/PatchedHealthcheckFieldChangeRequest'
+    PatchedDockerCommandFieldChangeRequest:
       type: object
       properties:
         type:
@@ -3795,11 +3795,10 @@ components:
           nullable: true
           minLength: 1
         field:
-          $ref: '#/components/schemas/DockerCommandChangeFieldFieldEnum'
+          $ref: '#/components/schemas/DockerCommandFieldChangeFieldEnum'
       required:
       - field
-      - new_value
-    PatchedDockerCredentialsChangeFieldRequest:
+    PatchedDockerCredentialsFieldChangeRequest:
       type: object
       properties:
         type:
@@ -3811,11 +3810,10 @@ components:
           - $ref: '#/components/schemas/DockerCredentialsRequestRequest'
           nullable: true
         field:
-          $ref: '#/components/schemas/DockerCredentialsChangeFieldFieldEnum'
+          $ref: '#/components/schemas/DockerCredentialsFieldChangeFieldEnum'
       required:
       - field
-      - new_value
-    PatchedDockerImageChangeFieldRequest:
+    PatchedDockerImageFieldChangeRequest:
       type: object
       properties:
         type:
@@ -3826,10 +3824,9 @@ components:
           type: string
           minLength: 1
         field:
-          $ref: '#/components/schemas/DockerImageChangeFieldFieldEnum'
+          $ref: '#/components/schemas/DockerImageFieldChangeFieldEnum'
       required:
       - field
-      - new_value
     PatchedEnvItemChangeRequest:
       type: object
       properties:
@@ -3845,7 +3842,7 @@ components:
           $ref: '#/components/schemas/EnvItemChangeFieldEnum'
       required:
       - field
-    PatchedHealthcheckChangeFieldRequest:
+    PatchedHealthcheckFieldChangeRequest:
       type: object
       properties:
         type:
@@ -3857,10 +3854,9 @@ components:
           - $ref: '#/components/schemas/HealthCheckRequestRequest'
           nullable: true
         field:
-          $ref: '#/components/schemas/HealthcheckChangeFieldFieldEnum'
+          $ref: '#/components/schemas/HealthcheckFieldChangeFieldEnum'
       required:
       - field
-      - new_value
     PatchedPortItemChangeRequest:
       type: object
       properties:

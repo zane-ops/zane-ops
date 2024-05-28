@@ -6,13 +6,14 @@ from ..serializers import DockerServiceSerializer
 
 
 def compute_all_deployment_changes(service: DockerRegistryService, change: dict):
-    deployment_changes = [DeploymentChangeDto(**change)]
+    deployment_changes = []
     deployment_changes.extend(
         map(
             lambda ch: DeploymentChangeDto.from_db_deployment_change(ch),
             service.unapplied_changes.all(),
         )
     )
+    deployment_changes.append(DeploymentChangeDto(**change))
     return deployment_changes
 
 

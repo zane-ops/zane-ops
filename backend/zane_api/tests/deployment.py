@@ -12,7 +12,6 @@ from ..models import (
     DockerDeploymentChange,
     Volume,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -497,12 +496,11 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "credentials": {
-                "type": "UPDATE",
-                "new_value": {
-                    "username": "fredkiss3",
-                    "password": "bad",
-                },
+            "field": "credentials",
+            "type": "UPDATE",
+            "new_value": {
+                "username": "fredkiss3",
+                "password": "bad",
             },
         }
         response = self.client.patch(
@@ -514,6 +512,44 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertEqual(1, DockerDeploymentChange.objects.count())
+
+    def test_validate_new_image_with_existing_credentials(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug="app")
+        DockerDeploymentChange.objects.create(
+            field="credentials",
+            new_value={
+                "username": "fredkiss3",
+                "password": "s3cret",
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "field": "image",
+            "type": "UPDATE",
+            "new_value": self.fake_docker_client.NONEXISTANT_PRIVATE_IMAGE,
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_volume_cannot_specify_the_same_container_path_twice_with_pending_changes(
         self,
@@ -687,5 +723,4 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
