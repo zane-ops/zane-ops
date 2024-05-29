@@ -15,7 +15,6 @@ from ..models import (
     PortConfiguration,
     URL,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -935,7 +934,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_url_cannot_specify_the_same_url_twice(self):
