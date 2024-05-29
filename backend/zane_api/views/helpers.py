@@ -75,6 +75,10 @@ class DeploymentChangeDto:
     new_value: Optional[Any] = None
 
     @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+    @classmethod
     def from_db_deployment_change(cls, change: BaseDeploymentChange):
         return cls(
             type=change.type,

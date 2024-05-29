@@ -644,7 +644,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         http_ports = [80, 443]
         ports_exposed_to_http = list(
             filter(
-                lambda port: port.host is not None and port.host in http_ports,
+                lambda port: port.host is None or port.host in http_ports,
                 snapshot.ports,
             )
         )
@@ -750,6 +750,26 @@ class DockerImageFieldChangeSerializer(BaseFieldChangeSerializer):
 class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["healthcheck"], required=True)
     new_value = HealthCheckRequestSerializer(required=True, allow_null=True)
+
+    def validate(self, attrs: dict):
+        service = self.get_service()
+        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+
+        new_healthcheck = attrs.get("new_value")
+        if new_healthcheck is not None and new_healthcheck.get("type") == "PATH":
+            ports_exposed_to_http = list(
+                filter(
+                    lambda port: port.host is None or port.host in [80, 443],
+                    snapshot.ports,
+                )
+            )
+            if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": f"healthcheck requires that at least one `url` or one `port` is provided"
+                    }
+                )
+        return attrs
 
 
 class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):

@@ -1027,3 +1027,105 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_healthcheck_path_require_url_or_http_port(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": "healthcheck",
+            "type": "UPDATE",
+            "new_value": {
+                "type": "PATH",
+                "value": "/",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_healthcheck_works_with_http_port(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="ports",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 9000},
+                    service=service,
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "field": "healthcheck",
+            "type": "UPDATE",
+            "new_value": {
+                "type": "PATH",
+                "value": "/",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_healthcheck_works_with_url(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="urls",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "labs.idx.co",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "field": "healthcheck",
+            "type": "UPDATE",
+            "new_value": {
+                "type": "PATH",
+                "value": "/",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
