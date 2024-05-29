@@ -1054,7 +1054,35 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_healthcheck_works_with_http_port(
+    def test_validate_healthcheck_cmd_do_not_require_url_or_http_port(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        DockerRegistryService.objects.create(
+            slug="app", project=p, image="redis:alpine"
+        )
+
+        changes_payload = {
+            "field": "healthcheck",
+            "type": "UPDATE",
+            "new_value": {
+                "type": "COMMAND",
+                "value": "redis-cli PING",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_healthcheck_path_works_with_http_port(
         self,
     ):
         owner = self.loginUser()
@@ -1090,7 +1118,7 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_validate_healthcheck_works_with_url(
+    def test_validate_healthcheck_path_works_with_url(
         self,
     ):
         owner = self.loginUser()
