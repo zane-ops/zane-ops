@@ -502,6 +502,25 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                         }
                     )
 
+        if (
+            change_type == "DELETE"
+            and snapshot.healthcheck is not None
+            and snapshot.healthcheck.type == "PATH"
+        ):
+            ports_exposed_to_http = list(
+                filter(
+                    lambda port: port.host is None or port.host in [80, 443],
+                    snapshot.ports,
+                )
+            )
+            if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": f"Cannot delete an URL if there is a healthcheck attached to it"
+                        f" and the service is not exposed to the public through an HTTP port (80/443)"
+                    }
+                )
+
         return attrs
 
 
