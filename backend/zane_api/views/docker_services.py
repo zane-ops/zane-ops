@@ -297,9 +297,9 @@ class DockerServiceDeploymentChangesAPIView(APIView):
         responses={
             200: DockerServiceSerializer,
         },
-        operation_id="updateDeploymentChanges",
+        operation_id="requestDeploymentChanges",
     )
-    def patch(self, request: Request, project_slug: str, service_slug: str):
+    def post(self, request: Request, project_slug: str, service_slug: str):
         project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         service: DockerRegistryService = (
             DockerRegistryService.objects.filter(
@@ -382,6 +382,10 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                 return Response(
                     response.data,
                 )
+
+    @extend_schema(operation_id="cancelDeploymentChanges")
+    def delete(self, request: Request, project_slug: str, service_slug: str):
+        return Response()
 
 
 class GetDockerServiceAPIView(APIView):
