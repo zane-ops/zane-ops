@@ -5,6 +5,7 @@ from typing import Any
 import django_filters
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from rest_framework import pagination
@@ -516,7 +517,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
             if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"Cannot delete an URL if there is a healthcheck attached to it"
+                        "new_value": f"Cannot delete an URL if there is a path healthcheck attached to it"
                         f" and the service is not exposed to the public through an HTTP port (80/443)"
                     }
                 )
@@ -660,14 +661,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
             )
 
         # validate double http port
-        http_ports = [80, 443]
-        ports_exposed_to_http = list(
-            filter(
-                lambda port: port.host is None or port.host in http_ports,
-                snapshot.ports,
-            )
-        )
-        if len(ports_exposed_to_http) >= 2:
+        if len(snapshot.http_ports) >= 2:
             raise serializers.ValidationError(
                 {
                     "new_value": {
@@ -677,6 +671,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
             )
 
         # validate that url & host ports don't clash
+        http_ports = [80, 443]
         if len(snapshot.urls) > 0:
             for port in snapshot.ports:
                 if port.host not in http_ports:
@@ -689,7 +684,8 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     )
 
         # check if port is available
-        public_port = attrs.get("new_value", {}).get("host")
+        new_value = attrs.get("new_value", {})
+        public_port = new_value.get("host") if new_value is not None else None
         if public_port is not None and public_port not in http_ports:
             is_port_available = check_if_port_is_available_on_host(public_port)
             if not is_port_available:
@@ -703,16 +699,29 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if port is not already used by another service
         already_existing_port: PortConfiguration = PortConfiguration.objects.filter(
-            host=public_port
+            Q(host=public_port) & Q(host__isnull=False)
         ).first()
         if already_existing_port is not None:
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host": f"host Port {already_existing_port.host} is already used by other services."
+                        "host": f"host Port `{already_existing_port.host}` is already used by other services."
                     }
                 }
             )
+
+        if (
+            change_type == "DELETE"
+            and snapshot.healthcheck is not None
+            and snapshot.healthcheck.type == "PATH"
+        ):
+            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": f"Cannot delete a PORT if there is a path healthcheck attached to it"
+                        f" and the service is not exposed to the public through an URL or another HTTP port"
+                    }
+                )
 
         return attrs
 

@@ -170,6 +170,15 @@ class DockerServiceSnapshot:
     env_variables: List[EnvVariableDto] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
 
+    @property
+    def http_ports(self):
+        return list(
+            filter(
+                lambda p: p.host is None or p.host in [80, 443],
+                self.ports,
+            )
+        )
+
     @classmethod
     def from_serialized_data(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]

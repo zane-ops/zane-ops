@@ -360,7 +360,7 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                     case "ports":
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = PortConfigurationSerializer(
-                                service.volumes.get(id=item_id)
+                                service.ports.get(id=item_id)
                             ).data
                     case "env_variables":
                         if change_type in ["UPDATE", "DELETE"]:

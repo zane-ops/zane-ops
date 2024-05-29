@@ -855,6 +855,89 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    def test_validate_ports_cannot_delete_if_healthcheck_path_in_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        port = PortConfiguration.objects.create(forwarded=80)
+        service.ports.add(port)
+        DockerDeploymentChange.objects.create(
+            field="healthcheck",
+            type=DockerDeploymentChange.ChangeType.UPDATE,
+            new_value={
+                "type": "PATH",
+                "value": "/",
+                "timeout_seconds": 30,
+                "interval_seconds": 5,
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "DELETE",
+            "item_id": port.id,
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_can_delete_if_healthcheck_path_in_service_and_url_exists(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        port = PortConfiguration.objects.create(forwarded=80)
+        service.ports.add(port)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="urls",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "labs.idx.co",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="healthcheck",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 5,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "field": "ports",
+            "type": "DELETE",
+            "item_id": port.id,
+        }
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
     def test_validate_url_cannot_specify_the_same_url_twice(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
@@ -1017,8 +1100,6 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        print(f"{url.id=}")
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_url_can_delete_if_healthcheck_path_in_service_and_port_exists(
