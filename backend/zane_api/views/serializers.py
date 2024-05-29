@@ -490,7 +490,16 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
         )
         if len(same_urls) >= 2:
             raise serializers.ValidationError(
-                {"new_value": "Duplicate urls values for the service are not allowed."}
+                {
+                    "new_value": "Duplicate urls values for the service are not allowed."
+                    + "\nthese urls conflicts :\n"
+                    + "\n".join(
+                        [
+                            json.dumps(url, indent=2, cls=EnhancedJSONEncoder)
+                            for url in same_urls
+                        ]
+                    )
+                }
             )
 
         http_ports = [80, 443]
@@ -657,7 +666,18 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         )
         if len(ports_with_same_host) >= 2:
             raise serializers.ValidationError(
-                {"new_value": {"host": "Duplicate `host` port values are not allowed."}}
+                {
+                    "new_value": {
+                        "host": "Duplicate `host` port values are not allowed."
+                        + "\nthese ports conflicts :\n"
+                        + "\n".join(
+                            [
+                                json.dumps(port, indent=2, cls=EnhancedJSONEncoder)
+                                for port in ports_with_same_host
+                            ]
+                        )
+                    }
+                }
             )
 
         # validate double http port
