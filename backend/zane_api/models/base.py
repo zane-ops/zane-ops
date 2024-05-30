@@ -249,7 +249,7 @@ class DockerRegistryService(BaseService):
     @property
     def credentials(self):
         if (
-            self.docker_credentials_password is None
+            self.docker_credentials_username is None
             and self.docker_credentials_password is None
         ):
             return None
