@@ -15,6 +15,7 @@ from ..models import (
     PortConfiguration,
     URL,
 )
+from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -696,6 +697,33 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    def test_validate_volume_cannot_use_the_same_host_path_as_another_service(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        v = Volume.objects.create(
+            host_path="/etc/localtime", container_path="/etc/locatime"
+        )
+
+        changes_payload = {
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "zane-localtime",
+                "container_path": "/etc/logs/zane",
+                "host_path": "/etc/localtime",
+            },
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
     def test_validate_env_cannot_specify_the_same_key_twice(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
@@ -819,6 +847,38 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_ports_can_update_port_if_in_the_same_service(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        port = PortConfiguration.objects.create(
+            host=8082,
+            forwarded=5540,
+        )
+
+        service = DockerRegistryService.objects.create(
+            slug="app", project=p, image="caddy:2.8-alpine"
+        )
+        service.ports.add(port)
+
+        changes_payload = {
+            "field": "ports",
+            "type": "UPDATE",
+            "item_id": port.id,
+            "new_value": {
+                "host": 8082,
+                "forwarded": 80,
+            },
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_ports_cannot_specify_two_http_ports(self):
         owner = self.loginUser()
@@ -1145,6 +1205,56 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_url_can_update_url_if_attached_to_same_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        url = URL.objects.create(domain="labs.idx.co")
+        service.urls.add(url)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "UPDATE",
+            "item_id": url.id,
+            "new_value": {"domain": "labs.idx.co"},
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_url_cannot_update_url_if_not_attached_to_same_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        url = URL.objects.create(domain="labs.idx.co")
+        service2 = DockerRegistryService.objects.create(slug="other-app", project=p)
+        service2.urls.add(url)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "item_id": url.id,
+            "new_value": {"domain": "labs.idx.co"},
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_ports_cannot_specify_custom_url_and_public_port_at_the_same_time(
         self,

@@ -67,6 +67,7 @@ class URLRequestSerializer(serializers.Serializer):
     strip_prefix = serializers.BooleanField(required=False, default=True)
 
     def validate(self, url: dict[str, str]):
+        service: DockerRegistryService = self.context.get("service")
         if url["domain"] == settings.ZANE_APP_DOMAIN:
             raise serializers.ValidationError(
                 {
@@ -84,13 +85,15 @@ class URLRequestSerializer(serializers.Serializer):
                 }
             )
         existing_urls = URL.objects.filter(
-            domain=url["domain"].lower(), base_path=url["base_path"].lower()
+            Q(domain=url["domain"].lower())
+            & Q(base_path=url["base_path"].lower())
+            & ~Q(dockerregistryservice__id=service.id if service is not None else None)
         ).distinct()
         if len(existing_urls) > 0:
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        f"""URL with domain `{url['domain']}` and base path `{url['base_path']}` """
+                        f"URL with domain `{url['domain']}` and base path `{url['base_path']}` "
                         f"is already assigned to another service."
                     ]
                 }
@@ -472,7 +475,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "item_id": [
-                            f"URL configuration item with id `{item_id}` does not exist."
+                            f"URL configuration item with id `{item_id}` does not exist for this service."
                         ]
                     }
                 )
@@ -542,6 +545,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         super().validate(change)
         service = self.get_service()
         change_type = change["type"]
+        new_value = change.get("new_value", {}) or {}
         if change_type in ["DELETE", "UPDATE"]:
             item_id = change["item_id"]
 
@@ -549,7 +553,11 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 service.volumes.get(id=item_id)
             except Volume.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"item_id": [f"Volume with id `{item_id}` does not exist."]}
+                    {
+                        "item_id": [
+                            f"Volume with id `{item_id}` does not exist for this service."
+                        ]
+                    }
                 )
 
         snapshot = compute_docker_service_snapshot_from_changes(service, change)
@@ -558,8 +566,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         volumes_with_same_container_path = list(
             filter(
                 lambda v: v.container_path is not None
-                and v.container_path
-                == change.get("new_value", {}).get("container_path"),
+                and v.container_path == new_value.get("container_path"),
                 snapshot.volumes,
             )
         )
@@ -567,7 +574,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "container_path": "Cannot specify two volumes with the same `container path` for this service"
+                        "container_path": "Cannot specify two volumes with the same `container path` for this service."
                     }
                 }
             )
@@ -576,7 +583,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         volumes_with_same_host_path = list(
             filter(
                 lambda v: v.host_path is not None
-                and v.host_path == change.get("new_value", {}).get("host_path"),
+                and v.host_path == new_value.get("host_path"),
                 snapshot.volumes,
             )
         )
@@ -585,10 +592,26 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host_path": "Cannot specify two volumes with the same `host path` for this service"
+                        "host_path": "Cannot specify two volumes with the same `host path` for this service."
                     }
                 }
             )
+
+        # check if host path is not already used by another service
+        if new_value.get("host_path") is not None:
+            already_existing_volumes: Volume = Volume.objects.filter(
+                Q(host_path__isnull=False)
+                & Q(host_path=new_value.get("host_path"))
+                & ~Q(dockerregistryservice=service)
+            ).first()
+            if already_existing_volumes is not None:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "host_path": f"Another service is already mounted to the host path `{already_existing_volumes.host_path}`."
+                        }
+                    }
+                )
 
         return change
 
@@ -608,27 +631,32 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
                 service.env_variables.get(id=item_id)
             except DockerEnvVariable.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"item_id": [f"Env variable with id `{item_id}` does not exist."]}
+                    {
+                        "item_id": [
+                            f"Env variable with id `{item_id}` does not exist for this service."
+                        ]
+                    }
                 )
 
         # validate double `key`
         snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
-        envs_with_same_host_path = list(
-            filter(
-                lambda env: env.key is not None
-                and env.key == attrs.get("new_value", {}).get("key"),
-                snapshot.env_variables,
+        if attrs.get("new_value") is not None:
+            envs_with_same_key = list(
+                filter(
+                    lambda env: env.key is not None
+                    and env.key == attrs.get("new_value", {}).get("key"),
+                    snapshot.env_variables,
+                )
             )
-        )
 
-        if len(envs_with_same_host_path) >= 2:
-            raise serializers.ValidationError(
-                {
-                    "new_value": {
-                        "key": "Cannot specify two env variables with the same `key` for this service"
+            if len(envs_with_same_key) >= 2:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "key": "Cannot specify two env variables with the same `key` for this service"
+                        }
                     }
-                }
-            )
+                )
         return attrs
 
 
@@ -649,7 +677,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "item_id": [
-                            f"Port configuration item with id `{item_id}` does not exist."
+                            f"Port configuration item with id `{item_id}` does not exist for this service."
                         ]
                     }
                 )
@@ -719,13 +747,15 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if port is not already used by another service
         already_existing_port: PortConfiguration = PortConfiguration.objects.filter(
-            Q(host=public_port) & Q(host__isnull=False)
+            Q(host=public_port)
+            & Q(host__isnull=False)
+            & ~Q(dockerregistryservice=service)
         ).first()
         if already_existing_port is not None:
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host": f"host Port `{already_existing_port.host}` is already used by other services."
+                        "host": f"host Port `{already_existing_port.host}` is already used by another service."
                     }
                 }
             )

@@ -326,7 +326,7 @@ class Volume(TimestampedModel):
     name = models.CharField(max_length=255)
     container_path = models.CharField(max_length=255)
     host_path = models.CharField(
-        max_length=255, null=True, validators=[validate_url_path]
+        max_length=255, null=True, validators=[validate_url_path], unique=True
     )
 
     def __str__(self):
