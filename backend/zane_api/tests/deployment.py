@@ -15,7 +15,6 @@ from ..models import (
     PortConfiguration,
     URL,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -1308,7 +1307,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
     def test_validate_url_cannot_update_url_if_not_attached_to_same_service(

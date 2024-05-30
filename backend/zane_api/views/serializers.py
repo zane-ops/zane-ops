@@ -397,7 +397,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
                         ]
                     }
                 )
-        if change_type != "DELETE" and new_value is None:
+        if change_type in ["ADD", "UPDATE"] and new_value is None:
             raise serializers.ValidationError(
                 {
                     "new_value": [
@@ -407,28 +407,32 @@ class BaseChangeItemSerializer(serializers.Serializer):
             )
         if change_type == "DELETE":
             attrs["new_value"] = None
+        if change_type == "ADD":
+            attrs["item_id"] = None
 
-        service = self.get_service()
-        changes = compute_all_deployment_changes(service, attrs)
-        items_with_same_id = list(
-            filter(
-                lambda c: c.item_id is not None and c.item_id == attrs.get("item_id"),
-                changes,
+        if attrs.get("item_id") is not None:
+            service = self.get_service()
+            changes = compute_all_deployment_changes(service, attrs)
+            items_with_same_id = list(
+                filter(
+                    lambda c: c.item_id is not None
+                    and c.item_id == attrs.get("item_id"),
+                    changes,
+                )
             )
-        )
-        if len(items_with_same_id) >= 2:
-            raise serializers.ValidationError(
-                {
-                    "item_id": f"Cannot make conflicting changes for the field `{attrs['field']}` with id `{attrs.get('item_id')}`"
-                    + "\nattempted to apply these changes :\n"
-                    + "\n".join(
-                        [
-                            json.dumps(change, indent=2, cls=EnhancedJSONEncoder)
-                            for change in items_with_same_id
-                        ]
-                    )
-                }
-            )
+            if len(items_with_same_id) >= 2:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": f"Cannot make conflicting changes for the field `{attrs['field']}` with id `{attrs.get('item_id')}`"
+                        + "\nattempted to apply these changes :\n"
+                        + "\n".join(
+                            [
+                                json.dumps(change, indent=2, cls=EnhancedJSONEncoder)
+                                for change in items_with_same_id
+                            ]
+                        )
+                    }
+                )
 
         return attrs
 
