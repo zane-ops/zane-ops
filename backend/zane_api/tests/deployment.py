@@ -1553,11 +1553,22 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
-        change = DockerDeploymentChange.objects.create(
-            field="credentials",
-            type=DockerDeploymentChange.ChangeType.UPDATE,
-            new_value={"username": "fredkiss3", "password": "s3c4et"},
-            service=service,
+
+        changes = DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="credentials",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={"username": "fredkiss3", "password": "s3c4et"},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
         )
 
         response = self.client.delete(
@@ -1565,18 +1576,18 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
-            data={"change_id": change.id},
+            data={"change_id": changes[0].id},
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         change_count = DockerDeploymentChange.objects.filter(
             service=service, applied=False
         ).count()
-        self.assertEqual(0, change_count)
+        self.assertEqual(1, change_count)
 
     def test_cannot_cancel_nonexistent_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerRegistryService.objects.create(slug="app", project=p)
 
         response = self.client.delete(
             reverse(
