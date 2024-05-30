@@ -1,3 +1,4 @@
+import re
 from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
@@ -34,4 +35,12 @@ def validate_url_path(value: str):
     except ValidationError:
         raise ValidationError(
             "should be a valid url route path starting with `/` and not containing `..` or `*`"
+        )
+
+
+def validate_env_name(value: str):
+    pattern = r"^[A-Za-z_][A-Za-z0-9_]*$"
+    if not bool(re.match(pattern, value)):
+        raise ValidationError(
+            "shoud starts with an underscore (_) or a letter followed by letters, number or underscores(_)"
         )

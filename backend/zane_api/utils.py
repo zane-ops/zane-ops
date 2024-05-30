@@ -1,4 +1,6 @@
+import dataclasses
 import datetime
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -143,3 +145,17 @@ def format_seconds(seconds: float):
         return f"{minutes}m{remaining_seconds:02}s"
     else:
         return f"{remaining_seconds}s"
+
+
+def jprint(value: dict | list | str | int | float):
+    """
+    Print & format value as JSON
+    """
+    return print(json.dumps(value, indent=2, cls=EnhancedJSONEncoder))
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)

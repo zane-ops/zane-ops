@@ -70,8 +70,6 @@ class VolumeSerializer(ModelSerializer):
     class Meta:
         model = models.Volume
         fields = [
-            "created_at",
-            "updated_at",
             "id",
             "name",
             "container_path",
@@ -83,25 +81,36 @@ class VolumeSerializer(ModelSerializer):
 class URLModelSerializer(ModelSerializer):
     class Meta:
         model = models.URL
-        fields = ["domain", "base_path", "strip_prefix"]
+        fields = ["id", "domain", "base_path", "strip_prefix"]
 
 
 class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
         model = models.DockerEnvVariable
-        fields = ["key"]
+        fields = ["id", "key", "value"]
 
 
 class PortConfigurationSerializer(ModelSerializer):
     class Meta:
         model = models.PortConfiguration
-        fields = ["host", "forwarded"]
+        fields = ["id", "host", "forwarded"]
 
 
 class HealthCheckSerializer(ModelSerializer):
     class Meta:
         model = models.HealthCheck
-        fields = ["type", "value", "timeout_seconds", "interval_seconds"]
+        fields = ["id", "type", "value", "timeout_seconds", "interval_seconds"]
+
+
+class DockerDeploymentChangeSerializer(ModelSerializer):
+    class Meta:
+        model = models.DockerDeploymentChange
+        fields = ["id", "type", "field", "new_value", "old_value"]
+
+
+class DockerCredentialSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
 
 
 class DockerServiceSerializer(ModelSerializer):
@@ -115,11 +124,14 @@ class DockerServiceSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+    credentials = DockerCredentialSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService
         fields = [
-            "image_repository",
+            "id",
+            "image",
             "slug",
             "urls",
             "created_at",
@@ -130,13 +142,9 @@ class DockerServiceSerializer(ModelSerializer):
             "env_variables",
             "healthcheck",
             "network_aliases",
+            "unapplied_changes",
+            "credentials",
         ]
-
-
-class CaseInsensitiveChoiceField(serializers.ChoiceField):
-    def to_internal_value(self, data: str):
-        data = super().to_internal_value(data.lower())
-        return data
 
 
 class DockerServiceDeploymentSerializer(ModelSerializer):
@@ -151,7 +159,6 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "created_at",
             "is_redeploy_of",
             "hash",
-            "image_tag",
             "status",
             "status_reason",
             "url",

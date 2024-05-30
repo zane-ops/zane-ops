@@ -33,7 +33,7 @@ Should we ?
        ```shell
         service-domain.com {
           handle /path/* {
-             reverse_proxy service-alias.zaneops.internal.blue service-alias.zaneops.internal.green {
+             reverse_proxy service-alias.blue.zaneops.internal service-alias.green.zaneops.internal {
                 lb_policy first # always choose the first available service before the next
                 fail_duration 30s # How long to hold that a proxy is down
 
@@ -48,16 +48,16 @@ Should we ?
     3. If healthcheck has changed, we will modify the caddy proxy after we are sure that the new service is up.
     4. Caddy will always redirect to the first available upstream
 
-- We also need to expose temporarily the deployment to an url that is reachable from the outside
+- [x] We also need to expose temporarily the deployment to an url that is reachable from the outside
     - issue: it will be available from the outsider also, maybe we need to add
       [`forward_auth`](https://caddyserver.com/docs/caddyfile/directives/forward_auth) directive ?
       with an access token generated for the deployment (?)
-- modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
-  ?redirect_to=<uri>
-- modify the `/api/login` to take into account the search param and redirect accordingly
-- add lock on monitor, to skip a monitor if it hasn't run yet
-- Remove all deployments url configs when archiving a service
-- Pass user context in monitor task
+- [x] modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
+  ?redirect_to=`<uri>`
+- [x] modify the `/api/login` to take into account the search param and redirect accordingly
+- [ ] add lock on monitor, to skip a monitor if it hasn't run yet
+- [ ] Remove all deployments url configs when archiving a service
+- [x] Pass user context in monitor task
 
 ### Other important things (in another PR)
 
@@ -81,3 +81,4 @@ Should we ?
   one
     - will be included: healthcheck, urls, ports (config), tag, image and volumes, envs will stay the same.
     - We need a URL that computes the changeset between two deploys to warn the user about the changes when deploying
+- Variables are directly linked to an environment ?

@@ -101,15 +101,6 @@ class CustomAPIClient(APIClient):
 class APITestCase(TestCase):
     def setUp(self):
         self.client = CustomAPIClient(parent=self)
-
-    def tearDown(self):
-        cache.clear()
-
-
-class AuthAPITestCase(APITestCase):
-    def setUp(self):
-        super().setUp()
-        User.objects.create_user(username="Fredkiss3", password="password")
         self.fake_docker_client = FakeDockerClient()
 
         # these functions are always patched
@@ -122,6 +113,21 @@ class AuthAPITestCase(APITestCase):
         ).start()
 
         self.addCleanup(patch.stopall)
+
+    def tearDown(self):
+        cache.clear()
+
+    def assertDictContainsSubset(self, subset: dict, parent: dict, msg: object = None):
+        extracted_subset = dict(
+            [(key, parent[key]) for key in subset.keys() if key in parent.keys()]
+        )
+        self.assertEqual(subset, extracted_subset, msg)
+
+
+class AuthAPITestCase(APITestCase):
+    def setUp(self):
+        super().setUp()
+        User.objects.create_user(username="Fredkiss3", password="password")
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
@@ -216,6 +222,8 @@ class FakeDockerClient:
 
     PORT_USED_BY_HOST = 8080
     FAILING_CMD = "invalid"
+    NONEXISTANT_IMAGE = "nonexistant"
+    NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -358,18 +366,26 @@ class FakeDockerClient:
         ]
 
     def images_pull(self, repository: str, tag: str = None, *args, **kwargs):
-        self.pulled_images.add(f"{repository}:{tag}")
+        if tag is not None:
+            self.pulled_images.add(f"{repository}:{tag}")
+        else:
+            self.pulled_images.add(repository)
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
-            if not image.startswith("dcr.fredkiss.dev"):
+            username, password = auth_config["username"], auth_config["password"]
+            if username != "fredkiss3" or password != "s3cret":
                 raise docker.errors.APIError("Invalid credentials")
 
-            if not image.startswith("dcr.fredkiss.dev/gh-next"):
-                raise docker.errors.NotFound("This image does not exist")
+            if image == self.NONEXISTANT_PRIVATE_IMAGE:
+                raise docker.errors.NotFound(
+                    "This image does not exist in the registry"
+                )
+            self.is_logged_in = True
         else:
-            if image == "nonexistent":
+            if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
+
 
     def docker_create_network(self, name: str, **kwargs):
         created_network = FakeDockerClient.FakeNetwork(name=name, id=name, parent=self)

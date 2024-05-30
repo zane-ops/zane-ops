@@ -1,37 +1,61 @@
 import time
+from typing import Any
 
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    extend_schema,
+    inline_serializer,
+    PolymorphicProxySerializer,
+)
 from faker import Faker
 from rest_framework import status, exceptions
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
 from .base import EMPTY_RESPONSE, ResourceConflict
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
+    VolumeItemChangeSerializer,
+    DockerCommandFieldChangeSerializer,
+    DockerImageFieldChangeSerializer,
+    URLItemChangeSerializer,
+    EnvItemChangeSerializer,
+    PortItemChangeSerializer,
+    DockerCredentialsFieldChangeSerializer,
+    HealthcheckFieldChangeSerializer,
+    DockerDeploymentFieldChangeRequestSerializer,
 )
 from ..models import (
     Project,
     DockerRegistryService,
     DockerDeployment,
+    ArchivedProject,
+    ArchivedDockerService,
+    DockerDeploymentChange,
+    HealthCheck,
     Volume,
     PortConfiguration,
     URL,
     DockerEnvVariable,
-    ArchivedProject,
-    ArchivedDockerService,
-    HealthCheck,
 )
-from ..serializers import DockerServiceDeploymentSerializer, DockerServiceSerializer
-from ..tasks import deploy_docker_service, delete_resources_for_docker_service
+from ..serializers import (
+    DockerServiceDeploymentSerializer,
+    DockerServiceSerializer,
+    HealthCheckSerializer,
+    VolumeSerializer,
+    URLModelSerializer,
+    PortConfigurationSerializer,
+    DockerEnvVariableSerializer,
+)
+from ..tasks import delete_resources_for_docker_service, deploy_docker_service
 from ..utils import strip_slash_if_exists
 
 
@@ -63,18 +87,12 @@ class CreateDockerServiceAPIView(APIView):
                 fake = Faker()
                 Faker.seed(time.monotonic())
                 service_slug = data.get("slug", fake.slug()).lower()
-                docker_image_tag = "latest"
                 try:
-                    docker_image = data["image"]
-                    docker_image_parts = docker_image.split(":", 1)
-                    if len(docker_image_parts) == 2:
-                        docker_image, docker_image_tag = docker_image_parts
-
                     healthcheck = data.get("healthcheck")
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
-                        image_repository=docker_image,
+                        image=data["image"],
                         command=data.get("command"),
                         docker_credentials_username=(
                             docker_credentials.get("username")
@@ -88,7 +106,7 @@ class CreateDockerServiceAPIView(APIView):
                         ),
                         healthcheck=(
                             HealthCheck.objects.create(
-                                type=healthcheck["type"].upper(),
+                                type=healthcheck["type"],
                                 value=healthcheck["value"],
                                 timeout_seconds=healthcheck["timeout_seconds"],
                                 interval_seconds=healthcheck["interval_seconds"],
@@ -99,6 +117,26 @@ class CreateDockerServiceAPIView(APIView):
                     )
 
                     service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+
+                    initial_changes = [
+                        DockerDeploymentChange(
+                            field="image",
+                            new_value=data["image"],
+                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                            service=service,
+                        )
+                    ]
+
+                    if docker_credentials is not None:
+                        initial_changes.append(
+                            DockerDeploymentChange(
+                                field="credentials",
+                                new_value=docker_credentials,
+                                type=DockerDeploymentChange.ChangeType.UPDATE,
+                                service=service,
+                            )
+                        )
+                    DockerDeploymentChange.objects.bulk_create(initial_changes)
                     service.save()
                 except IntegrityError:
                     raise ResourceConflict(
@@ -107,17 +145,13 @@ class CreateDockerServiceAPIView(APIView):
 
                 # Create volumes if exists
                 volumes_request = data.get("volumes", [])
-                volume_mode_map = {
-                    "rw": Volume.VolumeMode.READ_WRITE,
-                    "ro": Volume.VolumeMode.READ_ONLY,
-                }
                 created_volumes = Volume.objects.bulk_create(
                     [
                         Volume(
                             name=volume.get("name", fake.slug().lower()),
-                            container_path=volume["mount_path"],
+                            container_path=volume["container_path"],
                             host_path=volume.get("host_path"),
-                            mode=volume_mode_map[volume.get("mode")],
+                            mode=volume.get("mode"),
                         )
                         for volume in volumes_request
                     ]
@@ -133,14 +167,14 @@ class CreateDockerServiceAPIView(APIView):
                 if len(service_urls_from_request) > 0:
                     has_at_least_one_http_port = False
                     for port in ports_from_request:
-                        if port["public"] in http_ports:
+                        if port["host"] in http_ports:
                             has_at_least_one_http_port = True
                             break
 
                     if not has_at_least_one_http_port:
                         ports_from_request.append(
                             {
-                                "public": 80,
+                                "host": 80,
                                 "forwarded": 80,
                             }
                         )
@@ -149,9 +183,7 @@ class CreateDockerServiceAPIView(APIView):
                     [
                         PortConfiguration(
                             host=(
-                                port["public"]
-                                if port["public"] not in http_ports
-                                else None
+                                port["host"] if port["host"] not in http_ports else None
                             ),
                             forwarded=port["forwarded"],
                         )
@@ -165,7 +197,7 @@ class CreateDockerServiceAPIView(APIView):
                 can_create_urls = len(service_urls_from_request) > 0
                 if not can_create_urls:
                     for port in ports_from_request:
-                        public_port = port["public"]
+                        public_port = port["host"]
                         if public_port in http_ports:
                             can_create_urls = True
                             break
@@ -212,9 +244,7 @@ class CreateDockerServiceAPIView(APIView):
                         service.urls.add(*created_urls)
 
                 # Create first deployment
-                first_deployment = DockerDeployment.objects.create(
-                    service=service, image_tag=docker_image_tag
-                )
+                first_deployment = DockerDeployment.objects.create(service=service)
                 if len(service.urls.all()) > 0:
                     first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
                     first_deployment.save()
@@ -245,15 +275,111 @@ class CreateDockerServiceAPIView(APIView):
                 response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
+
+class DockerServiceDeploymentChangesAPIView(APIView):
+    serializer_class = DockerServiceSerializer
+
     @extend_schema(
-        request=DockerServiceCreateRequestSerializer,
+        request=PolymorphicProxySerializer(
+            component_name="DeploymentChangeRequest",
+            serializers=[
+                URLItemChangeSerializer,
+                VolumeItemChangeSerializer,
+                EnvItemChangeSerializer,
+                PortItemChangeSerializer,
+                DockerCredentialsFieldChangeSerializer,
+                DockerCommandFieldChangeSerializer,
+                DockerImageFieldChangeSerializer,
+                HealthcheckFieldChangeSerializer,
+            ],
+            resource_type_field_name="field",
+        ),
         responses={
             200: DockerServiceSerializer,
         },
-        operation_id="updateDockerService",
+        operation_id="requestDeploymentChanges",
     )
-    def put(self, request: Request, project_slug: str, service_slug: str):
-        return Response()
+    def post(self, request: Request, project_slug: str, service_slug: str):
+        project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        field_serializer_map = {
+            "urls": URLItemChangeSerializer,
+            "volumes": VolumeItemChangeSerializer,
+            "env_variables": EnvItemChangeSerializer,
+            "ports": PortItemChangeSerializer,
+            "credentials": DockerCredentialsFieldChangeSerializer,
+            "command": DockerCommandFieldChangeSerializer,
+            "image": DockerImageFieldChangeSerializer,
+            "healthcheck": HealthcheckFieldChangeSerializer,
+        }
+
+        request_serializer = DockerDeploymentFieldChangeRequestSerializer(
+            data=request.data
+        )
+        if request_serializer.is_valid(raise_exception=True):
+            form_serializer_class: type[Serializer] = field_serializer_map[
+                request_serializer.data["field"]
+            ]
+            form = form_serializer_class(
+                data=request.data, context={"service": service}
+            )
+            if form.is_valid(raise_exception=True):
+                data = form.data
+                field = data["field"]
+                new_value = data.get("new_value")
+                item_id = data.get("item_id")
+                change_type = data.get("type")
+                old_value: Any = None
+                match field:
+                    case "image" | "command" | "credentials":
+                        old_value = getattr(service, field)
+                    case "healthcheck":
+                        old_value = (
+                            HealthCheckSerializer(service.healthcheck).data
+                            if service.healthcheck is not None
+                            else None
+                        )
+                    case "volumes":
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = VolumeSerializer(
+                                service.volumes.get(id=item_id)
+                            ).data
+                    case "urls":
+                        old_value = None
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = URLModelSerializer(
+                                service.urls.get(id=item_id)
+                            ).data
+                    case "ports":
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = PortConfigurationSerializer(
+                                service.ports.get(id=item_id)
+                            ).data
+                    case "env_variables":
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = DockerEnvVariableSerializer(
+                                service.env_variables.get(id=item_id)
+                            ).data
+
+                service.add_change(
+                    DockerDeploymentChange(
+                        type=change_type,
+                        field=field,
+                        old_value=old_value,
+                        new_value=new_value,
+                        service=service,
+                    )
+                )
+
+                response = DockerServiceSerializer(service)
+                return Response(response.data, status=status.HTTP_201_CREATED)
 
 
 class GetDockerServiceAPIView(APIView):
@@ -276,7 +402,7 @@ class GetDockerServiceAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "ports", "urls")
+            .prefetch_related("volumes", "ports", "urls", "env_variables")
         ).first()
 
         if service is None:

@@ -345,8 +345,7 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
         }
 
     client.images.pull(
-        repository=service.image_repository,
-        tag=deployment.image_tag,
+        repository=service.image,
         auth_config=auth_config,
     )
 
@@ -391,7 +390,7 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
     envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
 
     client.services.create(
-        image=f"{service.image_repository}:{deployment.image_tag}",
+        image=service.image,
         name=get_docker_service_resource_name(
             service_id=service.id,
             project_id=service.project.id,
@@ -771,11 +770,14 @@ def get_updated_docker_service_deployment_status(
                 )
             break
 
+        min_time_left = healthcheck_time_left
+        if healthcheck_time_left - 1 > 0:  # we don't want a sleep time of `0`
+            min_time_left = min(healthcheck_time_left - 1, healthcheck_time_left)
+
         sleep_time_available = min(
-            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL),
-            healthcheck_time_left - 1,
-            healthcheck_time_left,
+            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL), min_time_left
         )
+
         # TODO (#67) : send system logs when the state changes
         print(
             f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
