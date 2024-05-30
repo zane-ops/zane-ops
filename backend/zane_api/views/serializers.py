@@ -11,8 +11,9 @@ from django_filters import OrderingFilter
 from rest_framework import pagination
 
 from .helpers import (
-    compute_docker_service_snapshot_from_changes,
+    compute_docker_service_snapshot_with_changes,
     compute_all_deployment_changes,
+    compute_docker_service_snapshot_without_changes,
 )
 from .. import serializers
 from ..docker_operations import (
@@ -28,6 +29,7 @@ from ..models import (
     Volume,
     DockerEnvVariable,
     PortConfiguration,
+    DockerDeploymentChange,
 )
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
@@ -484,7 +486,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
         # validate double host port
         same_urls = list(
             filter(
@@ -565,7 +567,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_from_changes(service, change)
+        snapshot = compute_docker_service_snapshot_with_changes(service, change)
 
         # validate double container paths
         volumes_with_same_container_path = list(
@@ -670,7 +672,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
                 )
 
         # validate double `key`
-        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
         if attrs.get("new_value") is not None:
             envs_with_same_key = list(
                 filter(
@@ -713,7 +715,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         # validate double host port
         ports_with_same_host = list(
@@ -813,7 +815,7 @@ class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
 
     def validate(self, attrs: dict):
         service = self.get_service()
-        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         if snapshot.credentials is not None:
             do_image_exists = check_if_docker_image_exists(
@@ -836,11 +838,11 @@ class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
 
 class DockerImageFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["image"], required=True)
-    new_value = serializers.CharField(required=True)
+    new_value = serializers.CharField(required=True, min_length=1)
 
     def validate(self, attrs: dict):
         service = self.get_service()
-        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         if snapshot.credentials is not None:
             do_image_exists = check_if_docker_image_exists(
@@ -862,7 +864,7 @@ class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
 
     def validate(self, attrs: dict):
         service = self.get_service()
-        snapshot = compute_docker_service_snapshot_from_changes(service, attrs)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         new_healthcheck = attrs.get("new_value")
         if new_healthcheck is not None and new_healthcheck.get("type") == "PATH":
@@ -895,3 +897,42 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
             "healthcheck",
         ],
     )
+
+
+# ====================================
+#   cancel Docker services changes   #
+# ====================================
+
+
+class CancelDockerDeploymentChangesRequestSerializer(serializers.Serializer):
+    change_id = serializers.CharField(required=True)
+
+    def get_service(self):
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+        return service
+
+    def validate(self, attrs: dict):
+        service = self.get_service()
+        snapshot = compute_docker_service_snapshot_without_changes(
+            service, change_id=attrs["change_id"]
+        )
+        if snapshot.image is None:
+            raise serializers.ValidationError(
+                "Cannot delete this change because it would remove the image of the service."
+            )
+
+        return attrs
+
+    def validate_change_id(self, value: str):
+        service = self.get_service()
+
+        try:
+            service.unapplied_changes.get(id=value)
+        except DockerDeploymentChange.DoesNotExist:
+            raise serializers.ValidationError(
+                f"A pending change with id `{value}` does not exist in this service."
+            )
+
+        return value

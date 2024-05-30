@@ -1546,3 +1546,63 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
+    def test_cancel_simple_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        change = DockerDeploymentChange.objects.create(
+            field="credentials",
+            type=DockerDeploymentChange.ChangeType.UPDATE,
+            new_value={"username": "fredkiss3", "password": "s3c4et"},
+            service=service,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data={"change_id": change.id},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        change_count = DockerDeploymentChange.objects.filter(
+            service=service, applied=False
+        ).count()
+        self.assertEqual(0, change_count)
+
+    def test_cannot_cancel_nonexistent_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data={"change_id": "val_123"},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_cannot_cancel_a_change_that_sets_image_null(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        change = DockerDeploymentChange.objects.create(
+            field="image",
+            type=DockerDeploymentChange.ChangeType.UPDATE,
+            new_value="caddy:2.8-alpine",
+            service=service,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data={"change_id": change.id},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

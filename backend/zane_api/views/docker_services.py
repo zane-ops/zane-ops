@@ -32,6 +32,7 @@ from .serializers import (
     DockerCredentialsFieldChangeSerializer,
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
+    CancelDockerDeploymentChangesRequestSerializer,
 )
 from ..models import (
     Project,
@@ -392,6 +393,46 @@ class DockerServiceDeploymentChangesAPIView(APIView):
 
                 response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=CancelDockerDeploymentChangesRequestSerializer,
+        responses={
+            204: inline_serializer(
+                name="CancelDockerServiveDeploymentChangesResponseSerializer", fields={}
+            )
+        },
+        operation_id="cancelDeploymentChanges",
+    )
+    def delete(self, request: Request, project_slug: str, service_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+        form = CancelDockerDeploymentChangesRequestSerializer(
+            data=request.data, context={"service": service}
+        )
+        if form.is_valid(raise_exception=True):
+            change_id = form.data["change_id"]
+            change = service.unapplied_changes.get(id=change_id)
+            change.delete()
+
+            return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
 
 class GetDockerServiceAPIView(APIView):
