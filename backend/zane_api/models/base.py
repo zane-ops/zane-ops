@@ -259,10 +259,11 @@ class DockerRegistryService(BaseService):
         }
 
     def add_change(self, change: "DockerDeploymentChange"):
-        existing_changes = self.unapplied_changes.filter(field=change.field)
         match change.field:
             case "image" | "command" | "credentials" | "healthcheck":
-                change_for_field: "DockerDeploymentChange" = existing_changes.first()
+                change_for_field: "DockerDeploymentChange" = (
+                    self.unapplied_changes.filter(field=change.field).first()
+                )
                 if change_for_field is not None:
                     change_for_field.new_value = change.new_value
                 else:
