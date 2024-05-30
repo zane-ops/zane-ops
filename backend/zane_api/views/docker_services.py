@@ -300,7 +300,13 @@ class DockerServiceDeploymentChangesAPIView(APIView):
         operation_id="requestDeploymentChanges",
     )
     def post(self, request: Request, project_slug: str, service_slug: str):
-        project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
         service: DockerRegistryService = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
@@ -308,6 +314,12 @@ class DockerServiceDeploymentChangesAPIView(APIView):
             .select_related("project")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
 
         field_serializer_map = {
             "urls": URLItemChangeSerializer,

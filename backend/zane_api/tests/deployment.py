@@ -1507,3 +1507,42 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+    def test_cannot_add_changes_on_nonexistant_projet(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": "image",
+            "type": "UPDATE",
+            "new_value": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": "project", "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_cannot_add_changes_on_nonexistant_service(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        changes_payload = {
+            "field": "image",
+            "type": "UPDATE",
+            "new_value": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
