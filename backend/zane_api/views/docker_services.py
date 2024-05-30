@@ -383,10 +383,6 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                     response.data,
                 )
 
-    @extend_schema(operation_id="cancelDeploymentChanges")
-    def delete(self, request: Request, project_slug: str, service_slug: str):
-        return Response()
-
 
 class GetDockerServiceAPIView(APIView):
     serializer_class = DockerServiceSerializer
