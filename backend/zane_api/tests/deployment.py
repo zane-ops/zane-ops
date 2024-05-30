@@ -322,7 +322,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         fake_service.scale.assert_called_with(0)
 
 
-class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
+class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_create_service_with_image_creates_changes(self):
         owner = self.loginUser()
@@ -721,7 +721,87 @@ class DockerServiceDeploymentChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_can_use_the_same_host_path_if_same_service(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        v = Volume.objects.create(
+            host_path="/etc/localtime", container_path="/etc/locatime"
+        )
+        service.volumes.add(v)
+
+        changes_payload = {
+            "field": "volumes",
+            "type": "UPDATE",
+            "item_id": v.id,
+            "new_value": {
+                "name": "zane-localtime",
+                "container_path": "/etc/logs/zane",
+                "host_path": "/etc/localtime",
+            },
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_volume_cannot_delete_host_path_if_existing(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        v = Volume.objects.create(
+            host_path="/etc/localtime", container_path="/etc/locatime"
+        )
+        service.volumes.add(v)
+
+        changes_payload = {
+            "field": "volumes",
+            "type": "UPDATE",
+            "item_id": v.id,
+            "new_value": {
+                "name": "zane-localtime",
+                "container_path": "/etc/logs/zane",
+            },
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_cannot_add_host_path_if_not_existing(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        v = Volume.objects.create(container_path="/etc/locatime")
+        service.volumes.add(v)
+
+        changes_payload = {
+            "field": "volumes",
+            "type": "UPDATE",
+            "item_id": v.id,
+            "new_value": {
+                "name": "zane-localtime",
+                "container_path": "/etc/logs/zane",
+                "host_path": "/etc/logs/zane",
+            },
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_env_cannot_specify_the_same_key_twice(self):

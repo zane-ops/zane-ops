@@ -5,7 +5,9 @@ from ..models import DockerRegistryService, BaseDeploymentChange
 from ..serializers import DockerServiceSerializer
 
 
-def compute_all_deployment_changes(service: DockerRegistryService, change: dict):
+def compute_all_deployment_changes(
+    service: DockerRegistryService, change: dict | None = None
+):
     deployment_changes = []
     deployment_changes.extend(
         map(
@@ -13,12 +15,13 @@ def compute_all_deployment_changes(service: DockerRegistryService, change: dict)
             service.unapplied_changes.all(),
         )
     )
-    deployment_changes.append(DeploymentChangeDto(**change))
+    if change is not None:
+        deployment_changes.append(DeploymentChangeDto(**change))
     return deployment_changes
 
 
 def compute_docker_service_snapshot_from_changes(
-    service: DockerRegistryService, change: dict
+    service: DockerRegistryService, change: dict | None = None
 ):
     deployment_changes = compute_all_deployment_changes(service, change)
 

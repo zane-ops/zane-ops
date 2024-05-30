@@ -51,7 +51,7 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 class VolumeRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100, required=False)
     container_path = serializers.CharField(max_length=255)
-    host_path = serializers.URLPathField(max_length=255, required=False)
+    host_path = serializers.URLPathField(max_length=255, required=False, default=None)
     VOLUME_MODE_CHOICES = (
         ("READ_ONLY", _("READ_ONLY")),
         ("READ_WRITE", _("READ_WRITE")),
@@ -546,11 +546,12 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         service = self.get_service()
         change_type = change["type"]
         new_value = change.get("new_value", {}) or {}
+        current_volume: Volume | None = None
         if change_type in ["DELETE", "UPDATE"]:
             item_id = change["item_id"]
 
             try:
-                service.volumes.get(id=item_id)
+                current_volume = service.volumes.get(id=item_id)
             except Volume.DoesNotExist:
                 raise serializers.ValidationError(
                     {
@@ -599,16 +600,42 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if host path is not already used by another service
         if new_value.get("host_path") is not None:
-            already_existing_volumes: Volume = Volume.objects.filter(
+            already_existing_volumes: Volume | None = Volume.objects.filter(
                 Q(host_path__isnull=False)
                 & Q(host_path=new_value.get("host_path"))
-                & ~Q(dockerregistryservice=service)
+                & ~Q(dockerregistryservice__id=service.id)
             ).first()
             if already_existing_volumes is not None:
                 raise serializers.ValidationError(
                     {
                         "new_value": {
                             "host_path": f"Another service is already mounted to the host path `{already_existing_volumes.host_path}`."
+                        }
+                    }
+                )
+        if change_type == "UPDATE" and current_volume is not None:
+            if (
+                new_value.get("host_path") is None
+                and current_volume.host_path is not None
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "host_path": f"Cannot set the `host path` of a volume mounted to one to null, "
+                            f"you need to delete and recreate the volume without a host path instead."
+                        }
+                    }
+                )
+
+            if (
+                new_value.get("host_path") is not None
+                and current_volume.host_path is None
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "host_path": f"Cannot mount a volume to host path if it wasn't mounted to one before, "
+                            f"you need to delete and recreate the volume with a host path instead."
                         }
                     }
                 )
