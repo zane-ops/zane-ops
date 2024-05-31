@@ -895,12 +895,3 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
             "healthcheck",
         ],
     )
-
-
-# ====================================
-#   cancel Docker services changes   #
-# ====================================
-
-
-class CancelDockerDeploymentChangesResponseSerializer(serializers.Serializer):
-    pass

@@ -33,7 +33,6 @@ from .serializers import (
     DockerCredentialsFieldChangeSerializer,
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
-    CancelDockerDeploymentChangesResponseSerializer,
 )
 from ..models import (
     Project,
@@ -399,12 +398,12 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
 
 
 class CancelDockerServiceDeploymentChangesAPIView(APIView):
-    serializer_class = CancelDockerDeploymentChangesResponseSerializer
-
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
-            204: CancelDockerDeploymentChangesResponseSerializer,
+            204: inline_serializer(
+                name="CancelDockerServiveDeploymentChangesResponseSerializer", fields={}
+            ),
         },
         operation_id="cancelDeploymentChanges",
     )
