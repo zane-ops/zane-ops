@@ -2123,17 +2123,16 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
     ):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-            ]
+        create_service_payload = {
+            "slug": "basic-web-server",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
         )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         response = self.client.put(
             reverse(
