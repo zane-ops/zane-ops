@@ -1101,7 +1101,7 @@ paths:
                 $ref: '#/components/schemas/DockerService'
           description: ''
   /api/projects/{project_slug}/request-service-changes/docker/{service_slug}/:
-    post:
+    put:
       operationId: requestDeploymentChanges
       parameters:
       - in: path

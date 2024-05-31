@@ -302,7 +302,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
         },
         operation_id="requestDeploymentChanges",
     )
-    def post(self, request: Request, project_slug: str, service_slug: str):
+    def put(self, request: Request, project_slug: str, service_slug: str):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
