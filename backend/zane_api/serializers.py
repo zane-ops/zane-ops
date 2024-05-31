@@ -116,9 +116,7 @@ class DockerCredentialSerializer(serializers.Serializer):
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
-    ports = PortConfigurationSerializer(
-        read_only=True, many=True, source="port_config", default=[]
-    )
+    ports = PortConfigurationSerializer(read_only=True, many=True)
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
     healthcheck = HealthCheckSerializer(read_only=True)
     network_aliases = serializers.ListField(

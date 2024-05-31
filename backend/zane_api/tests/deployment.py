@@ -2104,13 +2104,87 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         new_url = updated_service.urls.filter(domain="web-server.fred.kiss").first()
         self.assertIsNotNone(new_url)
 
-        deleted_url = updated_service.env_variables.filter(id=url_to_delete.id).first()
+        deleted_url = updated_service.urls.filter(id=url_to_delete.id).first()
         self.assertIsNone(deleted_url)
 
         updated_url = updated_service.urls.get(id=url_to_update.id)
         self.assertEqual("proxy.fredkiss.dev", updated_url.domain)
         self.assertEqual("/config", updated_url.base_path)
         self.assertEqual(False, updated_url.strip_prefix)
+
+    def test_apply_port_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        port_to_delete, port_to_update = PortConfiguration.objects.bulk_create(
+            [
+                PortConfiguration(host=1010, forwarded=1010),
+                PortConfiguration(forwarded=8000, host=8000),
+            ]
+        )
+        service.ports.add(port_to_delete, port_to_update)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "forwarded": 9000,
+                        "host": 9000,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=port_to_update.id,
+                    new_value={
+                        "forwarded": 80,
+                        "host": 8080,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=port_to_delete.id,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(2, updated_service.ports.count())
+
+        new_port = updated_service.ports.filter(host=9000).first()
+        self.assertIsNotNone(new_port)
+
+        deleted_port = updated_service.ports.filter(id=port_to_delete.id).first()
+        self.assertIsNone(deleted_port)
+
+        updated_port = updated_service.ports.get(id=port_to_update.id)
+        self.assertEqual(8080, updated_port.host)
+        self.assertEqual(80, updated_port.forwarded)
 
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
         owner = self.loginUser()

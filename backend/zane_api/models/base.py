@@ -334,10 +334,25 @@ class DockerRegistryService(BaseService):
                         url.base_path = change.new_value.get("base_path")
                         url.strip_prefix = change.new_value.get("strip_prefix")
                         url.save()
+                case DockerDeploymentChange.ChangeField.PORTS:
+                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                        self.ports.add(
+                            PortConfiguration.objects.create(
+                                host=change.new_value.get("host"),
+                                forwarded=change.new_value.get("forwarded"),
+                            )
+                        )
+                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                        self.ports.get(id=change.item_id).delete()
+                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                        port = self.ports.get(id=change.item_id)
+                        port.host = change.new_value.get("host")
+                        port.forwarded = change.new_value.get("forwarded")
+                        port.save()
 
+        self.unapplied_changes.update(applied=True)
         self.save()
         self.refresh_from_db()
-        self.unapplied_changes.update(applied=True)
 
     @property
     def credentials(self):
