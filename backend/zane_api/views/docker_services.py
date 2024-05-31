@@ -463,6 +463,39 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
 
+class ApplyDockerServiceDeploymentChangesAPIView(APIView):
+    serializer_class = DockerServiceSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        operation_id="applyDeploymentChanges",
+    )
+    def put(self, request: Request, project_slug: str, service_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        response = DockerServiceSerializer(service)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
 class GetDockerServiceAPIView(APIView):
     serializer_class = DockerServiceSerializer
 

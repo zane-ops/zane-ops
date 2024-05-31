@@ -1799,3 +1799,74 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+
+class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
+    def test_apply_simple_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual("caddy:2.8-alpine", updated_service.image)
+        self.assertEqual(0, updated_service.unapplied_changes.count(0))
+        self.assertEqual(1, updated_service.applied_changes.count(0))
+
+    def test_apply_changes_creates_a_deployment(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        new_change: DockerDeploymentChange | None = (
+            updated_service.applied_changes.first()
+        )
+        self.assertIsNotNone(new_change.deployment)
+        new_deployment: DockerDeployment | None = DockerDeployment.objects.filter(
+            is_current_production=True
+        ).first()
+        self.assertEqual(new_change.deployment.id, new_deployment.id)

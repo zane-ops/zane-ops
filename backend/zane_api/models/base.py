@@ -247,6 +247,10 @@ class DockerRegistryService(BaseService):
         return self.changes.filter(applied=False)
 
     @property
+    def applied_changes(self):
+        return self.changes.filter(applied=True)
+
+    @property
     def credentials(self):
         if (
             self.docker_credentials_username is None
