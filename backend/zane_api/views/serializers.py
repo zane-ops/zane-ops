@@ -823,7 +823,7 @@ class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
             if not do_image_exists:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` provided for the service."
+                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` is set for the service."
                     }
                 )
         return attrs
@@ -875,7 +875,7 @@ class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
             if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"healthcheck requires that at least one `url` or one `port` is provided"
+                        "new_value": f"healthcheck requires that at least one `url` or one `port` is set in the service."
                     }
                 )
         return attrs
