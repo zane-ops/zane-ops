@@ -438,7 +438,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             service__slug="app", field="image"
         ).first()
@@ -475,7 +475,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             Q(service__slug="app") & Q(field="volumes")
@@ -748,7 +748,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_volume_cannot_delete_host_path_if_existing(self):
         owner = self.loginUser()
@@ -957,7 +957,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_ports_cannot_specify_two_http_ports(self):
         owner = self.loginUser()
@@ -1073,7 +1073,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_url_cannot_specify_the_same_url_twice(self):
         owner = self.loginUser()
@@ -1283,7 +1283,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_url_can_update_url_if_attached_to_same_service(
         self,
@@ -1307,7 +1307,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_url_cannot_update_url_if_not_attached_to_same_service(
         self,
@@ -1430,7 +1430,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_healthcheck_path_works_with_http_port(
         self,
@@ -1466,7 +1466,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_healthcheck_path_works_with_url(
         self,
@@ -1506,7 +1506,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_cannot_add_changes_on_nonexistant_projet(self):
         owner = self.loginUser()

@@ -394,7 +394,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 )
 
                 response = DockerServiceSerializer(service)
-                return Response(response.data, status=status.HTTP_201_CREATED)
+                return Response(response.data, status=status.HTTP_200_OK)
 
 
 class CancelDockerServiceDeploymentChangesAPIView(APIView):
