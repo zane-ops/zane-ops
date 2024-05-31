@@ -2035,6 +2035,83 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("ENVIRONMENT", updated_env.key)
         self.assertEqual("production", updated_env.value)
 
+    def test_apply_url_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        url_to_delete, url_to_update = URL.objects.bulk_create(
+            [
+                URL(base_path="/unused", domain="old-domain.com"),
+                URL(base_path="/", domain="caddy-test.fredkiss.dev"),
+            ]
+        )
+        service.urls.add(url_to_delete, url_to_update)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "web-server.fred.kiss",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=url_to_update.id,
+                    new_value={
+                        "domain": "proxy.fredkiss.dev",
+                        "base_path": "/config",
+                        "strip_prefix": False,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=url_to_delete.id,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(2, updated_service.urls.count())
+
+        new_url = updated_service.urls.filter(domain="web-server.fred.kiss").first()
+        self.assertIsNotNone(new_url)
+
+        deleted_url = updated_service.env_variables.filter(id=url_to_delete.id).first()
+        self.assertIsNone(deleted_url)
+
+        updated_url = updated_service.urls.get(id=url_to_update.id)
+        self.assertEqual("proxy.fredkiss.dev", updated_url.domain)
+        self.assertEqual("/config", updated_url.base_path)
+        self.assertEqual(False, updated_url.strip_prefix)
+
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)

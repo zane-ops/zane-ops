@@ -317,6 +317,23 @@ class DockerRegistryService(BaseService):
                         env.key = change.new_value.get("key")
                         env.value = change.new_value.get("value")
                         env.save()
+                case DockerDeploymentChange.ChangeField.URLS:
+                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                        self.urls.add(
+                            URL.objects.create(
+                                domain=change.new_value.get("domain"),
+                                base_path=change.new_value.get("base_path"),
+                                strip_prefix=change.new_value.get("strip_prefix"),
+                            )
+                        )
+                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                        self.urls.get(id=change.item_id).delete()
+                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                        url = self.urls.get(id=change.item_id)
+                        url.domain = change.new_value.get("domain")
+                        url.base_path = change.new_value.get("base_path")
+                        url.strip_prefix = change.new_value.get("strip_prefix")
+                        url.save()
 
         self.save()
         self.refresh_from_db()
