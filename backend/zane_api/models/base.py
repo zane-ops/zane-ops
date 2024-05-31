@@ -258,13 +258,16 @@ class DockerRegistryService(BaseService):
     def apply_pending_changes(self):
         for change in self.unapplied_changes:
             match change.field:
-                case "image" | "command":
+                case (
+                    DockerDeploymentChange.ChangeField.IMAGE
+                    | DockerDeploymentChange.ChangeField.COMMAND
+                ):
                     setattr(self, change.field, change.new_value)
-                case "credentials":
+                case DockerDeploymentChange.ChangeField.CREDENTIALS:
                     self.docker_credentials_username = change.new_value.get("username")
                     self.docker_credentials_password = change.new_value.get("password")
                     pass
-                case "healthcheck":
+                case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                     if self.healthcheck is None:
                         self.healthcheck = HealthCheck()
 
@@ -279,7 +282,7 @@ class DockerRegistryService(BaseService):
                         or HealthCheck.DEFAULT_INTERVAL_SECONDS
                     )
                     self.healthcheck.save()
-                case "volumes":
+                case DockerDeploymentChange.ChangeField.VOLUMES:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
@@ -300,7 +303,7 @@ class DockerRegistryService(BaseService):
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
-                case "env_variables":
+                case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
                         DockerEnvVariable.objects.create(
                             key=change.new_value.get("key"),
@@ -528,6 +531,18 @@ class DockerDeploymentChange(BaseDeploymentChange):
         primary_key=True,
         prefix=ID_PREFIX,
     )
+
+    class ChangeField(models.TextChoices):
+        IMAGE = "image", _("image")
+        COMMAND = "command", _("command")
+        CREDENTIALS = "credentials", _("credentials")
+        HEALTHCHECK = "healthcheck", _("healthcheck")
+        VOLUMES = "volumes", _("volumes")
+        ENV_VARIABLES = "env_variables", _("env_variables")
+        URLS = "urls", _("urls")
+        PORTS = "ports", _("ports")
+
+    field = models.CharField(max_length=255, choices=ChangeField.choices)
 
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"

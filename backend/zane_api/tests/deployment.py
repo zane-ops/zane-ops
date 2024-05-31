@@ -1835,13 +1835,13 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value="caddy:2.8-alpine",
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="credentials",
+                    field=DockerDeploymentChange.ChangeField.CREDENTIALS,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "username": "fredkiss3",
@@ -1896,13 +1896,13 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="images",
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value="caddy:2.8-alpine",
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="volumes",
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
@@ -1911,7 +1911,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="volumes",
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     item_id=volume_to_update.id,
                     new_value={
@@ -1923,7 +1923,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="volumes",
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
                     type=DockerDeploymentChange.ChangeType.DELETE,
                     item_id=volume_to_delete.id,
                     service=service,
@@ -1978,13 +1978,13 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="images",
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value="caddy:2.8-alpine",
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="env_variables",
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "DJANGO_SECRET_KEY",
@@ -1993,7 +1993,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="env_variables",
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     item_id=env_to_update.id,
                     new_value={
@@ -2145,12 +2145,12 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug="basic-web-server")
         new_change: DockerDeploymentChange | None = (
             updated_service.applied_changes.first()
         )
         self.assertIsNotNone(new_change.deployment)
-        new_deployment: DockerDeployment | None = DockerDeployment.objects.filter(
-            is_current_production=True
-        ).first()
+        prod_deployments = DockerDeployment.objects.filter(is_current_production=True)
+        self.assertEqual(1, prod_deployments.count())
+        new_deployment: DockerDeployment | None = prod_deployments.first()
         self.assertEqual(new_change.deployment.id, new_deployment.id)
