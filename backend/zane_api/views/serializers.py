@@ -194,7 +194,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                     {
                         "healthcheck": {
                             "path": [
-                                f"healthcheck requires that at least one `url` or one `port` is provided"
+                                f"healthcheck requires that at least one `url` or one `port` is set in the service."
                             ]
                         }
                     }
