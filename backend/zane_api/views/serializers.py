@@ -823,7 +823,7 @@ class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
             if not do_image_exists:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` is set for the service."
+                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` set in the service."
                     }
                 )
         return attrs
