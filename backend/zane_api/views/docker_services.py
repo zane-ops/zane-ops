@@ -404,9 +404,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
-            204: inline_serializer(
-                name="CancelDockerServiveDeploymentChangesResponseSerializer", fields={}
-            ),
+            204: CancelDockerDeploymentChangesResponseSerializer,
         },
         operation_id="cancelDeploymentChanges",
     )
