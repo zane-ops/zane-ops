@@ -183,7 +183,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                     raise serializers.ValidationError(
                         {
                             "urls": [
-                                f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
+                                f"Cannot specify both a custom URL and a host port other than a HTTP (80/443)"
                             ]
                         }
                     )
@@ -538,6 +538,13 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
+        if change_type == "ADD" and len(snapshot.http_ports) == 0:
+            raise serializers.ValidationError(
+                {
+                    "new_value": f"adding an URL requires that one port with a HTTP host (80/443) is set in the service."
+                }
+            )
+
         return attrs
 
 
@@ -744,7 +751,8 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host": "Only one HTTP port (80/443) is allowed, we cannot forward the http requests to two distinct ports."
+                        "host": "Only one HTTP host port (80/443) is allowed,"
+                                " we cannot forward the http requests to two distinct ports."
                     }
                 }
             )
@@ -866,16 +874,11 @@ class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
 
         new_healthcheck = attrs.get("new_value")
         if new_healthcheck is not None and new_healthcheck.get("type") == "PATH":
-            ports_exposed_to_http = list(
-                filter(
-                    lambda port: port.host is None or port.host in [80, 443],
-                    snapshot.ports,
-                )
-            )
-            if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
+            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"healthcheck requires that at least one `url` or one `port` is set in the service."
+                        "new_value": f"healthcheck requires that at least one `url`"
+                        f" or one port with a HTTP host (80/443)` is set in the service."
                     }
                 )
         return attrs

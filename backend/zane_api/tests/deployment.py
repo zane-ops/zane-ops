@@ -1208,6 +1208,27 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    def test_validate_url_require_forwarded_http_port(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": "labs.idx.co"},
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
     def test_validate_url_cannot_delete_if_healthcheck_path_in_service(
         self,
     ):
