@@ -492,6 +492,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 f" does not exist within the project `{project_slug}`"
             )
 
+        service.apply_pending_changes()
         response = DockerServiceSerializer(service)
         return Response(response.data, status=status.HTTP_200_OK)
 

@@ -838,6 +838,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
+  /api/projects/{project_slug}/apply-service-changes/docker/{service_slug}/:
+    put:
+      operationId: applyDeploymentChanges
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyDeploymentChangesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerService'
+          description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveDockerService
@@ -1799,6 +1893,177 @@ paths:
           description: ''
 components:
   schemas:
+    ApplyDeploymentChangesCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - command
+          type: string
+          description: '* `command` - command'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesError:
+      oneOf:
+      - $ref: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ApplyDeploymentChangesIdErrorComponent'
+      - $ref: '#/components/schemas/ApplyDeploymentChangesImageErrorComponent'
+      - $ref: '#/components/schemas/ApplyDeploymentChangesSlugErrorComponent'
+      - $ref: '#/components/schemas/ApplyDeploymentChangesCommandErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
+          id: '#/components/schemas/ApplyDeploymentChangesIdErrorComponent'
+          image: '#/components/schemas/ApplyDeploymentChangesImageErrorComponent'
+          slug: '#/components/schemas/ApplyDeploymentChangesSlugErrorComponent'
+          command: '#/components/schemas/ApplyDeploymentChangesCommandErrorComponent'
+    ApplyDeploymentChangesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ApplyDeploymentChangesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ApplyDeploymentChangesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ApplyDeploymentChangesIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - id
+          type: string
+          description: '* `id` - id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - image
+          type: string
+          description: '* `image` - image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplyDeploymentChangesError'
+      required:
+      - errors
+      - type
     ArchiveDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -2767,6 +3032,7 @@ components:
           - blank
           - invalid
           - max_length
+          - min_length
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
@@ -2775,6 +3041,7 @@ components:
             * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
+            * `min_length` - min_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -2983,6 +3250,18 @@ components:
       required:
       - password
       - username
+    DockerCredentialRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - username
     DockerCredentialsFieldChangeFieldEnum:
       enum:
       - credentials
@@ -3040,6 +3319,26 @@ components:
       - new_value
       - old_value
       - type
+    DockerDeploymentChangeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
+        field:
+          type: string
+          minLength: 1
+          maxLength: 255
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+      required:
+      - field
+      - type
     DockerDeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -3064,6 +3363,24 @@ components:
           maxLength: 255
       required:
       - id
+      - key
+      - value
+    DockerEnvVariableRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
       - key
       - value
     DockerImage:
@@ -3451,6 +3768,28 @@ components:
       - status
       - status_reason
       - url
+    DockerServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        image:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 510
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        command:
+          type: string
+          nullable: true
+      required:
+      - slug
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -3693,6 +4032,27 @@ components:
       - timeout_seconds
       - type
       - value
+    HealthCheckRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/HealthCheckTypeEnum'
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+        timeout_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        interval_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
     HealthCheckRequestRequest:
       type: object
       properties:
@@ -4037,6 +4397,24 @@ components:
       - forwarded
       - host
       - id
+    PortConfigurationRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        host:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        forwarded:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - forwarded
     PortItemChangeFieldEnum:
       enum:
       - ports
@@ -4677,6 +5055,7 @@ components:
           - blank
           - invalid
           - max_length
+          - min_length
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
@@ -4685,6 +5064,7 @@ components:
             * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
+            * `min_length` - min_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -5037,6 +5417,25 @@ components:
       - domain
       - id
       - strip_prefix
+    URLModelRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        domain:
+          type: string
+          nullable: true
+          maxLength: 1000
+        base_path:
+          type: string
+          minLength: 1
+          default: /
+        strip_prefix:
+          type: boolean
+      required:
+      - domain
     URLRequestRequest:
       type: object
       properties:
@@ -5194,6 +5593,7 @@ components:
         name:
           type: string
           maxLength: 255
+          minLength: 1
         container_path:
           type: string
           maxLength: 255
@@ -5246,6 +5646,31 @@ components:
       description: |-
         * `READ_ONLY` - Read-Only
         * `READ_WRITE` - Read-Write
+    VolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        container_path:
+          type: string
+          minLength: 1
+          maxLength: 255
+        host_path:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+        mode:
+          $ref: '#/components/schemas/VolumeModeEnum'
+      required:
+      - container_path
+      - name
     VolumeRequestModeEnum:
       enum:
       - READ_ONLY
@@ -5260,7 +5685,7 @@ components:
         name:
           type: string
           minLength: 1
-          maxLength: 100
+          maxLength: 255
         container_path:
           type: string
           minLength: 1

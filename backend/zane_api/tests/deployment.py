@@ -14,7 +14,9 @@ from ..models import (
     Volume,
     PortConfiguration,
     URL,
+    HealthCheck,
 )
+from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -1816,6 +1818,15 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     new_value="caddy:2.8-alpine",
                     service=service,
                 ),
+                DockerDeploymentChange(
+                    field="credentials",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "username": "fredkiss3",
+                        "password": "5ec43t",
+                    },
+                    service=service,
+                ),
             ]
         )
 
@@ -1828,11 +1839,185 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual("caddy:2.8-alpine", updated_service.image)
-        self.assertEqual(0, updated_service.unapplied_changes.count(0))
-        self.assertEqual(1, updated_service.applied_changes.count(0))
+        self.assertEqual(
+            {
+                "username": "fredkiss3",
+                "password": "5ec43t",
+            },
+            updated_service.credentials,
+        )
+        self.assertEqual(0, updated_service.unapplied_changes.count())
+        self.assertEqual(2, updated_service.applied_changes.count())
+
+    def test_apply_compound_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        volume_to_delete, volume_to_update = Volume.objects.bulk_create(
+            [
+                Volume(
+                    container_path="/etc/localtime",
+                    host_path="/etc/localtime",
+                    name="to delete",
+                ),
+                Volume(container_path="/other", name="to update"),
+            ]
+        )
+        service.volumes.add(volume_to_delete, volume_to_update)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="images",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="volumes",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="volumes",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=volume_to_update.id,
+                    new_value={
+                        "host_path": "/etc/config",
+                        "container_path": "/config",
+                        "name": "caddy config",
+                        "mode": Volume.VolumeMode.READ_ONLY,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="volumes",
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=volume_to_delete.id,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(2, updated_service.volumes.count())
+
+        new_volume = updated_service.volumes.filter(container_path="/data").first()
+        self.assertIsNotNone(new_volume)
+        self.assertGreater(len(new_volume.name), 0)
+
+        deleted_volume = updated_service.volumes.filter(id=volume_to_delete.id).first()
+        self.assertIsNone(deleted_volume)
+
+        updated_volume = updated_service.volumes.get(id=volume_to_update.id)
+        self.assertEqual(Volume.VolumeMode.READ_ONLY, updated_volume.mode)
+        self.assertEqual("/etc/config", updated_volume.host_path)
+        self.assertEqual("/config", updated_volume.container_path)
+        self.assertEqual("caddy config", updated_volume.name)
+
+    def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="healthcheck",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertIsNotNone(updated_service.healthcheck)
+
+    def test_apply_healthcheck_changes_updates_healthcheck_if_exists(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        service.healthcheck = HealthCheck.objects.create(type="COMMAND", value="/")
+        service.save()
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="healthcheck",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/status",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 5,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual("PATH", updated_service.healthcheck.type)
+        self.assertEqual("/status", updated_service.healthcheck.value)
+        self.assertEqual(30, updated_service.healthcheck.timeout_seconds)
+        self.assertEqual(5, updated_service.healthcheck.interval_seconds)
 
     def test_apply_changes_creates_a_deployment(
         self,

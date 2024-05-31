@@ -1,9 +1,12 @@
+import time
 import uuid
 
 from django.conf import settings
+from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
+from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
@@ -80,6 +83,8 @@ class URL(models.Model):
 
 class HealthCheck(models.Model):
     ID_PREFIX = "htc_"
+    DEFAULT_TIMEOUT_SECONDS = 60
+    DEFAULT_INTERVAL_SECONDS = 15
     id = ShortUUIDField(
         length=11,
         max_length=255,
@@ -98,8 +103,8 @@ class HealthCheck(models.Model):
         default=HealthCheckType.PATH,
     )
     value = models.CharField(max_length=255, null=False, default="/")
-    interval_seconds = models.PositiveIntegerField(default=15)
-    timeout_seconds = models.PositiveIntegerField(default=60)
+    interval_seconds = models.PositiveIntegerField(default=DEFAULT_INTERVAL_SECONDS)
+    timeout_seconds = models.PositiveIntegerField(default=DEFAULT_TIMEOUT_SECONDS)
 
 
 class BaseService(TimestampedModel):
@@ -250,6 +255,55 @@ class DockerRegistryService(BaseService):
     def applied_changes(self):
         return self.changes.filter(applied=True)
 
+    def apply_pending_changes(self):
+        for change in self.unapplied_changes:
+            match change.field:
+                case "image" | "command":
+                    setattr(self, change.field, change.new_value)
+                case "credentials":
+                    self.docker_credentials_username = change.new_value.get("username")
+                    self.docker_credentials_password = change.new_value.get("password")
+                    pass
+                case "healthcheck":
+                    if self.healthcheck is None:
+                        self.healthcheck = HealthCheck()
+
+                    self.healthcheck.type = change.new_value.get("type")
+                    self.healthcheck.value = change.new_value.get("value")
+                    self.healthcheck.timeout_seconds = (
+                        change.new_value.get("timeout_seconds")
+                        or HealthCheck.DEFAULT_TIMEOUT_SECONDS
+                    )
+                    self.healthcheck.interval_seconds = (
+                        change.new_value.get("interval_seconds")
+                        or HealthCheck.DEFAULT_INTERVAL_SECONDS
+                    )
+                    self.healthcheck.save()
+                case "volumes":
+                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                        fake = Faker()
+                        Faker.seed(time.monotonic())
+                        self.volumes.add(
+                            Volume.objects.create(
+                                container_path=change.new_value.get("container_path"),
+                                host_path=change.new_value.get("host_path"),
+                                mode=change.new_value.get("mode"),
+                                name=change.new_value.get("name", fake.slug().lower()),
+                            )
+                        )
+                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                        self.volumes.get(id=change.item_id).delete()
+                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                        volume = self.volumes.get(id=change.item_id)
+                        volume.host_path = change.new_value.get("host_path")
+                        volume.container_path = change.new_value.get("container_path")
+                        volume.mode = change.new_value.get("mode")
+                        volume.name = change.new_value.get("name", volume.name)
+                        volume.save()
+
+        self.save()
+        self.unapplied_changes.update(applied=True)
+
     @property
     def credentials(self):
         if (
@@ -328,7 +382,12 @@ class Volume(TimestampedModel):
         choices=VolumeMode.choices,
         default=VolumeMode.READ_WRITE,
     )
-    name = models.CharField(max_length=255)
+    name = models.CharField(
+        max_length=255,
+        blank=False,
+        null=False,
+        validators=[MinLengthValidator(limit_value=1)],
+    )
     container_path = models.CharField(max_length=255)
     host_path = models.CharField(
         max_length=255, null=True, validators=[validate_url_path], unique=True

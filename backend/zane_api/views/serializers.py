@@ -49,7 +49,7 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 
 
 class VolumeRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100, required=False)
+    name = serializers.CharField(max_length=255, required=False, min_length=1)
     container_path = serializers.CharField(max_length=255)
     host_path = serializers.URLPathField(max_length=255, required=False, default=None)
     VOLUME_MODE_CHOICES = (
