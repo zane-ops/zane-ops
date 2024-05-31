@@ -15,6 +15,7 @@ from ..models import (
     PortConfiguration,
     URL,
     HealthCheck,
+    DockerEnvVariable,
 )
 from ..utils import jprint
 
@@ -1853,7 +1854,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(0, updated_service.unapplied_changes.count())
         self.assertEqual(2, updated_service.applied_changes.count())
 
-    def test_apply_compound_changes(
+    def test_apply_volume_changes(
         self,
     ):
         owner = self.loginUser()
@@ -1935,6 +1936,83 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("/etc/config", updated_volume.host_path)
         self.assertEqual("/config", updated_volume.container_path)
         self.assertEqual("caddy config", updated_volume.name)
+
+    def test_apply_env_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        env_to_delete, env_to_update = DockerEnvVariable.objects.bulk_create(
+            [
+                DockerEnvVariable(
+                    key="TO_DELETE", value="random bullshit", service_id=service.id
+                ),
+                DockerEnvVariable(
+                    key="TO_UPDATE", value="old value", service_id=service.id
+                ),
+            ]
+        )
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="images",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="env_variables",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "DJANGO_SECRET_KEY",
+                        "value": "super-secret-key-value-random123",
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="env_variables",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=env_to_update.id,
+                    new_value={
+                        "key": "ENVIRONMENT",
+                        "value": "production",
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="env_variables",
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=env_to_delete.id,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(2, updated_service.env_variables.count())
+
+        new_env = updated_service.env_variables.filter(key="DJANGO_SECRET_KEY").first()
+        self.assertIsNotNone(new_env)
+
+        deleted_env = updated_service.env_variables.filter(id=env_to_delete.id).first()
+        self.assertIsNone(deleted_env)
+
+        updated_env = updated_service.env_variables.get(id=env_to_update.id)
+        self.assertEqual("ENVIRONMENT", updated_env.key)
+        self.assertEqual("production", updated_env.value)
 
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
         owner = self.loginUser()

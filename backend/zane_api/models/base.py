@@ -10,7 +10,7 @@ from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
-from ..validators import validate_url_domain, validate_url_path
+from ..validators import validate_url_domain, validate_url_path, validate_env_name
 
 
 class TimestampedModel(models.Model):
@@ -153,7 +153,7 @@ class PortConfiguration(models.Model):
 
 
 class BaseEnvVariable(models.Model):
-    key = models.CharField(max_length=255)
+    key = models.CharField(max_length=255, validators=[validate_env_name])
     value = models.CharField(max_length=255)
 
     class Meta:
@@ -300,8 +300,23 @@ class DockerRegistryService(BaseService):
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
+                case "env_variables":
+                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                        DockerEnvVariable.objects.create(
+                            key=change.new_value.get("key"),
+                            value=change.new_value.get("value"),
+                            service=self,
+                        )
+                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                        self.env_variables.get(id=change.item_id).delete()
+                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                        env = self.env_variables.get(id=change.item_id)
+                        env.key = change.new_value.get("key")
+                        env.value = change.new_value.get("value")
+                        env.save()
 
         self.save()
+        self.refresh_from_db()
         self.unapplied_changes.update(applied=True)
 
     @property
