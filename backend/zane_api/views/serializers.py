@@ -13,7 +13,6 @@ from rest_framework import pagination
 from .helpers import (
     compute_docker_service_snapshot_with_changes,
     compute_all_deployment_changes,
-    compute_docker_service_snapshot_without_changes,
 )
 from .. import serializers
 from ..docker_operations import (
@@ -29,7 +28,6 @@ from ..models import (
     Volume,
     DockerEnvVariable,
     PortConfiguration,
-    DockerDeploymentChange,
 )
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
@@ -906,51 +904,3 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
 
 class CancelDockerDeploymentChangesResponseSerializer(serializers.Serializer):
     pass
-
-
-class CancelDockerDeploymentChangesRequestSerializer(serializers.Serializer):
-    change_id = serializers.CharField(required=True)
-
-    def get_service(self):
-        service: DockerRegistryService = self.context.get("service")
-        if service is None:
-            raise serializers.ValidationError("`service` is required in context.")
-        return service
-
-    def validate(self, attrs: dict):
-        service = self.get_service()
-        snapshot = compute_docker_service_snapshot_without_changes(
-            service, change_id=attrs["change_id"]
-        )
-        change = service.unapplied_changes.get(id=attrs["change_id"])
-        if snapshot.image is None:
-            raise serializers.ValidationError(
-                "Cannot delete this change because it would remove the image of the service."
-            )
-
-        if change.field == "ports" or change.field == "urls":
-            is_healthcheck_path = (
-                snapshot.healthcheck is not None and snapshot.healthcheck.type == "PATH"
-            )
-            service_is_not_exposed_to_http = (
-                len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0
-            )
-            if is_healthcheck_path and service_is_not_exposed_to_http:
-                raise serializers.ValidationError(
-                    f"Cannot delete this change because there is a healthcheck of type `path` attached to the service"
-                    f" and the service is not exposed to the public through an URL or another HTTP port"
-                )
-
-        return attrs
-
-    def validate_change_id(self, value: str):
-        service = self.get_service()
-
-        try:
-            service.unapplied_changes.get(id=value)
-        except DockerDeploymentChange.DoesNotExist:
-            raise serializers.ValidationError(
-                f"A pending change with id `{value}` does not exist in this service."
-            )
-
-        return value
