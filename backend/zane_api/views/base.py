@@ -10,12 +10,12 @@ EMPTY_PAGINATED_RESPONSE = OrderedDict(
 )
 
 
-class CustomThrottledException(exceptions.Throttled):
+class ThrottledExceptionWithWaitTime(exceptions.Throttled):
     default_detail = "You made too Many requests in a short amount of time,"
-    extra_detail_plural = "Please wait for {wait} seconds before retrying your action."
     extra_detail_singular = (
         "Please wait for {wait} seconds before retrying your action."
     )
+    extra_detail_plural = extra_detail_singular
 
 
 class ResourceConflict(exceptions.APIException):
@@ -30,7 +30,7 @@ class ResourceConflict(exceptions.APIException):
 class CustomExceptionHandler(ExceptionHandler):
     def convert_known_exceptions(self, exc: Exception) -> Exception:
         if isinstance(exc, exceptions.Throttled):
-            return CustomThrottledException(wait=exc.wait)
+            return ThrottledExceptionWithWaitTime(wait=exc.wait)
         if isinstance(exc, exceptions.AuthenticationFailed):
             exc.status_code = status.HTTP_401_UNAUTHORIZED
         if (

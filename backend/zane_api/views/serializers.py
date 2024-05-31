@@ -904,6 +904,10 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
 # ====================================
 
 
+class CancelDockerDeploymentChangesResponseSerializer(serializers.Serializer):
+    pass
+
+
 class CancelDockerDeploymentChangesRequestSerializer(serializers.Serializer):
     change_id = serializers.CharField(required=True)
 
@@ -918,10 +922,24 @@ class CancelDockerDeploymentChangesRequestSerializer(serializers.Serializer):
         snapshot = compute_docker_service_snapshot_without_changes(
             service, change_id=attrs["change_id"]
         )
+        change = service.unapplied_changes.get(id=attrs["change_id"])
         if snapshot.image is None:
             raise serializers.ValidationError(
                 "Cannot delete this change because it would remove the image of the service."
             )
+
+        if change.field == "ports" or change.field == "urls":
+            is_healthcheck_path = (
+                snapshot.healthcheck is not None and snapshot.healthcheck.type == "PATH"
+            )
+            service_is_not_exposed_to_http = (
+                len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0
+            )
+            if is_healthcheck_path and service_is_not_exposed_to_http:
+                raise serializers.ValidationError(
+                    f"Cannot delete this change because there is a healthcheck of type `path` attached to the service"
+                    f" and the service is not exposed to the public through an URL or another HTTP port"
+                )
 
         return attrs
 

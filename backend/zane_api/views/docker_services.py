@@ -20,6 +20,7 @@ from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
 from .base import EMPTY_RESPONSE, ResourceConflict
+from .helpers import compute_docker_service_snapshot_without_changes
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
@@ -32,7 +33,7 @@ from .serializers import (
     DockerCredentialsFieldChangeSerializer,
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
-    CancelDockerDeploymentChangesRequestSerializer,
+    CancelDockerDeploymentChangesResponseSerializer,
 )
 from ..models import (
     Project,
@@ -55,6 +56,7 @@ from ..serializers import (
     URLModelSerializer,
     PortConfigurationSerializer,
     DockerEnvVariableSerializer,
+    ErrorResponse409Serializer,
 )
 from ..tasks import delete_resources_for_docker_service, deploy_docker_service
 from ..utils import strip_slash_if_exists
@@ -66,6 +68,7 @@ class CreateDockerServiceAPIView(APIView):
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
+            409: ErrorResponse409Serializer,
             201: DockerServiceSerializer,
         },
         operation_id="createDockerService",
@@ -277,7 +280,7 @@ class CreateDockerServiceAPIView(APIView):
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
 
-class DockerServiceDeploymentChangesAPIView(APIView):
+class RequestDockerServiceDeploymentChangesAPIView(APIView):
     serializer_class = DockerServiceSerializer
 
     @extend_schema(
@@ -394,16 +397,22 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                 response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
+
+class CancelDockerServiceDeploymentChangesAPIView(APIView):
+    serializer_class = CancelDockerDeploymentChangesResponseSerializer
+
     @extend_schema(
-        request=CancelDockerDeploymentChangesRequestSerializer,
         responses={
+            409: ErrorResponse409Serializer,
             204: inline_serializer(
                 name="CancelDockerServiveDeploymentChangesResponseSerializer", fields={}
-            )
+            ),
         },
         operation_id="cancelDeploymentChanges",
     )
-    def delete(self, request: Request, project_slug: str, service_slug: str):
+    def delete(
+        self, request: Request, project_slug: str, service_slug: str, change_id: str
+    ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
@@ -424,14 +433,36 @@ class DockerServiceDeploymentChangesAPIView(APIView):
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the project `{project_slug}`"
             )
-        form = CancelDockerDeploymentChangesRequestSerializer(
-            data=request.data, context={"service": service}
-        )
-        if form.is_valid(raise_exception=True):
-            change_id = form.data["change_id"]
-            change = service.unapplied_changes.get(id=change_id)
-            change.delete()
+        try:
+            found_change = service.unapplied_changes.get(id=change_id)
+        except DockerDeploymentChange.DoesNotExist:
+            raise exceptions.NotFound(
+                f"A pending change with id `{change_id}` does not exist in this service."
+            )
+        else:
+            snapshot = compute_docker_service_snapshot_without_changes(
+                service, change_id=change_id
+            )
+            if snapshot.image is None:
+                raise ResourceConflict(
+                    detail="Cannot delete this change because it would remove the image of the service."
+                )
 
+            if found_change.field == "ports" or found_change.field == "urls":
+                is_healthcheck_path = (
+                    snapshot.healthcheck is not None
+                    and snapshot.healthcheck.type == "PATH"
+                )
+                service_is_not_exposed_to_http = (
+                    len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0
+                )
+                if is_healthcheck_path and service_is_not_exposed_to_http:
+                    raise ResourceConflict(
+                        f"Cannot delete this change because there is a healthcheck of type `path` attached to the service"
+                        f" and the service is not exposed to the public through an URL or another HTTP port"
+                    )
+
+            found_change.delete()
             return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
 

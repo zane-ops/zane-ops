@@ -826,6 +826,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '201':
           content:
             application/json:
@@ -907,6 +913,96 @@ paths:
                     - code: throttled
                       detail: Request was throttled.
                       attr: null
+          description: ''
+        '204':
+          description: No response body
+  /api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
+    delete:
+      operationId: cancelDeploymentChanges
+      parameters:
+      - in: path
+        name: change_id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelDeploymentChangesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
         '204':
           description: No response body
@@ -992,13 +1088,19 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '201':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/service-changes/docker/{service_slug}/:
+  /api/projects/{project_slug}/request-service-changes/docker/{service_slug}/:
     post:
       operationId: requestDeploymentChanges
       parameters:
@@ -1802,6 +1904,13 @@ components:
           readOnly: true
       required:
       - user
+    CancelDeploymentChangesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     CheckIfPortIsAvailableError:
       oneOf:
       - $ref: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
@@ -3404,6 +3513,25 @@ components:
       - attr
       - code
       - detail
+    Error409:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/Error409CodeEnum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    Error409CodeEnum:
+      enum:
+      - resource_conflict
+      type: string
+      description: '* `resource_conflict` - Resource Conflict'
     Error429:
       type: object
       properties:
@@ -3457,6 +3585,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Error404'
+      required:
+      - errors
+      - type
+    ErrorResponse409:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error409'
       required:
       - errors
       - type
@@ -4346,6 +4486,7 @@ components:
           enum:
           - blank
           - invalid
+          - min_length
           - 'null'
           - null_characters_not_allowed
           - required
@@ -4354,6 +4495,7 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `min_length` - min_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required

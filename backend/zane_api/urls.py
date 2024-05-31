@@ -54,10 +54,16 @@ urlpatterns = [
         name="services.docker.create",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-changes/docker"
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
         r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
-        views.DockerServiceDeploymentChangesAPIView.as_view(),
-        name="services.docker.deployment_changes",
+        views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
+        name="services.docker.request_deployment_changes",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-service-changes/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
+        views.CancelDockerServiceDeploymentChangesAPIView.as_view(),
+        name="services.docker.cancel_deployment_changes",
     ),
     re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker"
