@@ -468,6 +468,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        request=None,
         operation_id="applyDeploymentChanges",
     )
     def put(self, request: Request, project_slug: str, service_slug: str):
