@@ -431,9 +431,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "new_value": "ghcr.io/zane-ops/app",
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -468,9 +468,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -506,9 +506,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "password": "bad",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -545,9 +545,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "UPDATE",
             "new_value": self.fake_docker_client.NONEXISTANT_PRIVATE_IMAGE,
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -580,9 +580,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -608,9 +608,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "container_path": "/etc/logs/zane",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -653,9 +653,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "item_id": v.id,
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -687,9 +687,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "host_path": "/etc/localtime",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -713,9 +713,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "host_path": "/etc/localtime",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -741,9 +741,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "host_path": "/etc/localtime",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -768,9 +768,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "container_path": "/etc/logs/zane",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -794,9 +794,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "host_path": "/etc/logs/zane",
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -826,9 +826,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -858,9 +858,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -883,9 +883,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -918,9 +918,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -950,9 +950,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -984,9 +984,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             },
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1018,9 +1018,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "DELETE",
             "item_id": port.id,
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1066,9 +1066,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "DELETE",
             "item_id": port.id,
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1105,9 +1105,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "ADD",
             "new_value": {"domain": "dcr.fredkiss.dev", "base_path": "/portainer"},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1124,9 +1124,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "ADD",
             "new_value": {"domain": settings.ZANE_APP_DOMAIN},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1147,9 +1147,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "ADD",
             "new_value": {"domain": "abc.gh.fredkiss.dev"},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1166,9 +1166,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "ADD",
             "new_value": {"domain": f"*.{settings.ZANE_APP_DOMAIN}"},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1196,9 +1196,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "ADD",
             "new_value": {"domain": "labs.idx.co"},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1230,9 +1230,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "DELETE",
             "item_id": url.id,
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1276,9 +1276,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "DELETE",
             "item_id": url.id,
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1300,9 +1300,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "item_id": url.id,
             "new_value": {"domain": "labs.idx.co"},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1325,9 +1325,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "item_id": url.id,
             "new_value": {"domain": "labs.idx.co"},
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1369,9 +1369,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "forwarded": 3000,
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1395,9 +1395,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "interval_seconds": 5,
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1423,9 +1423,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "interval_seconds": 5,
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1459,9 +1459,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "interval_seconds": 5,
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1499,9 +1499,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "interval_seconds": 5,
             },
         }
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1519,9 +1519,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "new_value": "ghcr.io/zane-ops/app",
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": "project", "service_slug": "app"},
             ),
             data=changes_payload,
@@ -1538,11 +1538,264 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "new_value": "ghcr.io/zane-ops/app",
         }
 
-        response = self.client.post(
+        response = self.client.put(
             reverse(
-                "zane_api:services.docker.deployment_changes",
+                "zane_api:services.docker.request_deployment_changes",
                 kwargs={"project_slug": p.slug, "service_slug": "app"},
             ),
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
+    def test_cancel_simple_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes = DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="credentials",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={"username": "fredkiss3", "password": "s3c4et"},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": changes[0].id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        change_count = DockerDeploymentChange.objects.filter(
+            service=service, applied=False
+        ).count()
+        self.assertEqual(1, change_count)
+
+    def test_cannot_cancel_nonexistent_changes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        DockerRegistryService.objects.create(slug="app", project=p)
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": "val_123",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_cannot_cancel_a_change_that_sets_image_null(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        change = DockerDeploymentChange.objects.create(
+            field="image",
+            type=DockerDeploymentChange.ChangeType.UPDATE,
+            new_value="caddy:2.8-alpine",
+            service=service,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_cancel_port_change_if_healthcheck_path(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        port_change, _, _ = DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="ports",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="healthcheck",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 5,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": port_change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_cancel_url_change_if_healthcheck_path(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        url_change, _, _ = DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="urls",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "portainer.com",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="healthcheck",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 5,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "change_id": url_change.id,
+        }
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": url_change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_can_cancel_port_change_if_no_healthcheck_path_in_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        port_change, _ = DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="ports",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": port_change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+    def test_can_cancel_url_change_if_no_healthcheck_path_in_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        url_change, _ = DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field="urls",
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "portainer.com",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field="image",
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                    "change_id": url_change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)

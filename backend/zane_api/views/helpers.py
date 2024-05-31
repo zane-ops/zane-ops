@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Literal, Any, Optional, List, Dict
 
+from django.db.models import Q
+
 from ..models import DockerRegistryService, BaseDeploymentChange
 from ..serializers import DockerServiceSerializer
 
@@ -20,10 +22,62 @@ def compute_all_deployment_changes(
     return deployment_changes
 
 
-def compute_docker_service_snapshot_from_changes(
+def compute_docker_service_snapshot_with_changes(
     service: DockerRegistryService, change: dict | None = None
 ):
     deployment_changes = compute_all_deployment_changes(service, change)
+
+    service_snapshot = DockerServiceSnapshot.from_serialized_data(
+        DockerServiceSerializer(service).data
+    )
+
+    field_dto_map = {
+        "volumes": VolumeDto,
+        "env_variables": EnvVariableDto,
+        "ports": PortConfigurationDto,
+        "urls": URLDto,
+    }
+    for change in deployment_changes:
+        match change.field:
+            case "image" | "command":
+                setattr(service_snapshot, change.field, change.new_value)
+            case "healthcheck":
+                service_snapshot.healthcheck = HealthCheckDto.from_dict(
+                    change.new_value,
+                )
+            case "credentials":
+                service_snapshot.credentials = DockerCredentialsDto.from_dict(
+                    change.new_value
+                )
+            case _:
+                dto_class: type[VolumeDto] = field_dto_map[change.field]
+                items: list = getattr(service_snapshot, change.field)
+
+                if change.type == "ADD":
+                    items.append(dto_class.from_dict(change.new_value))
+                if change.type == "DELETE":
+                    setattr(
+                        service_snapshot,
+                        change.field,
+                        [item for item in items if item.id != change.item_id],
+                    )
+                if change.type == "UPDATE":
+                    for i, item in enumerate(items):
+                        if item.id == change.item_id:
+                            items[i] = dto_class.from_dict(
+                                dict(change.new_value, id=change.item_id)
+                            )
+
+    return service_snapshot
+
+
+def compute_docker_service_snapshot_without_changes(
+    service: DockerRegistryService, change_id: str
+):
+    deployment_changes = map(
+        lambda ch: DeploymentChangeDto.from_db_deployment_change(ch),
+        service.unapplied_changes.filter(~Q(id=change_id)),
+    )
 
     service_snapshot = DockerServiceSnapshot.from_serialized_data(
         DockerServiceSerializer(service).data

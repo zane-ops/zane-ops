@@ -31,7 +31,11 @@ from ..models import (
     DockerDeployment,
     GitDeployment,
 )
-from ..serializers import ProjectSerializer, ArchivedProjectSerializer
+from ..serializers import (
+    ProjectSerializer,
+    ArchivedProjectSerializer,
+    ErrorResponse409Serializer,
+)
 from ..tasks import (
     delete_docker_resources_for_project,
     create_docker_resources_for_project,
@@ -117,6 +121,7 @@ class ProjectsListAPIView(ListCreateAPIView):
     @extend_schema(
         request=ProjectCreateRequestSerializer,
         responses={
+            409: ErrorResponse409Serializer,
             201: ProjectSerializer,
         },
         operation_id="createProject",
