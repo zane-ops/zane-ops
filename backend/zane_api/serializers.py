@@ -95,6 +95,14 @@ class PortConfigurationSerializer(ModelSerializer):
         model = models.PortConfiguration
         fields = ["id", "host", "forwarded"]
 
+    def to_representation(self, instance: models.PortConfiguration):
+        ret = super().to_representation(instance)
+        # in the database `host` is stored as null for HTTP hosts, but the user should only
+        # see it as `80`
+        if ret.get("host") is None:
+            ret["host"] = 80
+        return ret
+
 
 class HealthCheckSerializer(ModelSerializer):
     class Meta:
