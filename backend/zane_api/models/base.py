@@ -1,5 +1,6 @@
 import time
 import uuid
+from typing import Union
 
 from django.conf import settings
 from django.core.validators import MinLengthValidator
@@ -271,7 +272,18 @@ class DockerRegistryService(BaseService):
     def http_port(self) -> PortConfiguration | None:
         return self.ports.filter(host__isnull=True).first()
 
-    def apply_pending_changes(self):
+    @property
+    def last_queued_deployment(self) -> Union["DockerDeployment", None]:
+        return (
+            self.deployments.filter(
+                is_current_production=False,
+                status=DockerDeployment.DeploymentStatus.QUEUED,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+    def apply_pending_changes(self, deployment: "DockerDeployment"):
         added_new_http_port = False
         for change in self.unapplied_changes:
             match change.field:
@@ -390,7 +402,7 @@ class DockerRegistryService(BaseService):
         if added_new_http_port and self.urls.count() == 0:
             self.urls.add(URL.create_default_url(service=self))
 
-        self.unapplied_changes.update(applied=True)
+        self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
         self.refresh_from_db()
 
@@ -537,7 +549,7 @@ class DockerDeployment(BaseDeployment):
         default=DeploymentStatus.QUEUED,
     )
     status_reason = models.TextField(null=True, blank=True)
-    is_current_production = models.BooleanField(default=True)
+    is_current_production = models.BooleanField(default=False)
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
     )

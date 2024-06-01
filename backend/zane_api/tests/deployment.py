@@ -2370,7 +2370,8 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         p = Project.objects.create(slug="zaneops", owner=owner)
         create_service_payload = {
             "slug": "basic-web-server",
-            "image": "caddy:2.8-alpine",
+            "image": "ghcr.io/caddy:2.8-alpine-with-python",
+            "credentials": {"username": "fredkiss3", "password": "s3cret"},
         }
 
         response = self.client.post(
@@ -2384,17 +2385,14 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.apply_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": "basic-web-server",
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="basic-web-server")
-        new_change: DockerDeploymentChange | None = (
-            updated_service.applied_changes.first()
-        )
-        self.assertIsNotNone(new_change.deployment)
-        prod_deployments = DockerDeployment.objects.filter(is_current_production=True)
-        self.assertEqual(1, prod_deployments.count())
-        new_deployment: DockerDeployment | None = prod_deployments.first()
-        self.assertEqual(new_change.deployment.id, new_deployment.id)
+        new_deployment = updated_service.last_queued_deployment
+        self.assertIsNotNone(new_deployment)
+        for new_change in updated_service.applied_changes:
+            self.assertIsNotNone(new_change.deployment)
+            self.assertEqual(new_change.deployment.id, new_deployment.id)
