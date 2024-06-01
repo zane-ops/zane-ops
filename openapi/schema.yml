@@ -3064,6 +3064,16 @@ components:
       - field
       - new_value
       - field
+    DockerCredential:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+      - password
+      - username
     DockerCredentialsFieldChangeFieldEnum:
       enum:
       - credentials
@@ -3421,7 +3431,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
           readOnly: true
+          nullable: true
         credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredential'
           nullable: true
         urls:
           type: array
@@ -3518,7 +3531,8 @@ components:
           format: date-time
           readOnly: true
         is_redeploy_of:
-          type: integer
+          type: string
+          readOnly: true
           nullable: true
         hash:
           type: string
@@ -3539,6 +3553,8 @@ components:
             type: string
           readOnly: true
         service_snapshot:
+          allOf:
+          - $ref: '#/components/schemas/DockerService'
           nullable: true
       required:
       - created_at

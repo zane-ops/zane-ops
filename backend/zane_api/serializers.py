@@ -126,11 +126,12 @@ class DockerServiceSerializer(ModelSerializer):
     urls = URLModelSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True)
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
-    healthcheck = HealthCheckSerializer(read_only=True)
+    healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+    credentials = DockerCredentialSerializer(allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService
@@ -156,6 +157,8 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    service_snapshot = DockerServiceSerializer(allow_null=True)
+    is_redeploy_of = serializers.CharField(allow_null=True, read_only=True)
 
     class Meta:
         model = models.DockerDeployment
