@@ -204,11 +204,9 @@ class DockerRegistryService(BaseService):
     )
     image = models.CharField(max_length=510, null=True)
     command = models.TextField(null=True, blank=True)
-    docker_credentials_username = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-    docker_credentials_password = models.CharField(
-        max_length=255, null=True, blank=True
+    credentials = models.JSONField(
+        max_length=255,
+        null=True,
     )
 
     def __str__(self):
@@ -293,9 +291,10 @@ class DockerRegistryService(BaseService):
                 ):
                     setattr(self, change.field, change.new_value)
                 case DockerDeploymentChange.ChangeField.CREDENTIALS:
-                    self.docker_credentials_username = change.new_value.get("username")
-                    self.docker_credentials_password = change.new_value.get("password")
-                    pass
+                    self.credentials = {
+                        "username": change.new_value.get("username"),
+                        "password": change.new_value.get("password"),
+                    }
                 case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                     if self.healthcheck is None:
                         self.healthcheck = HealthCheck()
@@ -405,18 +404,6 @@ class DockerRegistryService(BaseService):
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
         self.refresh_from_db()
-
-    @property
-    def credentials(self):
-        if (
-            self.docker_credentials_username is None
-            and self.docker_credentials_password is None
-        ):
-            return None
-        return {
-            "username": self.docker_credentials_username,
-            "password": self.docker_credentials_password,
-        }
 
     def add_change(self, change: "DockerDeploymentChange"):
         match change.field:

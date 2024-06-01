@@ -143,11 +143,9 @@ class ArchivedDockerService(ArchivedBaseService):
         to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"
     )
     command = models.TextField(null=True, blank=True)
-    docker_credentials_username = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-    docker_credentials_password = models.CharField(
-        max_length=255, null=True, blank=True
+    credentials = models.JSONField(
+        max_length=255,
+        null=True,
     )
     deployment_urls = models.ManyToManyField(to=DeploymentURL)
 
@@ -161,8 +159,7 @@ class ArchivedDockerService(ArchivedBaseService):
             project=parent,
             command=service.command,
             original_id=service.id,
-            docker_credentials_username=service.docker_credentials_username,
-            docker_credentials_password=service.docker_credentials_password,
+            credentials=service.credentials,
         )
 
         archived_volumes = ArchivedVolume.objects.bulk_create(

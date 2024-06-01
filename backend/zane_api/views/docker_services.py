@@ -97,16 +97,7 @@ class CreateDockerServiceAPIView(APIView):
                         project=project,
                         image=data["image"],
                         command=data.get("command"),
-                        docker_credentials_username=(
-                            docker_credentials.get("username")
-                            if docker_credentials is not None
-                            else None
-                        ),
-                        docker_credentials_password=(
-                            docker_credentials.get("password")
-                            if docker_credentials is not None
-                            else None
-                        ),
+                        credentials=docker_credentials,
                         healthcheck=(
                             HealthCheck.objects.create(
                                 type=healthcheck["type"],
