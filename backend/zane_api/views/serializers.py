@@ -872,7 +872,7 @@ class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
                 raise serializers.ValidationError(
                     {
                         "new_value": f"healthcheck requires that at least one `url`"
-                        f" or one port with a HTTP `host` (80/443)` is set in the service."
+                        f" or one port with a HTTP `host` (80/443) is set in the service."
                     }
                 )
         return attrs
