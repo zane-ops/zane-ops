@@ -2186,7 +2186,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(8080, updated_port.host)
         self.assertEqual(80, updated_port.forwarded)
 
-    def test_apply_http_port_changes_without_url_creates_new_url(
+    def test_apply_http_port_changes_without_url_creates_default_url(
         self,
     ):
         owner = self.loginUser()
@@ -2227,6 +2227,58 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(new_port)
         self.assertEqual(80, new_port.forwarded)
         self.assertEqual(1, updated_service.urls.count())
+
+    def test_apply_http_port_changes_with_url_do_not_create_default_url(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "labs.zane.co",
+                        "base_path": "/app",
+                        "strip_prefix": False,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(1, updated_service.urls.count())
+        service_url: URL = updated_service.urls.first()
+        self.assertEqual("labs.zane.co", service_url.domain)
+        self.assertEqual("/app", service_url.base_path)
+        self.assertEqual(False, service_url.strip_prefix)
 
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
         owner = self.loginUser()

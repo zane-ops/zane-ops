@@ -272,6 +272,7 @@ class DockerRegistryService(BaseService):
         return self.ports.filter(host__isnull=True).first()
 
     def apply_pending_changes(self):
+        added_new_http_port = False
         for change in self.unapplied_changes:
             match change.field:
                 case (
@@ -366,8 +367,8 @@ class DockerRegistryService(BaseService):
                             )
                         )
 
-                        if is_http_port and self.urls.count() == 0:
-                            self.urls.add(URL.create_default_url(service=self))
+                        if is_http_port:
+                            added_new_http_port = True
 
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.ports.get(id=change.item_id).delete()
@@ -383,8 +384,11 @@ class DockerRegistryService(BaseService):
                         port.forwarded = change.new_value.get("forwarded")
                         port.save()
 
-                        if is_http_port and self.urls.count() == 0:
-                            self.urls.add(URL.create_default_url(service=self))
+                        if is_http_port:
+                            added_new_http_port = True
+
+        if added_new_http_port and self.urls.count() == 0:
+            self.urls.add(URL.create_default_url(service=self))
 
         self.unapplied_changes.update(applied=True)
         self.save()
