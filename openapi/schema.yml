@@ -918,7 +918,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
@@ -3064,16 +3064,6 @@ components:
       - field
       - new_value
       - field
-    DockerCredential:
-      type: object
-      properties:
-        username:
-          type: string
-        password:
-          type: string
-      required:
-      - password
-      - username
     DockerCredentialsFieldChangeFieldEnum:
       enum:
       - credentials
@@ -3119,8 +3109,7 @@ components:
         type:
           $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
         field:
-          type: string
-          maxLength: 255
+          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
         new_value:
           nullable: true
         old_value:
@@ -3131,6 +3120,26 @@ components:
       - new_value
       - old_value
       - type
+    DockerDeploymentChangeFieldEnum:
+      enum:
+      - image
+      - command
+      - credentials
+      - healthcheck
+      - volumes
+      - env_variables
+      - urls
+      - ports
+      type: string
+      description: |-
+        * `image` - image
+        * `command` - command
+        * `credentials` - credentials
+        * `healthcheck` - healthcheck
+        * `volumes` - volumes
+        * `env_variables` - env_variables
+        * `urls` - urls
+        * `ports` - ports
     DockerDeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -3386,22 +3395,6 @@ components:
     DockerService:
       type: object
       properties:
-        id:
-          type: string
-          maxLength: 255
-        image:
-          type: string
-          nullable: true
-          maxLength: 510
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLModel'
-          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3410,28 +3403,45 @@ components:
           type: string
           format: date-time
           readOnly: true
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        image:
+          type: string
+          nullable: true
+          maxLength: 510
+        command:
+          type: string
+          nullable: true
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/HealthCheck'
+          readOnly: true
+        credentials:
+          nullable: true
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLModel'
+          readOnly: true
         volumes:
           type: array
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
-        command:
-          type: string
-          nullable: true
         ports:
           type: array
           items:
             $ref: '#/components/schemas/PortConfiguration'
           readOnly: true
-          default: []
         env_variables:
           type: array
           items:
             $ref: '#/components/schemas/DockerEnvVariable'
-          readOnly: true
-        healthcheck:
-          allOf:
-          - $ref: '#/components/schemas/HealthCheck'
           readOnly: true
         network_aliases:
           type: array
@@ -3443,11 +3453,6 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
-        credentials:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredential'
-          readOnly: true
-          nullable: true
       required:
       - command
       - created_at
@@ -3533,12 +3538,15 @@ components:
           items:
             type: string
           readOnly: true
+        service_snapshot:
+          nullable: true
       required:
       - created_at
       - hash
       - is_current_production
       - is_redeploy_of
       - network_aliases
+      - service_snapshot
       - status
       - status_reason
       - url
