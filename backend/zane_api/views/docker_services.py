@@ -97,16 +97,7 @@ class CreateDockerServiceAPIView(APIView):
                         project=project,
                         image=data["image"],
                         command=data.get("command"),
-                        docker_credentials_username=(
-                            docker_credentials.get("username")
-                            if docker_credentials is not None
-                            else None
-                        ),
-                        docker_credentials_password=(
-                            docker_credentials.get("password")
-                            if docker_credentials is not None
-                            else None
-                        ),
+                        credentials=docker_credentials,
                         healthcheck=(
                             HealthCheck.objects.create(
                                 type=healthcheck["type"],
@@ -212,10 +203,7 @@ class CreateDockerServiceAPIView(APIView):
                             base_path="/",
                         ).first()
                         if existing_urls is None:
-                            default_url = URL.objects.create(
-                                domain=f"{project.slug}-{service_slug}.{settings.ROOT_DOMAIN}",
-                                base_path="/",
-                            )
+                            default_url = URL.create_default_url(service=service)
                         else:
                             default_url = URL.objects.create(
                                 domain=f"{project.slug}-{service_slug}-{fake.slug()}.{settings.ROOT_DOMAIN}",
@@ -247,9 +235,11 @@ class CreateDockerServiceAPIView(APIView):
                         service.urls.add(*created_urls)
 
                 # Create first deployment
-                first_deployment = DockerDeployment.objects.create(service=service)
+                first_deployment = DockerDeployment.objects.create(
+                    service=service, is_current_production=True
+                )
                 if len(service.urls.all()) > 0:
-                    first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+                    first_deployment.url = f"{project.slug}-{service_slug}-docker-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
                     first_deployment.save()
 
                 # Create envs if exists
@@ -394,7 +384,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 )
 
                 response = DockerServiceSerializer(service)
-                return Response(response.data, status=status.HTTP_201_CREATED)
+                return Response(response.data, status=status.HTTP_200_OK)
 
 
 class CancelDockerServiceDeploymentChangesAPIView(APIView):
@@ -461,6 +451,48 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
 
             found_change.delete()
             return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class ApplyDockerServiceDeploymentChangesAPIView(APIView):
+    serializer_class = DockerServiceDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        operation_id="applyDeploymentChanges",
+    )
+    def put(self, request: Request, project_slug: str, service_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        new_deployment = DockerDeployment.objects.create(service=service)
+        service.apply_pending_changes(deployment=new_deployment)
+
+        if len(service.urls.all()) > 0:
+            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+        new_deployment.service_snapshot = DockerServiceSerializer(service).data
+        new_deployment.save()
+
+        response = DockerServiceDeploymentSerializer(new_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
 
 
 class GetDockerServiceAPIView(APIView):

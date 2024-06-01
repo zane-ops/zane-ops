@@ -838,6 +838,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
+  /api/projects/{project_slug}/apply-service-changes/docker/{service_slug}/:
+    put:
+      operationId: applyDeploymentChanges
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyDeploymentChangesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveDockerService
@@ -1799,6 +1881,13 @@ paths:
           description: ''
 components:
   schemas:
+    ApplyDeploymentChangesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ArchiveDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -2767,6 +2856,7 @@ components:
           - blank
           - invalid
           - max_length
+          - min_length
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
@@ -2775,6 +2865,7 @@ components:
             * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
+            * `min_length` - min_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -3028,8 +3119,7 @@ components:
         type:
           $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
         field:
-          type: string
-          maxLength: 255
+          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
         new_value:
           nullable: true
         old_value:
@@ -3040,6 +3130,26 @@ components:
       - new_value
       - old_value
       - type
+    DockerDeploymentChangeFieldEnum:
+      enum:
+      - image
+      - command
+      - credentials
+      - healthcheck
+      - volumes
+      - env_variables
+      - urls
+      - ports
+      type: string
+      description: |-
+        * `image` - image
+        * `command` - command
+        * `credentials` - credentials
+        * `healthcheck` - healthcheck
+        * `volumes` - volumes
+        * `env_variables` - env_variables
+        * `urls` - urls
+        * `ports` - ports
     DockerDeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -3295,22 +3405,6 @@ components:
     DockerService:
       type: object
       properties:
-        id:
-          type: string
-          maxLength: 255
-        image:
-          type: string
-          nullable: true
-          maxLength: 510
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLModel'
-          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3319,28 +3413,48 @@ components:
           type: string
           format: date-time
           readOnly: true
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        image:
+          type: string
+          nullable: true
+          maxLength: 510
+        command:
+          type: string
+          nullable: true
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/HealthCheck'
+          readOnly: true
+          nullable: true
+        credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredential'
+          nullable: true
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLModel'
+          readOnly: true
         volumes:
           type: array
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
-        command:
-          type: string
-          nullable: true
         ports:
           type: array
           items:
             $ref: '#/components/schemas/PortConfiguration'
           readOnly: true
-          default: []
         env_variables:
           type: array
           items:
             $ref: '#/components/schemas/DockerEnvVariable'
-          readOnly: true
-        healthcheck:
-          allOf:
-          - $ref: '#/components/schemas/HealthCheck'
           readOnly: true
         network_aliases:
           type: array
@@ -3352,11 +3466,6 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
-        credentials:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredential'
-          readOnly: true
-          nullable: true
       required:
       - command
       - created_at
@@ -3422,7 +3531,8 @@ components:
           format: date-time
           readOnly: true
         is_redeploy_of:
-          type: integer
+          type: string
+          readOnly: true
           nullable: true
         hash:
           type: string
@@ -3442,12 +3552,17 @@ components:
           items:
             type: string
           readOnly: true
+        service_snapshot:
+          allOf:
+          - $ref: '#/components/schemas/DockerService'
+          nullable: true
       required:
       - created_at
       - hash
       - is_current_production
       - is_redeploy_of
       - network_aliases
+      - service_snapshot
       - status
       - status_reason
       - url
@@ -4677,6 +4792,7 @@ components:
           - blank
           - invalid
           - max_length
+          - min_length
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
@@ -4685,6 +4801,7 @@ components:
             * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
+            * `min_length` - min_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -5194,6 +5311,7 @@ components:
         name:
           type: string
           maxLength: 255
+          minLength: 1
         container_path:
           type: string
           maxLength: 255
@@ -5260,7 +5378,7 @@ components:
         name:
           type: string
           minLength: 1
-          maxLength: 100
+          maxLength: 255
         container_path:
           type: string
           minLength: 1

@@ -95,6 +95,14 @@ class PortConfigurationSerializer(ModelSerializer):
         model = models.PortConfiguration
         fields = ["id", "host", "forwarded"]
 
+    def to_representation(self, instance: models.PortConfiguration):
+        ret = super().to_representation(instance)
+        # in the database `host` is stored as null for HTTP hosts, but the user should only
+        # see it as `80`
+        if ret.get("host") is None:
+            ret["host"] = 80
+        return ret
+
 
 class HealthCheckSerializer(ModelSerializer):
     class Meta:
@@ -116,34 +124,32 @@ class DockerCredentialSerializer(serializers.Serializer):
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
-    ports = PortConfigurationSerializer(
-        read_only=True, many=True, source="port_config", default=[]
-    )
+    ports = PortConfigurationSerializer(read_only=True, many=True)
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
-    healthcheck = HealthCheckSerializer(read_only=True)
+    healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
-    credentials = DockerCredentialSerializer(read_only=True, allow_null=True)
+    credentials = DockerCredentialSerializer(allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService
         fields = [
-            "id",
-            "image",
-            "slug",
-            "urls",
             "created_at",
             "updated_at",
-            "volumes",
+            "id",
+            "slug",
+            "image",
             "command",
+            "healthcheck",
+            "credentials",
+            "urls",
+            "volumes",
             "ports",
             "env_variables",
-            "healthcheck",
             "network_aliases",
             "unapplied_changes",
-            "credentials",
         ]
 
 
@@ -151,6 +157,8 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    service_snapshot = DockerServiceSerializer(allow_null=True)
+    is_redeploy_of = serializers.CharField(allow_null=True, read_only=True)
 
     class Meta:
         model = models.DockerDeployment
@@ -163,4 +171,5 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "status_reason",
             "url",
             "network_aliases",
+            "service_snapshot",
         ]

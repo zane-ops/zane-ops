@@ -921,7 +921,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
@@ -963,7 +963,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
@@ -1023,7 +1023,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
@@ -1047,7 +1047,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
@@ -1084,7 +1084,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
@@ -1119,7 +1119,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
@@ -1152,7 +1152,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="simple-webserver")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
@@ -1502,14 +1502,14 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
@@ -1530,7 +1530,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1578,7 +1578,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.RESTARTING,
             latest_deployment.status,
@@ -1599,7 +1599,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1647,7 +1647,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
@@ -1672,7 +1672,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1766,7 +1766,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             latest_deployment.status,
@@ -1787,7 +1787,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1804,7 +1804,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         latest_deployment.save()
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             latest_deployment.status,

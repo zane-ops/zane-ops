@@ -334,19 +334,10 @@ def scale_down_docker_service(deployment: DockerDeployment):
 def create_service_from_docker_registry(deployment: DockerDeployment):
     service = deployment.service
     client = get_docker_client()
-    auth_config: DockerAuthConfig | None = None
-    if (
-        service.docker_credentials_username is not None
-        and service.docker_credentials_password is not None
-    ):
-        auth_config = {
-            "username": service.docker_credentials_username,
-            "password": service.docker_credentials_password,
-        }
 
     client.images.pull(
         repository=service.image,
-        auth_config=auth_config,
+        auth_config=service.credentials,
     )
 
     exposed_ports: dict[int, int] = {}

@@ -49,7 +49,7 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 
 
 class VolumeRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=100, required=False)
+    name = serializers.CharField(max_length=255, required=False, min_length=1)
     container_path = serializers.CharField(max_length=255)
     host_path = serializers.URLPathField(max_length=255, required=False, default=None)
     VOLUME_MODE_CHOICES = (
@@ -183,7 +183,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                     raise serializers.ValidationError(
                         {
                             "urls": [
-                                f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
+                                f"Cannot specify both a custom URL and a host port other than a HTTP (80/443)"
                             ]
                         }
                     )
@@ -515,7 +515,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                 if port.host not in http_ports:
                     raise serializers.ValidationError(
                         {
-                            "new_value": f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
+                            "new_value": f"Cannot specify both a custom URL and a port with `host` other than a HTTP port (80/443)"
                         }
                     )
 
@@ -524,19 +524,20 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
             and snapshot.healthcheck is not None
             and snapshot.healthcheck.type == "PATH"
         ):
-            ports_exposed_to_http = list(
-                filter(
-                    lambda port: port.host is None or port.host in [80, 443],
-                    snapshot.ports,
-                )
-            )
-            if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
+            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
                 raise serializers.ValidationError(
                     {
                         "new_value": f"Cannot delete an URL if there is a path healthcheck attached to it"
-                        f" and the service is not exposed to the public through an HTTP port (80/443)"
+                        f" and the service is not exposed to the public through a port with a HTTP `host` (80/443)"
                     }
                 )
+
+        if change_type == "ADD" and len(snapshot.http_ports) == 0:
+            raise serializers.ValidationError(
+                {
+                    "new_value": f"adding an URL requires that one port with a HTTP `host` (80/443) is set in the service."
+                }
+            )
 
         return attrs
 
@@ -744,7 +745,8 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host": "Only one HTTP port (80/443) is allowed, we cannot forward the http requests to two distinct ports."
+                        "host": "Only one HTTP `host` port (80/443) is allowed,"
+                        " we cannot forward the http requests to two distinct ports."
                     }
                 }
             )
@@ -757,7 +759,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     raise serializers.ValidationError(
                         {
                             "new_value": {
-                                "host": f"Cannot specify both a custom URL and a host port other than a HTTP port (80/443)"
+                                "host": f"Cannot specify both a custom URL and a `host` port other than a HTTP port (80/443)"
                             }
                         }
                     )
@@ -799,8 +801,8 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
             if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"Cannot delete a PORT if there is a path healthcheck attached to it"
-                        f" and the service is not exposed to the public through an URL or another HTTP port"
+                        "new_value": f"Cannot delete a PORT if there is a path healthcheck attached to it "
+                        f"and the service is not exposed to the public through an URL or a port with a `host` HTTP (80/443)"
                     }
                 )
 
@@ -866,16 +868,11 @@ class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
 
         new_healthcheck = attrs.get("new_value")
         if new_healthcheck is not None and new_healthcheck.get("type") == "PATH":
-            ports_exposed_to_http = list(
-                filter(
-                    lambda port: port.host is None or port.host in [80, 443],
-                    snapshot.ports,
-                )
-            )
-            if len(snapshot.urls) == 0 and len(ports_exposed_to_http) == 0:
+            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"healthcheck requires that at least one `url` or one `port` is set in the service."
+                        "new_value": f"healthcheck requires that at least one `url`"
+                        f" or one port with a HTTP `host` (80/443) is set in the service."
                     }
                 )
         return attrs
