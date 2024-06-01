@@ -245,7 +245,7 @@ class DockerRegistryService(BaseService):
         all_monitor_tasks.delete()
 
     @property
-    def latest_production_deployment(self) -> "DockerDeployment":
+    def latest_production_deployment(self) -> Union["DockerDeployment", None]:
         return (
             self.deployments.filter(is_current_production=True)
             .select_related("service", "service__project")
@@ -277,6 +277,12 @@ class DockerRegistryService(BaseService):
             self.deployments.filter(
                 is_current_production=False,
                 status=DockerDeployment.DeploymentStatus.QUEUED,
+            )
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
             )
             .order_by("-created_at")
             .first()
