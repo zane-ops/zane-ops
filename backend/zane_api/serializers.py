@@ -161,4 +161,5 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "status_reason",
             "url",
             "network_aliases",
+            "service_snapshot",
         ]

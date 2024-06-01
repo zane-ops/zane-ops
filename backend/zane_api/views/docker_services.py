@@ -248,7 +248,7 @@ class CreateDockerServiceAPIView(APIView):
                     service=service, is_current_production=True
                 )
                 if len(service.urls.all()) > 0:
-                    first_deployment.url = f"{project.slug}-{service_slug}-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+                    first_deployment.url = f"{project.slug}-{service_slug}-docker-{first_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
                     first_deployment.save()
 
                 # Create envs if exists
@@ -463,7 +463,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
 
 
 class ApplyDockerServiceDeploymentChangesAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = DockerServiceDeploymentSerializer
 
     @transaction.atomic()
     @extend_schema(
@@ -495,7 +495,11 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
         new_deployment = DockerDeployment.objects.create(service=service)
         service.apply_pending_changes(deployment=new_deployment)
 
-        response = DockerServiceSerializer(service)
+        if len(service.urls.all()) > 0:
+            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+            new_deployment.save()
+
+        response = DockerServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
