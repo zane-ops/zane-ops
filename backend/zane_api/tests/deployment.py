@@ -2186,6 +2186,48 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(8080, updated_port.host)
         self.assertEqual(80, updated_port.forwarded)
 
+    def test_apply_http_port_changes_without_url_creates_new_url(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+
+        new_port = updated_service.ports.filter(host__isnull=True).first()
+        self.assertIsNotNone(new_port)
+        self.assertEqual(80, new_port.forwarded)
+        self.assertEqual(1, updated_service.urls.count())
+
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
