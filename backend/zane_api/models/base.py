@@ -244,7 +244,8 @@ class DockerRegistryService(BaseService):
         IntervalSchedule.objects.filter(id__in=interval_ids).delete()
         all_monitor_tasks.delete()
 
-    def get_latest_deployment(self) -> "DockerDeployment":
+    @property
+    def latest_production_deployment(self) -> "DockerDeployment":
         return (
             self.deployments.filter(is_current_production=True)
             .select_related("service", "service__project")

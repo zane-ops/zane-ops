@@ -66,7 +66,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
             slug="valkey"
         ).first()
         self.assertIsNotNone(created_service)
-        latest_deployment = created_service.get_latest_deployment()
+        latest_deployment = created_service.latest_production_deployment
         self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, latest_deployment.slot)
 
     def test_filter_deployments_succesful(self):
