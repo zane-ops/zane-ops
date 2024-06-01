@@ -17,7 +17,6 @@ from ..models import (
     HealthCheck,
     DockerEnvVariable,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -1861,7 +1860,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual("caddy:2.8-alpine", updated_service.image)
@@ -1940,7 +1938,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual(2, updated_service.volumes.count())
@@ -2020,7 +2017,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual(2, updated_service.env_variables.count())
@@ -2096,7 +2092,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual(2, updated_service.urls.count())
@@ -2171,7 +2166,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual(2, updated_service.ports.count())
@@ -2219,7 +2213,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
 
@@ -2271,7 +2264,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual(1, updated_service.urls.count())
@@ -2313,7 +2305,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertIsNotNone(updated_service.healthcheck)
@@ -2355,7 +2346,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual("PATH", updated_service.healthcheck.type)
@@ -2389,7 +2379,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="basic-web-server")
         new_deployment = updated_service.last_queued_deployment
@@ -2432,7 +2421,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
         new_deployment = updated_service.last_queued_deployment
