@@ -2389,10 +2389,12 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 },
             ),
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="basic-web-server")
         new_deployment = updated_service.last_queued_deployment
         self.assertIsNotNone(new_deployment)
+        self.assertIsNotNone(new_deployment.service_snapshot)
         for new_change in updated_service.applied_changes:
             self.assertIsNotNone(new_change.deployment)
             self.assertEqual(new_change.deployment.id, new_deployment.id)

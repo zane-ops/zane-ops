@@ -123,25 +123,24 @@ class DockerServiceSerializer(ModelSerializer):
         child=serializers.CharField(), read_only=True
     )
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
-    credentials = DockerCredentialSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService
         fields = [
-            "id",
-            "image",
-            "slug",
-            "urls",
             "created_at",
             "updated_at",
-            "volumes",
+            "id",
+            "slug",
+            "image",
             "command",
+            "healthcheck",
+            "credentials",
+            "urls",
+            "volumes",
             "ports",
             "env_variables",
-            "healthcheck",
             "network_aliases",
             "unapplied_changes",
-            "credentials",
         ]
 
 

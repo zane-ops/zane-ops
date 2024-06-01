@@ -497,7 +497,8 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
 
         if len(service.urls.all()) > 0:
             new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
-            new_deployment.save()
+        new_deployment.service_snapshot = DockerServiceSerializer(service).data
+        new_deployment.save()
 
         response = DockerServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
