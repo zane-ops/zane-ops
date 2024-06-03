@@ -269,7 +269,7 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
 
     if (
         deployment is not None
-        and deployment.status != DockerDeployment.DeploymentStatus.OFFLINE
+        and deployment.status != DockerDeployment.DeploymentStatus.REMOVED
     ):
         try:
             deployment_status, deployment_status_reason = (

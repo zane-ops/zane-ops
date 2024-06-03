@@ -96,7 +96,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
                     "service_slug": "cache-db",
                 },
             )
-            + "?status=OFFLINE"
+            + "?status=REMOVED"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
@@ -2363,17 +2363,25 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
     ):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-        create_service_payload = {
-            "slug": "basic-web-server",
-            "image": "ghcr.io/caddy:2.8-alpine-with-python",
-            "credentials": {"username": "fredkiss3", "password": "s3cret"},
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        service = DockerRegistryService.objects.create(
+            slug="basic-web-server", project=p
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="ghcr.io/caddy:2.8-alpine-with-python",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={"username": "fredkiss3", "password": "s3cret"},
+                    service=service,
+                ),
+            ]
+        )
 
         response = self.client.put(
             reverse(
@@ -2386,7 +2394,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="basic-web-server")
-        new_deployment = updated_service.last_queued_deployment
+        new_deployment = updated_service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.service_snapshot)
         for new_change in updated_service.applied_changes:
