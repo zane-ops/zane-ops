@@ -2696,3 +2696,91 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                 get_volume_resource_name(volume_to_delete)
             )
         )
+
+    def test_deploy_service_with_port(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"host": 6383, "forwarded": 6379},
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.service_map[
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+        ]
+
+        self.assertIsNotNone(docker_service.endpoint)
+        port_in_docker = docker_service.endpoint.get("Ports")[0]
+        self.assertEqual(6383, port_in_docker["PublishedPort"])
+        self.assertEqual(6379, port_in_docker["TargetPort"])
+
+    def test_deploy_service_with_http_port(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="adminer:latest",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 8080},
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.service_map[
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+        ]
+        self.assertIsNone(docker_service.endpoint)

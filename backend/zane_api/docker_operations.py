@@ -469,6 +469,17 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
             )
 
+        # ports
+        exposed_ports: dict[int, int] = {}
+        endpoint_spec: EndpointSpec | None = None
+
+        # We don't expose HTTP ports with docker because they will be handled by caddy directly
+        for port in service.ports.filter(host__isnull=False):
+            exposed_ports[port.host] = port.forwarded
+
+        if len(exposed_ports) > 0:
+            endpoint_spec = EndpointSpec(ports=exposed_ports)
+
         client.services.create(
             image=service.image,
             command=service.command,
@@ -478,7 +489,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 deployment_hash=deployment.hash,
             ),
             mounts=mounts,
-            # endpoint_spec=endpoint_spec,
+            endpoint_spec=endpoint_spec,
             env=envs,
             labels=get_resource_labels(
                 service.project.id,
@@ -896,12 +907,12 @@ def get_updated_docker_service_deployment_status(
                 DockerSwarmTaskState.PREPARING: starting_status,
                 DockerSwarmTaskState.STARTING: starting_status,
                 DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
-                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.REMOVED,
                 DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
-                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.REMOVED,
                 DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
                 DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
-                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.REMOVED,
             }
 
             exited_without_error = 0
