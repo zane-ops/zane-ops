@@ -701,24 +701,24 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 timeout=5,
             )
 
-        # now we create the config for the URL
+        # now we create or modify the config for the URL
         response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
         )
-        if response.status_code == status.HTTP_404_NOT_FOUND:
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+        routes = list(
+            filter(
+                lambda route: route["id"] != get_caddy_id_for_url(url), response.json()
             )
-            routes = response.json()
-            routes.append(get_caddy_request_for_url(url, service, http_port))
-            routes = sort_proxy_routes(routes)
+        )
+        routes.append(get_caddy_request_for_url(url, service, http_port))
+        routes = sort_proxy_routes(routes)
 
-            requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
-                headers={"content-type": "application/json"},
-                json=routes,
-                timeout=5,
-            )
+        requests.patch(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+            headers={"content-type": "application/json"},
+            json=routes,
+            timeout=5,
+        )
 
 
 def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> None:

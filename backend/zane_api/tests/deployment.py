@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, Mock
 
 from django.conf import settings
 from django.db.models import Q
@@ -2784,3 +2784,93 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             )
         ]
         self.assertIsNone(docker_service.endpoint)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.expose_docker_service_deployment_to_http")
+    def test_deploy_service_with_http_port_exposes_the_service(
+        self, mock_expose_service: Mock, mock_expose_deployment: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="adminer:latest",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 8080},
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        mock_expose_service.assert_called()
+        mock_expose_deployment.assert_called()
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    @patch("zane_api.tasks.expose_docker_service_deployment_to_http")
+    def test_deploy_service_with_urls(
+        self, mock_expose_service: Mock, mock_expose_deployment: Mock
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="adminer:latest",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 8080},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "web-server.fred.kiss",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        mock_expose_service.assert_called_once()
+        mock_expose_deployment.assert_called_once()

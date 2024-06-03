@@ -187,6 +187,13 @@ def deploy_docker_service_with_changes(
 
             create_resources_for_docker_service_deployment(deployment)
 
+            http_port: PortConfiguration = service.ports.filter(
+                host__isnull=True
+            ).first()
+            if http_port is not None:
+                expose_docker_service_deployment_to_http(deployment)
+                expose_docker_service_to_http(deployment)
+
             deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
             deployment.is_current_production = True
             deployment.save()
