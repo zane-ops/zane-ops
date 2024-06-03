@@ -838,88 +838,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{project_slug}/apply-service-changes/docker/{service_slug}/:
-    put:
-      operationId: applyDeploymentChanges
-      parameters:
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplyDeploymentChangesErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
-          description: ''
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveDockerService
@@ -1182,6 +1100,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
+  /api/projects/{project_slug}/deploy-service/docker/{service_slug}/:
+    put:
+      operationId: applyDeploymentChanges
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyDeploymentChangesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
   /api/projects/{project_slug}/request-service-changes/docker/{service_slug}/:
     put:
       operationId: requestDeploymentChanges
@@ -1398,9 +1398,9 @@ paths:
             - CANCELLED
             - FAILED
             - HEALTHY
-            - OFFLINE
             - PREPARING
             - QUEUED
+            - REMOVED
             - RESTARTING
             - STARTING
             - UNHEALTHY
@@ -1413,7 +1413,7 @@ paths:
           * `RESTARTING` - Restarting
           * `HEALTHY` - Healthy
           * `UNHEALTHY` - Unhealthy
-          * `OFFLINE` - Offline
+          * `REMOVED` - Removed
         explode: true
         style: form
       tags:
@@ -3820,7 +3820,7 @@ components:
         timeout_seconds:
           type: integer
           minimum: 5
-          default: 60
+          default: 30
         interval_seconds:
           type: integer
           minimum: 5
@@ -5085,7 +5085,7 @@ components:
       - RESTARTING
       - HEALTHY
       - UNHEALTHY
-      - OFFLINE
+      - REMOVED
       type: string
       description: |-
         * `QUEUED` - Queued
@@ -5096,7 +5096,7 @@ components:
         * `RESTARTING` - Restarting
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
-        * `OFFLINE` - Offline
+        * `REMOVED` - Removed
     Type20aEnum:
       enum:
       - UPDATE

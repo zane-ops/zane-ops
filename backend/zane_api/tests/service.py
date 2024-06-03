@@ -292,7 +292,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
 
 class DockerServiceHealthCheckViewTests(AuthAPITestCase):
-    def test_create_scheduled_task_when_creating_a_service(self):
+    def test_create_scheduled_task_when_deploying_a_service(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
