@@ -317,27 +317,23 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
-def get_docker_deployment_resource_name(
-    service_id: str, project_id: str, deployment_hash: str
-):
-    return f"srv-{project_id}-{service_id}-{deployment_hash}"
+def get_swarm_service_name_for_deployment(deployment: DockerDeployment):
+    return (
+        f"srv-{deployment.service.project.id}-{deployment.service.id}-{deployment.hash}"
+    )
 
 
 def scale_down_docker_service(deployment: DockerDeployment):
-    service = deployment.service
     client = get_docker_client()
 
-    swarm_service_list = client.services.list(
-        filters={
-            "name": get_docker_service_resource_name(
-                service_id=service.id,
-                project_id=service.project.id,
-            )
-        }
-    )
-
-    if len(swarm_service_list) > 0:
-        swarm_service = swarm_service_list[0]
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        pass
+    else:
         swarm_service.scale(0)
 
 
@@ -420,13 +416,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
     client = get_docker_client()
 
     try:
-        client.services.get(
-            get_docker_deployment_resource_name(
-                service_id=service.id,
-                project_id=service.project.id,
-                deployment_hash=deployment.hash,
-            )
-        )
+        client.services.get(get_swarm_service_name_for_deployment(deployment))
     except docker.errors.NotFound:
         client.images.pull(
             repository=service.image,
@@ -483,11 +473,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
         client.services.create(
             image=service.image,
             command=service.command,
-            name=get_docker_deployment_resource_name(
-                service_id=service.id,
-                project_id=service.project.id,
-                deployment_hash=deployment.hash,
-            ),
+            name=get_swarm_service_name_for_deployment(deployment),
             mounts=mounts,
             endpoint_spec=endpoint_spec,
             env=envs,
@@ -828,9 +814,7 @@ def get_updated_docker_service_deployment_status(
     client = get_docker_client()
 
     swarm_service = client.services.get(
-        get_docker_service_resource_name(
-            deployment.service.id, deployment.service.project.id
-        )
+        get_swarm_service_name_for_deployment(deployment)
     )
 
     start_time = monotonic()
@@ -848,9 +832,6 @@ def get_updated_docker_service_deployment_status(
     )
     while (monotonic() - start_time) < healthcheck_timeout:
         healthcheck_attempts += 1
-        task_list = swarm_service.tasks(
-            filters={"label": f"deployment_hash={deployment.hash}"}
-        )
         healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
         if healthcheck_time_left < 1:
             # do not override status reason
@@ -861,20 +842,15 @@ def get_updated_docker_service_deployment_status(
                 )
             break
 
-        min_time_left = healthcheck_time_left
-        if healthcheck_time_left - 1 > 0:  # we don't want a sleep time of `0`
-            min_time_left = min(healthcheck_time_left - 1, healthcheck_time_left)
-
-        sleep_time_available = min(
-            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL), min_time_left
-        )
-
         # TODO (#67) : send system logs when the state changes
         print(
             f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
             f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
         )
 
+        task_list = swarm_service.tasks(
+            filters={"label": f"deployment_hash={deployment.hash}"}
+        )
         if len(task_list) == 0:
             if deployment.status in [
                 DockerDeployment.DeploymentStatus.HEALTHY,
@@ -996,26 +972,27 @@ def get_updated_docker_service_deployment_status(
                         deployment_status_reason = str(e)
                         break
 
+            healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
             if (
                 retry_if_not_healthy
                 and deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                and healthcheck_time_left > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
             ):
                 # TODO (#67) : send system logs when the state changes
                 print(
                     f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
-                    + f" Retrying in {format_seconds(sleep_time_available)} 🔄"
+                    + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
                 )
-                sleep(sleep_time_available)
+                sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                 continue
-            # TODO (#67) : send system logs when the state changes
 
+            # TODO (#67) : send system logs when the state changes
             print(
                 f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
                 f"| finished with {deployment_status=} ✅"
             )
             return deployment_status, deployment_status_reason
 
-        sleep(sleep_time_available)
-        continue
+        sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
     return deployment_status, deployment_status_reason

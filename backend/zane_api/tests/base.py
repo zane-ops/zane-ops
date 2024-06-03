@@ -301,7 +301,7 @@ class FakeDockerClient:
 
     def services_get(self, name: str):
         if name not in self.service_map:
-            raise docker.errors.NotFound("Volume Not found")
+            raise docker.errors.NotFound(f"Service with `{name=}` Not found")
         return self.service_map[name]
 
     def services_remove(self, name: str):

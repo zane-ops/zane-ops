@@ -50,18 +50,6 @@ def docker_service_deploy_failure(
         scale_down_docker_service(deployment)
         deployment.save()
 
-        # enqueue the next deployment if there is one
-        last_queued_deployment = deployment.service.last_queued_deployment
-        if last_queued_deployment is not None:
-            deploy_docker_service_with_changes.apply_async(
-                kwargs=dict(
-                    deployment_hash=last_queued_deployment.hash,
-                    service_id=kwargs["service_id"],
-                    auth_token=kwargs["auth_token"],
-                ),
-                task_id=last_queued_deployment.task_id,
-            )
-
 
 @shared_task(bind=True, on_failure=docker_service_deploy_failure)
 def deploy_docker_service(
@@ -192,23 +180,47 @@ def deploy_docker_service_with_changes(
             ).first()
             if http_port is not None:
                 expose_docker_service_deployment_to_http(deployment)
-                expose_docker_service_to_http(deployment)
 
-            deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
-            deployment.is_current_production = True
-            deployment.save()
-
-            # enqueue the next task if there is one
-            last_queued_deployment = deployment.service.last_queued_deployment
-            if last_queued_deployment is not None:
-                deploy_docker_service_with_changes.apply_async(
-                    kwargs=dict(
-                        deployment_hash=last_queued_deployment.hash,
-                        service_id=service_id,
-                        auth_token=auth_token,
-                    ),
-                    task_id=last_queued_deployment.task_id,
+            deployment_status, deployment_status_reason = (
+                get_updated_docker_service_deployment_status(
+                    deployment,
+                    auth_token=auth_token,
+                    retry_if_not_healthy=True,
                 )
+            )
+
+            if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
+                deployment.status = deployment_status
+                deployment.is_current_production = True
+                healthcheck = service.healthcheck
+
+                deployment.monitor_task = PeriodicTask.objects.create(
+                    interval=IntervalSchedule.objects.create(
+                        every=(
+                            healthcheck.interval_seconds
+                            if healthcheck is not None
+                            else settings.DEFAULT_HEALTHCHECK_INTERVAL
+                        ),
+                        period=IntervalSchedule.SECONDS,
+                    ),
+                    name=f"monitor deployment {deployment_hash}",
+                    task="zane_api.tasks.monitor_docker_service_deployment",
+                    kwargs=json.dumps(
+                        {
+                            "deployment_hash": deployment_hash,
+                            "auth_token": auth_token,
+                        }
+                    ),
+                )
+
+                if http_port is not None:
+                    expose_docker_service_to_http(deployment)
+            else:
+                deployment.status = DockerDeployment.DeploymentStatus.FAILED
+                scale_down_docker_service(deployment)
+
+            deployment.status_reason = deployment_status_reason
+            deployment.save()
     except LockAcquisitionError:
         return "will retry after the current one is finished"
 

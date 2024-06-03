@@ -7,7 +7,7 @@ from rest_framework import status
 
 from .base import AuthAPITestCase
 from ..docker_operations import (
-    get_docker_deployment_resource_name,
+    get_swarm_service_name_for_deployment,
     get_volume_resource_name,
     create_docker_volume,
 )
@@ -2293,8 +2293,8 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     field="healthcheck",
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
-                        "type": "PATH",
-                        "value": "/",
+                        "type": "COMMAND",
+                        "value": "caddy validate",
                     },
                     service=service,
                 ),
@@ -2469,11 +2469,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertTrue(
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
             in self.fake_docker_client.service_map
         )
         self.assertEqual(
@@ -2518,11 +2514,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.service_map[
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
         ]
         self.assertTrue("DJANGO_SECRET_KEY" in docker_service.env)
 
@@ -2563,11 +2555,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.service_map[
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
         ]
 
         self.assertEqual(1, len(self.fake_docker_client.volume_map))
@@ -2618,11 +2606,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.service_map[
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
         ]
 
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
@@ -2683,11 +2667,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.service_map[
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
         ]
 
         self.assertEqual(1, len(docker_service.attached_volumes))
@@ -2731,11 +2711,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.service_map[
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
         ]
 
         self.assertIsNotNone(docker_service.endpoint)
@@ -2777,11 +2753,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment = service.latest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.service_map[
-            get_docker_deployment_resource_name(
-                project_id=p.id,
-                service_id=service.id,
-                deployment_hash=new_deployment.hash,
-            )
+            get_swarm_service_name_for_deployment(new_deployment)
         ]
         self.assertIsNone(docker_service.endpoint)
 
