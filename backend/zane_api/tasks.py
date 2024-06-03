@@ -18,6 +18,7 @@ from .docker_operations import (
     get_updated_docker_service_deployment_status,
     scale_down_docker_service,
     expose_docker_service_deployment_to_http,
+    create_resources_for_docker_service_deployment,
 )
 from .models import (
     DockerDeployment,
@@ -47,6 +48,18 @@ def docker_service_deploy_failure(
         deployment.status_reason = str(exc)
         scale_down_docker_service(deployment)
         deployment.save()
+
+        # enqueue the next deployment if there is one
+        last_queued_deployment = deployment.service.last_queued_deployment
+        if last_queued_deployment is not None:
+            deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=last_queued_deployment.hash,
+                    service_id=kwargs["service_id"],
+                    auth_token=kwargs["auth_token"],
+                ),
+                task_id=last_queued_deployment.task_id,
+            )
 
 
 @shared_task(bind=True, on_failure=docker_service_deploy_failure)
@@ -130,6 +143,50 @@ def deploy_docker_service(
         # Use the countdown from the exception for retrying
         self.retry(countdown=e.countdown, exc=e)
         return "retrying due to lock acquisistion error"
+
+
+@shared_task(on_failure=docker_service_deploy_failure)
+def deploy_docker_service_with_changes(
+    deployment_hash: str, service_id: str, auth_token: str
+):
+    lock_id = f"deploy_{service_id}"
+    try:
+        with cache_lock(lock_id, timeout=settings.CELERY_TASK_TIME_LIMIT):
+            deployment: DockerDeployment | None = (
+                DockerDeployment.objects.filter(hash=deployment_hash)
+                .select_related("service", "service__project", "service__healthcheck")
+                .prefetch_related(
+                    "service__volumes",
+                    "service__urls",
+                    "service__ports",
+                    "service__env_variables",
+                )
+                .first()
+            )
+            if deployment is None:
+                raise DockerDeployment.DoesNotExist(
+                    "Cannot execute a deploy a non existent deployment."
+                )
+
+            create_resources_for_docker_service_deployment(deployment)
+
+            deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
+            deployment.is_current_production = True
+            deployment.save()
+
+            # enqueue the next task if there is one
+            last_queued_deployment = deployment.service.last_queued_deployment
+            if last_queued_deployment is not None:
+                deploy_docker_service_with_changes.apply_async(
+                    kwargs=dict(
+                        deployment_hash=last_queued_deployment.hash,
+                        service_id=service_id,
+                        auth_token=auth_token,
+                    ),
+                    task_id=last_queued_deployment.task_id,
+                )
+    except LockAcquisitionError:
+        return "will retry after the current one is finished"
 
 
 @shared_task(

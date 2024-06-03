@@ -313,6 +313,12 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
+def get_docker_deployment_resource_name(
+    service_id: str, project_id: str, deployment_hash: str
+):
+    return f"srv-{project_id}-{service_id}-{deployment_hash}"
+
+
 def scale_down_docker_service(deployment: DockerDeployment):
     service = deployment.service
     client = get_docker_client()
@@ -395,6 +401,45 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
             NetworkAttachmentConfig(
                 target=get_network_resource_name(service.project.id),
                 aliases=[alias for alias in service.network_aliases],
+            )
+        ],
+        restart_policy=RestartPolicy(
+            condition="on-failure",
+            max_attempts=MAX_SERVICE_RESTART_COUNT,
+            delay=5,
+        ),
+    )
+
+
+def create_resources_for_docker_service_deployment(deployment: DockerDeployment):
+    service = deployment.service
+    client = get_docker_client()
+
+    client.images.pull(
+        repository=service.image,
+        auth_config=service.credentials,
+    )
+
+    client.services.create(
+        image=service.image,
+        name=get_docker_deployment_resource_name(
+            service_id=service.id,
+            project_id=service.project.id,
+            deployment_hash=deployment.hash,
+        ),
+        # mounts=mounts,
+        # endpoint_spec=endpoint_spec,
+        # env=envs,
+        labels=get_resource_labels(
+            service.project.id,
+            deployment_hash=deployment.hash,
+            service=deployment.service.id,
+        ),
+        command=service.command,
+        networks=[
+            NetworkAttachmentConfig(
+                target=get_network_resource_name(service.project.id),
+                aliases=[alias for alias in deployment.network_aliases],
             )
         ],
         restart_policy=RestartPolicy(

@@ -6,6 +6,9 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
+from ..docker_operations import (
+    get_docker_deployment_resource_name,
+)
 from ..models import (
     Project,
     DockerDeployment,
@@ -2425,3 +2428,44 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         updated_service = DockerRegistryService.objects.get(slug="app")
         new_deployment = updated_service.last_queued_deployment
         self.assertIsNotNone(new_deployment.url)
+
+
+class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
+    def test_deploy_simple_service(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertTrue(
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+            in self.fake_docker_client.service_map
+        )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
+        )
+        self.assertTrue(new_deployment.is_current_production)

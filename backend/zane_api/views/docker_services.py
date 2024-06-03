@@ -57,7 +57,11 @@ from ..serializers import (
     DockerEnvVariableSerializer,
     ErrorResponse409Serializer,
 )
-from ..tasks import delete_resources_for_docker_service, deploy_docker_service
+from ..tasks import (
+    delete_resources_for_docker_service,
+    deploy_docker_service,
+    deploy_docker_service_with_changes,
+)
 from ..utils import strip_slash_if_exists
 
 
@@ -490,6 +494,19 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
         new_deployment.service_snapshot = DockerServiceSerializer(service).data
         new_deployment.save()
+
+        token = Token.objects.get(user=request.user)
+        # Run celery deployment task
+        transaction.on_commit(
+            lambda: deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=new_deployment.hash,
+                    service_id=service.id,
+                    auth_token=token.key,
+                ),
+                task_id=new_deployment.task_id,
+            )
+        )
 
         response = DockerServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
