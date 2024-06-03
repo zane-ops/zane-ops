@@ -8,6 +8,8 @@ from rest_framework import status
 from .base import AuthAPITestCase
 from ..docker_operations import (
     get_docker_deployment_resource_name,
+    get_volume_resource_name,
+    create_docker_volume,
 )
 from ..models import (
     Project,
@@ -2426,7 +2428,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
-        new_deployment = updated_service.last_queued_deployment
+        new_deployment = updated_service.latest_production_deployment
         self.assertIsNotNone(new_deployment.url)
 
 
@@ -2457,6 +2459,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
         self.assertTrue(
             get_docker_deployment_resource_name(
                 project_id=p.id,
@@ -2469,3 +2472,219 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
         )
         self.assertTrue(new_deployment.is_current_production)
+
+    def test_deploy_service_with_env(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "DJANGO_SECRET_KEY",
+                        "value": "super-secret-key-value-random123",
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.service_map[
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+        ]
+        self.assertTrue("DJANGO_SECRET_KEY" in docker_service.env)
+
+    def test_deploy_service_with_volumes(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.service_map[
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+        ]
+
+        self.assertEqual(1, len(self.fake_docker_client.volume_map))
+        self.assertEqual(1, len(docker_service.attached_volumes))
+
+        new_volume = service.volumes.first()
+        self.assertIsNotNone(
+            docker_service.attached_volumes.get(get_volume_resource_name(new_volume))
+        )
+
+    def test_deploy_service_with_volumes_do_not_create_resources_for_volumes_with_host_path(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "host_path": "/var/www/caddy/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.service_map[
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+        ]
+
+        self.assertEqual(0, len(self.fake_docker_client.volume_map))
+        self.assertEqual(1, len(docker_service.attached_volumes))
+
+    def test_deploy_service_with_volumes_do_not_include_deleted_volumes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        volume_to_delete = Volume.objects.create(
+            container_path="/etc/localtime",
+            host_path="/etc/localtime",
+            name="to delete",
+        )
+        service.volumes.add(volume_to_delete)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=volume_to_delete.id,
+                    service=service,
+                ),
+            ]
+        )
+
+        # Create volume in docker to appear when filtering the list
+        create_docker_volume(volume_to_delete, service)
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.apply_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = service.latest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.service_map[
+            get_docker_deployment_resource_name(
+                project_id=p.id,
+                service_id=service.id,
+                deployment_hash=new_deployment.hash,
+            )
+        ]
+
+        self.assertEqual(1, len(docker_service.attached_volumes))
+        self.assertIsNone(
+            docker_service.attached_volumes.get(
+                get_volume_resource_name(volume_to_delete)
+            )
+        )

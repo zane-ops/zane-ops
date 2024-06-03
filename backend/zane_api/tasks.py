@@ -26,6 +26,7 @@ from .models import (
     Project,
     ArchivedProject,
     ArchivedDockerService,
+    DockerDeploymentChange,
 )
 from .utils import cache_lock, LockAcquisitionError
 
@@ -167,6 +168,22 @@ def deploy_docker_service_with_changes(
                 raise DockerDeployment.DoesNotExist(
                     "Cannot execute a deploy a non existent deployment."
                 )
+            if deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
+                deployment.status = DockerDeployment.DeploymentStatus.PREPARING
+                deployment.save()
+
+            # TODO (#67) : send system logs when the resources are created
+            service = deployment.service
+            for volume_change in deployment.changes.filter(
+                field=DockerDeploymentChange.ChangeField.VOLUMES,
+                type=DockerDeploymentChange.ChangeType.ADD,
+            ):
+                container_path = volume_change.new_value.get("container_path")
+                corresponding_volume = service.volumes.get(
+                    container_path=container_path
+                )
+                if corresponding_volume.host_path is None:
+                    create_docker_volume(corresponding_volume, service=service)
 
             create_resources_for_docker_service_deployment(deployment)
 

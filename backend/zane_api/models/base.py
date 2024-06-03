@@ -525,7 +525,7 @@ class DockerDeployment(BaseDeployment):
         RESTARTING = "RESTARTING", _("Restarting")
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("Unhealthy")
-        OFFLINE = "OFFLINE", _("Offline")
+        REMOVED = "REMOVED", _("Removed")
 
     class DeploymentSlot(models.TextChoices):
         BLUE = "BLUE", _("Blue")

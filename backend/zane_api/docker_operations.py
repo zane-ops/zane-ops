@@ -29,6 +29,7 @@ from .utils import (
     DockerSwarmTask,
     DockerSwarmTaskState,
     format_seconds,
+    find_item_in_list,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -288,11 +289,14 @@ def get_volume_resource_name(volume: Volume):
 def create_docker_volume(volume: Volume, service: BaseService):
     client = get_docker_client()
 
-    client.volumes.create(
-        name=get_volume_resource_name(volume),
-        driver="local",
-        labels=get_resource_labels(service.project.id, parent=service.id),
-    )
+    try:
+        client.volumes.get(get_volume_resource_name(volume))
+    except docker.errors.NotFound:
+        client.volumes.create(
+            name=get_volume_resource_name(volume),
+            driver="local",
+            labels=get_resource_labels(service.project.id, parent=service.id),
+        )
 
 
 def get_docker_volume_size(volume: Volume) -> int:
@@ -415,39 +419,84 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
     service = deployment.service
     client = get_docker_client()
 
-    client.images.pull(
-        repository=service.image,
-        auth_config=service.credentials,
-    )
-
-    client.services.create(
-        image=service.image,
-        name=get_docker_deployment_resource_name(
-            service_id=service.id,
-            project_id=service.project.id,
-            deployment_hash=deployment.hash,
-        ),
-        # mounts=mounts,
-        # endpoint_spec=endpoint_spec,
-        # env=envs,
-        labels=get_resource_labels(
-            service.project.id,
-            deployment_hash=deployment.hash,
-            service=deployment.service.id,
-        ),
-        command=service.command,
-        networks=[
-            NetworkAttachmentConfig(
-                target=get_network_resource_name(service.project.id),
-                aliases=[alias for alias in deployment.network_aliases],
+    try:
+        client.services.get(
+            get_docker_deployment_resource_name(
+                service_id=service.id,
+                project_id=service.project.id,
+                deployment_hash=deployment.hash,
             )
-        ],
-        restart_policy=RestartPolicy(
-            condition="on-failure",
-            max_attempts=MAX_SERVICE_RESTART_COUNT,
-            delay=5,
-        ),
-    )
+        )
+    except docker.errors.NotFound:
+        client.images.pull(
+            repository=service.image,
+            auth_config=service.credentials,
+        )
+
+        # env variables
+        envs: list[str] = [
+            f"{env.key}={env.value}" for env in service.env_variables.all()
+        ]
+
+        # Volumes
+        mounts: list[str] = []
+        docker_volume_list = client.volumes.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service.project.id, parent=service.id
+                    ).items()
+                ]
+            }
+        )
+        access_mode_map = {
+            Volume.VolumeMode.READ_WRITE: "rw",
+            Volume.VolumeMode.READ_ONLY: "ro",
+        }
+
+        for volume in service.volumes.filter(host_path__isnull=True):
+            # Only include volumes that are not to be deleted
+            docker_volume = find_item_in_list(
+                lambda v: v.name == get_volume_resource_name(volume), docker_volume_list
+            )
+            if docker_volume is not None:
+                mounts.append(
+                    f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                )
+        for volume in service.volumes.filter(host_path__isnull=False):
+            mounts.append(
+                f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
+            )
+
+        client.services.create(
+            image=service.image,
+            command=service.command,
+            name=get_docker_deployment_resource_name(
+                service_id=service.id,
+                project_id=service.project.id,
+                deployment_hash=deployment.hash,
+            ),
+            mounts=mounts,
+            # endpoint_spec=endpoint_spec,
+            env=envs,
+            labels=get_resource_labels(
+                service.project.id,
+                deployment_hash=deployment.hash,
+                service=deployment.service.id,
+            ),
+            networks=[
+                NetworkAttachmentConfig(
+                    target=get_network_resource_name(service.project.id),
+                    aliases=[alias for alias in deployment.network_aliases],
+                )
+            ],
+            restart_policy=RestartPolicy(
+                condition="on-failure",
+                max_attempts=MAX_SERVICE_RESTART_COUNT,
+                delay=5,
+            ),
+        )
 
 
 def sort_proxy_routes(routes: list[dict[str, list[dict[str, list[str]]]]]):
@@ -565,11 +614,6 @@ def get_caddy_id_for_url(url: URL | ArchivedURL):
 def get_caddy_request_for_url(
     url: URL, service: DockerRegistryService, http_port: PortConfiguration
 ):
-    service_name = get_docker_service_resource_name(
-        service_id=service.id,
-        project_id=service.project.id,
-    )
-
     proxy_handlers = []
 
     if url.strip_prefix:
@@ -586,7 +630,7 @@ def get_caddy_request_for_url(
         {
             "flush_interval": -1,
             "handler": "reverse_proxy",
-            "upstreams": [{"dial": f"{service_name}:{http_port.forwarded}"}],
+            "upstreams": [{"dial": f"{service.network_alias}:{http_port.forwarded}"}],
         }
     )
     return {

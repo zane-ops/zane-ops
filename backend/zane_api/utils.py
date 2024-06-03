@@ -4,6 +4,7 @@ import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
+from typing import Callable, TypeVar, List, Optional
 
 from django.core.cache import cache
 
@@ -152,6 +153,18 @@ def jprint(value: dict | list | str | int | float):
     Print & format value as JSON
     """
     return print(json.dumps(value, indent=2, cls=EnhancedJSONEncoder))
+
+
+T = TypeVar("T")
+
+
+def find_item_in_list(
+    predicate: Callable[[T], bool], sequence: List[T]
+) -> Optional[T]:
+    return next(
+        (item for item in sequence if predicate(item)),
+        None,
+    )
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
