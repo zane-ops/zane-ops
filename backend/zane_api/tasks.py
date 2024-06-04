@@ -19,6 +19,7 @@ from .docker_operations import (
     scale_down_docker_service,
     expose_docker_service_deployment_to_http,
     create_resources_for_docker_service_deployment,
+    get_updated_docker_deployment_status,
 )
 from .models import (
     DockerDeployment,
@@ -182,7 +183,7 @@ def deploy_docker_service_with_changes(
                 expose_docker_service_deployment_to_http(deployment)
 
             deployment_status, deployment_status_reason = (
-                get_updated_docker_service_deployment_status(
+                get_updated_docker_deployment_status(
                     deployment,
                     auth_token=auth_token,
                     retry_if_not_healthy=True,

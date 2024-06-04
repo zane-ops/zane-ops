@@ -311,7 +311,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
         fake_service = MagicMock()
         self.fake_docker_client.services.create = create_raise_error
-        self.fake_docker_client.services.list = lambda *args, **kwargs: [fake_service]
+        self.fake_docker_client.services.get = lambda *args: fake_service
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),

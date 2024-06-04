@@ -1262,7 +1262,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             "image": "redis:alpine",
         }
 
-        mock_monotonic.side_effect = [0, 1, 1.5]
+        mock_monotonic.side_effect = [0, 0, 0, 31]
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
@@ -1270,7 +1270,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.latest_production_deployment
+        latest_deployment = created_service.deployments.first()
 
         class FakeService:
             @staticmethod
@@ -1356,7 +1356,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
         self.fake_docker_client.services.get = lambda _id: FakeService()
 
-        mock_monotonic.side_effect = [0, 15, 31]
+        mock_monotonic.side_effect = [0, 0, 0, 31]
 
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
