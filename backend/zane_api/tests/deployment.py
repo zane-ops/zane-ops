@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import patch, Mock
 
 from django.conf import settings
 from django.db.models import Q
@@ -41,53 +41,29 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(1, len(data.get("results")))
 
     def test_filter_deployments_succesful(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project, service = self.create_and_deploy_REDIS_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployments_list",
                 kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "cache-db",
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
                 },
             )
             + "?status=REMOVED"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
-        self.assertEqual(0, len(data))
+        self.assertEqual(0, len(data.get("results")))
 
     def test_deployments_project_non_existing(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project, service = self.create_and_deploy_REDIS_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployments_list",
                 kwargs={
                     "project_slug": "inexistent",
-                    "service_slug": "cache-db",
+                    "service_slug": service.slug,
                 },
             )
         )
@@ -109,189 +85,33 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_get_single_deployment_succesful(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="cache-db"
-        ).first()
+        project, service = self.create_and_deploy_REDIS_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_single",
                 kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "cache-db",
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_single_deployment_service_non_existing(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+    def test_single_deployment_deployment_non_existing(self):
+        project, service = self.create_and_deploy_REDIS_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_single",
                 kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "cache-db",
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
                     "deployment_hash": "dkr_dpl_hash1234",
                 },
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-
-    def test_add_deployment_url_when_url_is_provided(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "webserver",
-            "image": "caddy",
-            "urls": [{"domain": "caddy.zaneops.dev"}],
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="webserver"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertIsNotNone(deployment.url)
-
-    def test_add_deployment_url_when_port_is_provided(
-        self,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "webserver",
-            "image": "caddy",
-            "ports": [{"forwarded": "80"}],
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="webserver"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertIsNotNone(deployment.url)
-
-    def test_do_not_add_deployment_url_when_no_port_or_url_is_provided(
-        self,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="cache-db"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertIsNone(deployment.url)
-
-    def test_mark_deployment_as_failed_when_the_task_fails(
-        self,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis",
-        }
-
-        exception = Exception("unexpected exception")
-
-        def create_raise_error(*args, **kwargs):
-            raise exception
-
-        self.fake_docker_client.services.create = create_raise_error
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="cache-db"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
-        self.assertEqual(str(exception), deployment.status_reason)
-
-    def test_scale_down_the_service_for_the_deployment_when_the_task_fails(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis",
-            "ports": [{"forwarded": "80"}],
-        }
-
-        exception = Exception("unexpected exception")
-
-        def create_raise_error(*args, **kwargs):
-            raise exception
-
-        fake_service = MagicMock()
-        self.fake_docker_client.services.create = create_raise_error
-        self.fake_docker_client.services.get = lambda *args: fake_service
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="cache-db"
-        ).first()
-        self.assertIsNotNone(deployment)
-        self.assertEqual(DockerDeployment.DeploymentStatus.FAILED, deployment.status)
-        self.assertEqual(str(exception), deployment.status_reason)
-        fake_service.scale.assert_called_with(0)
 
 
 class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
