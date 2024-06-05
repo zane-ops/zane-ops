@@ -29,6 +29,7 @@ from .utils import (
     DockerSwarmTask,
     DockerSwarmTaskState,
     format_seconds,
+    find_item_in_list,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -288,11 +289,14 @@ def get_volume_resource_name(volume: Volume):
 def create_docker_volume(volume: Volume, service: BaseService):
     client = get_docker_client()
 
-    client.volumes.create(
-        name=get_volume_resource_name(volume),
-        driver="local",
-        labels=get_resource_labels(service.project.id, parent=service.id),
-    )
+    try:
+        client.volumes.get(get_volume_resource_name(volume))
+    except docker.errors.NotFound:
+        client.volumes.create(
+            name=get_volume_resource_name(volume),
+            driver="local",
+            labels=get_resource_labels(service.project.id, parent=service.id),
+        )
 
 
 def get_docker_volume_size(volume: Volume) -> int:
@@ -313,21 +317,23 @@ def get_docker_service_resource_name(service_id: str, project_id: str):
     return f"srv-docker-{project_id}-{service_id}"
 
 
-def scale_down_docker_service(deployment: DockerDeployment):
-    service = deployment.service
-    client = get_docker_client()
-
-    swarm_service_list = client.services.list(
-        filters={
-            "name": get_docker_service_resource_name(
-                service_id=service.id,
-                project_id=service.project.id,
-            )
-        }
+def get_swarm_service_name_for_deployment(deployment: DockerDeployment):
+    return (
+        f"srv-{deployment.service.project.id}-{deployment.service.id}-{deployment.hash}"
     )
 
-    if len(swarm_service_list) > 0:
-        swarm_service = swarm_service_list[0]
+
+def scale_down_docker_service(deployment: DockerDeployment):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        pass
+    else:
         swarm_service.scale(0)
 
 
@@ -403,6 +409,91 @@ def create_service_from_docker_registry(deployment: DockerDeployment):
             delay=5,
         ),
     )
+
+
+def create_resources_for_docker_service_deployment(deployment: DockerDeployment):
+    service = deployment.service
+    client = get_docker_client()
+
+    try:
+        client.services.get(get_swarm_service_name_for_deployment(deployment))
+    except docker.errors.NotFound:
+        client.images.pull(
+            repository=service.image,
+            auth_config=service.credentials,
+        )
+
+        # env variables
+        envs: list[str] = [
+            f"{env.key}={env.value}" for env in service.env_variables.all()
+        ]
+
+        # Volumes
+        mounts: list[str] = []
+        docker_volume_list = client.volumes.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service.project.id, parent=service.id
+                    ).items()
+                ]
+            }
+        )
+        access_mode_map = {
+            Volume.VolumeMode.READ_WRITE: "rw",
+            Volume.VolumeMode.READ_ONLY: "ro",
+        }
+
+        for volume in service.volumes.filter(host_path__isnull=True):
+            # Only include volumes that are not to be deleted
+            docker_volume = find_item_in_list(
+                lambda v: v.name == get_volume_resource_name(volume), docker_volume_list
+            )
+            if docker_volume is not None:
+                mounts.append(
+                    f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                )
+        for volume in service.volumes.filter(host_path__isnull=False):
+            mounts.append(
+                f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
+            )
+
+        # ports
+        exposed_ports: dict[int, int] = {}
+        endpoint_spec: EndpointSpec | None = None
+
+        # We don't expose HTTP ports with docker because they will be handled by caddy directly
+        for port in service.ports.filter(host__isnull=False):
+            exposed_ports[port.host] = port.forwarded
+
+        if len(exposed_ports) > 0:
+            endpoint_spec = EndpointSpec(ports=exposed_ports)
+
+        client.services.create(
+            image=service.image,
+            command=service.command,
+            name=get_swarm_service_name_for_deployment(deployment),
+            mounts=mounts,
+            endpoint_spec=endpoint_spec,
+            env=envs,
+            labels=get_resource_labels(
+                service.project.id,
+                deployment_hash=deployment.hash,
+                service=deployment.service.id,
+            ),
+            networks=[
+                NetworkAttachmentConfig(
+                    target=get_network_resource_name(service.project.id),
+                    aliases=[alias for alias in deployment.network_aliases],
+                )
+            ],
+            restart_policy=RestartPolicy(
+                condition="on-failure",
+                max_attempts=MAX_SERVICE_RESTART_COUNT,
+                delay=5,
+            ),
+        )
 
 
 def sort_proxy_routes(routes: list[dict[str, list[dict[str, list[str]]]]]):
@@ -520,11 +611,6 @@ def get_caddy_id_for_url(url: URL | ArchivedURL):
 def get_caddy_request_for_url(
     url: URL, service: DockerRegistryService, http_port: PortConfiguration
 ):
-    service_name = get_docker_service_resource_name(
-        service_id=service.id,
-        project_id=service.project.id,
-    )
-
     proxy_handlers = []
 
     if url.strip_prefix:
@@ -541,7 +627,7 @@ def get_caddy_request_for_url(
         {
             "flush_interval": -1,
             "handler": "reverse_proxy",
-            "upstreams": [{"dial": f"{service_name}:{http_port.forwarded}"}],
+            "upstreams": [{"dial": f"{service.network_alias}:{http_port.forwarded}"}],
         }
     )
     return {
@@ -601,24 +687,24 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 timeout=5,
             )
 
-        # now we create the config for the URL
+        # now we create or modify the config for the URL
         response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
         )
-        if response.status_code == status.HTTP_404_NOT_FOUND:
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+        routes = list(
+            filter(
+                lambda route: route["id"] != get_caddy_id_for_url(url), response.json()
             )
-            routes = response.json()
-            routes.append(get_caddy_request_for_url(url, service, http_port))
-            routes = sort_proxy_routes(routes)
+        )
+        routes.append(get_caddy_request_for_url(url, service, http_port))
+        routes = sort_proxy_routes(routes)
 
-            requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
-                headers={"content-type": "application/json"},
-                json=routes,
-                timeout=5,
-            )
+        requests.patch(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+            headers={"content-type": "application/json"},
+            json=routes,
+            timeout=5,
+        )
 
 
 def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> None:
@@ -729,7 +815,8 @@ def get_updated_docker_service_deployment_status(
 
     swarm_service = client.services.get(
         get_docker_service_resource_name(
-            deployment.service.id, deployment.service.project.id
+            service_id=deployment.service.id,
+            project_id=deployment.service.project.id,
         )
     )
 
@@ -748,9 +835,6 @@ def get_updated_docker_service_deployment_status(
     )
     while (monotonic() - start_time) < healthcheck_timeout:
         healthcheck_attempts += 1
-        task_list = swarm_service.tasks(
-            filters={"label": f"deployment_hash={deployment.hash}"}
-        )
         healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
         if healthcheck_time_left < 1:
             # do not override status reason
@@ -761,20 +845,15 @@ def get_updated_docker_service_deployment_status(
                 )
             break
 
-        min_time_left = healthcheck_time_left
-        if healthcheck_time_left - 1 > 0:  # we don't want a sleep time of `0`
-            min_time_left = min(healthcheck_time_left - 1, healthcheck_time_left)
-
-        sleep_time_available = min(
-            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL), min_time_left
-        )
-
         # TODO (#67) : send system logs when the state changes
         print(
             f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
             f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
         )
 
+        task_list = swarm_service.tasks(
+            filters={"label": f"deployment_hash={deployment.hash}"}
+        )
         if len(task_list) == 0:
             if deployment.status in [
                 DockerDeployment.DeploymentStatus.HEALTHY,
@@ -807,12 +886,12 @@ def get_updated_docker_service_deployment_status(
                 DockerSwarmTaskState.PREPARING: starting_status,
                 DockerSwarmTaskState.STARTING: starting_status,
                 DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
-                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.REMOVED,
                 DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
-                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.REMOVED,
                 DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
                 DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
-                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.REMOVED,
             }
 
             exited_without_error = 0
@@ -896,26 +975,219 @@ def get_updated_docker_service_deployment_status(
                         deployment_status_reason = str(e)
                         break
 
+            healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
             if (
                 retry_if_not_healthy
                 and deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                and healthcheck_time_left > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
             ):
                 # TODO (#67) : send system logs when the state changes
                 print(
                     f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
-                    + f" Retrying in {format_seconds(sleep_time_available)} 🔄"
+                    + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
                 )
-                sleep(sleep_time_available)
+                sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                 continue
-            # TODO (#67) : send system logs when the state changes
 
+            # TODO (#67) : send system logs when the state changes
             print(
                 f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
                 f"| finished with {deployment_status=} ✅"
             )
             return deployment_status, deployment_status_reason
 
-        sleep(sleep_time_available)
-        continue
+        sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+
+    return deployment_status, deployment_status_reason
+
+
+def get_updated_docker_deployment_status(
+    deployment: DockerDeployment,
+    auth_token: str,
+    retry_if_not_healthy=False,
+) -> tuple[DockerDeployment.DeploymentStatus, str]:
+    client = get_docker_client()
+
+    swarm_service = client.services.get(
+        get_swarm_service_name_for_deployment(deployment)
+    )
+
+    start_time = monotonic()
+    healthcheck = deployment.service.healthcheck
+
+    healthcheck_timeout = (
+        healthcheck.timeout_seconds
+        if healthcheck is not None
+        else settings.DEFAULT_HEALTHCHECK_TIMEOUT
+    )
+    healthcheck_attempts = 0
+    deployment_status, deployment_status_reason = (
+        DockerDeployment.DeploymentStatus.UNHEALTHY,
+        "The service failed to meet the healthcheck requirements when starting the service.",
+    )
+    while (monotonic() - start_time) < healthcheck_timeout:
+        healthcheck_attempts += 1
+        healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
+        if healthcheck_time_left < 1:
+            # do not override status reason
+            if deployment_status_reason is None:
+                raise TimeoutError(
+                    "Failed to run the healthcheck because there is no time left,"
+                    + " please make sure the healthcheck timeout is large enough"
+                )
+            break
+
+        # TODO (#67) : send system logs when the state changes
+        print(
+            f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+            f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
+        )
+
+        task_list = swarm_service.tasks(
+            filters={"label": f"deployment_hash={deployment.hash}"}
+        )
+        if len(task_list) == 0:
+            if deployment.status in [
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                DockerDeployment.DeploymentStatus.STARTING,
+                DockerDeployment.DeploymentStatus.RESTARTING,
+            ]:
+                return (
+                    DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    "An Unknown error occurred, did you manually scale down the service ?",
+                )
+        else:
+            most_recent_swarm_task = DockerSwarmTask.from_dict(
+                max(
+                    task_list,
+                    key=lambda task: task["Version"]["Index"],
+                )
+            )
+
+            starting_status = deployment.DeploymentStatus.STARTING
+            # We set the status to restarting, because we get more than one task for this service when we restart it
+            if len(task_list) > 1:
+                starting_status = deployment.DeploymentStatus.RESTARTING
+
+            state_matrix = {
+                DockerSwarmTaskState.NEW: starting_status,
+                DockerSwarmTaskState.PENDING: starting_status,
+                DockerSwarmTaskState.ASSIGNED: starting_status,
+                DockerSwarmTaskState.ACCEPTED: starting_status,
+                DockerSwarmTaskState.READY: starting_status,
+                DockerSwarmTaskState.PREPARING: starting_status,
+                DockerSwarmTaskState.STARTING: starting_status,
+                DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
+                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.REMOVED,
+                DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
+                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.REMOVED,
+                DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
+                DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
+                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.REMOVED,
+            }
+
+            exited_without_error = 0
+            deployment_status = state_matrix[most_recent_swarm_task.state]
+            deployment_status_reason = (
+                most_recent_swarm_task.Status.Err
+                if most_recent_swarm_task.Status.Err is not None
+                else most_recent_swarm_task.Status.Message
+            )
+
+            if most_recent_swarm_task.state == DockerSwarmTaskState.SHUTDOWN:
+                status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+                if (
+                    status_code is not None and status_code != exited_without_error
+                ) or most_recent_swarm_task.Status.Err is not None:
+                    deployment_status = deployment.DeploymentStatus.UNHEALTHY
+
+            if most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING:
+                if healthcheck is not None:
+
+                    @timeout(
+                        healthcheck_time_left,
+                        exception_message="The service failed to meet the healthcheck in the timeout provided",
+                    )
+                    def run_healthcheck():
+                        nonlocal deployment_status
+                        nonlocal deployment_status_reason
+                        nonlocal client
+
+                        print(
+                            f"Running custom healthcheck {healthcheck.type=} - {healthcheck.value=}"
+                        )
+                        if healthcheck.type == HealthCheck.HealthCheckType.COMMAND:
+                            container = client.containers.get(
+                                most_recent_swarm_task.container_id
+                            )
+                            exit_code, output = container.exec_run(
+                                cmd=healthcheck.value,
+                                stdout=True,
+                                stderr=True,
+                                stdin=False,
+                            )
+
+                            if exit_code == 0:
+                                deployment_status = (
+                                    DockerDeployment.DeploymentStatus.HEALTHY
+                                )
+                            else:
+                                deployment_status = (
+                                    DockerDeployment.DeploymentStatus.UNHEALTHY
+                                )
+                            deployment_status_reason = output.decode("utf-8")
+                        else:
+                            scheme = (
+                                "https"
+                                if settings.ENVIRONMENT == settings.PRODUCTION_ENV
+                                else "http"
+                            )
+                            full_url = (
+                                f"{scheme}://{deployment.url + healthcheck.value}"
+                            )
+                            response = requests.get(
+                                full_url,
+                                headers={"Authorization": f"Token {auth_token}"},
+                                timeout=min(healthcheck_time_left, 5),
+                            )
+                            if response.status_code == status.HTTP_200_OK:
+                                deployment_status = (
+                                    DockerDeployment.DeploymentStatus.HEALTHY
+                                )
+                            else:
+                                deployment_status = (
+                                    DockerDeployment.DeploymentStatus.UNHEALTHY
+                                )
+                            deployment_status_reason = response.content.decode("utf-8")
+
+                    try:
+                        run_healthcheck()
+                    except TimeoutError as e:
+                        deployment_status = deployment.DeploymentStatus.UNHEALTHY
+                        deployment_status_reason = str(e)
+                        break
+
+            healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
+            if (
+                retry_if_not_healthy
+                and deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                and healthcheck_time_left > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
+            ):
+                # TODO (#67) : send system logs when the state changes
+                print(
+                    f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
+                    + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
+                )
+                sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                continue
+
+            # TODO (#67) : send system logs when the state changes
+            print(
+                f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+                f"| finished with {deployment_status=} ✅"
+            )
+            return deployment_status, deployment_status_reason
+
+        sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
     return deployment_status, deployment_status_reason

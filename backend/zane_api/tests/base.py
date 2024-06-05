@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Any, List
+from typing import List
 from unittest.mock import MagicMock, patch
 
 import docker.errors
@@ -301,7 +301,7 @@ class FakeDockerClient:
 
     def services_get(self, name: str):
         if name not in self.service_map:
-            raise docker.errors.NotFound("Volume Not found")
+            raise docker.errors.NotFound(f"Service with `{name=}` Not found")
         return self.service_map[name]
 
     def services_remove(self, name: str):
@@ -312,13 +312,13 @@ class FakeDockerClient:
     def services_create(
         self,
         name: str,
-        mounts: list[str],
-        env: list[str],
-        endpoint_spec: Any,
-        image: str,
         *args,
         **kwargs,
     ):
+        image: str | None = kwargs.get("image", None)
+        mounts: list[str] = kwargs.get("mounts", [])
+        env: list[str] = kwargs.get("env", [])
+        endpoint_spec = kwargs.get("endpoint_spec", None)
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")
         volumes: dict[str, dict[str, str]] = {}
@@ -385,7 +385,6 @@ class FakeDockerClient:
         else:
             if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
-
 
     def docker_create_network(self, name: str, **kwargs):
         created_network = FakeDockerClient.FakeNetwork(name=name, id=name, parent=self)

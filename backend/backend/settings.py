@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from .api_description import API_DESCRIPTION
@@ -286,6 +287,7 @@ CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_RESULT_CACHE_MAX = 1_000
+CELERY_RESULT_EXPIRES = timedelta(hours=1)
 
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
@@ -300,4 +302,4 @@ ZANE_PRIVATE_DOMAIN = "zaneops.internal"
 
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
-DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5  # seconds
+DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
