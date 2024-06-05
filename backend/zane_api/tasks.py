@@ -40,13 +40,19 @@ def docker_service_deploy_failure(
 ):
     print(f"ON DEPLOYMENT FAILURE {exc=}")
     deployment_hash = kwargs["deployment_hash"]
-    deployment: DockerDeployment = DockerDeployment.objects.filter(
-        hash=deployment_hash
-    ).first()
+    deployment: DockerDeployment = (
+        DockerDeployment.objects.filter(hash=deployment_hash)
+        .select_related("service")
+        .first()
+    )
     if deployment is not None:
         deployment.status = DockerDeployment.DeploymentStatus.FAILED
         deployment.status_reason = str(exc)
         scale_down_docker_service(deployment)
+
+        if deployment.service.deployments.count() == 1:
+            deployment.is_current_production = True
+
         deployment.save()
 
 
@@ -132,6 +138,8 @@ def deploy_docker_service_with_changes(
                 if http_port is not None:
                     expose_docker_service_to_http(deployment)
             else:
+                if service.deployments.count() == 1:
+                    deployment.is_current_production = True
                 deployment.status = DockerDeployment.DeploymentStatus.FAILED
                 scale_down_docker_service(deployment)
 

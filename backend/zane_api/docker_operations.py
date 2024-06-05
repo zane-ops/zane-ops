@@ -317,10 +317,6 @@ def get_docker_volume_size(volume: Volume) -> int:
     return int(size_string)
 
 
-def get_docker_service_resource_name(service_id: str, project_id: str):
-    return f"srv-docker-{project_id}-{service_id}"
-
-
 def get_swarm_service_name_for_deployment(
     deployment: DockerDeployment | tuple[str, str, str]
 ):
@@ -660,10 +656,7 @@ def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> No
                 headers={"content-type": "application/json"},
                 json=get_caddy_request_for_deployment_url(
                     url=deployment.url,
-                    service_name=get_docker_service_resource_name(
-                        service_id=deployment.service.id,
-                        project_id=deployment.service.project.id,
-                    ),
+                    service_name=get_swarm_service_name_for_deployment(deployment),
                     forwarded_http_port=http_port.forwarded,
                 ),
                 timeout=5,

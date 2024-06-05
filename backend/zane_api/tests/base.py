@@ -137,7 +137,7 @@ class AuthAPITestCase(APITestCase):
         Token.objects.get_or_create(user=user)
         return user
 
-    def create_and_deploy_REDIS_docker_service(
+    def create_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
         other_changes: list[DockerDeploymentChange] = None,

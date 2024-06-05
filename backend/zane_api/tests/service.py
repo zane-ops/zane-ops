@@ -711,7 +711,6 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
-        self.assertFalse(latest_deployment.is_current_production)
 
     @patch("zane_api.docker_operations.sleep")
     @patch("zane_api.docker_operations.monotonic")
@@ -803,7 +802,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
 class DockerServiceArchiveViewTest(AuthAPITestCase):
     def test_archive_simple_service(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
         first_deployment = service.deployments.first()
 
         response = self.client.delete(
@@ -856,7 +855,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertIsNone(archived_service)
 
     def test_archive_service_with_volume(self):
-        project, service = self.create_and_deploy_REDIS_docker_service(
+        project, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.VOLUMES,
@@ -901,7 +900,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
     def test_archive_service_with_env_and_command(self):
-        project, service = self.create_and_deploy_REDIS_docker_service(
+        project, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
@@ -1052,7 +1051,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
 
         response = self.client.delete(
             reverse(

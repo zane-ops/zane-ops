@@ -410,8 +410,10 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
     def get(self, request, *args, **kwargs):
         try:
             return super().get(request, *args, **kwargs)
-        except exceptions.NotFound:
-            return Response(EMPTY_PAGINATED_RESPONSE)
+        except exceptions.NotFound as e:
+            if "Invalid page" in str(e.detail):
+                return Response(EMPTY_PAGINATED_RESPONSE)
+            raise e
 
     def get_queryset(self) -> QuerySet[DockerDeployment]:
         project_slug = self.kwargs["project_slug"]

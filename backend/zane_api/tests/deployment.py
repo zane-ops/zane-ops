@@ -26,7 +26,7 @@ from ..models import (
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
     def test_get_deployments_succesful(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployments_list",
@@ -41,7 +41,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(1, len(data.get("results")))
 
     def test_filter_deployments_succesful(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployments_list",
@@ -57,7 +57,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(0, len(data.get("results")))
 
     def test_deployments_project_non_existing(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployments_list",
@@ -85,7 +85,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_get_single_deployment_succesful(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
         response = self.client.get(
             reverse(
@@ -100,7 +100,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_single_deployment_deployment_non_existing(self):
-        project, service = self.create_and_deploy_REDIS_docker_service()
+        project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_single",
@@ -112,6 +112,22 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_filter_deployments_invalid_page_return_empty_list(self):
+        project, service = self.create_and_deploy_redis_docker_service()
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployments_list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            )
+            + "?page=100"
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        self.assertEqual(0, len(data.get("results")))
 
 
 class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
