@@ -514,25 +514,29 @@ class ArchiveDockerServiceAPIView(APIView):
                 detail=f"A service with the slug `{service_slug}` does not exist in this project."
             )
 
-        archived_project = (
-            project.archived_version if hasattr(project, "archived_version") else None
-        )
-        if archived_project is None:
-            archived_project = ArchivedProject.create_from_project(project)
+        if service.deployments.count() > 0:
+            archived_project: ArchivedProject = (
+                project.archived_version
+                if hasattr(project, "archived_version")
+                else None
+            )
+            if archived_project is None:
+                archived_project = ArchivedProject.create_from_project(project)
 
-        archived_service = ArchivedDockerService.create_from_service(
-            service, archived_project
-        )
+            archived_service = ArchivedDockerService.create_from_service(
+                service, archived_project
+            )
 
-        archive_task_id = service.archive_task_id
+            archive_task_id = service.archive_task_id
+
+            transaction.on_commit(
+                lambda: delete_resources_for_docker_service.apply_async(
+                    kwargs=dict(archived_service_id=archived_service.id),
+                    task_id=archive_task_id,
+                )
+            )
+
         service.delete_resources()
         service.delete()
-
-        transaction.on_commit(
-            lambda: delete_resources_for_docker_service.apply_async(
-                kwargs=dict(archived_service_id=archived_service.id),
-                task_id=archive_task_id,
-            )
-        )
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)

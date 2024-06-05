@@ -80,18 +80,12 @@ services:
       POSTGRES_DB: zane
     ports:
       - "5434:5432"
-  pgadmin:
-    image: elestio/pgadmin
-    container_name: zane-pgadmin
+  adminer:
+    image: adminer
+    container_name: zane-adminer
     restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: secret
-      PGADMIN_LISTEN_PORT: 80
     ports:
-      - "8081:80"
-    volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - "8081:8080"
   redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui

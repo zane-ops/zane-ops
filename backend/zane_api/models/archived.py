@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .base import Project, DockerRegistryService, DockerDeployment
+from .base import Project, DockerRegistryService
 from ..utils import strip_slash_if_exists
 
 
@@ -133,10 +133,6 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
     )
 
 
-class DeploymentURL(models.Model):
-    domain = models.URLField(null=False)
-
-
 class ArchivedDockerService(ArchivedBaseService):
     image = models.CharField(max_length=510, null=False, blank=False)
     project = models.ForeignKey(
@@ -147,7 +143,8 @@ class ArchivedDockerService(ArchivedBaseService):
         max_length=255,
         null=True,
     )
-    deployment_urls = models.ManyToManyField(to=DeploymentURL)
+    deployment_urls = models.JSONField(null=False, default=list)
+    deployment_hashes = models.JSONField(null=False, default=list)
 
     @classmethod
     def create_from_service(
@@ -160,6 +157,10 @@ class ArchivedDockerService(ArchivedBaseService):
             command=service.command,
             original_id=service.id,
             credentials=service.credentials,
+            deployment_urls=[
+                dpl.url for dpl in service.deployments.filter(url__isnull=False)
+            ],
+            deployment_hashes=[dpl.hash for dpl in service.deployments.all()],
         )
 
         archived_volumes = ArchivedVolume.objects.bulk_create(
@@ -203,19 +204,8 @@ class ArchivedDockerService(ArchivedBaseService):
             ]
         )
 
-        existing_deployments_urls: list[DockerDeployment] = list(
-            filter(lambda dpl: dpl.url is not None, service.deployments.all())
-        )
-        deployment_urls = DeploymentURL.objects.bulk_create(
-            [
-                DeploymentURL(domain=deployment.url)
-                for deployment in existing_deployments_urls
-            ]
-        )
-
         archived_service.volumes.add(*archived_volumes)
         archived_service.ports.add(*archived_ports)
         archived_service.urls.add(*archived_urls)
-        archived_service.deployment_urls.add(*deployment_urls)
 
         return archived_service

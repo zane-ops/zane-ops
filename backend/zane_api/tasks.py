@@ -162,9 +162,9 @@ def delete_docker_resources_for_project(archived_project_id: int):
         .prefetch_related("volumes", "urls")
     )
 
-    for docker_service in archived_docker_services:
-        cleanup_docker_service_resources(docker_service)
-        unexpose_docker_service_from_http(docker_service)
+    for archived_service in archived_docker_services:
+        unexpose_docker_service_from_http(archived_service)
+        cleanup_docker_service_resources(archived_service)
 
     cleanup_project_resources(archived_project)
 
@@ -177,7 +177,7 @@ def delete_resources_for_docker_service(archived_service_id: id):
     archived_service = (
         ArchivedDockerService.objects.filter(id=archived_service_id)
         .select_related("project")
-        .prefetch_related("volumes", "urls", "deployment_urls")
+        .prefetch_related("volumes", "urls")
     ).first()
     if archived_service is None:
         raise ArchivedDockerService.DoesNotExist(

@@ -10,7 +10,7 @@ from rest_framework.authtoken.models import Token
 
 from .base import AuthAPITestCase, FakeDockerClient
 from ..docker_operations import (
-    get_docker_service_resource_name,
+    get_swarm_service_name_for_deployment,
 )
 from ..models import (
     Project,
@@ -763,9 +763,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
 
-        service = DockerRegistryService.objects.create(
-            slug="cache-db", image="redis", project=p
-        )
+        service = DockerRegistryService.objects.create(slug="cache-db", project=p)
 
         response = self.client.get(
             reverse(
@@ -792,9 +790,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p1 = Project.objects.create(slug="kiss-cam", owner=owner)
         p2 = Project.objects.create(slug="camly", owner=owner)
 
-        service = DockerRegistryService.objects.create(
-            slug="cache-db", image="redis", project=p1
-        )
+        service = DockerRegistryService.objects.create(slug="cache-db", project=p1)
 
         response = self.client.get(
             reverse(
@@ -807,226 +803,230 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
 class DockerServiceArchiveViewTest(AuthAPITestCase):
     def test_archive_simple_service(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        project, service = self.create_and_deploy_REDIS_docker_service()
+        first_deployment = service.deployments.first()
 
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-
-        # then delete
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
             ),
-            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = DockerRegistryService.objects.filter(slug="cache-db").first()
+        deleted_service = DockerRegistryService.objects.filter(
+            slug=service.slug
+        ).first()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug="cache-db"
+            slug=service.slug
         ).first()
         self.assertIsNotNone(archived_service)
 
         deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_docker_service_resource_name(
-                project_id=p.id, service_id=archived_service.original_id
-            )
+            get_swarm_service_name_for_deployment(first_deployment)
         )
         self.assertIsNone(deleted_docker_service)
 
-        deployments = DockerDeployment.objects.filter(service__slug="cache-db")
+        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
         self.assertEqual(0, len(deployments))
 
-    def test_archive_service_with_volume(self):
+    def test_archive_non_deployed_service_deletes_the_service(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        project = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=project)
 
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-            "volumes": [{"name": "REDIS Data volume", "container_path": "/data"}],
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-
-        # then delete
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
             ),
-            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_volumes = Volume.objects.filter(name="REDIS Data volume")
+        deleted_service = DockerRegistryService.objects.filter(
+            slug=service.slug
+        ).first()
+        self.assertIsNone(deleted_service)
+
+        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
+            slug=service.slug
+        ).first()
+        self.assertIsNone(archived_service)
+
+    def test_archive_service_with_volume(self):
+        project, service = self.create_and_deploy_REDIS_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "name": "redis-data",
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                )
+            ]
+        )
+        deployment = service.deployments.first()
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_volumes = Volume.objects.filter(name="redis-data")
         self.assertEqual(0, len(deleted_volumes))
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
-                "volumes"
-            )
+            ArchivedDockerService.objects.filter(
+                original_id=service.id
+            ).prefetch_related("volumes")
         ).first()
         self.assertEqual(1, len(archived_service.volumes.all()))
 
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_docker_service_resource_name(
-                project_id=p.id, service_id=archived_service.original_id
+        service_name = get_swarm_service_name_for_deployment(
+            (
+                archived_service.project.original_id,
+                archived_service.original_id,
+                archived_service.deployment_hashes[0],
             )
         )
+        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
     def test_archive_service_with_env_and_command(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-            "command": "redis-server --requirepass ${REDIS_PASSWORD}",
-            "env": {"REDIS_PASSWORD": "strongPassword123"},
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
+        project, service = self.create_and_deploy_REDIS_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "REDIS_PASSWORD",
+                        "value": "strongPassword123",
+                    },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.COMMAND,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="redis-server --requirepass ${REDIS_PASSWORD}",
+                ),
+            ]
         )
+        deployment = service.deployments.first()
 
-        # then delete
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
             ),
-            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_envs = DockerEnvVariable.objects.filter(service__slug="cache-db")
-        self.assertEqual(0, len(deleted_envs))
+        self.assertEqual(
+            0, DockerEnvVariable.objects.filter(service__slug=service.slug).count()
+        )
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
-                "env_variables"
-            )
+            ArchivedDockerService.objects.filter(
+                original_id=service.id
+            ).prefetch_related("env_variables")
         ).first()
-        self.assertEqual(1, len(archived_service.env_variables.all()))
+        self.assertEqual(1, archived_service.env_variables.count())
 
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_docker_service_resource_name(
-                project_id=p.id, service_id=archived_service.original_id
+        service_name = get_swarm_service_name_for_deployment(
+            (
+                archived_service.project.original_id,
+                archived_service.original_id,
+                archived_service.deployment_hashes[0],
             )
         )
+        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
 
     def test_archive_service_with_port(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        project, service = self.create_and_deploy_caddy_docker_service()
 
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-            "ports": [{"host": 6383, "forwarded": 6379}],
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-
-        # then delete
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
             ),
-            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_ports = PortConfiguration.objects.filter(host=6383)
-        self.assertEqual(0, len(deleted_ports))
+        self.assertEqual(
+            0,
+            PortConfiguration.objects.filter(
+                dockerregistryservice__slug=service.slug
+            ).count(),
+        )
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(slug="cache-db").prefetch_related(
-                "ports"
-            )
+            ArchivedDockerService.objects.filter(
+                original_id=service.id
+            ).prefetch_related("ports")
         ).first()
-        self.assertEqual(1, len(archived_service.ports.all()))
+        self.assertEqual(1, archived_service.ports.count())
 
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_docker_service_resource_name(
-                project_id=p.id, service_id=archived_service.original_id
+        service_name = get_swarm_service_name_for_deployment(
+            (
+                archived_service.project.original_id,
+                archived_service.original_id,
+                archived_service.deployment_hashes[0],
             )
         )
+        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
 
     def test_archive_service_with_urls(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="thullo", owner=owner)
-
-        create_service_payload = {
-            "slug": "thullo-api",
-            "image": "dcr.fredkiss.dev/thullo-api:latest",
-            "urls": [{"domain": "thullo.fredkiss.dev", "base_path": "/api"}],
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
+        project, service = self.create_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "thullo.fredkiss.dev",
+                        "base_path": "/api",
+                        "strip_prefix": True,
+                    },
+                )
+            ]
         )
 
-        # then delete
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "thullo-api"},
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
             ),
-            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_urls = URL.objects.filter(
-            domain="thullo.fredkiss.dev", base_path="/api"
+        self.assertEqual(
+            0,
+            URL.objects.filter(domain="thullo.fredkiss.dev", base_path="/api").count(),
         )
-        self.assertEqual(0, len(deleted_urls))
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(slug="thullo-api").prefetch_related(
-                "urls"
-            )
+            ArchivedDockerService.objects.filter(
+                original_id=service.id
+            ).prefetch_related("urls")
         ).first()
         self.assertEqual(1, len(archived_service.urls.all()))
 
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_docker_service_resource_name(
-                project_id=p.id, service_id=archived_service.original_id
+        service_name = get_swarm_service_name_for_deployment(
+            (
+                archived_service.project.original_id,
+                archived_service.original_id,
+                archived_service.deployment_hashes[0],
             )
         )
+        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
 
     def test_archive_service_non_existing(self):
@@ -1052,36 +1052,20 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        project, service = self.create_and_deploy_REDIS_docker_service()
 
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        # create
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-
-        # then delete
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
             ),
-            data=create_service_payload,
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deployments = DockerDeployment.objects.filter(service__slug="cache-db")
-        self.assertEqual(0, len(deployments))
-        monitoring_tasks = PeriodicTask.objects.all()
-        self.assertEqual(0, len(monitoring_tasks))
-        schedules = IntervalSchedule.objects.all()
-        self.assertEqual(0, len(schedules))
+        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
+        self.assertEqual(0, deployments.count())
+        self.assertEqual(0, PeriodicTask.objects.count())
+        self.assertEqual(0, IntervalSchedule.objects.count())
 
 
 class DockerServiceMonitorTests(AuthAPITestCase):

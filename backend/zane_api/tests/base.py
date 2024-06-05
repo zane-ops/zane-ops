@@ -162,6 +162,8 @@ class AuthAPITestCase(APITestCase):
                 ),
             )
 
+        for change in other_changes:
+            change.service = service
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
@@ -211,6 +213,8 @@ class AuthAPITestCase(APITestCase):
                 ),
             )
 
+        for change in other_changes:
+            change.service = service
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
