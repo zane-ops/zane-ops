@@ -26,53 +26,19 @@ from ..models import (
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
     def test_get_deployments_succesful(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project, service = self.create_and_deploy_REDIS_docker_service()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployments_list",
                 kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "cache-db",
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
                 },
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
-        self.assertEqual(1, len(data))
-
-    def test_create_service_set_deployment_slot(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "valkey",
-            "image": "valkey:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="valkey"
-        ).first()
-        self.assertIsNotNone(created_service)
-        latest_deployment = created_service.latest_production_deployment
-        self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, latest_deployment.slot)
+        self.assertEqual(1, len(data.get("results")))
 
     def test_filter_deployments_succesful(self):
         owner = self.loginUser()
@@ -2284,13 +2250,13 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value="caddy:2.8-alpine",
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="healthcheck",
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",

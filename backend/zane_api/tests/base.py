@@ -7,12 +7,14 @@ import docker.errors
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from docker.types import EndpointSpec
+from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
-from ..models import Project
+from ..models import Project, DockerDeploymentChange, DockerRegistryService
 
 
 class CustomAPIClient(APIClient):
@@ -134,6 +136,110 @@ class AuthAPITestCase(APITestCase):
         user = User.objects.get(username="Fredkiss3")
         Token.objects.get_or_create(user=user)
         return user
+
+    def create_and_deploy_REDIS_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ):
+        owner = self.loginUser()
+        project = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=project)
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "valkey-cli validate",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
+            + other_changes
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return project, service
+
+    def create_and_deploy_caddy_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ):
+        owner = self.loginUser()
+        project = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=project)
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+            + other_changes
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return project, service
 
 
 class FakeDockerClient:

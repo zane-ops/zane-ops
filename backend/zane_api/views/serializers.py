@@ -184,6 +184,12 @@ class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
         fields = ["status", "created_at", "hash"]
 
 
+class DeploymentListPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
+
+
 # ==============================
 #        Projects List         #
 # ==============================

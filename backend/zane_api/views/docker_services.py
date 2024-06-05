@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
+from . import EMPTY_PAGINATED_RESPONSE
 from .base import EMPTY_RESPONSE, ResourceConflict
 from .helpers import compute_docker_service_snapshot_without_changes
 from .serializers import (
@@ -33,6 +34,7 @@ from .serializers import (
     DockerCredentialsFieldChangeSerializer,
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
+    DeploymentListPagination,
 )
 from ..models import (
     Project,
@@ -400,9 +402,16 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
     serializer_class = DockerServiceDeploymentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
+    pagination_class = DeploymentListPagination
     queryset = (
         DockerDeployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound:
+            return Response(EMPTY_PAGINATED_RESPONSE)
 
     def get_queryset(self) -> QuerySet[DockerDeployment]:
         project_slug = self.kwargs["project_slug"]
