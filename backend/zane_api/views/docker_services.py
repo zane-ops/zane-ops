@@ -244,6 +244,102 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 return Response(response.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(exclude=True)
+class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
+    def put(self, request: Request, project_slug: str, service_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        for change in request.data:
+            field_serializer_map = {
+                "urls": URLItemChangeSerializer,
+                "volumes": VolumeItemChangeSerializer,
+                "env_variables": EnvItemChangeSerializer,
+                "ports": PortItemChangeSerializer,
+                "credentials": DockerCredentialsFieldChangeSerializer,
+                "command": DockerCommandFieldChangeSerializer,
+                "image": DockerImageFieldChangeSerializer,
+                "healthcheck": HealthcheckFieldChangeSerializer,
+            }
+
+            request_serializer = DockerDeploymentFieldChangeRequestSerializer(
+                data=change
+            )
+            if request_serializer.is_valid(raise_exception=True):
+                form_serializer_class: type[Serializer] = field_serializer_map[
+                    request_serializer.data["field"]
+                ]
+                form = form_serializer_class(data=change, context={"service": service})
+                if form.is_valid(raise_exception=True):
+                    data = form.data
+                    field = data["field"]
+                    new_value = data.get("new_value")
+                    item_id = data.get("item_id")
+                    change_type = data.get("type")
+                    old_value: Any = None
+                    match field:
+                        case "image" | "command" | "credentials":
+                            old_value = getattr(service, field)
+                        case "healthcheck":
+                            old_value = (
+                                HealthCheckSerializer(service.healthcheck).data
+                                if service.healthcheck is not None
+                                else None
+                            )
+                        case "volumes":
+                            if change_type in ["UPDATE", "DELETE"]:
+                                old_value = VolumeSerializer(
+                                    service.volumes.get(id=item_id)
+                                ).data
+                        case "urls":
+                            old_value = None
+                            if change_type in ["UPDATE", "DELETE"]:
+                                old_value = URLModelSerializer(
+                                    service.urls.get(id=item_id)
+                                ).data
+                        case "ports":
+                            if change_type in ["UPDATE", "DELETE"]:
+                                old_value = PortConfigurationSerializer(
+                                    service.ports.get(id=item_id)
+                                ).data
+                        case "env_variables":
+                            if change_type in ["UPDATE", "DELETE"]:
+                                old_value = DockerEnvVariableSerializer(
+                                    service.env_variables.get(id=item_id)
+                                ).data
+
+                    service.add_change(
+                        DockerDeploymentChange(
+                            type=change_type,
+                            field=field,
+                            old_value=old_value,
+                            new_value=new_value,
+                            service=service,
+                        )
+                    )
+
+        response = DockerServiceSerializer(service)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
 class CancelDockerServiceDeploymentChangesAPIView(APIView):
     @extend_schema(
         responses={
