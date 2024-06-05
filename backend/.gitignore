@@ -5,3 +5,4 @@ celerybeat-schedule
 out.yaml
 docker_service_testing.py
 record_requests.py
+seed/
