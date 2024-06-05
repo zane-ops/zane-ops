@@ -2,7 +2,9 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..docker_operations import get_docker_service_resource_name
+from ..docker_operations import (
+    get_swarm_service_name_for_deployment,
+)
 from ..models import (
     Project,
     ArchivedProject,
@@ -13,6 +15,7 @@ from ..models import (
     DockerEnvVariable,
     PortConfiguration,
     URL,
+    DockerDeploymentChange,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -340,37 +343,59 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNone(archived_projects.first().active_version)
 
     def test_archive_all_services_when_archiving_a_projects(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="sandbox", owner=owner)
-
-        create_service_payload = {
-            "slug": "gitea",
-            "image": "gitea/gitea:latest",
-            "urls": [{"domain": "gitea.zane.local", "base_path": "/"}],
-            "ports": [{"forwarded": 3000}],
-            "env": {"USER_UID": "1000", "USER_GID": "1000"},
-            "volumes": [{"name": "gitea", "container_path": "/data"}],
-        }
-
-        # create the service
-        self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-            content_type="application/json",
+        project, service = self.create_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "name": "caddy-data",
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "USER_UID",
+                        "value": "1000",
+                    },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "USER_GID",
+                        "value": "1000",
+                    },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "gitea.zane.local",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                ),
+            ]
         )
 
-        # then archive the project
+        first_deployment: DockerDeployment = service.deployments.first()
         response = self.client.delete(
-            reverse("zane_api:projects.details", kwargs={"slug": "sandbox"})
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         # Service is deleted
-        deleted_service = DockerRegistryService.objects.filter(slug="gitea").first()
+        deleted_service = DockerRegistryService.objects.filter(
+            slug=service.slug
+        ).first()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(slug="gitea")
+            ArchivedDockerService.objects.filter(original_id=service.id)
             .prefetch_related("volumes")
             .prefetch_related("env_variables")
             .prefetch_related("ports")
@@ -379,36 +404,41 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNotNone(archived_service)
 
         # Deployments are cleaned up
-        deployments = DockerDeployment.objects.filter(service__slug="gitea")
-        self.assertEqual(0, len(deployments))
+        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
+        self.assertEqual(0, deployments.count())
 
         # Volumes are cleaned up
-        deleted_volumes = Volume.objects.filter(name="gitea")
-        self.assertEqual(0, len(deleted_volumes))
-        self.assertEqual(1, len(archived_service.volumes.all()))
+        deleted_volume = Volume.objects.filter(name="gitea").first()
+        self.assertIsNone(deleted_volume)
+        self.assertEqual(1, archived_service.volumes.count())
 
         # env variables are cleaned up
-        deleted_envs = DockerEnvVariable.objects.filter(service__slug="cache-db")
-        self.assertEqual(0, len(deleted_envs))
-        self.assertEqual(2, len(archived_service.env_variables.all()))
+        deleted_envs = DockerEnvVariable.objects.filter(service__slug=service.slug)
+        self.assertEqual(0, deleted_envs.count())
+        self.assertEqual(2, archived_service.env_variables.count())
 
         # ports are cleaned up
-        deleted_ports = PortConfiguration.objects.filter(host=6383)
-        self.assertEqual(0, len(deleted_ports))
-        self.assertEqual(1, len(archived_service.ports.all()))
+        deleted_ports = PortConfiguration.objects.filter(
+            dockerregistryservice__slug=service.slug
+        )
+        self.assertEqual(0, deleted_ports.count())
+        self.assertEqual(1, archived_service.ports.count())
 
         # urls are cleaned up
         deleted_urls = URL.objects.filter(domain="gitea.zane.local", base_path="/")
-        self.assertEqual(0, len(deleted_urls))
-        self.assertEqual(1, len(archived_service.urls.all()))
+        self.assertEqual(0, deleted_urls.count())
+        self.assertEqual(1, archived_service.urls.count())
 
         # --- Docker Resources ---
         # service is removed
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_docker_service_resource_name(
-                project_id=p.id, service_id=archived_service.original_id
+        service_name = get_swarm_service_name_for_deployment(
+            (
+                archived_service.project.original_id,
+                archived_service.original_id,
+                first_deployment.hash,
             )
         )
+        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
 
         # volumes are unmounted
@@ -468,23 +498,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertEqual(0, project_in_response.get("total_services"))
 
     def test_with_succesful_deploy(self):
-        owner = self.loginUser()
-
-        sandbox = Project.objects.create(owner=owner, slug="sandbox")
-
-        # Create service
-        create_service_payload = {
-            "slug": "redis",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
-            ),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project, service = self.create_and_deploy_redis_docker_service()
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -493,28 +507,12 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertEqual(1, project_in_response.get("total_services"))
 
     def test_with_failed_deployment(self):
-        owner = self.loginUser()
-
-        sandbox = Project.objects.create(owner=owner, slug="sandbox")
-
-        # Create service
-        create_service_payload = {
-            "slug": "redis",
-            "image": "redis:alpine",
-        }
-
         def create_raise_error(*args, **kwargs):
             raise Exception("Fake error")
 
         self.fake_docker_client.services.create = create_raise_error
 
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
-            ),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project, service = self.create_and_deploy_redis_docker_service()
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -523,28 +521,10 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertEqual(1, project_in_response.get("total_services"))
 
     def test_with_unhealthy_deployment(self):
-        owner = self.loginUser()
-
-        sandbox = Project.objects.create(owner=owner, slug="sandbox")
-
-        # Create service
-        create_service_payload = {
-            "slug": "redis",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create", kwargs={"project_slug": sandbox.slug}
-            ),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project, service = self.create_and_deploy_redis_docker_service()
 
         # make the deployment unhealthy
-        deployment: DockerDeployment = DockerDeployment.objects.filter(
-            service__slug="redis"
-        ).first()
+        deployment: DockerDeployment = service.deployments.first()
         deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
         deployment.save()
 
