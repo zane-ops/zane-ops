@@ -293,7 +293,7 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
     ):
         try:
             deployment_status, deployment_status_reason = (
-                get_updated_docker_service_deployment_status(deployment, auth_token)
+                get_updated_docker_deployment_status(deployment, auth_token)
             )
             deployment.status = deployment_status
             deployment.status_reason = deployment_status_reason

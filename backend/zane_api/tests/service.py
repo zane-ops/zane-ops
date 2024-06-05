@@ -1087,27 +1087,37 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 class DockerServiceMonitorTests(AuthAPITestCase):
     def test_normal_deployment_flow(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.latest_production_deployment
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        latest_deployment = service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.latest_production_deployment
+        latest_deployment = service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
@@ -1115,20 +1125,30 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
     def test_restart_is_set_after_multiple_tasks_deployments(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.latest_production_deployment
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        latest_deployment = service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1176,7 +1196,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.latest_production_deployment
+        latest_deployment = service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.RESTARTING,
             latest_deployment.status,
@@ -1184,20 +1204,30 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
     def test_succesful_restart_deploymen_flow(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.latest_production_deployment
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        latest_deployment = service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1245,7 +1275,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.latest_production_deployment
+        latest_deployment = service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
@@ -1255,22 +1285,33 @@ class DockerServiceMonitorTests(AuthAPITestCase):
     @patch("zane_api.docker_operations.monotonic")
     def test_unsuccesful_restart_deployment_flow(self, mock_monotonic: Mock, _: Mock):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
+        )
 
         mock_monotonic.side_effect = [0, 0, 0, 31]
 
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.deployments.first()
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        latest_deployment = service.deployments.first()
 
         class FakeService:
             @staticmethod
@@ -1364,7 +1405,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         )
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.latest_production_deployment
+        latest_deployment = service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             latest_deployment.status,
@@ -1372,20 +1413,30 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
     def test_service_fail_outside_of_zane_control(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-
-        create_service_payload = {
-            "slug": "cache-db",
-            "image": "redis:alpine",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.get(slug="cache-db")
-        latest_deployment = created_service.latest_production_deployment
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        latest_deployment = service.latest_production_deployment
 
         class FakeService:
             @staticmethod
@@ -1402,7 +1453,7 @@ class DockerServiceMonitorTests(AuthAPITestCase):
         latest_deployment.save()
         token = Token.objects.get(user=owner)
         monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = created_service.latest_production_deployment
+        latest_deployment = service.latest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             latest_deployment.status,
