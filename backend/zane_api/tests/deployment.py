@@ -2681,17 +2681,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, first_deployment.slot)
         self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, second_deployment.slot)
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
-        self,
-        mock_monotonic: Mock,
-        _: Mock,
-    ):
-        mock_monotonic.side_effect = [0, 31]
+    def test_update_service_set_old_deployment_as_non_production(self):
         project, service = self.create_and_deploy_redis_docker_service()
-
-        mock_monotonic.side_effect = [0, 0, 0, 31]
 
         DockerDeploymentChange.objects.bulk_create(
             [
@@ -2716,7 +2707,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(2, service.deployments.count())
         first_deployment = service.deployments.order_by("created_at")[0]
         second_deployment = service.deployments.order_by("created_at")[1]
-        self.assertEqual(first_deployment.slot, second_deployment.slot)
+        self.assertFalse(first_deployment.is_current_production)
+        self.assertTrue(second_deployment.is_current_production)
 
     def test_update_service_scale_down_and_remove_old_deployment(self):
         project, service = self.create_and_deploy_redis_docker_service()
@@ -2818,3 +2810,154 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
+
+    def test_update_service_schedule_next_queued_deployment_on_finish(self):
+        project, service = self.create_and_deploy_redis_docker_service()
+
+        third_deployment = DockerDeployment.objects.create(service=service)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, service.deployments.count())
+
+        third_deployment.refresh_from_db()
+        self.assertNotEqual(
+            DockerDeployment.DeploymentStatus.QUEUED, third_deployment.status
+        )
+
+    def test_update_service_schedule_next_queued_deployment_even_if_fails(
+        self,
+    ):
+        project, service = self.create_and_deploy_redis_docker_service()
+
+        def create_raise_error(*args, **kwargs):
+            raise Exception("Fake error")
+
+        self.fake_docker_client.services.create = create_raise_error
+        third_deployment = DockerDeployment.objects.create(service=service)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, service.deployments.count())
+
+        third_deployment.refresh_from_db()
+        self.assertNotEqual(
+            DockerDeployment.DeploymentStatus.QUEUED, third_deployment.status
+        )
+
+    @patch("zane_api.docker_operations.sleep")
+    @patch("zane_api.docker_operations.monotonic")
+    def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
+        self,
+        mock_monotonic: Mock,
+        _: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 31]
+        project, service = self.create_and_deploy_redis_docker_service()
+
+        mock_monotonic.side_effect = [0, 0, 0, 31]
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+        first_deployment = service.deployments.order_by("created_at")[0]
+        second_deployment = service.deployments.order_by("created_at")[1]
+        self.assertEqual(first_deployment.slot, second_deployment.slot)
+
+    @patch("zane_api.docker_operations.sleep")
+    @patch("zane_api.docker_operations.monotonic")
+    def test_remove_new_service_if_deployment_fails(
+        self,
+        mock_monotonic: Mock,
+        _: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 0, 0, 31]
+        project, service = self.create_and_deploy_redis_docker_service()
+
+        mock_monotonic.side_effect = [0, 31]
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+        first_deployment = service.deployments.order_by("created_at")[0]
+        second_deployment = service.deployments.order_by("created_at")[1]
+
+        old_docker_service = self.fake_docker_client.service_map.get(
+            get_swarm_service_name_for_deployment(first_deployment)
+        )
+        new_docker_service = self.fake_docker_client.service_map.get(
+            get_swarm_service_name_for_deployment(second_deployment)
+        )
+        self.assertIsNone(new_docker_service)
+        self.assertIsNotNone(old_docker_service)

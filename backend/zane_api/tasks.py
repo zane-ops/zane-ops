@@ -14,11 +14,11 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
-    scale_down_docker_service_deployment,
     expose_docker_service_deployment_to_http,
     create_resources_for_docker_service_deployment,
     get_updated_docker_deployment_status,
     delete_docker_volume,
+    scale_and_remove_docker_service_deployment,
 )
 from .models import (
     DockerDeployment,
@@ -49,12 +49,24 @@ def docker_service_deploy_failure(
     if deployment is not None:
         deployment.status = DockerDeployment.DeploymentStatus.FAILED
         deployment.status_reason = str(exc)
-        scale_down_docker_service_deployment(deployment)
+        scale_and_remove_docker_service_deployment(deployment)
 
         if deployment.service.deployments.count() == 1:
             deployment.is_current_production = True
 
         deployment.save()
+
+        service = deployment.service
+        next_deployment = service.last_queued_deployment
+        if next_deployment is not None:
+            deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=next_deployment.hash,
+                    service_id=service.id,
+                    auth_token=kwargs["auth_token"],
+                ),
+                task_id=next_deployment.task_id,
+            )
 
 
 @shared_task(on_failure=docker_service_deploy_failure)
@@ -143,7 +155,7 @@ def deploy_docker_service_with_changes(
                 if service.deployments.count() == 1:
                     deployment.is_current_production = True
                 deployment.status = DockerDeployment.DeploymentStatus.FAILED
-                scale_down_docker_service_deployment(deployment)
+                scale_and_remove_docker_service_deployment(deployment)
 
             deployment.status_reason = deployment_status_reason
             deployment.save()
@@ -154,11 +166,24 @@ def deploy_docker_service_with_changes(
             latest_production_deploy is not None
             and deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
         ):
+            latest_production_deploy.is_current_production = False
+            latest_production_deploy.save()
             cleanup_docker_resources_for_deployment.apply_async(
                 kwargs=dict(
                     old_deployment_hash=latest_production_deploy.hash,
                     new_deployment_hash=deployment.hash,
                 )
+            )
+
+        next_deployment = service.last_queued_deployment
+        if next_deployment is not None:
+            deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=next_deployment.hash,
+                    service_id=service.id,
+                    auth_token=auth_token,
+                ),
+                task_id=next_deployment.task_id,
             )
 
 
@@ -176,7 +201,7 @@ def cleanup_docker_resources_for_deployment(
         hash=new_deployment_hash
     )
 
-    swarm_service = scale_down_docker_service_deployment(old_deployment, wait=True)
+    scale_and_remove_docker_service_deployment(old_deployment, wait_service_down=True)
 
     for volume_change in new_deployment.changes.filter(
         field=DockerDeploymentChange.ChangeField.VOLUMES,
@@ -184,10 +209,6 @@ def cleanup_docker_resources_for_deployment(
     ):
         delete_docker_volume(volume_change.item_id)
 
-    if swarm_service is not None:
-        swarm_service.remove()
-
-    # for volume in
     old_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
     old_deployment.save()
 

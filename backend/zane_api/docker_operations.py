@@ -7,7 +7,6 @@ import docker.errors
 import requests
 from django.conf import settings
 from docker.models.networks import Network
-from docker.models.services import Service
 from docker.types import RestartPolicy, EndpointSpec, NetworkAttachmentConfig
 from rest_framework import status
 from wrapt_timeout_decorator import timeout
@@ -35,7 +34,7 @@ from .utils import (
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
-DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 10  # seconds
+DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
 MAX_SERVICE_RESTART_COUNT = 3
 
 
@@ -345,9 +344,9 @@ def get_swarm_service_name_for_deployment(
     return f"srv-{project_id}-{service_id}-{deployment_id}"
 
 
-def scale_down_docker_service_deployment(
-    deployment: DockerDeployment, wait=False
-) -> Service | None:
+def scale_and_remove_docker_service_deployment(
+    deployment: DockerDeployment, wait_service_down=False
+):
     client = get_docker_client()
 
     try:
@@ -360,15 +359,13 @@ def scale_down_docker_service_deployment(
     else:
         swarm_service.scale(0)
 
-        if wait:
+        if wait_service_down:
 
             @timeout(
                 DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
                 exception_message="Timeout encountered when waiting for service to be down",
             )
             def wait_for_service_to_be_down():
-                nonlocal client
-                nonlocal swarm_service
                 print(f"waiting for service {swarm_service.name=} to be down...")
                 task_list = swarm_service.tasks()
                 while len(task_list) > 0:
@@ -382,8 +379,7 @@ def scale_down_docker_service_deployment(
                 print(f"service {swarm_service.name=} is down, YAY !! 🎉")
 
             wait_for_service_to_be_down()
-
-        return swarm_service
+        swarm_service.remove()
 
 
 def create_resources_for_docker_service_deployment(deployment: DockerDeployment):
