@@ -2648,3 +2648,72 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self.assertIsNotNone(new_deployment)
         mock_expose_service.assert_called_once()
         mock_expose_deployment.assert_called_once()
+
+
+class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
+    def test_update_service_set_different_deployment_slot(self):
+        project, service = self.create_and_deploy_redis_docker_service()
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+        first_deployment = service.deployments.order_by("created_at")[0]
+        second_deployment = service.deployments.order_by("created_at")[1]
+        self.assertNotEqual(first_deployment.slot, second_deployment.slot)
+        self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, first_deployment.slot)
+        self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, second_deployment.slot)
+
+    @patch("zane_api.docker_operations.sleep")
+    @patch("zane_api.docker_operations.monotonic")
+    def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
+        self,
+        mock_monotonic: Mock,
+        _: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 31]
+        project, service = self.create_and_deploy_redis_docker_service()
+
+        mock_monotonic.side_effect = [0, 0, 0, 31]
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+        first_deployment = service.deployments.order_by("created_at")[0]
+        second_deployment = service.deployments.order_by("created_at")[1]
+        self.assertEqual(first_deployment.slot, second_deployment.slot)
