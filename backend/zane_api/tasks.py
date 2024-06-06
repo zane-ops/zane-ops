@@ -14,10 +14,11 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
-    scale_down_docker_service,
+    scale_down_docker_service_deployment,
     expose_docker_service_deployment_to_http,
     create_resources_for_docker_service_deployment,
     get_updated_docker_deployment_status,
+    delete_docker_volume,
 )
 from .models import (
     DockerDeployment,
@@ -48,7 +49,7 @@ def docker_service_deploy_failure(
     if deployment is not None:
         deployment.status = DockerDeployment.DeploymentStatus.FAILED
         deployment.status_reason = str(exc)
-        scale_down_docker_service(deployment)
+        scale_down_docker_service_deployment(deployment)
 
         if deployment.service.deployments.count() == 1:
             deployment.is_current_production = True
@@ -84,6 +85,7 @@ def deploy_docker_service_with_changes(
 
             # TODO (#67) : send system logs when the resources are created
             service = deployment.service
+            latest_production_deploy = service.latest_production_deployment
             for volume_change in deployment.changes.filter(
                 field=DockerDeploymentChange.ChangeField.VOLUMES,
                 type=DockerDeploymentChange.ChangeType.ADD,
@@ -141,12 +143,53 @@ def deploy_docker_service_with_changes(
                 if service.deployments.count() == 1:
                     deployment.is_current_production = True
                 deployment.status = DockerDeployment.DeploymentStatus.FAILED
-                scale_down_docker_service(deployment)
+                scale_down_docker_service_deployment(deployment)
 
             deployment.status_reason = deployment_status_reason
             deployment.save()
     except LockAcquisitionError:
         return "will retry after the current one is finished"
+    else:
+        if (
+            latest_production_deploy is not None
+            and deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
+        ):
+            cleanup_docker_resources_for_deployment.apply_async(
+                kwargs=dict(
+                    old_deployment_hash=latest_production_deploy.hash,
+                    new_deployment_hash=deployment.hash,
+                )
+            )
+
+
+@shared_task(
+    autoretry_for=(docker.errors.APIError, TimeoutError),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def cleanup_docker_resources_for_deployment(
+    old_deployment_hash: str, new_deployment_hash: str
+):
+    old_deployment: DockerDeployment = DockerDeployment.objects.get(
+        hash=old_deployment_hash
+    )
+    new_deployment: DockerDeployment = DockerDeployment.objects.get(
+        hash=new_deployment_hash
+    )
+
+    swarm_service = scale_down_docker_service_deployment(old_deployment, wait=True)
+
+    for volume_change in new_deployment.changes.filter(
+        field=DockerDeploymentChange.ChangeField.VOLUMES,
+        type=DockerDeploymentChange.ChangeType.DELETE,
+    ):
+        delete_docker_volume(volume_change.item_id)
+
+    if swarm_service is not None:
+        swarm_service.remove()
+
+    # for volume in
+    old_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
+    old_deployment.save()
 
 
 @shared_task(
