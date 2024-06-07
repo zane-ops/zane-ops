@@ -306,6 +306,7 @@ def delete_resources_for_docker_service(archived_service_id: id):
 
 @shared_task
 def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
+    lock_id = f"monitor_{deployment_hash}"
     deployment: DockerDeployment | None = (
         DockerDeployment.objects.filter(hash=deployment_hash)
         .select_related("service", "service__project")
@@ -325,11 +326,21 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
         and deployment.status != DockerDeployment.DeploymentStatus.FAILED
     ):
         try:
-            deployment_status, deployment_status_reason = (
-                get_updated_docker_deployment_status(deployment, auth_token)
-            )
-            deployment.status = deployment_status
-            deployment.status_reason = deployment_status_reason
+            healthcheck = deployment.service.healthcheck
+            timeout_margin = 5  # seconds
+            monitor_timeout = (
+                healthcheck.timeout_seconds
+                if healthcheck is not None
+                else settings.DEFAULT_HEALTHCHECK_TIMEOUT
+            ) + timeout_margin
+            with cache_lock(lock_id, timeout=monitor_timeout):
+                deployment_status, deployment_status_reason = (
+                    get_updated_docker_deployment_status(deployment, auth_token)
+                )
+                deployment.status = deployment_status
+                deployment.status_reason = deployment_status_reason
+        except LockAcquisitionError:
+            return "Ignored, another monitor task is already running and hasn't finished yet"
         except TimeoutError as e:
             deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
             deployment.status_reason = str(e)
