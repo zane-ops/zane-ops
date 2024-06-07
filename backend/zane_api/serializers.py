@@ -164,6 +164,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
         model = models.DockerDeployment
         fields = [
             "is_current_production",
+            "slot",
             "created_at",
             "is_redeploy_of",
             "hash",

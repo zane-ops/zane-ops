@@ -37,7 +37,7 @@ Should we ?
                 lb_policy first # always choose the first available service before the next
                 fail_duration 30s # How long to hold that a proxy is down
 
-                health_path /<healthcheck-path>
+                health_uri /<healthcheck-path>
                 health_status 2xx
                 health_interval <healthcheck-interval>s
                 health_timeout <healthcheck-timeout>s
@@ -56,7 +56,7 @@ Should we ?
   ?redirect_to=`<uri>`
 - [x] modify the `/api/login` to take into account the search param and redirect accordingly
 - [ ] add lock on monitor, to skip a monitor if it hasn't run yet
-- [ ] Remove all deployments url configs when archiving a service
+- [x] Remove all deployments url configs when archiving a service
 - [x] Pass user context in monitor task
 
 ### Other important things (in another PR)

@@ -220,7 +220,7 @@ class DockerRegistryService(BaseService):
     def network_aliases(self):
         return (
             [
-                f"{self.network_alias}.{settings.ZANE_PRIVATE_DOMAIN}",
+                f"{self.network_alias}.{settings.ZANE_INTERNAL_DOMAIN}",
                 self.network_alias,
             ]
             if self.network_alias is not None
@@ -384,10 +384,6 @@ class DockerRegistryService(BaseService):
                                 forwarded=change.new_value.get("forwarded"),
                             )
                         )
-
-                        if is_http_port:
-                            added_new_http_port = True
-
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.ports.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
@@ -402,10 +398,9 @@ class DockerRegistryService(BaseService):
                         port.forwarded = change.new_value.get("forwarded")
                         port.save()
 
-                        if is_http_port:
-                            added_new_http_port = True
-
-        if added_new_http_port and self.urls.count() == 0:
+        # Always recreate an URL if there is an http port
+        self.refresh_from_db()
+        if self.http_port is not None and self.urls.count() == 0:
             self.urls.add(URL.create_default_url(service=self))
 
         self.unapplied_changes.update(applied=True, deployment=deployment)
@@ -569,7 +564,7 @@ class DockerDeployment(BaseDeployment):
         aliases = []
         if self.service is not None and len(self.service.network_aliases) > 0:
             aliases = self.service.network_aliases + [
-                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_PRIVATE_DOMAIN}",
+                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}",
             ]
         return aliases
 

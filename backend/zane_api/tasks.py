@@ -132,7 +132,8 @@ def deploy_docker_service_with_changes(
                     create_docker_volume(corresponding_volume, service=service)
 
             if (
-                service.volumes.count() > 0 or service.ports.count() > 0
+                service.volumes.count() > 0
+                or service.ports.filter(host__isnull=False).count() > 0
             ) and latest_production_deploy is not None:
                 scale_down_service_deployment(latest_production_deploy)
 

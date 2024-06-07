@@ -652,11 +652,26 @@ def get_caddy_request_for_url(
             }
         )
 
+    thirty_seconds_in_nano_seconds = 30_000_000_000
     proxy_handlers.append(
         {
             "flush_interval": -1,
             "handler": "reverse_proxy",
-            "upstreams": [{"dial": f"{service.network_alias}:{http_port.forwarded}"}],
+            "health_checks": {
+                "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
+            },
+            "load_balancing": {
+                "retries": 3,
+                "selection_policy": {"policy": "first"},
+            },
+            "upstreams": [
+                {
+                    "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                },
+                {
+                    "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                },
+            ],
         }
     )
     return {
