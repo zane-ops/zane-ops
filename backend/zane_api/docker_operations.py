@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import List, TypedDict
 
@@ -34,7 +35,7 @@ from .utils import (
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
-DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 10  # seconds
+DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
 MAX_SERVICE_RESTART_COUNT = 3
 
 
@@ -285,9 +286,23 @@ def check_if_port_is_available_on_host(port: int) -> bool:
         return True
 
 
-def get_volume_resource_name(volume: Volume):
-    ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
-    return f"vol-{volume.id}-{ts_to_full_number}"
+def get_volume_resource_name(volume: Volume | str):
+    if isinstance(volume, Volume):
+        vol_id = volume.id
+    else:
+        vol_id = volume
+    return f"vol-{vol_id}"
+
+
+def delete_docker_volume(volume_id: str):
+    client = get_docker_client()
+    try:
+        volume = client.volumes.get(get_volume_resource_name(volume_id))
+    except docker.errors.NotFound:
+        # the volume has already been deleted, do nothing
+        pass
+    else:
+        volume.remove(force=True)
 
 
 def create_docker_volume(volume: Volume, service: BaseService):
@@ -330,7 +345,9 @@ def get_swarm_service_name_for_deployment(
     return f"srv-{project_id}-{service_id}-{deployment_id}"
 
 
-def scale_down_docker_service(deployment: DockerDeployment):
+def scale_down_and_remove_docker_service_deployment(
+    deployment: DockerDeployment, wait_service_down=False
+):
     client = get_docker_client()
 
     try:
@@ -339,9 +356,80 @@ def scale_down_docker_service(deployment: DockerDeployment):
         )
     except docker.errors.NotFound:
         # do nothing, the service doesn't exist
-        pass
+        return None
     else:
         swarm_service.scale(0)
+
+        if wait_service_down:
+
+            @timeout(
+                DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+                exception_message="Timeout encountered when waiting for service to be down",
+            )
+            def wait_for_service_to_be_down():
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                    continue
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            wait_for_service_to_be_down()
+        swarm_service.remove()
+
+
+def scale_down_service_deployment(deployment: DockerDeployment, wait_service_down=True):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
+        swarm_service.scale(0)
+
+        if wait_service_down:
+
+            @timeout(
+                DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+                exception_message="Timeout encountered when waiting for service to be down",
+            )
+            def wait_for_service_to_be_down():
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                    continue
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            wait_for_service_to_be_down()
+
+
+def scale_back_service_deployment(deployment: DockerDeployment):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
+        swarm_service.scale(1)
 
 
 def create_resources_for_docker_service_deployment(deployment: DockerDeployment):
@@ -530,7 +618,15 @@ def get_caddy_request_for_deployment_url(
     }
 
 
-def get_caddy_id_for_url(url: URL | ArchivedURL):
+@dataclass
+class URLDto:
+    domain: str
+    base_path: str
+    strip_prefix: bool
+    id: str | None = None
+
+
+def get_caddy_id_for_url(url: URL | ArchivedURL | URLDto):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
     ).replace("/", "-")
@@ -626,7 +722,7 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
         )
         routes = list(
             filter(
-                lambda route: route["id"] != get_caddy_id_for_url(url), response.json()
+                lambda route: route["@id"] != get_caddy_id_for_url(url), response.json()
             )
         )
         routes.append(get_caddy_request_for_url(url, service, http_port))
@@ -734,6 +830,62 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
             },
             timeout=5,
         )
+
+
+def unexpose_docker_deployment_from_http(
+    deployment: DockerDeployment,
+) -> None:
+    if deployment.url is not None:  # type: str
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}",
+            timeout=5,
+        )
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
+            headers={
+                "content-type": "application/json",
+                "accept": "application/json",
+            },
+            timeout=5,
+        )
+
+
+def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
+    for url in urls_to_delete:
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+            timeout=5,
+        )
+
+        if response.status_code != 404:
+            current_routes: list[dict[str, dict]] = response.json()
+            routes = list(
+                filter(
+                    lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                    current_routes,
+                )
+            )
+
+            # delete the domain and logger config when there are no routes for the domain anymore
+            if len(routes) == 0:
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                    timeout=5,
+                )
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                    headers={
+                        "content-type": "application/json",
+                        "accept": "application/json",
+                    },
+                    timeout=5,
+                )
+            else:
+                # in the other case, we just delete the caddy config
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
+                    timeout=5,
+                )
 
 
 def get_updated_docker_deployment_status(

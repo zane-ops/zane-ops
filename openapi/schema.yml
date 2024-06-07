@@ -2496,9 +2496,14 @@ components:
           nullable: true
         old_value:
           nullable: true
+        item_id:
+          type: string
+          nullable: true
+          maxLength: 255
       required:
       - field
       - id
+      - item_id
       - new_value
       - old_value
       - type

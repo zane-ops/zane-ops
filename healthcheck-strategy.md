@@ -16,16 +16,16 @@ Should we ?
     1. `...same as before`
     2. Create another service and inspect the previous network alias deployment for the service
         1. we will use the same service alias as the current production deploy for services so that it is available by
-           other services ( `service-alias.zaneops.internal` )
+           other services ( `service-alias.zaneops.internal` ) ✅
         2. if the service was `blue`, we choose `green`, else we
-           choose `blue` (`service-alias.zaneops.internal.<blue|green>`)
+           choose `blue` (`service-alias.zaneops.internal.<blue|green>`) ✅
     3. Monitor the health of the newly created service with the healthcheck params of the service
        with a scheduled job,
         1. if the service fails to meet the health status requirements, we remove the service for the
-           deployment
-        2. if the service succeed to meet the requirements, we remove the previous service
-    4. we mark the deployment as finished and release the lock for the deployment,
-       and also schedule the task for the next deployment, and set the current deployment as the production one.
+           deployment ✅
+        2. if the service succeed to meet the requirements, we remove the previous service ✅
+    4. we mark the deployment as finished and release the lock for the deployment, ✅
+       and also schedule the task for the next deployment, and set the current deployment as the production one. ✅
 
 - On caddy side :
     1. use the service network alias instead of the service name

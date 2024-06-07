@@ -5,6 +5,7 @@ import billiard.einfo as e_info
 import docker.errors
 from celery import shared_task, Task
 from django.conf import settings
+from django.db.models import Q
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
@@ -14,10 +15,15 @@ from .docker_operations import (
     cleanup_project_resources,
     cleanup_docker_service_resources,
     unexpose_docker_service_from_http,
-    scale_down_docker_service,
     expose_docker_service_deployment_to_http,
     create_resources_for_docker_service_deployment,
     get_updated_docker_deployment_status,
+    delete_docker_volume,
+    scale_down_and_remove_docker_service_deployment,
+    unexpose_docker_deployment_from_http,
+    apply_deleted_urls_changes,
+    scale_down_service_deployment,
+    scale_back_service_deployment,
 )
 from .models import (
     DockerDeployment,
@@ -28,6 +34,7 @@ from .models import (
     DockerDeploymentChange,
 )
 from .utils import cache_lock, LockAcquisitionError
+from .views.helpers import URLDto
 
 
 def docker_service_deploy_failure(
@@ -45,18 +52,46 @@ def docker_service_deploy_failure(
         .select_related("service")
         .first()
     )
+
     if deployment is not None:
         deployment.status = DockerDeployment.DeploymentStatus.FAILED
         deployment.status_reason = str(exc)
-        scale_down_docker_service(deployment)
+
+        latest_production_deploy = deployment.service.latest_production_deployment
+        if (
+            latest_production_deploy is not None
+            and latest_production_deploy.id != deployment.id
+        ):
+            scale_back_service_deployment(latest_production_deploy)
+
+        scale_down_and_remove_docker_service_deployment(deployment)
 
         if deployment.service.deployments.count() == 1:
             deployment.is_current_production = True
 
         deployment.save()
 
+        # delete all monitor tasks that might have been created in the meantime
+        PeriodicTask.objects.filter(name=deployment.monitor_task_name).delete()
 
-@shared_task(on_failure=docker_service_deploy_failure)
+        service = deployment.service
+        next_deployment = service.last_queued_deployment
+        if next_deployment is not None:
+            deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=next_deployment.hash,
+                    service_id=service.id,
+                    auth_token=kwargs["auth_token"],
+                ),
+                task_id=next_deployment.task_id,
+            )
+
+
+@shared_task(
+    autoretry_for=(TimeoutError,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+    on_failure=docker_service_deploy_failure,
+)
 def deploy_docker_service_with_changes(
     deployment_hash: str, service_id: str, auth_token: str
 ):
@@ -84,6 +119,7 @@ def deploy_docker_service_with_changes(
 
             # TODO (#67) : send system logs when the resources are created
             service = deployment.service
+            latest_production_deploy = service.latest_production_deployment
             for volume_change in deployment.changes.filter(
                 field=DockerDeploymentChange.ChangeField.VOLUMES,
                 type=DockerDeploymentChange.ChangeType.ADD,
@@ -94,6 +130,11 @@ def deploy_docker_service_with_changes(
                 )
                 if corresponding_volume.host_path is None:
                     create_docker_volume(corresponding_volume, service=service)
+
+            if (
+                service.volumes.count() > 0 or service.ports.count() > 0
+            ) and latest_production_deploy is not None:
+                scale_down_service_deployment(latest_production_deploy)
 
             create_resources_for_docker_service_deployment(deployment)
 
@@ -125,7 +166,7 @@ def deploy_docker_service_with_changes(
                         ),
                         period=IntervalSchedule.SECONDS,
                     ),
-                    name=f"monitor deployment {deployment_hash}",
+                    name=deployment.monitor_task_name,
                     task="zane_api.tasks.monitor_docker_service_deployment",
                     kwargs=json.dumps(
                         {
@@ -141,12 +182,79 @@ def deploy_docker_service_with_changes(
                 if service.deployments.count() == 1:
                     deployment.is_current_production = True
                 deployment.status = DockerDeployment.DeploymentStatus.FAILED
-                scale_down_docker_service(deployment)
+
+                if latest_production_deploy is not None:
+                    scale_back_service_deployment(latest_production_deploy)
+                scale_down_and_remove_docker_service_deployment(deployment)
 
             deployment.status_reason = deployment_status_reason
             deployment.save()
     except LockAcquisitionError:
         return "will retry after the current one is finished"
+    else:
+        if (
+            latest_production_deploy is not None
+            and deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
+        ):
+            service.deployments.filter(~Q(hash=deployment_hash)).update(
+                is_current_production=False
+            )
+            cleanup_docker_resources_for_deployment.apply_async(
+                kwargs=dict(
+                    old_deployment_hash=latest_production_deploy.hash,
+                    new_deployment_hash=deployment.hash,
+                )
+            )
+
+        next_deployment = service.last_queued_deployment
+        if next_deployment is not None:
+            deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=next_deployment.hash,
+                    service_id=service.id,
+                    auth_token=auth_token,
+                ),
+                task_id=next_deployment.task_id,
+            )
+
+
+@shared_task(
+    autoretry_for=(docker.errors.APIError, TimeoutError),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def cleanup_docker_resources_for_deployment(
+    old_deployment_hash: str, new_deployment_hash: str
+):
+    old_deployment: DockerDeployment = DockerDeployment.objects.get(
+        hash=old_deployment_hash
+    )
+    new_deployment: DockerDeployment = DockerDeployment.objects.get(
+        hash=new_deployment_hash
+    )
+
+    unexpose_docker_deployment_from_http(old_deployment)
+    scale_down_and_remove_docker_service_deployment(
+        old_deployment, wait_service_down=True
+    )
+
+    for volume_change in new_deployment.changes.filter(
+        field=DockerDeploymentChange.ChangeField.VOLUMES,
+        type=DockerDeploymentChange.ChangeType.DELETE,
+    ):
+        delete_docker_volume(volume_change.item_id)
+
+    urls_to_delete = [
+        URLDto.from_dict(change.old_value)
+        for change in new_deployment.changes.filter(
+            field=DockerDeploymentChange.ChangeField.URLS,
+            type=DockerDeploymentChange.ChangeType.DELETE,
+        )
+    ]
+
+    apply_deleted_urls_changes(urls_to_delete)
+
+    old_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
+    old_deployment.save()
 
 
 @shared_task(
@@ -213,6 +321,7 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
     if (
         deployment is not None
         and deployment.status != DockerDeployment.DeploymentStatus.REMOVED
+        and deployment.status != DockerDeployment.DeploymentStatus.FAILED
     ):
         try:
             deployment_status, deployment_status_reason = (

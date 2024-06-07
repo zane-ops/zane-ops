@@ -390,12 +390,13 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
 
         snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
         # validate double host port
+        new_value = attrs.get("new_value") or {}
         same_urls = list(
             filter(
                 lambda url: url.domain is not None
                 and url.base_path is not None
-                and url.domain == attrs.get("new_value", {}).get("domain")
-                and url.base_path == attrs.get("new_value", {}).get("base_path"),
+                and url.domain == new_value.get("domain")
+                and url.base_path == new_value.get("base_path"),
                 snapshot.urls,
             )
         )
@@ -454,7 +455,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         super().validate(change)
         service = self.get_service()
         change_type = change["type"]
-        new_value = change.get("new_value", {}) or {}
+        new_value = change.get("new_value") or {}
         current_volume: Volume | None = None
         if change_type in ["DELETE", "UPDATE"]:
             item_id = change["item_id"]
@@ -560,6 +561,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
         super().validate(attrs)
         service = self.get_service()
         change_type = attrs["type"]
+        new_value = attrs.get("new_value") or {}
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
@@ -576,11 +578,10 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
 
         # validate double `key`
         snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
-        if attrs.get("new_value") is not None:
+        if new_value is not None:
             envs_with_same_key = list(
                 filter(
-                    lambda env: env.key is not None
-                    and env.key == attrs.get("new_value", {}).get("key"),
+                    lambda env: env.key is not None and env.key == new_value.get("key"),
                     snapshot.env_variables,
                 )
             )
@@ -604,6 +605,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         super().validate(attrs)
         service = self.get_service()
         change_type = attrs["type"]
+        new_value = attrs.get("new_value") or {}
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
@@ -624,7 +626,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         ports_with_same_host = list(
             filter(
                 lambda port: port.host is not None
-                and port.host == attrs.get("new_value", {}).get("host"),
+                and port.host == new_value.get("host"),
                 snapshot.ports,
             )
         )
@@ -669,8 +671,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     )
 
         # check if port is available
-        new_value = attrs.get("new_value", {})
-        public_port = new_value.get("host") if new_value is not None else None
+        public_port = new_value.get("host")
         if public_port is not None and public_port not in http_ports:
             is_port_available = check_if_port_is_available_on_host(public_port)
             if not is_port_available:

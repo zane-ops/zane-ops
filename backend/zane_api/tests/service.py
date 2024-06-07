@@ -685,7 +685,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
         mock_monotonic.side_effect = [0, 0, 0, 31]
 
-        class FakeService:
+        class MockService:
             @staticmethod
             def tasks(*args, **kwargs):
                 return []
@@ -693,7 +693,10 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             def scale(self, *args):
                 pass
 
-        self.fake_docker_client.services.get = lambda _id: FakeService()
+            def remove(self):
+                pass
+
+        self.fake_docker_client.services.get = lambda _id: MockService()
 
         response = self.client.put(
             reverse(

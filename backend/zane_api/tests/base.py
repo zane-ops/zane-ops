@@ -109,6 +109,8 @@ class APITestCase(TestCase):
         patch("zane_api.tasks.expose_docker_service_to_http").start()
         patch("zane_api.tasks.unexpose_docker_service_from_http").start()
         patch("zane_api.tasks.expose_docker_service_deployment_to_http").start()
+        patch("zane_api.tasks.unexpose_docker_deployment_from_http").start()
+        patch("zane_api.tasks.apply_deleted_urls_changes").start()
         patch(
             "zane_api.docker_operations.get_docker_client",
             return_value=self.fake_docker_client,
