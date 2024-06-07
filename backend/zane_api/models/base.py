@@ -384,6 +384,9 @@ class DockerRegistryService(BaseService):
                                 forwarded=change.new_value.get("forwarded"),
                             )
                         )
+                        if is_http_port:
+                            added_new_http_port = True
+
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.ports.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
@@ -398,9 +401,11 @@ class DockerRegistryService(BaseService):
                         port.forwarded = change.new_value.get("forwarded")
                         port.save()
 
+                        if is_http_port:
+                            added_new_http_port = True
+
         # Always recreate an URL if there is an http port
-        self.refresh_from_db()
-        if self.http_port is not None and self.urls.count() == 0:
+        if added_new_http_port and self.urls.count() == 0:
             self.urls.add(URL.create_default_url(service=self))
 
         self.unapplied_changes.update(applied=True, deployment=deployment)
