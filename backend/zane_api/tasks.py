@@ -20,6 +20,8 @@ from .docker_operations import (
     get_updated_docker_deployment_status,
     delete_docker_volume,
     scale_and_remove_docker_service_deployment,
+    unexpose_docker_deployment_from_http,
+    apply_deleted_urls_changes,
 )
 from .models import (
     DockerDeployment,
@@ -30,6 +32,7 @@ from .models import (
     DockerDeploymentChange,
 )
 from .utils import cache_lock, LockAcquisitionError
+from .views.helpers import URLDto
 
 
 def docker_service_deploy_failure(
@@ -203,6 +206,7 @@ def cleanup_docker_resources_for_deployment(
         hash=new_deployment_hash
     )
 
+    unexpose_docker_deployment_from_http(old_deployment)
     scale_and_remove_docker_service_deployment(old_deployment, wait_service_down=True)
 
     for volume_change in new_deployment.changes.filter(
@@ -210,6 +214,16 @@ def cleanup_docker_resources_for_deployment(
         type=DockerDeploymentChange.ChangeType.DELETE,
     ):
         delete_docker_volume(volume_change.item_id)
+
+    urls_to_delete = [
+        URLDto.from_dict(change.old_value)
+        for change in new_deployment.changes.filter(
+            field=DockerDeploymentChange.ChangeField.URLS,
+            type=DockerDeploymentChange.ChangeType.DELETE,
+        )
+    ]
+
+    apply_deleted_urls_changes(urls_to_delete)
 
     old_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
     old_deployment.save()

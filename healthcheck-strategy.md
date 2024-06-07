@@ -16,7 +16,7 @@ Should we ?
     1. `...same as before`
     2. Create another service and inspect the previous network alias deployment for the service
         1. we will use the same service alias as the current production deploy for services so that it is available by
-           other services ( `service-alias.zaneops.internal` )
+           other services ( `service-alias.zaneops.internal` ) ✅
         2. if the service was `blue`, we choose `green`, else we
            choose `blue` (`service-alias.zaneops.internal.<blue|green>`) ✅
     3. Monitor the health of the newly created service with the healthcheck params of the service

@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import List, TypedDict
 
@@ -568,7 +569,15 @@ def get_caddy_request_for_deployment_url(
     }
 
 
-def get_caddy_id_for_url(url: URL | ArchivedURL):
+@dataclass
+class URLDto:
+    domain: str
+    base_path: str
+    strip_prefix: bool
+    id: str | None = None
+
+
+def get_caddy_id_for_url(url: URL | ArchivedURL | URLDto):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
     ).replace("/", "-")
@@ -772,6 +781,62 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
             },
             timeout=5,
         )
+
+
+def unexpose_docker_deployment_from_http(
+    deployment: DockerDeployment,
+) -> None:
+    if deployment.url is not None:  # type: str
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}",
+            timeout=5,
+        )
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
+            headers={
+                "content-type": "application/json",
+                "accept": "application/json",
+            },
+            timeout=5,
+        )
+
+
+def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
+    for url in urls_to_delete:
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+            timeout=5,
+        )
+
+        if response.status_code != 404:
+            current_routes: list[dict[str, dict]] = response.json()
+            routes = list(
+                filter(
+                    lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                    current_routes,
+                )
+            )
+
+            # delete the domain and logger config when there are no routes for the domain anymore
+            if len(routes) == 0:
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                    timeout=5,
+                )
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                    headers={
+                        "content-type": "application/json",
+                        "accept": "application/json",
+                    },
+                    timeout=5,
+                )
+            else:
+                # in the other case, we just delete the caddy config
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
+                    timeout=5,
+                )
 
 
 def get_updated_docker_deployment_status(
