@@ -5,6 +5,7 @@ import billiard.einfo as e_info
 import docker.errors
 from celery import shared_task, Task
 from django.conf import settings
+from django.db.models import Q
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
@@ -166,8 +167,9 @@ def deploy_docker_service_with_changes(
             latest_production_deploy is not None
             and deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
         ):
-            latest_production_deploy.is_current_production = False
-            latest_production_deploy.save()
+            service.deployments.filter(~Q(hash=deployment_hash)).update(
+                is_current_production=False
+            )
             cleanup_docker_resources_for_deployment.apply_async(
                 kwargs=dict(
                     old_deployment_hash=latest_production_deploy.hash,
