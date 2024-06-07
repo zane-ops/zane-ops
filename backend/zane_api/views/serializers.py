@@ -390,12 +390,13 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
 
         snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
         # validate double host port
+        new_value = attrs.get("new_value") or {}
         same_urls = list(
             filter(
                 lambda url: url.domain is not None
                 and url.base_path is not None
-                and url.domain == attrs.get("new_value", {}).get("domain")
-                and url.base_path == attrs.get("new_value", {}).get("base_path"),
+                and url.domain == new_value.get("domain")
+                and url.base_path == new_value.get("base_path"),
                 snapshot.urls,
             )
         )

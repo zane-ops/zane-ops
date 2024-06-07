@@ -3,6 +3,7 @@ from unittest.mock import patch, Mock, MagicMock
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
+from django_celery_beat.models import PeriodicTask
 from rest_framework import status
 
 from .base import AuthAPITestCase
@@ -2961,3 +2962,23 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertIsNone(new_docker_service)
         self.assertIsNotNone(old_docker_service)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    def test_remove_monitor_task_if_deployment_fails(
+        self,
+        mock_expose: Mock,
+    ):
+        def expose_raise_error():
+            raise Exception("Fake exception")
+
+        mock_expose.side_effect = expose_raise_error
+        project, service = self.create_and_deploy_caddy_docker_service()
+
+        mock_expose.assert_called()
+
+        initial_deployment = service.deployments.first()
+        self.assertIsNone(initial_deployment.monitor_task)
+        periodic_task_associated_to_deployment = PeriodicTask.objects.filter(
+            name=initial_deployment.monitor_task_name
+        )
+        self.assertEqual(0, periodic_task_associated_to_deployment.count())

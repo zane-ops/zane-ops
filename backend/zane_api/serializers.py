@@ -113,7 +113,7 @@ class HealthCheckSerializer(ModelSerializer):
 class DockerDeploymentChangeSerializer(ModelSerializer):
     class Meta:
         model = models.DockerDeploymentChange
-        fields = ["id", "type", "field", "new_value", "old_value"]
+        fields = ["id", "type", "field", "new_value", "old_value", "item_id"]
 
 
 class DockerCredentialSerializer(serializers.Serializer):

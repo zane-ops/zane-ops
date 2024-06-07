@@ -148,9 +148,9 @@ class DeploymentChangeDto:
 
 @dataclass
 class VolumeDto:
-    name: str
     container_path: str
     mode: Literal["READ_ONLY", "READ_WRITE"]
+    name: str = None
     host_path: Optional[str] = None
     id: Optional[str] = None
 

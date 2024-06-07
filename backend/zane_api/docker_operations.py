@@ -673,7 +673,7 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
         )
         routes = list(
             filter(
-                lambda route: route["id"] != get_caddy_id_for_url(url), response.json()
+                lambda route: route["@id"] != get_caddy_id_for_url(url), response.json()
             )
         )
         routes.append(get_caddy_request_for_url(url, service, http_port))

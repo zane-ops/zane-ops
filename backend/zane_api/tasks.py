@@ -60,6 +60,9 @@ def docker_service_deploy_failure(
 
         deployment.save()
 
+        # delete all monitor tasks that might have been created in the meantime
+        PeriodicTask.objects.filter(name=deployment.monitor_task_name).delete()
+
         service = deployment.service
         next_deployment = service.last_queued_deployment
         if next_deployment is not None:
@@ -143,7 +146,7 @@ def deploy_docker_service_with_changes(
                         ),
                         period=IntervalSchedule.SECONDS,
                     ),
-                    name=f"monitor deployment {deployment_hash}",
+                    name=deployment.monitor_task_name,
                     task="zane_api.tasks.monitor_docker_service_deployment",
                     kwargs=json.dumps(
                         {
@@ -293,6 +296,7 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
     if (
         deployment is not None
         and deployment.status != DockerDeployment.DeploymentStatus.REMOVED
+        and deployment.status != DockerDeployment.DeploymentStatus.FAILED
     ):
         try:
             deployment_status, deployment_status_reason = (

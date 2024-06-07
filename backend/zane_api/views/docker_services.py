@@ -237,6 +237,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                         old_value=old_value,
                         new_value=new_value,
                         service=service,
+                        item_id=item_id,
                     )
                 )
 
@@ -333,6 +334,7 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                             old_value=old_value,
                             new_value=new_value,
                             service=service,
+                            item_id=item_id,
                         )
                     )
 
