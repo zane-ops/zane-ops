@@ -19,9 +19,11 @@ from .docker_operations import (
     create_resources_for_docker_service_deployment,
     get_updated_docker_deployment_status,
     delete_docker_volume,
-    scale_and_remove_docker_service_deployment,
+    scale_down_and_remove_docker_service_deployment,
     unexpose_docker_deployment_from_http,
     apply_deleted_urls_changes,
+    scale_down_service_deployment,
+    scale_back_service_deployment,
 )
 from .models import (
     DockerDeployment,
@@ -50,10 +52,19 @@ def docker_service_deploy_failure(
         .select_related("service")
         .first()
     )
+
     if deployment is not None:
         deployment.status = DockerDeployment.DeploymentStatus.FAILED
         deployment.status_reason = str(exc)
-        scale_and_remove_docker_service_deployment(deployment)
+
+        latest_production_deploy = deployment.service.latest_production_deployment
+        if (
+            latest_production_deploy is not None
+            and latest_production_deploy.id != deployment.id
+        ):
+            scale_back_service_deployment(latest_production_deploy)
+
+        scale_down_and_remove_docker_service_deployment(deployment)
 
         if deployment.service.deployments.count() == 1:
             deployment.is_current_production = True
@@ -76,7 +87,11 @@ def docker_service_deploy_failure(
             )
 
 
-@shared_task(on_failure=docker_service_deploy_failure)
+@shared_task(
+    autoretry_for=(TimeoutError,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+    on_failure=docker_service_deploy_failure,
+)
 def deploy_docker_service_with_changes(
     deployment_hash: str, service_id: str, auth_token: str
 ):
@@ -115,6 +130,11 @@ def deploy_docker_service_with_changes(
                 )
                 if corresponding_volume.host_path is None:
                     create_docker_volume(corresponding_volume, service=service)
+
+            if (
+                service.volumes.count() > 0 or service.ports.count() > 0
+            ) and latest_production_deploy is not None:
+                scale_down_service_deployment(latest_production_deploy)
 
             create_resources_for_docker_service_deployment(deployment)
 
@@ -162,7 +182,10 @@ def deploy_docker_service_with_changes(
                 if service.deployments.count() == 1:
                     deployment.is_current_production = True
                 deployment.status = DockerDeployment.DeploymentStatus.FAILED
-                scale_and_remove_docker_service_deployment(deployment)
+
+                if latest_production_deploy is not None:
+                    scale_back_service_deployment(latest_production_deploy)
+                scale_down_and_remove_docker_service_deployment(deployment)
 
             deployment.status_reason = deployment_status_reason
             deployment.save()
@@ -210,7 +233,9 @@ def cleanup_docker_resources_for_deployment(
     )
 
     unexpose_docker_deployment_from_http(old_deployment)
-    scale_and_remove_docker_service_deployment(old_deployment, wait_service_down=True)
+    scale_down_and_remove_docker_service_deployment(
+        old_deployment, wait_service_down=True
+    )
 
     for volume_change in new_deployment.changes.filter(
         field=DockerDeploymentChange.ChangeField.VOLUMES,

@@ -345,7 +345,7 @@ def get_swarm_service_name_for_deployment(
     return f"srv-{project_id}-{service_id}-{deployment_id}"
 
 
-def scale_and_remove_docker_service_deployment(
+def scale_down_and_remove_docker_service_deployment(
     deployment: DockerDeployment, wait_service_down=False
 ):
     client = get_docker_client()
@@ -381,6 +381,55 @@ def scale_and_remove_docker_service_deployment(
 
             wait_for_service_to_be_down()
         swarm_service.remove()
+
+
+def scale_down_service_deployment(deployment: DockerDeployment, wait_service_down=True):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
+        swarm_service.scale(0)
+
+        if wait_service_down:
+
+            @timeout(
+                DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+                exception_message="Timeout encountered when waiting for service to be down",
+            )
+            def wait_for_service_to_be_down():
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                    continue
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            wait_for_service_to_be_down()
+
+
+def scale_back_service_deployment(deployment: DockerDeployment):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
+        swarm_service.scale(1)
 
 
 def create_resources_for_docker_service_deployment(deployment: DockerDeployment):
