@@ -33,7 +33,7 @@ from .models import (
     ArchivedDockerService,
     DockerDeploymentChange,
 )
-from .utils import cache_lock, LockAcquisitionError
+from .utils import cache_lock, LockAcquisitionError, find_item_in_list
 from .views.helpers import URLDto
 
 
@@ -244,13 +244,30 @@ def cleanup_docker_resources_for_deployment(
     ):
         delete_docker_volume(volume_change.item_id)
 
-    urls_to_delete = [
-        URLDto.from_dict(change.old_value)
-        for change in new_deployment.changes.filter(
-            field=DockerDeploymentChange.ChangeField.URLS,
-            type=DockerDeploymentChange.ChangeType.DELETE,
+    urls_to_delete = list(
+        map(
+            lambda change: URLDto.from_dict(change.old_value),
+            new_deployment.changes.filter(
+                field=DockerDeploymentChange.ChangeField.URLS,
+                type=DockerDeploymentChange.ChangeType.DELETE,
+            ),
         )
-    ]
+    )
+
+    # This is a fix that check that the URL hasn't been re-added again
+    # Because since we add new URLs before deleting old urls
+    # it might delete the newly added URL
+    existing_urls = new_deployment.service.urls.filter(
+        Q(domain__in=[url.domain for url in urls_to_delete])
+        & Q(base_path__in=[url.base_path for url in urls_to_delete])
+    )
+    for url in existing_urls:
+        existing_url = find_item_in_list(
+            lambda item: item.domain == url.domain and item.base_path == url.base_path,
+            urls_to_delete,
+        )
+        if existing_url is not None:
+            urls_to_delete.remove(existing_url)
 
     apply_deleted_urls_changes(urls_to_delete)
 
