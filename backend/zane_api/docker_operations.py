@@ -448,6 +448,14 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
         envs: list[str] = [
             f"{env.key}={env.value}" for env in service.env_variables.all()
         ]
+        # zane-specific-envs
+        envs.extend(
+            [
+                f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
+                f"ZANE_DEPLOYMENT_HASH={deployment.unprefixed_hash}",
+                f"ZANE_DEPLOYMENT_TYPE=docker",
+            ]
+        )
 
         # Volumes
         mounts: list[str] = []
@@ -466,7 +474,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
             Volume.VolumeMode.READ_ONLY: "ro",
         }
 
-        for volume in service.volumes.filter(host_path__isnull=True):
+        for volume in service.docker_volumes:
             # Only include volumes that are not to be deleted
             docker_volume = find_item_in_list(
                 lambda v: v.name == get_volume_resource_name(volume), docker_volume_list
@@ -475,7 +483,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 mounts.append(
                     f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
                 )
-        for volume in service.volumes.filter(host_path__isnull=False):
+        for volume in service.host_volumes:
             mounts.append(
                 f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
             )

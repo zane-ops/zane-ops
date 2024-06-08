@@ -131,6 +131,14 @@ class BaseService(TimestampedModel):
     )
     network_alias = models.CharField(max_length=300, null=True, unique=True)
 
+    @property
+    def host_volumes(self):
+        return self.volumes.filter(host_path__isnull=False)
+
+    @property
+    def docker_volumes(self):
+        return self.volumes.filter(host_path__isnull=True)
+
     class Meta:
         abstract = True
         unique_together = (
