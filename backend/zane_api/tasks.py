@@ -33,7 +33,7 @@ from .models import (
     ArchivedDockerService,
     DockerDeploymentChange,
 )
-from .utils import cache_lock, LockAcquisitionError
+from .utils import cache_lock, LockAcquisitionError, find_item_in_list
 from .views.helpers import URLDto
 
 
@@ -132,7 +132,8 @@ def deploy_docker_service_with_changes(
                     create_docker_volume(corresponding_volume, service=service)
 
             if (
-                service.volumes.count() > 0 or service.ports.count() > 0
+                service.volumes.count() > 0
+                or service.ports.filter(host__isnull=False).count() > 0
             ) and latest_production_deploy is not None:
                 scale_down_service_deployment(latest_production_deploy)
 
@@ -243,13 +244,30 @@ def cleanup_docker_resources_for_deployment(
     ):
         delete_docker_volume(volume_change.item_id)
 
-    urls_to_delete = [
-        URLDto.from_dict(change.old_value)
-        for change in new_deployment.changes.filter(
-            field=DockerDeploymentChange.ChangeField.URLS,
-            type=DockerDeploymentChange.ChangeType.DELETE,
+    urls_to_delete = list(
+        map(
+            lambda change: URLDto.from_dict(change.old_value),
+            new_deployment.changes.filter(
+                field=DockerDeploymentChange.ChangeField.URLS,
+                type=DockerDeploymentChange.ChangeType.DELETE,
+            ),
         )
-    ]
+    )
+
+    # This is a fix that check that the URL hasn't been re-added again
+    # Because since we add new URLs before deleting old urls
+    # it might delete the newly added URL
+    existing_urls = new_deployment.service.urls.filter(
+        Q(domain__in=[url.domain for url in urls_to_delete])
+        & Q(base_path__in=[url.base_path for url in urls_to_delete])
+    )
+    for url in existing_urls:
+        existing_url = find_item_in_list(
+            lambda item: item.domain == url.domain and item.base_path == url.base_path,
+            urls_to_delete,
+        )
+        if existing_url is not None:
+            urls_to_delete.remove(existing_url)
 
     apply_deleted_urls_changes(urls_to_delete)
 
@@ -305,6 +323,7 @@ def delete_resources_for_docker_service(archived_service_id: id):
 
 @shared_task
 def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
+    lock_id = f"monitor_{deployment_hash}"
     deployment: DockerDeployment | None = (
         DockerDeployment.objects.filter(hash=deployment_hash)
         .select_related("service", "service__project")
@@ -324,11 +343,21 @@ def monitor_docker_service_deployment(deployment_hash: str, auth_token: str):
         and deployment.status != DockerDeployment.DeploymentStatus.FAILED
     ):
         try:
-            deployment_status, deployment_status_reason = (
-                get_updated_docker_deployment_status(deployment, auth_token)
-            )
-            deployment.status = deployment_status
-            deployment.status_reason = deployment_status_reason
+            healthcheck = deployment.service.healthcheck
+            timeout_margin = 5  # seconds
+            monitor_timeout = (
+                healthcheck.timeout_seconds
+                if healthcheck is not None
+                else settings.DEFAULT_HEALTHCHECK_TIMEOUT
+            ) + timeout_margin
+            with cache_lock(lock_id, timeout=monitor_timeout):
+                deployment_status, deployment_status_reason = (
+                    get_updated_docker_deployment_status(deployment, auth_token)
+                )
+                deployment.status = deployment_status
+                deployment.status_reason = deployment_status_reason
+        except LockAcquisitionError:
+            return "Ignored, another monitor task is already running and hasn't finished yet"
         except TimeoutError as e:
             deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
             deployment.status_reason = str(e)

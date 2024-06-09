@@ -36,16 +36,10 @@ Should we ?
              reverse_proxy service-alias.blue.zaneops.internal service-alias.green.zaneops.internal {
                 lb_policy first # always choose the first available service before the next
                 fail_duration 30s # How long to hold that a proxy is down
-
-                health_path /<healthcheck-path>
-                health_status 2xx
-                health_interval <healthcheck-interval>s
-                health_timeout <healthcheck-timeout>s
              }
           }
         }
        ```
-    3. If healthcheck has changed, we will modify the caddy proxy after we are sure that the new service is up.
     4. Caddy will always redirect to the first available upstream
 
 - [x] We also need to expose temporarily the deployment to an url that is reachable from the outside
@@ -55,8 +49,8 @@ Should we ?
 - [x] modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
   ?redirect_to=`<uri>`
 - [x] modify the `/api/login` to take into account the search param and redirect accordingly
-- [ ] add lock on monitor, to skip a monitor if it hasn't run yet
-- [ ] Remove all deployments url configs when archiving a service
+- [x] add lock on monitor, to skip a monitor if it hasn't run yet
+- [x] Remove all deployments url configs when archiving a service
 - [x] Pass user context in monitor task
 
 ### Other important things (in another PR)
