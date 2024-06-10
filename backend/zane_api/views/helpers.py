@@ -195,7 +195,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             )
                         )
 
-                    # Check for additions
+                # Check for additions
                 for item_id in target_items:
                     if item_id not in current_items:
                         element = target_items[item_id]
