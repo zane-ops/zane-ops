@@ -421,6 +421,7 @@ class DockerRegistryService(BaseService):
         self.refresh_from_db()
 
     def add_change(self, change: "DockerDeploymentChange"):
+        change.service = self
         match change.field:
             case "image" | "command" | "credentials" | "healthcheck":
                 change_for_field: "DockerDeploymentChange" = (

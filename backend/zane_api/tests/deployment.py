@@ -3155,3 +3155,167 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             [call(1)],
             any_order=True,
         )
+
+
+class DockerServiceRedeploymentViewTests(AuthAPITestCase):
+    def test_redeploy_create_deployment_with_computed_changes(self):
+        project, service = self.create_and_deploy_redis_docker_service()
+        initial_deployment: DockerDeployment = service.deployments.first()
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Redeploy
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, service.deployments.count())
+
+        last_deployment: DockerDeployment = (
+            service.deployments.order_by("created_at")
+            .select_related("is_redeploy_of")
+            .last()
+        )
+        self.assertIsNotNone(last_deployment.service_snapshot)
+        self.assertEqual(initial_deployment, last_deployment.is_redeploy_of)
+        self.assertEqual(1, last_deployment.changes.count())
+
+        change: DockerDeploymentChange = last_deployment.changes.first()
+        self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(DockerDeploymentChange.ChangeField.IMAGE, change.field)
+        self.assertEqual("valkey/valkey:7.2-alpine", change.new_value)
+        self.assertEqual("valkey/valkey:7.3-alpine", change.old_value)
+
+        service.refresh_from_db()
+        self.assertEqual("valkey/valkey:7.2-alpine", service.image)
+
+    def test_redeploy_save_creates_service_in_docker(self):
+        project, service = self.create_and_deploy_redis_docker_service()
+        initial_deployment: DockerDeployment = service.deployments.first()
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Redeploy
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, service.deployments.count())
+
+        last_deployment: DockerDeployment = service.deployments.order_by(
+            "created_at"
+        ).last()
+        self.assertTrue(last_deployment.is_current_production)
+        docker_service = self.fake_docker_client.service_map.get(
+            get_swarm_service_name_for_deployment(last_deployment)
+        )
+        self.assertIsNotNone(docker_service)
+
+    def test_redeploy_create_set_different_slot(self):
+        project, service = self.create_and_deploy_redis_docker_service()
+        initial_deployment: DockerDeployment = service.deployments.first()
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        second_deployment: DockerDeployment = service.deployments.order_by(
+            "created_at"
+        ).last()
+        print(f"{second_deployment.service_snapshot=}")
+
+        # We Redeploy twice to set the slot to `GREEN`, because `BLUE` is the default value
+        self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": second_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        latest_deployment: DockerDeployment = service.deployments.order_by(
+            "created_at"
+        ).last()
+        self.assertIsNotNone(latest_deployment.service_snapshot)
+        self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, latest_deployment.slot)
