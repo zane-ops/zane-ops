@@ -451,9 +451,15 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
         # zane-specific-envs
         envs.extend(
             [
+                f"ZANE=1",
                 f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                 f"ZANE_DEPLOYMENT_HASH={deployment.unprefixed_hash}",
                 f"ZANE_DEPLOYMENT_TYPE=docker",
+                f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
+                f"ZANE_SERVICE_ID={service.id}",
+                f"ZANE_SERVICE_NAME={service.slug}",
+                f"ZANE_PROJECT_ID={service.project.id}",
+                f'ZANE_DEPLOYMENT_URL="{deployment.url or ""}"',
             ]
         )
 
