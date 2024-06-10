@@ -1,5 +1,7 @@
+import re
 from unittest.mock import patch, Mock, MagicMock, call
 
+import responses
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
@@ -3319,3 +3321,115 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         ).last()
         self.assertIsNotNone(latest_deployment.service_snapshot)
         self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, latest_deployment.slot)
+
+    @responses.activate
+    def test_redeploy_complex_service(self):
+        responses.add(
+            responses.GET,
+            url=re.compile("^(https?)*"),
+            status=status.HTTP_200_OK,
+        )
+
+        project, service = self.create_and_deploy_caddy_docker_service(
+            with_healthcheck=True,
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "caddy-demo.zaneops.local",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                ),
+            ],
+        )
+
+        initial_deployment: DockerDeployment = service.deployments.first()
+        url_to_update: URL = service.urls.filter(
+            domain="caddy-demo.zaneops.local"
+        ).first()
+        volume_to_delete: Volume = service.volumes.filter(
+            container_path="/data"
+        ).first()
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=url_to_update.id,
+                    new_value={
+                        "domain": "caddy-one.zaneops.local",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value=None,
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=volume_to_delete.id,
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "CADDY_ADMIN",
+                        "value": "0.0.0.0:2019",
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        # deploy changes
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Redeploy
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
+
+        self.assertEqual(3, service.deployments.count())
+
+        self.assertIsNotNone(service.healthcheck)
+        self.assertEqual(1, service.urls.count())
+        url: URL = service.urls.first()
+        self.assertEqual("caddy-demo.zaneops.local", url.domain)
+
+        self.assertEqual(1, service.volumes.count())
+        self.assertEqual(0, service.env_variables.count())

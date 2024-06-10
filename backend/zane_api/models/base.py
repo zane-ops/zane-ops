@@ -306,11 +306,20 @@ class DockerRegistryService(BaseService):
                 ):
                     setattr(self, change.field, change.new_value)
                 case DockerDeploymentChange.ChangeField.CREDENTIALS:
+                    if change.new_value is None:
+                        self.credentials = None
+                        continue
                     self.credentials = {
                         "username": change.new_value.get("username"),
                         "password": change.new_value.get("password"),
                     }
                 case DockerDeploymentChange.ChangeField.HEALTHCHECK:
+                    if change.new_value is None:
+                        if self.healthcheck is not None:
+                            self.healthcheck.delete()
+                            self.healthcheck = None
+                        continue
+
                     if self.healthcheck is None:
                         self.healthcheck = HealthCheck()
 

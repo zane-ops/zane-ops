@@ -146,12 +146,24 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                     )
             case "healthcheck" | "credentials":
                 if current_value != target_value:
+                    if target_value is not None and isinstance(
+                        target_value, HealthCheckDto
+                    ):
+                        target_value.id = None
                     changes.append(
                         DockerDeploymentChange(
                             type=DockerDeploymentChange.ChangeType.UPDATE,
                             field=service_field.name,
-                            new_value=dataclasses.asdict(target_value),
-                            old_value=dataclasses.asdict(current_value),
+                            new_value=(
+                                dataclasses.asdict(target_value)
+                                if target_value is not None
+                                else None
+                            ),
+                            old_value=(
+                                dataclasses.asdict(current_value)
+                                if current_value is not None
+                                else None
+                            ),
                         )
                     )
             case _:
@@ -169,7 +181,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                                 type=DockerDeploymentChange.ChangeType.DELETE,
                                 field=service_field.name,
                                 item_id=item_id,
-                                old_value=dataclasses.asdict(current_value),
+                                old_value=dataclasses.asdict(current_items[item_id]),
                             )
                         )
                     elif current_items[item_id] != target_items[item_id]:
