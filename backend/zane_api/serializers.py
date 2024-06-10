@@ -164,7 +164,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_redeploy_hash(self, obj: models.DockerDeployment):
-        return obj.is_redeploy_of.hash if obj.is_redeploy_of else None
+        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
         model = models.DockerDeployment
