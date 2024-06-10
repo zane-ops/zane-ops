@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
+import dataclasses
+from dataclasses import dataclass, field, fields
 from typing import Literal, Any, Optional, List, Dict
 
 from django.db.models import Q
 
-from ..models import DockerRegistryService, BaseDeploymentChange
+from ..models import DockerRegistryService, BaseDeploymentChange, DockerDeploymentChange
 from ..serializers import DockerServiceSerializer
 
 
@@ -27,7 +28,7 @@ def compute_docker_service_snapshot_with_changes(
 ):
     deployment_changes = compute_all_deployment_changes(service, change)
 
-    service_snapshot = DockerServiceSnapshot.from_serialized_data(
+    service_snapshot = DockerServiceSnapshot.from_dict(
         DockerServiceSerializer(service).data
     )
 
@@ -79,7 +80,7 @@ def compute_docker_service_snapshot_without_changes(
         service.unapplied_changes.filter(~Q(id=change_id)),
     )
 
-    service_snapshot = DockerServiceSnapshot.from_serialized_data(
+    service_snapshot = DockerServiceSnapshot.from_dict(
         DockerServiceSerializer(service).data
     )
 
@@ -121,6 +122,92 @@ def compute_docker_service_snapshot_without_changes(
                             )
 
     return service_snapshot
+
+
+def compute_docker_changes_from_snapshots(current: dict, target: dict):
+    current_snapshot = DockerServiceSnapshot.from_dict(current)
+    target_snapshot = DockerServiceSnapshot.from_dict(target)
+
+    changes: list[DockerDeploymentChange] = []
+
+    for service_field in fields(current_snapshot):
+        current_value = getattr(current_snapshot, service_field.name)
+        target_value = getattr(target_snapshot, service_field.name)
+        match service_field.name:
+            case "image" | "command":
+                if current_value != target_value:
+                    changes.append(
+                        DockerDeploymentChange(
+                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                            field=service_field.name,
+                            new_value=target_value,
+                            old_value=current_value,
+                        )
+                    )
+            case "healthcheck" | "credentials":
+                if current_value != target_value:
+                    if target_value is not None and isinstance(
+                        target_value, HealthCheckDto
+                    ):
+                        target_value.id = None
+                    changes.append(
+                        DockerDeploymentChange(
+                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                            field=service_field.name,
+                            new_value=(
+                                dataclasses.asdict(target_value)
+                                if target_value is not None
+                                else None
+                            ),
+                            old_value=(
+                                dataclasses.asdict(current_value)
+                                if current_value is not None
+                                else None
+                            ),
+                        )
+                    )
+            case _:
+                current_items: dict[
+                    str, VolumeDto | URLDto | EnvVariableDto | PortConfigurationDto
+                ] = {item.id: item for item in current_value}
+                target_items: dict[
+                    str, VolumeDto | URLDto | EnvVariableDto | PortConfigurationDto
+                ] = {item.id: item for item in target_value}
+
+                for item_id in current_items:
+                    if item_id not in target_items:
+                        changes.append(
+                            DockerDeploymentChange(
+                                type=DockerDeploymentChange.ChangeType.DELETE,
+                                field=service_field.name,
+                                item_id=item_id,
+                                old_value=dataclasses.asdict(current_items[item_id]),
+                            )
+                        )
+                    elif current_items[item_id] != target_items[item_id]:
+                        changes.append(
+                            DockerDeploymentChange(
+                                type=DockerDeploymentChange.ChangeType.UPDATE,
+                                field=service_field.name,
+                                item_id=item_id,
+                                new_value=dataclasses.asdict(target_items[item_id]),
+                                old_value=dataclasses.asdict(current_items[item_id]),
+                            )
+                        )
+
+                # Check for additions
+                for item_id in target_items:
+                    if item_id not in current_items:
+                        element = target_items[item_id]
+                        element.id = None
+                        changes.append(
+                            DockerDeploymentChange(
+                                type=DockerDeploymentChange.ChangeType.ADD,
+                                field=service_field.name,
+                                new_value=dataclasses.asdict(element),
+                            )
+                        )
+    return changes
 
 
 @dataclass
@@ -237,7 +324,7 @@ class DockerServiceSnapshot:
         )
 
     @classmethod
-    def from_serialized_data(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
+    def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
         ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]

@@ -2,6 +2,8 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models import TextChoices
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
 from rest_framework.serializers import *
@@ -158,7 +160,12 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
         child=serializers.CharField(), read_only=True
     )
     service_snapshot = DockerServiceSerializer(allow_null=True)
-    is_redeploy_of = serializers.CharField(allow_null=True, read_only=True)
+    redeploy_hash = serializers.SerializerMethodField(allow_null=True)
+    changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_redeploy_hash(self, obj: models.DockerDeployment):
+        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
         model = models.DockerDeployment
@@ -166,11 +173,12 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "is_current_production",
             "slot",
             "created_at",
-            "is_redeploy_of",
+            "redeploy_hash",
             "hash",
             "status",
             "status_reason",
             "url",
             "network_aliases",
             "service_snapshot",
+            "changes",
         ]

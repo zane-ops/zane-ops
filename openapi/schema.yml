@@ -1182,6 +1182,94 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
+  /api/projects/{project_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
+    put:
+      operationId: redeployDockerService
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeployDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
   /api/projects/{project_slug}/request-service-changes/docker/{service_slug}/:
     put:
       operationId: requestDeploymentChanges
@@ -2878,11 +2966,13 @@ components:
       properties:
         is_current_production:
           type: boolean
+        slot:
+          $ref: '#/components/schemas/SlotEnum'
         created_at:
           type: string
           format: date-time
           readOnly: true
-        is_redeploy_of:
+        redeploy_hash:
           type: string
           readOnly: true
           nullable: true
@@ -2908,13 +2998,20 @@ components:
           allOf:
           - $ref: '#/components/schemas/DockerService'
           nullable: true
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerDeploymentChange'
+          readOnly: true
       required:
+      - changes
       - created_at
       - hash
       - is_current_production
-      - is_redeploy_of
       - network_aliases
+      - redeploy_hash
       - service_snapshot
+      - slot
       - status
       - status_reason
       - url
@@ -3739,6 +3836,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RedeployDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RequestDeploymentChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesNonFieldErrorsErrorComponent'
@@ -4427,6 +4531,14 @@ components:
           type: integer
       required:
       - forwarded
+    SlotEnum:
+      enum:
+      - BLUE
+      - GREEN
+      type: string
+      description: |-
+        * `BLUE` - Blue
+        * `GREEN` - Green
     StatusEnum:
       enum:
       - QUEUED

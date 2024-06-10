@@ -21,7 +21,10 @@ from rest_framework.views import APIView
 
 from . import EMPTY_PAGINATED_RESPONSE
 from .base import EMPTY_RESPONSE, ResourceConflict
-from .helpers import compute_docker_service_snapshot_without_changes
+from .helpers import (
+    compute_docker_service_snapshot_without_changes,
+    compute_docker_changes_from_snapshots,
+)
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
@@ -455,6 +458,97 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
         else:
             new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
+
+        new_deployment.service_snapshot = DockerServiceSerializer(service).data
+        new_deployment.save()
+
+        token = Token.objects.get(user=request.user)
+        # Run celery deployment task
+        transaction.on_commit(
+            lambda: deploy_docker_service_with_changes.apply_async(
+                kwargs=dict(
+                    deployment_hash=new_deployment.hash,
+                    service_id=service.id,
+                    auth_token=token.key,
+                ),
+                task_id=new_deployment.task_id,
+            )
+        )
+
+        response = DockerServiceDeploymentSerializer(new_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
+class RedeployDockerServiceAPIView(APIView):
+    serializer_class = DockerServiceDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        operation_id="redeployDockerService",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        try:
+            deployment = service.deployments.get(hash=deployment_hash)
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        latest_deployment = service.latest_production_deployment
+
+        changes = compute_docker_changes_from_snapshots(
+            latest_deployment.service_snapshot, deployment.service_snapshot
+        )
+
+        for change in changes:
+            service.add_change(change)
+
+        new_deployment = DockerDeployment.objects.create(
+            service=service, is_redeploy_of=deployment
+        )
+        service.apply_pending_changes(deployment=new_deployment)
+
+        if (
+            latest_deployment is not None
+            and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
+            and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
+            # 👆🏽 technically this can only be true for the initial deployment
+            # for the next deployments, when they fail, they will not be promoted to production
+        ):
+            new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
+        else:
+            new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
+
+        if len(service.urls.all()) > 0:
+            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
 
         new_deployment.service_snapshot = DockerServiceSerializer(service).data
         new_deployment.save()
