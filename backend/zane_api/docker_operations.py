@@ -459,7 +459,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 f"ZANE_SERVICE_ID={service.id}",
                 f"ZANE_SERVICE_NAME={service.slug}",
                 f"ZANE_PROJECT_ID={service.project.id}",
-                f'ZANE_DEPLOYMENT_URL="{deployment.url or ""}"',
+                f"""ZANE_DEPLOYMENT_URL={deployment.url or '""'}""",
             ]
         )
 
