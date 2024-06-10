@@ -2998,7 +2998,13 @@ components:
           allOf:
           - $ref: '#/components/schemas/DockerService'
           nullable: true
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerDeploymentChange'
+          readOnly: true
       required:
+      - changes
       - created_at
       - hash
       - is_current_production

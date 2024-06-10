@@ -161,6 +161,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
     )
     service_snapshot = DockerServiceSerializer(allow_null=True)
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
+    changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_redeploy_hash(self, obj: models.DockerDeployment):
@@ -179,4 +180,5 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "url",
             "network_aliases",
             "service_snapshot",
+            "changes",
         ]
