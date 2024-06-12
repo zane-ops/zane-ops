@@ -506,6 +506,16 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertEqual(1, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
+    def test_with_multiple_services(self):
+        self.create_and_deploy_redis_docker_service()
+        self.create_and_deploy_caddy_docker_service()
+
+        response = self.client.get(reverse("zane_api:projects.list"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_in_response = response.json().get("results", [])[0]
+        self.assertEqual(2, project_in_response.get("total_services"))
+        self.assertEqual(2, project_in_response.get("healthy_services"))
+
     def test_with_failed_deployment(self):
         def create_raise_error(*args, **kwargs):
             raise Exception("Fake error")

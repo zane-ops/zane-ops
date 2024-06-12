@@ -1,7 +1,7 @@
 import time
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q, Count, Case, When, IntegerField, QuerySet
+from django.db.models import Q, When, IntegerField, QuerySet, Sum, Case
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer
 from faker import Faker
@@ -69,43 +69,50 @@ class ProjectsListAPIView(ListCreateAPIView):
             )
         ).values("service__project")
 
-        git_healthy = GitDeployment.objects.filter(
-            Q(is_current_production=True)
-            & (
-                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
-                | Q(status=GitDeployment.DeploymentStatus.SLEEPING)
-            )
-        ).values("service__project")
+        # git_healthy = GitDeployment.objects.filter(
+        #     Q(is_current_production=True)
+        #     & (
+        #         Q(status=GitDeployment.DeploymentStatus.HEALTHY)
+        #         | Q(status=GitDeployment.DeploymentStatus.SLEEPING)
+        #     )
+        # ).values("service__project")
+        #
+        # git_total = GitDeployment.objects.filter(
+        #     Q(is_current_production=True)
+        #     & (
+        #         Q(status=GitDeployment.DeploymentStatus.HEALTHY)
+        #         | Q(status=GitDeployment.DeploymentStatus.SLEEPING)
+        #         | Q(status=GitDeployment.DeploymentStatus.UNHEALTHY)
+        #         | Q(status=GitDeployment.DeploymentStatus.FAILED)
+        #     )
+        # ).values("service__project")
 
-        git_total = GitDeployment.objects.filter(
-            Q(is_current_production=True)
-            & (
-                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
-                | Q(status=GitDeployment.DeploymentStatus.SLEEPING)
-                | Q(status=GitDeployment.DeploymentStatus.UNHEALTHY)
-                | Q(status=GitDeployment.DeploymentStatus.FAILED)
-            )
-        ).values("service__project")
+        print([item["service__project"] for item in docker_total])
+        print([item["service__project"] for item in docker_healthy])
 
         queryset = queryset.annotate(
-            healthy_services=Count(
+            healthy_services=Sum(
                 Case(
                     When(
                         id__in=[item["service__project"] for item in docker_healthy]
-                        + [item["service__project"] for item in git_healthy],
+                        # + [item["service__project"] for item in git_healthy]
+                        ,
                         then=1,
                     ),
                     output_field=IntegerField(),
+                    default=0,
                 )
             ),
-            total_services=Count(
+            total_services=Sum(
                 Case(
                     When(
                         Q(id__in=[item["service__project"] for item in docker_total])
-                        | Q(id__in=[item["service__project"] for item in git_total]),
+                        # | Q(id__in=[item["service__project"] for item in git_total])
+                        ,
                         then=1,
                     ),
                     output_field=IntegerField(),
+                    default=0,
                 )
             ),
         )
