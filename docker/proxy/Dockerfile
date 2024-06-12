@@ -1,10 +1,10 @@
-ARG CADDY_VERSION=2.7.6
+ARG CADDY_VERSION=2.8
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
 ADD "https://github.com/acouvreur/sablier.git#v1.6.0" /sablier
 
 RUN xcaddy build \
-    --with github.com/acouvreur/sablier/plugins/caddy=/sablier/plugins/caddy
+    --with github.com/caddy-dns/cloudflare
 
 FROM caddy:${CADDY_VERSION}
 
