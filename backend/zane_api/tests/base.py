@@ -145,8 +145,8 @@ class AuthAPITestCase(APITestCase):
         other_changes: list[DockerDeploymentChange] = None,
     ):
         owner = self.loginUser()
-        project = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=project)
+        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="redis", project=project)
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -196,8 +196,8 @@ class AuthAPITestCase(APITestCase):
         other_changes: list[DockerDeploymentChange] = None,
     ):
         owner = self.loginUser()
-        project = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=project)
+        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="caddy", project=project)
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
