@@ -14,7 +14,14 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv_vault import load_dotenv
+
 from .api_description import API_DESCRIPTION
+
+try:
+    load_dotenv(".env", override=True)
+except FileNotFoundError:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,7 +48,7 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
 ALLOWED_HOSTS = (
-    [f".{ROOT_DOMAIN}", "localhost", "127.0.0.1"]
+    [f".{ROOT_DOMAIN}", "localhost", "127.0.0.1", ZANE_APP_DOMAIN]
     if ENVIRONMENT != PRODUCTION_ENV
     else [f".{ROOT_DOMAIN}"]
 )

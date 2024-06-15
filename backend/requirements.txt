@@ -13,6 +13,7 @@ click-didyoumean==0.3.0
 click-plugins==1.1.1
 click-repl==0.3.0
 cron-descriptor==1.4.3
+cryptography==41.0.7
 dill==0.3.8
 django==5.0.4
 django-celery-beat==2.6.0
@@ -50,6 +51,8 @@ pycurl==7.45.3
 pygments==2.17.2
 python-crontab==3.0.0
 python-dateutil==2.9.0.post0
+python-dotenv==0.21.1
+python-dotenv-vault==0.6.4
 pytz==2024.1
 pyyaml==6.0.1
 redgreenunittest==0.1.1
