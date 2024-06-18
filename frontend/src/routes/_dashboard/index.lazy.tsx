@@ -1,4 +1,4 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowDown,
   ChevronsUpDown,
@@ -25,7 +25,8 @@ import React from "react";
 import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
-import { Button } from "~/components/ui/button";
+
+import { useDebounce } from "use-debounce";
 import {
   Table,
   TableBody,
@@ -37,7 +38,15 @@ import {
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
 
-export const Route = createLazyFileRoute("/_dashboard/")({
+import { z } from "zod";
+import { Button } from "~/components/ui/button";
+
+const projectSearchSchema = z.object({
+  slug: z.string().catch("")
+});
+
+export const Route = createFileRoute("/_dashboard/")({
+  validateSearch: (search) => projectSearchSchema.parse(search),
   component: withAuthRedirect(AuthedView)
 });
 
@@ -62,28 +71,35 @@ function AuthedView() {
 export function ProjectList() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(10);
+  const { slug } = Route.useSearch();
+  const [debouncedValue] = useDebounce(slug, 300);
 
-  const query = useProjectList();
+  const query = useProjectList({ slug: debouncedValue });
+
+  const navigate = useNavigate();
 
   if (query.isLoading) {
     return <Loader />;
   }
+
   const projectList = query.data?.data?.results ?? [];
+  const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
+  const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
   return (
-    <>
-      {projectList.length === 0 ? (
-        <main className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
+    <main>
+      {empty ? (
+        <section className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
             <h1 className="text-lg">You don't have any project yet</h1>
           </div>
           <Button>Create One</Button>
-        </main>
+        </section>
       ) : (
-        <main>
+        <section>
           <div className="md:my-10 my-5">
-            <h1 className="text-3xl  font-bold">Overview</h1>
+            <h1 className="text-3xl font-bold">Overview</h1>
             <h4 className="text-sm mt-2 opacity-60">List of projects</h4>
           </div>
 
@@ -91,19 +107,23 @@ export function ProjectList() {
             <div className="flex md:my-5 md:w-[30%] w-full  items-center">
               <Search size={20} className="relative left-5" />
               <Input
+                onChange={(e) => {
+                  navigate({ search: { slug: e.target.value }, replace: true });
+                }}
+                defaultValue={slug}
                 className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
                 placeholder="Ex: ZaneOps"
               />
             </div>
 
             <div className="md:w-fit w-full">
-              <Menubar className="border border-border md:w-fit w-full ">
+              <Menubar className="border border-border md:w-fit w-full">
                 <MenubarMenu>
                   <MenubarTrigger className="flex md:w-fit w-full ring-secondary md:justify-center justify-between text-sm items-center gap-1">
                     Status
                     <ChevronsUpDown className="w-4" />
                   </MenubarTrigger>
-                  <MenubarContent className=" border  w-[calc(var(--radix-menubar-trigger-width)+0.5rem)]  border-border md:min-w-6  md:w-auto">
+                  <MenubarContent className="border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border md:min-w-6 md:w-auto">
                     <MenubarContentItem icon={Rocket} text="Active" />
                     <MenubarContentItem icon={Trash} text="Archived" />
                   </MenubarContent>
@@ -126,55 +146,67 @@ export function ProjectList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projectList.map((project) => (
-                <TableRow
-                  className="border-border cursor-pointer"
-                  key={project.id}
-                >
-                  <TableCell className="font-medium flex items-center gap-3">
-                    <Folder size={18} />
-                    {project.slug}
-                  </TableCell>
-                  <TableCell>{project.description}</TableCell>
-                  <TableCell>{formattedDate(project.updated_at)}</TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      color={
-                        project.healthy_services === project.total_services
-                          ? "green"
-                          : project.healthy_services === 0
-                            ? "red"
-                            : "yellow"
-                      }
-                    >
-                      <p>
-                        {project.healthy_services}/
-                        {`${project.total_services} Services Up`}
-                      </p>
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell className="flex justify-end">
-                    <div className="w-fit flex items-center gap-3">
-                      Settings
-                      <Settings width={18} />
-                    </div>
+              {noResults ? (
+                <TableRow className="border-border cursor-pointer">
+                  <TableCell colSpan={5} className="text-center py-4">
+                    <h1 className="text-2xl font-bold">No results found</h1>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                projectList.map((project) => (
+                  <TableRow
+                    className="border-border cursor-pointer"
+                    key={project.id}
+                  >
+                    <TableCell className="font-medium ">
+                      <div className="flex gap-2">
+                        <Folder size={18} />
+                        {project.slug}
+                      </div>
+                    </TableCell>
+                    <TableCell>{project.description}</TableCell>
+                    <TableCell>{formattedDate(project.updated_at)}</TableCell>
+                    <TableCell>
+                      <StatusBadge
+                        color={
+                          project.healthy_services === project.total_services
+                            ? "green"
+                            : project.healthy_services === 0
+                              ? "red"
+                              : "yellow"
+                        }
+                      >
+                        <p>
+                          {project.healthy_services}/
+                          {`${project.total_services} Services Up`}
+                        </p>
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell className="flex justify-end">
+                      <div className="w-fit flex items-center gap-3">
+                        Settings
+                        <Settings width={18} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
 
-          <div className="my-4">
-            <Pagination
-              totalPages={10}
-              currentPage={currentPage}
-              perPage={perPage}
-              onChangePage={(page) => setCurrentPage(page)}
-              onChangePerPage={(perPage) => setPerPage(perPage)}
-            />
-          </div>
-        </main>
+          {!noResults && (
+            <div className="my-4">
+              <Pagination
+                totalPages={10}
+                currentPage={currentPage}
+                perPage={perPage}
+                onChangePage={(page) => setCurrentPage(page)}
+                onChangePerPage={(perPage) => setPerPage(perPage)}
+              />
+            </div>
+          )}
+        </section>
       )}
-    </>
+    </main>
   );
 }
