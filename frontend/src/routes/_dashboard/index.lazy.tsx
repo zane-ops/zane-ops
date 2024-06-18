@@ -1,4 +1,8 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  createLazyFileRoute,
+  useNavigate,
+} from "@tanstack/react-router";
 import {
   ArrowDown,
   ChevronsUpDown,
@@ -6,7 +10,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,7 +22,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -33,13 +37,24 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
 
-export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView)
+import { z } from "zod";
+
+const projectSearchSchema = z.object({
+  slug: z.string().catch(""),
+});
+
+// export const Route = createFileRoute('/_dashboard/')({
+//   validateSearch: (search) => productSearchSchema.parse(search),
+// })
+
+export const Route = createFileRoute("/_dashboard/")({
+  validateSearch: (search) => projectSearchSchema.parse(search),
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -63,16 +78,19 @@ function AuthedView() {
 export function ProjectList() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(10);
-  const [searchInput, setSearchInput] = React.useState("");
-  const [debouncedValue] = useDebounce(searchInput, 300);
+  const { slug } = Route.useSearch();
+  const [debouncedValue] = useDebounce(slug, 300);
+
   const query = useProjectList({ slug: debouncedValue });
+
+  const navigate = useNavigate();
 
   if (query.isLoading) {
     return <Loader />;
   }
 
   const projectList = query.data?.data?.results ?? [];
-  const noResults = projectList.length === 0 && searchInput.trim() !== "";
+  const noResults = projectList.length === 0 && slug.trim() !== "";
 
   return (
     <main>
@@ -85,8 +103,10 @@ export function ProjectList() {
         <div className="flex md:my-5 md:w-[30%] w-full  items-center">
           <Search size={20} className="relative left-5" />
           <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => {
+              navigate({ search: { slug: e.target.value }, replace: true });
+            }}
+            defaultValue={slug}
             className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
             placeholder="Ex: ZaneOps"
           />
