@@ -48,10 +48,6 @@ const projectSearchSchema = z.object({
   slug: z.string().catch("")
 });
 
-// export const Route = createFileRoute('/_dashboard/')({
-//   validateSearch: (search) => productSearchSchema.parse(search),
-// })
-
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
   component: withAuthRedirect(AuthedView)
