@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash,
+  Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,7 +18,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -26,20 +26,20 @@ import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 
+import { useDebounce } from "use-debounce";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
-import { useDebounce } from "use-debounce";
 
 export const Route = createLazyFileRoute("/_dashboard/")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -65,11 +65,6 @@ export function ProjectList() {
   const [perPage, setPerPage] = React.useState(10);
   const [searchInput, setSearchInput] = React.useState("");
   const [debouncedValue] = useDebounce(searchInput, 300);
-
-  function handleSearchInput(e) {
-    setSearchInput(e.target.value);
-  }
-
   const query = useProjectList({ slug: debouncedValue });
 
   if (query.isLoading) {
@@ -91,7 +86,7 @@ export function ProjectList() {
           <Search size={20} className="relative left-5" />
           <Input
             value={searchInput}
-            onChange={handleSearchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
             placeholder="Ex: ZaneOps"
           />
@@ -139,9 +134,11 @@ export function ProjectList() {
                 className="border-border cursor-pointer"
                 key={project.id}
               >
-                <TableCell className="font-medium flex items-center gap-3">
-                  <Folder size={18} />
-                  {project.slug}
+                <TableCell className="font-medium ">
+                  <div className="flex gap-2">
+                    <Folder size={18} />
+                    {project.slug}
+                  </div>
                 </TableCell>
                 <TableCell>{project.description}</TableCell>
                 <TableCell>{formattedDate(project.updated_at)}</TableCell>

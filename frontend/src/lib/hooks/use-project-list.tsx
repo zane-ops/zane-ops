@@ -9,12 +9,7 @@ export function useProjectList(filters: { slug?: string }) {
     queryKey: projectKeys.list({ slug: filters.slug }),
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
-        params: {
-          query: {
-            slug: filters.slug,
-          },
-        },
-        signal,
+        signal
       });
     },
     placeholderData: keepPreviousData,
@@ -23,6 +18,6 @@ export function useProjectList(filters: { slug?: string }) {
         return TEN_SECONDS;
       }
       return false;
-    },
+    }
   });
 }
