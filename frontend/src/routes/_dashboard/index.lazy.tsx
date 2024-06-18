@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  createLazyFileRoute,
-  useNavigate
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowDown,
   ChevronsUpDown,
@@ -10,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -22,7 +18,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -37,7 +33,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
@@ -46,12 +42,12 @@ import { z } from "zod";
 import { Button } from "~/components/ui/button";
 
 const projectSearchSchema = z.object({
-  slug: z.string().catch("")
+  slug: z.string().catch(""),
 });
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
