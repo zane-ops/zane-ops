@@ -22,6 +22,7 @@ import {
 } from "~/components/ui/menubar";
 
 import React from "react";
+import { useDebounce } from "use-debounce";
 import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
@@ -62,8 +63,18 @@ function AuthedView() {
 export function ProjectList() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(10);
+  const [searchInput, setSearchInput] = React.useState("");
+  const [debouncedValue] = useDebounce(searchInput, 1000);
+  const inputRef = React.useRef(null);
 
-  const query = useProjectList();
+  function handleSearchInput(e) {
+    setSearchInput(e.target.value);
+  }
+
+  if (inputRef.current) {
+    inputRef.current.focus();
+  }
+  const query = useProjectList({ slug: debouncedValue });
 
   if (query.isLoading) {
     return <Loader />;
@@ -91,6 +102,9 @@ export function ProjectList() {
             <div className="flex md:my-5 md:w-[30%] w-full  items-center">
               <Search size={20} className="relative left-5" />
               <Input
+                ref={inputRef}
+                value={searchInput}
+                onChange={handleSearchInput}
                 className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
                 placeholder="Ex: ZaneOps"
               />

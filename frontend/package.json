@@ -37,7 +37,8 @@
     "react-dom": "18.3.0-canary-47beb96cc-20240222",
     "shadcn-ui": "^0.8.0",
     "tailwind-merge": "^2.2.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "use-debounce": "^10.0.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.5.3",

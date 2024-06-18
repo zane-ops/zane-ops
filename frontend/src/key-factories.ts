@@ -3,5 +3,5 @@ export const userKeys = {
 };
 
 export const projectKeys = {
-  list: ["PROJECT_LIST"] as const
+  list: (filters: { slug?: string }) => ["PROJECT_LIST", filters] as const
 };
