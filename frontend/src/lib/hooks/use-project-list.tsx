@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { projectKeys } from "~/key-factories";
 
@@ -11,17 +11,18 @@ export function useProjectList(filters: { slug?: string }) {
       return apiClient.GET("/api/projects/", {
         params: {
           query: {
-            slug: filters.slug
-          }
+            slug: filters.slug,
+          },
         },
-        signal
+        signal,
       });
     },
+    placeholderData: keepPreviousData,
     refetchInterval: (query) => {
       if (query.state.data?.data?.results) {
         return TEN_SECONDS;
       }
       return false;
-    }
+    },
   });
 }
