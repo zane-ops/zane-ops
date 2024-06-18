@@ -1,7 +1,7 @@
 import {
   createFileRoute,
   createLazyFileRoute,
-  useNavigate
+  useNavigate,
 } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -10,7 +10,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -22,7 +22,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import React from "react";
@@ -37,7 +37,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
@@ -46,12 +46,12 @@ import { z } from "zod";
 import { Button } from "~/components/ui/button";
 
 const projectSearchSchema = z.object({
-  slug: z.string().catch("")
+  slug: z.string().catch(""),
 });
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -91,17 +91,17 @@ export function ProjectList() {
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
   return (
-    <>
+    <main>
       {empty ? (
-        <main className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
+        <section className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
             <h1 className="text-lg">You don't have any project yet</h1>
           </div>
           <Button>Create One</Button>
-        </main>
+        </section>
       ) : (
-        <main>
+        <section>
           <div className="md:my-10 my-5">
             <h1 className="text-3xl font-bold">Overview</h1>
             <h4 className="text-sm mt-2 opacity-60">List of projects</h4>
@@ -209,8 +209,8 @@ export function ProjectList() {
               />
             </div>
           )}
-        </main>
+        </section>
       )}
-    </>
+    </main>
   );
 }
