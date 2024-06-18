@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .base import Project, DockerRegistryService, DockerDeployment
+from .base import Project, DockerRegistryService
 from ..utils import strip_slash_if_exists
 
 
@@ -133,48 +133,34 @@ class ArchivedDockerEnvVariable(BaseArchivedEnvVariable):
     )
 
 
-class DeploymentURL(models.Model):
-    domain = models.URLField(null=False)
-
-
 class ArchivedDockerService(ArchivedBaseService):
-    image_repository = models.CharField(max_length=510, null=False, blank=False)
-    image_tag = models.CharField(max_length=255, default="latest")
+    image = models.CharField(max_length=510, null=False, blank=False)
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"
     )
     command = models.TextField(null=True, blank=True)
-    docker_credentials_username = models.CharField(
-        max_length=255, null=True, blank=True
+    credentials = models.JSONField(
+        max_length=255,
+        null=True,
     )
-    docker_credentials_password = models.CharField(
-        max_length=255, null=True, blank=True
-    )
-    deployment_urls = models.ManyToManyField(to=DeploymentURL)
+    deployment_urls = models.JSONField(null=False, default=list)
+    deployment_hashes = models.JSONField(null=False, default=list)
 
     @classmethod
     def create_from_service(
         cls, service: DockerRegistryService, parent: ArchivedProject
     ):
-        latest_deployment: DockerDeployment | None = (
-            service.deployments.filter(is_current_production=True)
-            .order_by("-created_at")
-            .first()
-        )
-
         archived_service = cls.objects.create(
-            image_repository=service.image_repository,
-            image_tag=(
-                latest_deployment.image_tag
-                if latest_deployment is not None
-                else "latest"
-            ),
+            image=service.image,
             slug=service.slug,
             project=parent,
             command=service.command,
             original_id=service.id,
-            docker_credentials_username=service.docker_credentials_username,
-            docker_credentials_password=service.docker_credentials_password,
+            credentials=service.credentials,
+            deployment_urls=[
+                dpl.url for dpl in service.deployments.filter(url__isnull=False)
+            ],
+            deployment_hashes=[dpl.hash for dpl in service.deployments.all()],
         )
 
         archived_volumes = ArchivedVolume.objects.bulk_create(
@@ -218,19 +204,8 @@ class ArchivedDockerService(ArchivedBaseService):
             ]
         )
 
-        existing_deployments_urls: list[DockerDeployment] = list(
-            filter(lambda dpl: dpl.url is not None, service.deployments.all())
-        )
-        deployment_urls = DeploymentURL.objects.bulk_create(
-            [
-                DeploymentURL(domain=deployment.url)
-                for deployment in existing_deployments_urls
-            ]
-        )
-
         archived_service.volumes.add(*archived_volumes)
         archived_service.ports.add(*archived_ports)
         archived_service.urls.add(*archived_urls)
-        archived_service.deployment_urls.add(*deployment_urls)
 
         return archived_service

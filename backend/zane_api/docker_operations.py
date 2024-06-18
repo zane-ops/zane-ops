@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import List, TypedDict
 
@@ -29,11 +30,12 @@ from .utils import (
     DockerSwarmTask,
     DockerSwarmTaskState,
     format_seconds,
+    find_item_in_list,
 )
 
 docker_client: docker.DockerClient | None = None
 DOCKER_HUB_REGISTRY_URL = "registry-1.docker.io/v2"
-DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 10  # seconds
+DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
 MAX_SERVICE_RESTART_COUNT = 3
 
 
@@ -116,58 +118,62 @@ def check_if_docker_image_exists(
 
 def cleanup_docker_service_resources(archived_service: ArchivedDockerService):
     client = get_docker_client()
-    service_name = get_docker_service_resource_name(
-        archived_service.original_id,
-        archived_service.project.original_id,
-    )
-
-    try:
-        swarm_service = client.services.get(service_name)
-    except docker.errors.NotFound:
-        # we will assume the service has already been deleted
-        pass
-    else:
-        swarm_service.scale(0)
-
-        @timeout(
-            DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
-            exception_message="Timeout encountered when waiting for service to be down",
-        )
-        def wait_for_service_to_be_down():
-            nonlocal client
-            nonlocal swarm_service
-            print(f"waiting for service {swarm_service.name=} to be down...")
-            task_list = swarm_service.tasks()
-            while len(task_list) > 0:
-                print(
-                    f"service {swarm_service.name=} is not down yet, "
-                    + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
-                )
-                sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                task_list = swarm_service.tasks()
-                continue
-            print(f"service {swarm_service.name=} is down, YAY !! 🎉")
-
-        wait_for_service_to_be_down()
-
-        print("deleting volume list...")
-        docker_volume_list = client.volumes.list(
-            filters={
-                "label": [
-                    f"{key}={value}"
-                    for key, value in get_resource_labels(
+    for deployment_hash in archived_service.deployment_hashes:  # type: str
+        try:
+            swarm_service = client.services.get(
+                get_swarm_service_name_for_deployment(
+                    (
                         archived_service.project.original_id,
-                        parent=archived_service.original_id,
-                    ).items()
-                ]
-            }
-        )
+                        archived_service.original_id,
+                        deployment_hash,
+                    )
+                )
+            )
+        except docker.errors.NotFound:
+            # we will assume the service has already been deleted
+            pass
+        else:
+            swarm_service.scale(0)
 
-        for volume in docker_volume_list:
-            volume.remove(force=True)
-        print(f"deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
-        swarm_service.remove()
-        print(f"removed service.")
+            @timeout(
+                DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+                exception_message="Timeout encountered when waiting for service to be down",
+            )
+            def wait_for_service_to_be_down():
+                nonlocal client
+                nonlocal swarm_service
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                    continue
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            wait_for_service_to_be_down()
+
+            print("deleting volume list...")
+            docker_volume_list = client.volumes.list(
+                filters={
+                    "label": [
+                        f"{key}={value}"
+                        for key, value in get_resource_labels(
+                            archived_service.project.original_id,
+                            parent=archived_service.original_id,
+                        ).items()
+                    ]
+                }
+            )
+
+            for volume in docker_volume_list:
+                volume.remove(force=True)
+            print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
+            swarm_service.remove()
+            print(f"Removed service. YAY !! 🎉")
 
 
 def get_proxy_service():
@@ -280,19 +286,36 @@ def check_if_port_is_available_on_host(port: int) -> bool:
         return True
 
 
-def get_volume_resource_name(volume: Volume):
-    ts_to_full_number = str(volume.created_at.timestamp()).replace(".", "")
-    return f"vol-{volume.id}-{ts_to_full_number}"
+def get_volume_resource_name(volume: Volume | str):
+    if isinstance(volume, Volume):
+        vol_id = volume.id
+    else:
+        vol_id = volume
+    return f"vol-{vol_id}"
+
+
+def delete_docker_volume(volume_id: str):
+    client = get_docker_client()
+    try:
+        volume = client.volumes.get(get_volume_resource_name(volume_id))
+    except docker.errors.NotFound:
+        # the volume has already been deleted, do nothing
+        pass
+    else:
+        volume.remove(force=True)
 
 
 def create_docker_volume(volume: Volume, service: BaseService):
     client = get_docker_client()
 
-    client.volumes.create(
-        name=get_volume_resource_name(volume),
-        driver="local",
-        labels=get_resource_labels(service.project.id, parent=service.id),
-    )
+    try:
+        client.volumes.get(get_volume_resource_name(volume))
+    except docker.errors.NotFound:
+        client.volumes.create(
+            name=get_volume_resource_name(volume),
+            driver="local",
+            labels=get_resource_labels(service.project.id, parent=service.id),
+        )
 
 
 def get_docker_volume_size(volume: Volume) -> int:
@@ -309,110 +332,203 @@ def get_docker_volume_size(volume: Volume) -> int:
     return int(size_string)
 
 
-def get_docker_service_resource_name(service_id: str, project_id: str):
-    return f"srv-docker-{project_id}-{service_id}"
+def get_swarm_service_name_for_deployment(
+    deployment: DockerDeployment | tuple[str, str, str]
+):
+
+    if isinstance(deployment, DockerDeployment):
+        project_id = deployment.service.project.id
+        service_id = deployment.service.id
+        deployment_id = deployment.hash
+    else:
+        project_id, service_id, deployment_id = deployment
+    return f"srv-{project_id}-{service_id}-{deployment_id}"
 
 
-def scale_down_docker_service(deployment: DockerDeployment):
-    service = deployment.service
+def scale_down_and_remove_docker_service_deployment(
+    deployment: DockerDeployment, wait_service_down=False
+):
     client = get_docker_client()
 
-    swarm_service_list = client.services.list(
-        filters={
-            "name": get_docker_service_resource_name(
-                service_id=service.id,
-                project_id=service.project.id,
-            )
-        }
-    )
-
-    if len(swarm_service_list) > 0:
-        swarm_service = swarm_service_list[0]
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
         swarm_service.scale(0)
 
+        if wait_service_down:
 
-def create_service_from_docker_registry(deployment: DockerDeployment):
+            @timeout(
+                DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+                exception_message="Timeout encountered when waiting for service to be down",
+            )
+            def wait_for_service_to_be_down():
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                    continue
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            wait_for_service_to_be_down()
+        swarm_service.remove()
+
+
+def scale_down_service_deployment(deployment: DockerDeployment, wait_service_down=True):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
+        swarm_service.scale(0)
+
+        if wait_service_down:
+
+            @timeout(
+                DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS,
+                exception_message="Timeout encountered when waiting for service to be down",
+            )
+            def wait_for_service_to_be_down():
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                    continue
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            wait_for_service_to_be_down()
+
+
+def scale_back_service_deployment(deployment: DockerDeployment):
+    client = get_docker_client()
+
+    try:
+        swarm_service = client.services.get(
+            get_swarm_service_name_for_deployment(deployment)
+        )
+    except docker.errors.NotFound:
+        # do nothing, the service doesn't exist
+        return None
+    else:
+        swarm_service.scale(1)
+
+
+def create_resources_for_docker_service_deployment(deployment: DockerDeployment):
     service = deployment.service
     client = get_docker_client()
-    auth_config: DockerAuthConfig | None = None
-    if (
-        service.docker_credentials_username is not None
-        and service.docker_credentials_password is not None
-    ):
-        auth_config = {
-            "username": service.docker_credentials_username,
-            "password": service.docker_credentials_password,
+
+    try:
+        client.services.get(get_swarm_service_name_for_deployment(deployment))
+    except docker.errors.NotFound:
+        client.images.pull(
+            repository=service.image,
+            auth_config=service.credentials,
+        )
+
+        # env variables
+        envs: list[str] = [
+            f"{env.key}={env.value}" for env in service.env_variables.all()
+        ]
+        # zane-specific-envs
+        envs.extend(
+            [
+                f"ZANE=1",
+                f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
+                f"ZANE_DEPLOYMENT_HASH={deployment.unprefixed_hash}",
+                f"ZANE_DEPLOYMENT_TYPE=docker",
+                f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
+                f"ZANE_SERVICE_ID={service.id}",
+                f"ZANE_SERVICE_NAME={service.slug}",
+                f"ZANE_PROJECT_ID={service.project.id}",
+                f"""ZANE_DEPLOYMENT_URL={deployment.url or '""'}""",
+            ]
+        )
+
+        # Volumes
+        mounts: list[str] = []
+        docker_volume_list = client.volumes.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service.project.id, parent=service.id
+                    ).items()
+                ]
+            }
+        )
+        access_mode_map = {
+            Volume.VolumeMode.READ_WRITE: "rw",
+            Volume.VolumeMode.READ_ONLY: "ro",
         }
 
-    client.images.pull(
-        repository=service.image_repository,
-        tag=deployment.image_tag,
-        auth_config=auth_config,
-    )
+        for volume in service.docker_volumes:
+            # Only include volumes that are not to be deleted
+            docker_volume = find_item_in_list(
+                lambda v: v.name == get_volume_resource_name(volume), docker_volume_list
+            )
+            if docker_volume is not None:
+                mounts.append(
+                    f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                )
+        for volume in service.host_volumes:
+            mounts.append(
+                f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
+            )
 
-    exposed_ports: dict[int, int] = {}
-    endpoint_spec: EndpointSpec | None = None
+        # ports
+        exposed_ports: dict[int, int] = {}
+        endpoint_spec: EndpointSpec | None = None
 
-    # We don't expose HTTP ports with docker because they will be handled by caddy directly
-    http_ports = [80, 443]
-    for port in service.ports.all():
-        if port.host not in http_ports and port.host is not None:
+        # We don't expose HTTP ports with docker because they will be handled by caddy directly
+        for port in service.ports.filter(host__isnull=False):
             exposed_ports[port.host] = port.forwarded
 
-    if len(exposed_ports) > 0:
-        endpoint_spec = EndpointSpec(ports=exposed_ports)
+        if len(exposed_ports) > 0:
+            endpoint_spec = EndpointSpec(ports=exposed_ports)
 
-    mounts: list[str] = []
-    docker_volume_list = client.volumes.list(
-        filters={
-            "label": [
-                f"{key}={value}"
-                for key, value in get_resource_labels(
-                    service.project.id, parent=service.id
-                ).items()
-            ]
-        }
-    )
-    access_mode_map = {
-        Volume.VolumeMode.READ_WRITE: "rw",
-        Volume.VolumeMode.READ_ONLY: "ro",
-    }
-    for docker_volume, volume in zip(
-        docker_volume_list, service.volumes.filter(host_path__isnull=True)
-    ):
-        mounts.append(
-            f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+        client.services.create(
+            image=service.image,
+            command=service.command,
+            name=get_swarm_service_name_for_deployment(deployment),
+            mounts=mounts,
+            endpoint_spec=endpoint_spec,
+            env=envs,
+            labels=get_resource_labels(
+                service.project.id,
+                deployment_hash=deployment.hash,
+                service=deployment.service.id,
+            ),
+            networks=[
+                NetworkAttachmentConfig(
+                    target=get_network_resource_name(service.project.id),
+                    aliases=[alias for alias in deployment.network_aliases],
+                )
+            ],
+            restart_policy=RestartPolicy(
+                condition="on-failure",
+                max_attempts=MAX_SERVICE_RESTART_COUNT,
+                delay=5,
+            ),
         )
-    for volume in service.volumes.filter(host_path__isnull=False):
-        mounts.append(
-            f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
-        )
-
-    envs: list[str] = [f"{env.key}={env.value}" for env in service.env_variables.all()]
-
-    client.services.create(
-        image=f"{service.image_repository}:{deployment.image_tag}",
-        name=get_docker_service_resource_name(
-            service_id=service.id,
-            project_id=service.project.id,
-        ),
-        mounts=mounts,
-        endpoint_spec=endpoint_spec,
-        env=envs,
-        labels=get_resource_labels(service.project.id, deployment_hash=deployment.hash),
-        command=service.command,
-        networks=[
-            NetworkAttachmentConfig(
-                target=get_network_resource_name(service.project.id),
-                aliases=[alias for alias in service.network_aliases],
-            )
-        ],
-        restart_policy=RestartPolicy(
-            condition="on-failure",
-            max_attempts=MAX_SERVICE_RESTART_COUNT,
-            delay=5,
-        ),
-    )
 
 
 def sort_proxy_routes(routes: list[dict[str, list[dict[str, list[str]]]]]):
@@ -516,7 +632,15 @@ def get_caddy_request_for_deployment_url(
     }
 
 
-def get_caddy_id_for_url(url: URL | ArchivedURL):
+@dataclass
+class URLDto:
+    domain: str
+    base_path: str
+    strip_prefix: bool
+    id: str | None = None
+
+
+def get_caddy_id_for_url(url: URL | ArchivedURL | URLDto):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
     ).replace("/", "-")
@@ -530,11 +654,6 @@ def get_caddy_id_for_url(url: URL | ArchivedURL):
 def get_caddy_request_for_url(
     url: URL, service: DockerRegistryService, http_port: PortConfiguration
 ):
-    service_name = get_docker_service_resource_name(
-        service_id=service.id,
-        project_id=service.project.id,
-    )
-
     proxy_handlers = []
 
     if url.strip_prefix:
@@ -547,11 +666,26 @@ def get_caddy_request_for_url(
             }
         )
 
+    thirty_seconds_in_nano_seconds = 30_000_000_000
     proxy_handlers.append(
         {
             "flush_interval": -1,
             "handler": "reverse_proxy",
-            "upstreams": [{"dial": f"{service_name}:{http_port.forwarded}"}],
+            "health_checks": {
+                "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
+            },
+            "load_balancing": {
+                "retries": 3,
+                "selection_policy": {"policy": "first"},
+            },
+            "upstreams": [
+                {
+                    "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                },
+                {
+                    "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                },
+            ],
         }
     )
     return {
@@ -611,24 +745,24 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 timeout=5,
             )
 
-        # now we create the config for the URL
+        # now we create or modify the config for the URL
         response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
         )
-        if response.status_code == status.HTTP_404_NOT_FOUND:
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+        routes = list(
+            filter(
+                lambda route: route["@id"] != get_caddy_id_for_url(url), response.json()
             )
-            routes = response.json()
-            routes.append(get_caddy_request_for_url(url, service, http_port))
-            routes = sort_proxy_routes(routes)
+        )
+        routes.append(get_caddy_request_for_url(url, service, http_port))
+        routes = sort_proxy_routes(routes)
 
-            requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
-                headers={"content-type": "application/json"},
-                json=routes,
-                timeout=5,
-            )
+        requests.patch(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+            headers={"content-type": "application/json"},
+            json=routes,
+            timeout=5,
+        )
 
 
 def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> None:
@@ -647,10 +781,7 @@ def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> No
                 headers={"content-type": "application/json"},
                 json=get_caddy_request_for_deployment_url(
                     url=deployment.url,
-                    service_name=get_docker_service_resource_name(
-                        service_id=deployment.service.id,
-                        project_id=deployment.service.project.id,
-                    ),
+                    service_name=get_swarm_service_name_for_deployment(deployment),
                     forwarded_http_port=http_port.forwarded,
                 ),
                 timeout=5,
@@ -678,7 +809,7 @@ def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> No
 
 
 def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
-    for url in service.urls.all():
+    for url in service.urls.all():  # type: ArchivedURL
         # get all the routes of the domain
         response = requests.get(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
@@ -715,13 +846,13 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
                     timeout=5,
                 )
 
-    for url in service.deployment_urls.all():
+    for url in service.deployment_urls:  # type: str
         requests.delete(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}",
             timeout=5,
         )
         requests.delete(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url}",
             headers={
                 "content-type": "application/json",
                 "accept": "application/json",
@@ -730,7 +861,63 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
         )
 
 
-def get_updated_docker_service_deployment_status(
+def unexpose_docker_deployment_from_http(
+    deployment: DockerDeployment,
+) -> None:
+    if deployment.url is not None:  # type: str
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}",
+            timeout=5,
+        )
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
+            headers={
+                "content-type": "application/json",
+                "accept": "application/json",
+            },
+            timeout=5,
+        )
+
+
+def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
+    for url in urls_to_delete:
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+            timeout=5,
+        )
+
+        if response.status_code != 404:
+            current_routes: list[dict[str, dict]] = response.json()
+            routes = list(
+                filter(
+                    lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                    current_routes,
+                )
+            )
+
+            # delete the domain and logger config when there are no routes for the domain anymore
+            if len(routes) == 0:
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                    timeout=5,
+                )
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
+                    headers={
+                        "content-type": "application/json",
+                        "accept": "application/json",
+                    },
+                    timeout=5,
+                )
+            else:
+                # in the other case, we just delete the caddy config
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
+                    timeout=5,
+                )
+
+
+def get_updated_docker_deployment_status(
     deployment: DockerDeployment,
     auth_token: str,
     retry_if_not_healthy=False,
@@ -738,9 +925,7 @@ def get_updated_docker_service_deployment_status(
     client = get_docker_client()
 
     swarm_service = client.services.get(
-        get_docker_service_resource_name(
-            deployment.service.id, deployment.service.project.id
-        )
+        get_swarm_service_name_for_deployment(deployment)
     )
 
     start_time = monotonic()
@@ -758,9 +943,6 @@ def get_updated_docker_service_deployment_status(
     )
     while (monotonic() - start_time) < healthcheck_timeout:
         healthcheck_attempts += 1
-        task_list = swarm_service.tasks(
-            filters={"label": f"deployment_hash={deployment.hash}"}
-        )
         healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
         if healthcheck_time_left < 1:
             # do not override status reason
@@ -771,17 +953,15 @@ def get_updated_docker_service_deployment_status(
                 )
             break
 
-        sleep_time_available = min(
-            float(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL),
-            healthcheck_time_left - 1,
-            healthcheck_time_left,
-        )
         # TODO (#67) : send system logs when the state changes
         print(
             f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
             f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
         )
 
+        task_list = swarm_service.tasks(
+            filters={"label": f"deployment_hash={deployment.hash}"}
+        )
         if len(task_list) == 0:
             if deployment.status in [
                 DockerDeployment.DeploymentStatus.HEALTHY,
@@ -814,12 +994,12 @@ def get_updated_docker_service_deployment_status(
                 DockerSwarmTaskState.PREPARING: starting_status,
                 DockerSwarmTaskState.STARTING: starting_status,
                 DockerSwarmTaskState.RUNNING: deployment.DeploymentStatus.HEALTHY,
-                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.COMPLETE: deployment.DeploymentStatus.REMOVED,
                 DockerSwarmTaskState.FAILED: deployment.DeploymentStatus.UNHEALTHY,
-                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.SHUTDOWN: deployment.DeploymentStatus.REMOVED,
                 DockerSwarmTaskState.REJECTED: deployment.DeploymentStatus.UNHEALTHY,
                 DockerSwarmTaskState.ORPHANED: deployment.DeploymentStatus.UNHEALTHY,
-                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.OFFLINE,
+                DockerSwarmTaskState.REMOVE: deployment.DeploymentStatus.REMOVED,
             }
 
             exited_without_error = 0
@@ -903,26 +1083,27 @@ def get_updated_docker_service_deployment_status(
                         deployment_status_reason = str(e)
                         break
 
+            healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
             if (
                 retry_if_not_healthy
                 and deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                and healthcheck_time_left > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
             ):
                 # TODO (#67) : send system logs when the state changes
                 print(
                     f"Healtcheck for deployment {deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
-                    + f" Retrying in {format_seconds(sleep_time_available)} 🔄"
+                    + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
                 )
-                sleep(sleep_time_available)
+                sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                 continue
-            # TODO (#67) : send system logs when the state changes
 
+            # TODO (#67) : send system logs when the state changes
             print(
                 f"Healtcheck for {deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
                 f"| finished with {deployment_status=} ✅"
             )
             return deployment_status, deployment_status_reason
 
-        sleep(sleep_time_available)
-        continue
+        sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
     return deployment_status, deployment_status_reason

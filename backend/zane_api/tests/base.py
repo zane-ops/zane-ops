@@ -1,18 +1,20 @@
 import json
 from dataclasses import dataclass
-from typing import Any, List
+from typing import List
 from unittest.mock import MagicMock, patch
 
 import docker.errors
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from docker.types import EndpointSpec
+from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
-from ..models import Project
+from ..models import Project, DockerDeploymentChange, DockerRegistryService
 
 
 class CustomAPIClient(APIClient):
@@ -101,21 +103,14 @@ class CustomAPIClient(APIClient):
 class APITestCase(TestCase):
     def setUp(self):
         self.client = CustomAPIClient(parent=self)
-
-    def tearDown(self):
-        cache.clear()
-
-
-class AuthAPITestCase(APITestCase):
-    def setUp(self):
-        super().setUp()
-        User.objects.create_user(username="Fredkiss3", password="password")
         self.fake_docker_client = FakeDockerClient()
 
         # these functions are always patched
         patch("zane_api.tasks.expose_docker_service_to_http").start()
         patch("zane_api.tasks.unexpose_docker_service_from_http").start()
         patch("zane_api.tasks.expose_docker_service_deployment_to_http").start()
+        patch("zane_api.tasks.unexpose_docker_deployment_from_http").start()
+        patch("zane_api.tasks.apply_deleted_urls_changes").start()
         patch(
             "zane_api.docker_operations.get_docker_client",
             return_value=self.fake_docker_client,
@@ -123,11 +118,134 @@ class AuthAPITestCase(APITestCase):
 
         self.addCleanup(patch.stopall)
 
+    def tearDown(self):
+        cache.clear()
+
+    def assertDictContainsSubset(self, subset: dict, parent: dict, msg: object = None):
+        extracted_subset = dict(
+            [(key, parent[key]) for key in subset.keys() if key in parent.keys()]
+        )
+        self.assertEqual(subset, extracted_subset, msg)
+
+
+class AuthAPITestCase(APITestCase):
+    def setUp(self):
+        super().setUp()
+        User.objects.create_user(username="Fredkiss3", password="password")
+
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
         user = User.objects.get(username="Fredkiss3")
         Token.objects.get_or_create(user=user)
         return user
+
+    def create_and_deploy_redis_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ):
+        owner = self.loginUser()
+        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="redis", project=project)
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "valkey-cli validate",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.2-alpine",
+                    service=service,
+                ),
+            ]
+            + other_changes
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return project, service
+
+    def create_and_deploy_caddy_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ):
+        owner = self.loginUser()
+        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="caddy", project=project)
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+            + other_changes
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return project, service
 
 
 class FakeDockerClient:
@@ -216,6 +334,8 @@ class FakeDockerClient:
 
     PORT_USED_BY_HOST = 8080
     FAILING_CMD = "invalid"
+    NONEXISTANT_IMAGE = "nonexistant"
+    NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -293,7 +413,7 @@ class FakeDockerClient:
 
     def services_get(self, name: str):
         if name not in self.service_map:
-            raise docker.errors.NotFound("Volume Not found")
+            raise docker.errors.NotFound(f"Service with `{name=}` Not found")
         return self.service_map[name]
 
     def services_remove(self, name: str):
@@ -304,13 +424,13 @@ class FakeDockerClient:
     def services_create(
         self,
         name: str,
-        mounts: list[str],
-        env: list[str],
-        endpoint_spec: Any,
-        image: str,
         *args,
         **kwargs,
     ):
+        image: str | None = kwargs.get("image", None)
+        mounts: list[str] = kwargs.get("mounts", [])
+        env: list[str] = kwargs.get("env", [])
+        endpoint_spec = kwargs.get("endpoint_spec", None)
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")
         volumes: dict[str, dict[str, str]] = {}
@@ -358,17 +478,24 @@ class FakeDockerClient:
         ]
 
     def images_pull(self, repository: str, tag: str = None, *args, **kwargs):
-        self.pulled_images.add(f"{repository}:{tag}")
+        if tag is not None:
+            self.pulled_images.add(f"{repository}:{tag}")
+        else:
+            self.pulled_images.add(repository)
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
-            if not image.startswith("dcr.fredkiss.dev"):
+            username, password = auth_config["username"], auth_config["password"]
+            if username != "fredkiss3" or password != "s3cret":
                 raise docker.errors.APIError("Invalid credentials")
 
-            if not image.startswith("dcr.fredkiss.dev/gh-next"):
-                raise docker.errors.NotFound("This image does not exist")
+            if image == self.NONEXISTANT_PRIVATE_IMAGE:
+                raise docker.errors.NotFound(
+                    "This image does not exist in the registry"
+                )
+            self.is_logged_in = True
         else:
-            if image == "nonexistent":
+            if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
 
     def docker_create_network(self, name: str, **kwargs):

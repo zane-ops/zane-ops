@@ -16,16 +16,16 @@ Should we ?
     1. `...same as before`
     2. Create another service and inspect the previous network alias deployment for the service
         1. we will use the same service alias as the current production deploy for services so that it is available by
-           other services ( `service-alias.zaneops.internal` )
+           other services ( `service-alias.zaneops.internal` ) ✅
         2. if the service was `blue`, we choose `green`, else we
-           choose `blue` (`service-alias.zaneops.internal.<blue|green>`)
+           choose `blue` (`service-alias.zaneops.internal.<blue|green>`) ✅
     3. Monitor the health of the newly created service with the healthcheck params of the service
        with a scheduled job,
         1. if the service fails to meet the health status requirements, we remove the service for the
-           deployment
-        2. if the service succeed to meet the requirements, we remove the previous service
-    4. we mark the deployment as finished and release the lock for the deployment,
-       and also schedule the task for the next deployment, and set the current deployment as the production one.
+           deployment ✅
+        2. if the service succeed to meet the requirements, we remove the previous service ✅
+    4. we mark the deployment as finished and release the lock for the deployment, ✅
+       and also schedule the task for the next deployment, and set the current deployment as the production one. ✅
 
 - On caddy side :
     1. use the service network alias instead of the service name
@@ -33,31 +33,25 @@ Should we ?
        ```shell
         service-domain.com {
           handle /path/* {
-             reverse_proxy service-alias.zaneops.internal.blue service-alias.zaneops.internal.green {
+             reverse_proxy service-alias.blue.zaneops.internal service-alias.green.zaneops.internal {
                 lb_policy first # always choose the first available service before the next
                 fail_duration 30s # How long to hold that a proxy is down
-
-                health_path /<healthcheck-path>
-                health_status 2xx
-                health_interval <healthcheck-interval>s
-                health_timeout <healthcheck-timeout>s
              }
           }
         }
        ```
-    3. If healthcheck has changed, we will modify the caddy proxy after we are sure that the new service is up.
     4. Caddy will always redirect to the first available upstream
 
-- We also need to expose temporarily the deployment to an url that is reachable from the outside
+- [x] We also need to expose temporarily the deployment to an url that is reachable from the outside
     - issue: it will be available from the outsider also, maybe we need to add
       [`forward_auth`](https://caddyserver.com/docs/caddyfile/directives/forward_auth) directive ?
       with an access token generated for the deployment (?)
-- modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
-  ?redirect_to=<uri>
-- modify the `/api/login` to take into account the search param and redirect accordingly
-- add lock on monitor, to skip a monitor if it hasn't run yet
-- Remove all deployments url configs when archiving a service
-- Pass user context in monitor task
+- [x] modify `/api/auth/me` to redirect to login page if `headers['accept']` contain `text/html`, with a search param
+  ?redirect_to=`<uri>`
+- [x] modify the `/api/login` to take into account the search param and redirect accordingly
+- [x] add lock on monitor, to skip a monitor if it hasn't run yet
+- [x] Remove all deployments url configs when archiving a service
+- [x] Pass user context in monitor task
 
 ### Other important things (in another PR)
 
@@ -81,3 +75,4 @@ Should we ?
   one
     - will be included: healthcheck, urls, ports (config), tag, image and volumes, envs will stay the same.
     - We need a URL that computes the changeset between two deploys to warn the user about the changes when deploying
+- Variables are directly linked to an environment ?

@@ -2,6 +2,8 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models import TextChoices
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
 from rest_framework.serializers import *
@@ -70,8 +72,6 @@ class VolumeSerializer(ModelSerializer):
     class Meta:
         model = models.Volume
         fields = [
-            "created_at",
-            "updated_at",
             "id",
             "name",
             "container_path",
@@ -83,77 +83,102 @@ class VolumeSerializer(ModelSerializer):
 class URLModelSerializer(ModelSerializer):
     class Meta:
         model = models.URL
-        fields = ["domain", "base_path", "strip_prefix"]
+        fields = ["id", "domain", "base_path", "strip_prefix"]
 
 
 class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
         model = models.DockerEnvVariable
-        fields = ["key"]
+        fields = ["id", "key", "value"]
 
 
 class PortConfigurationSerializer(ModelSerializer):
     class Meta:
         model = models.PortConfiguration
-        fields = ["host", "forwarded"]
+        fields = ["id", "host", "forwarded"]
+
+    def to_representation(self, instance: models.PortConfiguration):
+        ret = super().to_representation(instance)
+        # in the database `host` is stored as null for HTTP hosts, but the user should only
+        # see it as `80`
+        if ret.get("host") is None:
+            ret["host"] = 80
+        return ret
 
 
 class HealthCheckSerializer(ModelSerializer):
     class Meta:
         model = models.HealthCheck
-        fields = ["type", "value", "timeout_seconds", "interval_seconds"]
+        fields = ["id", "type", "value", "timeout_seconds", "interval_seconds"]
+
+
+class DockerDeploymentChangeSerializer(ModelSerializer):
+    class Meta:
+        model = models.DockerDeploymentChange
+        fields = ["id", "type", "field", "new_value", "old_value", "item_id"]
+
+
+class DockerCredentialSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
 
 
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
-    ports = PortConfigurationSerializer(
-        read_only=True, many=True, source="port_config", default=[]
-    )
+    ports = PortConfigurationSerializer(read_only=True, many=True)
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
-    healthcheck = HealthCheckSerializer(read_only=True)
+    healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+    credentials = DockerCredentialSerializer(allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService
         fields = [
-            "image_repository",
-            "slug",
-            "urls",
             "created_at",
             "updated_at",
-            "volumes",
+            "id",
+            "slug",
+            "image",
             "command",
+            "healthcheck",
+            "credentials",
+            "urls",
+            "volumes",
             "ports",
             "env_variables",
-            "healthcheck",
             "network_aliases",
+            "unapplied_changes",
         ]
-
-
-class CaseInsensitiveChoiceField(serializers.ChoiceField):
-    def to_internal_value(self, data: str):
-        data = super().to_internal_value(data.lower())
-        return data
 
 
 class DockerServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    service_snapshot = DockerServiceSerializer(allow_null=True)
+    redeploy_hash = serializers.SerializerMethodField(allow_null=True)
+    changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_redeploy_hash(self, obj: models.DockerDeployment):
+        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
         model = models.DockerDeployment
         fields = [
             "is_current_production",
+            "slot",
             "created_at",
-            "is_redeploy_of",
+            "redeploy_hash",
             "hash",
-            "image_tag",
             "status",
             "status_reason",
             "url",
             "network_aliases",
+            "service_snapshot",
+            "changes",
         ]

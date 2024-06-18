@@ -54,26 +54,55 @@ urlpatterns = [
         name="services.docker.create",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker/?(?P<service_slug>[a-z0-9]+(?:-["
-        r"a-z0-9]+)*)/?$",
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
+        name="services.docker.request_deployment_changes",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/_bulk?$",
+        views.BulkRequestDockerServiceDeploymentChangesAPIView.as_view(),
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-service-changes/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
+        views.CancelDockerServiceDeploymentChangesAPIView.as_view(),
+        name="services.docker.cancel_deployment_changes",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deploy-service/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        views.ApplyDockerServiceDeploymentChangesAPIView.as_view(),
+        name="services.docker.deploy_service",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deploy-service/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        views.RedeployDockerServiceAPIView.as_view(),
+        name="services.docker.redeploy_service",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
         views.ArchiveDockerServiceAPIView.as_view(),
         name="services.docker.archive",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker/(?P<service_slug>[a-z0-9]+(?:-["
-        r"a-z0-9]+)*)/?$",
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
         views.GetDockerServiceAPIView.as_view(),
         name="services.docker.details",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker/(?P<service_slug>[a-z0-9]+(?:-["
-        r"a-z0-9]+)*)/deployments/?$",
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deployments/?$",
         views.DockerServiceDeploymentsAPIView.as_view(),
         name="services.docker.deployments_list",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker/(?P<service_slug>[a-z0-9]+(?:-["
-        r"a-z0-9]+)*)/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         views.DockerServiceDeploymentSingleAPIView.as_view(),
         name="services.docker.deployment_single",
     ),

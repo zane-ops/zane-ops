@@ -10,12 +10,12 @@ EMPTY_PAGINATED_RESPONSE = OrderedDict(
 )
 
 
-class CustomThrottledException(exceptions.Throttled):
+class ThrottledExceptionWithWaitTime(exceptions.Throttled):
     default_detail = "You made too Many requests in a short amount of time,"
-    extra_detail_plural = "Please wait for {wait} seconds before retrying your action."
     extra_detail_singular = (
         "Please wait for {wait} seconds before retrying your action."
     )
+    extra_detail_plural = extra_detail_singular
 
 
 class ResourceConflict(exceptions.APIException):
@@ -30,7 +30,7 @@ class ResourceConflict(exceptions.APIException):
 class CustomExceptionHandler(ExceptionHandler):
     def convert_known_exceptions(self, exc: Exception) -> Exception:
         if isinstance(exc, exceptions.Throttled):
-            return CustomThrottledException(wait=exc.wait)
+            return ThrottledExceptionWithWaitTime(wait=exc.wait)
         if isinstance(exc, exceptions.AuthenticationFailed):
             exc.status_code = status.HTTP_401_UNAUTHORIZED
         if (
@@ -50,8 +50,17 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
     solution copied from : https://github.com/tfranzel/drf-spectacular/issues/480#issuecomment-898488288
     """
     schemas = result.get("components", {}).get("schemas", {})
-    for name, schema in schemas.items():
-        if name.endswith("Request") or "properties" not in schema:
+    for name, schema in schemas.items():  # type: str, Any
+        if "properties" not in schema:
+            continue
+        if name.endswith("FieldChangeRequest") or name.endswith("ItemChangeRequest"):
+            if "required" in schema:
+                schema["required"] += ["field"]
+            else:
+                schema["required"] = ["field"]
+            if name.endswith("ChangeFieldRequest"):
+                schema["required"] += ["new_value"]
+        if name.endswith("Request"):
             continue
         schema["required"] = sorted(schema["properties"].keys())
     return result
