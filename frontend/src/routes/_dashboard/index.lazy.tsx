@@ -21,7 +21,6 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 
-import React from "react";
 import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
@@ -40,9 +39,12 @@ import { formattedDate } from "~/utils";
 
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 
 const projectSearchSchema = z.object({
-  slug: z.string().catch("")
+  slug: z.string().catch(""),
+  page: z.number().catch(1),
+  per_page: z.number().catch(10)
 });
 
 export const Route = createFileRoute("/_dashboard/")({
@@ -69,13 +71,9 @@ function AuthedView() {
 }
 
 export function ProjectList() {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [perPage, setPerPage] = React.useState(10);
-  const { slug } = Route.useSearch();
+  const { slug, page = 1, per_page = 10 } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
-
-  const query = useProjectList({ slug: debouncedValue });
-
+  const query = useProjectList({ slug: debouncedValue, page, per_page });
   const navigate = useNavigate();
 
   if (query.isLoading) {
@@ -83,6 +81,9 @@ export function ProjectList() {
   }
 
   const projectList = query.data?.data?.results ?? [];
+  const totalProjects = query.data?.data?.count ?? 0;
+  const totalPages = Math.ceil(totalProjects / per_page);
+
   const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
@@ -104,11 +105,14 @@ export function ProjectList() {
           </div>
 
           <div className="flex my-3 flex-wrap items-center md:gap-3 gap-1">
-            <div className="flex md:my-5 md:w-[30%] w-full  items-center">
+            <div className="flex md:my-5 md:w-[30%] w-full items-center">
               <Search size={20} className="relative left-5" />
               <Input
                 onChange={(e) => {
-                  navigate({ search: { slug: e.target.value }, replace: true });
+                  navigate({
+                    search: { slug: e.target.value, page: 1, per_page },
+                    replace: true
+                  });
                 }}
                 defaultValue={slug}
                 className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
@@ -195,13 +199,28 @@ export function ProjectList() {
           </Table>
 
           {!noResults && (
-            <div className="my-4">
+            <div
+              className={cn(
+                "my-4",
+                slug !== debouncedValue && "opacity-40 pointer-events-none"
+              )}
+            >
               <Pagination
-                totalPages={10}
-                currentPage={currentPage}
-                perPage={perPage}
-                onChangePage={(page) => setCurrentPage(page)}
-                onChangePerPage={(perPage) => setPerPage(perPage)}
+                totalPages={totalPages}
+                currentPage={page}
+                perPage={per_page}
+                onChangePage={(newPage) => {
+                  navigate({
+                    search: { slug, page: newPage, per_page },
+                    replace: true
+                  });
+                }}
+                onChangePerPage={(newPerPage) => {
+                  navigate({
+                    search: { slug, page: 1, per_page: newPerPage },
+                    replace: true
+                  });
+                }}
               />
             </div>
           )}
