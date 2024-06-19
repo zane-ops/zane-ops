@@ -10,21 +10,13 @@ export function useProjectList(filters: {
   per_page?: number;
 }) {
   return useQuery({
-    queryKey: projectKeys.list({
-      slug: filters.slug,
-      page: filters.page,
-      per_page: filters.per_page
-    }),
+    queryKey: projectKeys.list(filters),
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
-          query: {
-            slug: filters.slug,
-            per_page: filters.per_page,
-            page: filters.page
-          }
+          query: filters,
         },
-        signal
+        signal,
       });
     },
     placeholderData: keepPreviousData,
@@ -33,6 +25,6 @@ export function useProjectList(filters: {
         return TEN_SECONDS;
       }
       return false;
-    }
+    },
   });
 }
