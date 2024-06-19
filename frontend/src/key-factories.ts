@@ -3,5 +3,6 @@ export const userKeys = {
 };
 
 export const projectKeys = {
-  list: (filters: { slug?: string, page?: number, per_page?:number }) => ["PROJECT_LIST", filters] as const
+  list: (filters: { slug?: string; page?: number; per_page?: number }) =>
+    ["PROJECT_LIST", filters] as const
 };

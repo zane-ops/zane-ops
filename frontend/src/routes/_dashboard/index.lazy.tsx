@@ -109,7 +109,10 @@ export function ProjectList() {
               <Search size={20} className="relative left-5" />
               <Input
                 onChange={(e) => {
-                  navigate({ search: { slug: e.target.value, page: 1, per_page }, replace: true });
+                  navigate({
+                    search: { slug: e.target.value, page: 1, per_page },
+                    replace: true
+                  });
                 }}
                 defaultValue={slug}
                 className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
@@ -202,10 +205,16 @@ export function ProjectList() {
                 currentPage={page}
                 perPage={per_page}
                 onChangePage={(newPage) => {
-                  navigate({ search: { slug, page: newPage, per_page }, replace: true });
+                  navigate({
+                    search: { slug, page: newPage, per_page },
+                    replace: true
+                  });
                 }}
                 onChangePerPage={(newPerPage) => {
-                  navigate({ search: { slug, page: 1, per_page: newPerPage }, replace: true });
+                  navigate({
+                    search: { slug, page: 1, per_page: newPerPage },
+                    replace: true
+                  });
                 }}
               />
             </div>
@@ -215,4 +224,3 @@ export function ProjectList() {
     </main>
   );
 }
-

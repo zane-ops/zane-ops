@@ -4,9 +4,17 @@ import { projectKeys } from "~/key-factories";
 
 const TEN_SECONDS = 10 * 1000;
 
-export function useProjectList(filters: { slug?: string, page?: number, per_page?: number }) {
+export function useProjectList(filters: {
+  slug?: string;
+  page?: number;
+  per_page?: number;
+}) {
   return useQuery({
-    queryKey: projectKeys.list({ slug: filters.slug, page: filters.page, per_page: filters.per_page }),
+    queryKey: projectKeys.list({
+      slug: filters.slug,
+      page: filters.page,
+      per_page: filters.per_page
+    }),
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
