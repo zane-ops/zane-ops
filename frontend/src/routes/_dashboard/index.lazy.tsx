@@ -36,6 +36,12 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { projectSearchSchema } from "~/key-factories";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { cn } from "~/lib/utils";
@@ -105,13 +111,13 @@ export function ProjectList() {
   };
 
   const getArrowDirection = (field: "slug" | "updated_at") => {
-    if (sort_by.includes(field)) {
-      return <ArrowDown size={15} />;
-    } else if (sort_by.includes(`-${field}`)) {
-      return <ArrowUp size={15} />;
+    if (sort_by.includes(`-${field}`)) {
+      return "descending";
     }
-    return <ArrowDown size={15} />;
+    return "ascending";
   };
+  const slugDirection = getArrowDirection("slug");
+  const updateAtDirection = getArrowDirection("updated_at");
 
   return (
     <main>
@@ -171,23 +177,49 @@ export function ProjectList() {
             <TableHeader className="bg-toggle">
               <TableRow className="border-none">
                 <TableHead>
-                  <button
-                    onClick={() => handleSort("slug")}
-                    className="flex cursor-pointer items-center gap-2"
-                  >
-                    Name
-                    {getArrowDirection("slug")}
-                  </button>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleSort("slug")}
+                          className="flex cursor-pointer items-center gap-2"
+                        >
+                          Name
+                          {slugDirection === "ascending" ? (
+                            <ArrowDown size={15} />
+                          ) : (
+                            <ArrowUp size={15} />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="capitalize">{slugDirection}</div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>
-                  <button
-                    onClick={() => handleSort("updated_at")}
-                    className="flex cursor-pointer items-center gap-2"
-                  >
-                    Last Updated
-                    {getArrowDirection("updated_at")}
-                  </button>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleSort("updated_at")}
+                          className="flex cursor-pointer items-center gap-2"
+                        >
+                          Last Updated
+                          {updateAtDirection === "ascending" ? (
+                            <ArrowDown size={15} />
+                          ) : (
+                            <ArrowUp size={15} />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="capitalize">{updateAtDirection}</div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
