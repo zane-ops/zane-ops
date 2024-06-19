@@ -1,14 +1,10 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
-import { projectKeys } from "~/key-factories";
+import { type ProjectSearch, projectKeys } from "~/key-factories";
 
 const TEN_SECONDS = 10 * 1000;
 
-export function useProjectList(filters: {
-  slug?: string;
-  page?: number;
-  per_page?: number;
-}) {
+export function useProjectList(filters: ProjectSearch) {
   return useQuery({
     queryKey: projectKeys.list(filters),
     queryFn: ({ signal }) => {

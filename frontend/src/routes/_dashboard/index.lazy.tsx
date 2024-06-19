@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowDown,
+  ArrowUp,
   ChevronsUpDown,
   Folder,
   Rocket,
@@ -26,6 +27,7 @@ import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 
 import { useDebounce } from "use-debounce";
+import { Button } from "~/components/ui/button";
 import {
   Table,
   TableBody,
@@ -34,18 +36,16 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { projectSearchSchema } from "~/key-factories";
 import { useProjectList } from "~/lib/hooks/use-project-list";
-import { formattedDate } from "~/utils";
-
-import { z } from "zod";
-import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-
-const projectSearchSchema = z.object({
-  slug: z.string().catch(""),
-  page: z.number().catch(1),
-  per_page: z.number().catch(10)
-});
+import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
@@ -71,9 +71,20 @@ function AuthedView() {
 }
 
 export function ProjectList() {
-  const { slug, page = 1, per_page = 10 } = Route.useSearch();
+  const {
+    slug = "",
+    page = 1,
+    per_page = 10,
+    sort_by = ["-updated_at"]
+  } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
-  const query = useProjectList({ slug: debouncedValue, page, per_page });
+
+  const query = useProjectList({
+    slug: debouncedValue,
+    page,
+    per_page,
+    sort_by
+  });
   const navigate = useNavigate();
 
   if (query.isLoading) {
@@ -86,6 +97,27 @@ export function ProjectList() {
 
   const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
+
+  const handleSort = (field: "slug" | "updated_at") => {
+    const isDescending = sort_by.includes(`-${field}`);
+    const newSortBy = sort_by.filter(
+      (criteria) => criteria !== field && criteria !== `-${field}`
+    );
+    newSortBy.push(isDescending ? field : `-${field}`);
+    navigate({
+      search: { slug, page, per_page, sort_by: newSortBy },
+      replace: true
+    });
+  };
+
+  const getArrowDirection = (field: "slug" | "updated_at") => {
+    if (sort_by.includes(`-${field}`)) {
+      return "descending";
+    }
+    return "ascending";
+  };
+  const slugDirection = getArrowDirection("slug");
+  const updatedAtDirection = getArrowDirection("updated_at");
 
   return (
     <main>
@@ -110,7 +142,12 @@ export function ProjectList() {
               <Input
                 onChange={(e) => {
                   navigate({
-                    search: { slug: e.target.value, page: 1, per_page },
+                    search: {
+                      slug: e.target.value,
+                      page: 1,
+                      per_page,
+                      sort_by
+                    },
                     replace: true
                   });
                 }}
@@ -139,11 +176,50 @@ export function ProjectList() {
           <Table>
             <TableHeader className="bg-toggle">
               <TableRow className="border-none">
-                <TableHead>Name</TableHead>
+                <TableHead>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleSort("slug")}
+                          className="flex cursor-pointer items-center gap-2"
+                        >
+                          Name
+                          {slugDirection === "ascending" ? (
+                            <ArrowDown size={15} />
+                          ) : (
+                            <ArrowUp size={15} />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="capitalize">{slugDirection}</div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead className="flex items-center gap-2">
-                  Last Updated
-                  <ArrowDown size={15} />
+                <TableHead>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleSort("updated_at")}
+                          className="flex cursor-pointer items-center gap-2"
+                        >
+                          Last Updated
+                          {updatedAtDirection === "ascending" ? (
+                            <ArrowDown size={15} />
+                          ) : (
+                            <ArrowUp size={15} />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="capitalize">{updatedAtDirection}</div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -211,13 +287,13 @@ export function ProjectList() {
                 perPage={per_page}
                 onChangePage={(newPage) => {
                   navigate({
-                    search: { slug, page: newPage, per_page },
+                    search: { slug, page: newPage, per_page, sort_by },
                     replace: true
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
-                    search: { slug, page: 1, per_page: newPerPage },
+                    search: { slug, page: 1, per_page: newPerPage, sort_by },
                     replace: true
                   });
                 }}
