@@ -15,9 +15,9 @@ export function useProjectList(filters: {
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
-          query: filters,
+          query: filters
         },
-        signal,
+        signal
       });
     },
     placeholderData: keepPreviousData,
@@ -26,6 +26,6 @@ export function useProjectList(filters: {
         return TEN_SECONDS;
       }
       return false;
-    },
+    }
   });
 }
