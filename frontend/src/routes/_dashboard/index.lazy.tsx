@@ -39,6 +39,7 @@ import { formattedDate } from "~/utils";
 
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 
 const projectSearchSchema = z.object({
   slug: z.string().catch(""),
@@ -198,7 +199,12 @@ export function ProjectList() {
           </Table>
 
           {!noResults && (
-            <div className="my-4">
+            <div
+              className={cn(
+                "my-4",
+                slug !== debouncedValue && "opacity-40 pointer-events-none"
+              )}
+            >
               <Pagination
                 totalPages={totalPages}
                 currentPage={page}
