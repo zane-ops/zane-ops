@@ -1,15 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
-import { projectKeys } from "~/key-factories";
+import { type ProjectSearch, projectKeys } from "~/key-factories";
 
 const TEN_SECONDS = 10 * 1000;
 
-export function useProjectList() {
+export function useProjectList(filters: ProjectSearch) {
   return useQuery({
-    queryKey: projectKeys.list,
+    queryKey: projectKeys.list(filters),
     queryFn: ({ signal }) => {
-      return apiClient.GET("/api/projects/", { signal });
+      return apiClient.GET("/api/projects/", {
+        params: {
+          query: filters
+        },
+        signal
+      });
     },
+    placeholderData: keepPreviousData,
     refetchInterval: (query) => {
       if (query.state.data?.data?.results) {
         return TEN_SECONDS;
