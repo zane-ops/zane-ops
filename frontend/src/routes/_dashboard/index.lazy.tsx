@@ -73,11 +73,11 @@ function AuthedView() {
 }
 
 export function ProjectList() {
-  const { slug, page = 1, per_page = 10 } = Route.useSearch();
+  const { slug, page = 1, per_page = 10, sort_by = [] } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
   const [sortBy, setSortBy] = React.useState<
     ("slug" | "-slug" | "updated_at" | "-updated_at")[]
-  >([]);
+  >(sort_by as ("slug" | "-slug" | "updated_at" | "-updated_at")[]);
   const query = useProjectList({
     slug: debouncedValue,
     page,
@@ -103,6 +103,10 @@ export function ProjectList() {
         const isDescending = prevSortBy.includes(`-${field}`);
         const newSortBy: ("slug" | "-slug" | "updated_at" | "-updated_at")[] =
           isDescending ? [field] : [`-${field}`];
+        navigate({
+          search: { slug, page, per_page, sort_by: newSortBy },
+          replace: true
+        });
         return newSortBy;
       }
     );
@@ -140,7 +144,12 @@ export function ProjectList() {
               <Input
                 onChange={(e) => {
                   navigate({
-                    search: { slug: e.target.value, page: 1, per_page },
+                    search: {
+                      slug: e.target.value,
+                      page: 1,
+                      per_page,
+                      sort_by
+                    },
                     replace: true
                   });
                 }}
@@ -254,13 +263,13 @@ export function ProjectList() {
                 perPage={per_page}
                 onChangePage={(newPage) => {
                   navigate({
-                    search: { slug, page: newPage, per_page },
+                    search: { slug, page: newPage, per_page, sort_by },
                     replace: true
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
-                    search: { slug, page: 1, per_page: newPerPage },
+                    search: { slug, page: 1, per_page: newPerPage, sort_by },
                     replace: true
                   });
                 }}
