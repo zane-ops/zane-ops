@@ -117,7 +117,7 @@ export function ProjectList() {
     return "ascending";
   };
   const slugDirection = getArrowDirection("slug");
-  const updateAtDirection = getArrowDirection("updated_at");
+  const updatedAtDirection = getArrowDirection("updated_at");
 
   return (
     <main>
@@ -208,7 +208,7 @@ export function ProjectList() {
                           className="flex cursor-pointer items-center gap-2"
                         >
                           Last Updated
-                          {updateAtDirection === "ascending" ? (
+                          {updatedAtDirection === "ascending" ? (
                             <ArrowDown size={15} />
                           ) : (
                             <ArrowUp size={15} />
@@ -216,7 +216,7 @@ export function ProjectList() {
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <div className="capitalize">{updateAtDirection}</div>
+                        <div className="capitalize">{updatedAtDirection}</div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
