@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -33,12 +33,11 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
 
-import React from "react";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -46,12 +45,18 @@ import { cn } from "~/lib/utils";
 const projectSearchSchema = z.object({
   slug: z.string().catch(""),
   page: z.number().catch(1),
-  per_page: z.number().catch(10)
+  per_page: z.number().catch(10),
+  sort_by: z
+    .array(z.enum(["slug", "-slug", "updated_at", "-updated_at"]))
+    .optional()
+    .catch(["-updated_at"]),
 });
+
+type ProjectSearch = z.infer<typeof projectSearchSchema>;
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -73,16 +78,19 @@ function AuthedView() {
 }
 
 export function ProjectList() {
-  const { slug, page = 1, per_page = 10, sort_by = [] } = Route.useSearch();
+  const {
+    slug,
+    page = 1,
+    per_page = 10,
+    sort_by = ["-updated_at"],
+  } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
-  const [sortBy, setSortBy] = React.useState<
-    ("slug" | "-slug" | "updated_at" | "-updated_at")[]
-  >(sort_by as ("slug" | "-slug" | "updated_at" | "-updated_at")[]);
+
   const query = useProjectList({
     slug: debouncedValue,
     page,
     per_page,
-    sort_by: sortBy
+    sort_by,
   });
   const navigate = useNavigate();
 
@@ -98,25 +106,22 @@ export function ProjectList() {
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
   const handleSort = (field: "slug" | "updated_at") => {
-    setSortBy(
-      (prevSortBy: ("slug" | "-slug" | "updated_at" | "-updated_at")[]) => {
-        const isDescending = prevSortBy.includes(`-${field}`);
-        const newSortBy: ("slug" | "-slug" | "updated_at" | "-updated_at")[] =
-          isDescending ? [field] : [`-${field}`];
-        navigate({
-          search: { slug, page, per_page, sort_by: newSortBy },
-          replace: true
-        });
-        return newSortBy;
-      }
+    const isDescending = sort_by.includes(`-${field}`);
+    const newSortBy = sort_by.filter(
+      (criteria) => criteria !== field && criteria !== `-${field}`
     );
+    newSortBy.push(isDescending ? field : `-${field}`);
+    navigate({
+      search: { slug, page, per_page, sort_by: newSortBy },
+      replace: true,
+    });
   };
 
   const getArrowDirection = (field: "slug" | "updated_at") => {
-    if (sortBy.includes(field)) {
-      return <ArrowUp size={15} />;
-    } else if (sortBy.includes(`-${field}`)) {
+    if (sort_by.includes(field)) {
       return <ArrowDown size={15} />;
+    } else if (sort_by.includes(`-${field}`)) {
+      return <ArrowUp size={15} />;
     }
     return <ArrowDown size={15} />;
   };
@@ -148,9 +153,9 @@ export function ProjectList() {
                       slug: e.target.value,
                       page: 1,
                       per_page,
-                      sort_by
+                      sort_by,
                     },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 defaultValue={slug}
@@ -179,23 +184,23 @@ export function ProjectList() {
             <TableHeader className="bg-toggle">
               <TableRow className="border-none">
                 <TableHead>
-                  <div
+                  <button
                     onClick={() => handleSort("slug")}
                     className="flex cursor-pointer items-center gap-2"
                   >
                     Name
                     {getArrowDirection("slug")}
-                  </div>
+                  </button>
                 </TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>
-                  <div
+                  <button
                     onClick={() => handleSort("updated_at")}
                     className="flex cursor-pointer items-center gap-2"
                   >
                     Last Updated
                     {getArrowDirection("updated_at")}
-                  </div>
+                  </button>
                 </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -264,13 +269,13 @@ export function ProjectList() {
                 onChangePage={(newPage) => {
                   navigate({
                     search: { slug, page: newPage, per_page, sort_by },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
                     search: { slug, page: 1, per_page: newPerPage, sort_by },
-                    replace: true
+                    replace: true,
                   });
                 }}
               />
