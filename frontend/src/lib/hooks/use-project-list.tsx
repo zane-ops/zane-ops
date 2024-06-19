@@ -5,6 +5,7 @@ import { projectKeys } from "~/key-factories";
 const TEN_SECONDS = 10 * 1000;
 
 export function useProjectList(filters: {
+  sort_by?: ("slug" | "-slug" | "updated_at" | "-updated_at")[];
   slug?: string;
   page?: number;
   per_page?: number;
@@ -14,9 +15,9 @@ export function useProjectList(filters: {
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
-          query: filters
+          query: filters,
         },
-        signal
+        signal,
       });
     },
     placeholderData: keepPreviousData,
@@ -25,6 +26,6 @@ export function useProjectList(filters: {
         return TEN_SECONDS;
       }
       return false;
-    }
+    },
   });
 }
