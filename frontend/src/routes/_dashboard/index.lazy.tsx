@@ -6,7 +6,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash,
+  Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -18,7 +18,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -32,7 +32,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
 import { useProjectList } from "~/lib/hooks/use-project-list";
 import { formattedDate } from "~/utils";
@@ -43,12 +43,12 @@ import { Button } from "~/components/ui/button";
 const projectSearchSchema = z.object({
   slug: z.string().catch(""),
   page: z.number().catch(1),
-  per_page: z.number().catch(10),
+  per_page: z.number().catch(10)
 });
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -110,7 +110,7 @@ export function ProjectList() {
                 onChange={(e) => {
                   navigate({
                     search: { slug: e.target.value, page: 1, per_page },
-                    replace: true,
+                    replace: true
                   });
                 }}
                 defaultValue={slug}
@@ -206,13 +206,13 @@ export function ProjectList() {
                 onChangePage={(newPage) => {
                   navigate({
                     search: { slug, page: newPage, per_page },
-                    replace: true,
+                    replace: true
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
                     search: { slug, page: 1, per_page: newPerPage },
-                    replace: true,
+                    replace: true
                   });
                 }}
               />
