@@ -114,7 +114,7 @@ export function ProjectList() {
     } else if (sortBy.includes(`-${field}`)) {
       return <ArrowDown size={15} />;
     }
-    return <ArrowDown size={15} className="opacity-50" />;
+    return <ArrowDown size={15} />;
   };
 
   return (
