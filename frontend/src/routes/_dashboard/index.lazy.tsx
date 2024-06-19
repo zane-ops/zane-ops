@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash,
+  Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -27,36 +27,23 @@ import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 
 import { useDebounce } from "use-debounce";
+import { Button } from "~/components/ui/button";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
+import { projectSearchSchema } from "~/key-factories";
 import { useProjectList } from "~/lib/hooks/use-project-list";
-import { formattedDate } from "~/utils";
-
-import { z } from "zod";
-import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-
-const projectSearchSchema = z.object({
-  slug: z.string().catch(""),
-  page: z.number().catch(1),
-  per_page: z.number().catch(10),
-  sort_by: z
-    .array(z.enum(["slug", "-slug", "updated_at", "-updated_at"]))
-    .optional()
-    .catch(["-updated_at"]),
-});
-
-type ProjectSearch = z.infer<typeof projectSearchSchema>;
+import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -79,10 +66,10 @@ function AuthedView() {
 
 export function ProjectList() {
   const {
-    slug,
+    slug = "",
     page = 1,
     per_page = 10,
-    sort_by = ["-updated_at"],
+    sort_by = ["-updated_at"]
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
@@ -90,7 +77,7 @@ export function ProjectList() {
     slug: debouncedValue,
     page,
     per_page,
-    sort_by,
+    sort_by
   });
   const navigate = useNavigate();
 
@@ -113,7 +100,7 @@ export function ProjectList() {
     newSortBy.push(isDescending ? field : `-${field}`);
     navigate({
       search: { slug, page, per_page, sort_by: newSortBy },
-      replace: true,
+      replace: true
     });
   };
 
@@ -153,9 +140,9 @@ export function ProjectList() {
                       slug: e.target.value,
                       page: 1,
                       per_page,
-                      sort_by,
+                      sort_by
                     },
-                    replace: true,
+                    replace: true
                   });
                 }}
                 defaultValue={slug}
@@ -269,13 +256,13 @@ export function ProjectList() {
                 onChangePage={(newPage) => {
                   navigate({
                     search: { slug, page: newPage, per_page, sort_by },
-                    replace: true,
+                    replace: true
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
                     search: { slug, page: 1, per_page: newPerPage, sort_by },
-                    replace: true,
+                    replace: true
                   });
                 }}
               />
