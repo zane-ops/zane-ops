@@ -79,7 +79,7 @@ export function ProjectList() {
     page = 1,
     per_page = 10,
     sort_by = ["-updated_at"],
-    status = ["active"]
+    status = "active"
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
@@ -89,7 +89,8 @@ export function ProjectList() {
     slug: debouncedValue,
     page,
     per_page,
-    sort_by
+    sort_by,
+    status
   };
 
   const projectActiveQuery = useProjectList(filters);
@@ -97,7 +98,7 @@ export function ProjectList() {
 
   const query = status === "active" ? projectActiveQuery : projectArchivedQuery;
 
-  if (query.isLoading || projectArchivedQuery.isLoading) {
+  if (query.isLoading) {
     return <Loader />;
   }
 
@@ -108,8 +109,8 @@ export function ProjectList() {
   const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
-  const noArchivedProjects = status === "active" && projectList.length === 0;
-  const noActiveProjects = status === "archived" && projectList.length === 0;
+  const noArchivedProjects = status === "archived" && projectList.length === 0;
+  const noActiveProjects = status === "active" && projectList.length === 0;
 
   const handleSort = (field: "slug" | "updated_at") => {
     const isDescending = sort_by.includes(`-${field}`);
@@ -134,7 +135,7 @@ export function ProjectList() {
 
   return (
     <main>
-      {empty ? (
+      {empty && noActiveProjects ? (
         <section className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
@@ -187,7 +188,7 @@ export function ProjectList() {
                             page: 1,
                             per_page,
                             sort_by,
-                            status: "Active"
+                            status: "active"
                           },
                           replace: true
                         })
@@ -204,7 +205,7 @@ export function ProjectList() {
                             page: 1,
                             per_page,
                             sort_by,
-                            status: "Archived"
+                            status: "archived"
                           },
                           replace: true
                         })
