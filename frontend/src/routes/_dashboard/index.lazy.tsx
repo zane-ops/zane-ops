@@ -267,7 +267,13 @@ export function ProjectList() {
                     </Tooltip>
                   </TooltipProvider>
                 </TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead
+                  className={cn({
+                    hidden: status === "archived"
+                  })}
+                >
+                  Status
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -301,7 +307,11 @@ export function ProjectList() {
                     </TableCell>
                     <TableCell>{project.description}</TableCell>
                     <TableCell>{formattedDate(project.updated_at)}</TableCell>
-                    <TableCell>
+                    <TableCell
+                      className={cn({
+                        hidden: status === "archived"
+                      })}
+                    >
                       <StatusBadge
                         color={
                           project.healthy_services === project.total_services
