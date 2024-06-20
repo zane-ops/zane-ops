@@ -65,7 +65,7 @@ class ProjectSerializer(ModelSerializer):
 class ArchivedProjectSerializer(ModelSerializer):
     class Meta:
         model = models.ArchivedProject
-        fields = ["slug", "archived_at", "description"]
+        fields = ["id", "slug", "archived_at", "description"]
 
 
 class VolumeSerializer(ModelSerializer):
