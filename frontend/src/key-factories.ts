@@ -1,6 +1,6 @@
 import { z } from "zod";
 export const userKeys = {
-  authedUser: ["AUTHED_USER"] as const
+  authedUser: ["AUTHED_USER"] as const,
 };
 
 export const projectSearchSchema = z.object({
@@ -11,11 +11,11 @@ export const projectSearchSchema = z.object({
     .array(z.enum(["slug", "-slug", "updated_at", "-updated_at"]))
     .optional()
     .catch(["-updated_at"]),
-  status: z.string().optional().catch("")
+  status: z.enum(["active", "archived"]).optional().catch("active"),
 });
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
 
 export const projectKeys = {
   list: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const,
-  archived: ["ARCHIVED_PROJECT"] as const
+  archived: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const,
 };

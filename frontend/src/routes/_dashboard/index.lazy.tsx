@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -34,25 +34,25 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { projectSearchSchema } from "~/key-factories";
 import {
-  useArchivedProject,
-  useProjectList
+  useArchivedProjectList,
+  useProjectList,
 } from "~/lib/hooks/use-project-list";
 import { cn } from "~/lib/utils";
 import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -79,23 +79,25 @@ export function ProjectList() {
     page = 1,
     per_page = 10,
     sort_by = ["-updated_at"],
-    status = "Active"
+    status = ["active"],
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
   const navigate = useNavigate();
 
-  const query =
-    status === "Archived"
-      ? useArchivedProject()
-      : useProjectList({
-          slug: debouncedValue,
-          page,
-          per_page,
-          sort_by
-        });
+  const filters = {
+    slug: debouncedValue,
+    page,
+    per_page,
+    sort_by,
+  };
 
-  if (query.isLoading) {
+  const projectActiveQuery = useProjectList(filters);
+  const projectArchivedQuery = useArchivedProjectList(filters);
+
+  const query = status === "active" ? projectActiveQuery : projectArchivedQuery;
+
+  if (query.isLoading || projectArchivedQuery.isLoading) {
     return <Loader />;
   }
 
@@ -105,8 +107,9 @@ export function ProjectList() {
 
   const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
-  const noArchivedProjects = status === "Archived" && projectList.length === 0;
-  const noActiveProjects = status === "Active" && projectList.length === 0;
+
+  const noArchivedProjects = status === "active" && projectList.length === 0;
+  const noActiveProjects = status === "archived" && projectList.length === 0;
 
   const handleSort = (field: "slug" | "updated_at") => {
     const isDescending = sort_by.includes(`-${field}`);
@@ -116,7 +119,7 @@ export function ProjectList() {
     newSortBy.push(isDescending ? field : `-${field}`);
     navigate({
       search: { slug, page, per_page, sort_by: newSortBy },
-      replace: true
+      replace: true,
     });
   };
 
@@ -131,7 +134,7 @@ export function ProjectList() {
 
   return (
     <main>
-      {noActiveProjects && empty ? (
+      {empty ? (
         <section className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
@@ -157,9 +160,9 @@ export function ProjectList() {
                       page: 1,
                       per_page,
                       sort_by,
-                      status
+                      status,
                     },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 defaultValue={slug}
@@ -184,9 +187,9 @@ export function ProjectList() {
                             page: 1,
                             per_page,
                             sort_by,
-                            status: "Active"
+                            status: "Active",
                           },
-                          replace: true
+                          replace: true,
                         })
                       }
                     >
@@ -201,9 +204,9 @@ export function ProjectList() {
                             page: 1,
                             per_page,
                             sort_by,
-                            status: "Archived"
+                            status: "Archived",
                           },
-                          replace: true
+                          replace: true,
                         })
                       }
                     >
@@ -329,7 +332,7 @@ export function ProjectList() {
             <div
               className={cn("my-4 block", {
                 hidden: noArchivedProjects,
-                "opacity-40 pointer-events-none": slug !== debouncedValue
+                "opacity-40 pointer-events-none": slug !== debouncedValue,
               })}
             >
               <Pagination
@@ -339,7 +342,7 @@ export function ProjectList() {
                 onChangePage={(newPage) => {
                   navigate({
                     search: { slug, page: newPage, per_page, sort_by, status },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
@@ -349,9 +352,9 @@ export function ProjectList() {
                       page: 1,
                       per_page: newPerPage,
                       sort_by,
-                      status
+                      status,
                     },
-                    replace: true
+                    replace: true,
                   });
                 }}
               />

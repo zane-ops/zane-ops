@@ -10,34 +10,33 @@ export function useProjectList(filters: ProjectSearch) {
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
-          query: filters
+          query: filters,
         },
-        signal
+        signal,
       });
     },
     placeholderData: keepPreviousData,
+    enabled: filters.status !== "archived",
     refetchInterval: (query) => {
       if (query.state.data?.data?.results) {
         return TEN_SECONDS;
       }
       return false;
-    }
+    },
   });
 }
 
-export function useArchivedProject() {
+export function useArchivedProjectList(filters: ProjectSearch) {
   return useQuery({
-    queryKey: projectKeys.archived,
+    queryKey: projectKeys.archived(filters),
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/archived-projects/", {
-        signal
+        param: {
+          query: filters,
+        },
+        signal,
       });
     },
-    refetchInterval: (query) => {
-      if (query.state.data?.data?.results) {
-        return TEN_SECONDS;
-      }
-      return false;
-    }
+    enabled: filters.status === "archived",
   });
 }
