@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash,
+  Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -34,25 +34,25 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
+  TooltipTrigger
 } from "~/components/ui/tooltip";
 import { projectSearchSchema } from "~/key-factories";
 import {
   useArchivedProjectList,
-  useProjectList,
+  useProjectList
 } from "~/lib/hooks/use-project-list";
 import { cn } from "~/lib/utils";
 import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -79,7 +79,7 @@ export function ProjectList() {
     page = 1,
     per_page = 10,
     sort_by = ["-updated_at"],
-    status = ["active"],
+    status = ["active"]
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
@@ -89,7 +89,7 @@ export function ProjectList() {
     slug: debouncedValue,
     page,
     per_page,
-    sort_by,
+    sort_by
   };
 
   const projectActiveQuery = useProjectList(filters);
@@ -119,7 +119,7 @@ export function ProjectList() {
     newSortBy.push(isDescending ? field : `-${field}`);
     navigate({
       search: { slug, page, per_page, sort_by: newSortBy },
-      replace: true,
+      replace: true
     });
   };
 
@@ -160,9 +160,9 @@ export function ProjectList() {
                       page: 1,
                       per_page,
                       sort_by,
-                      status,
+                      status
                     },
-                    replace: true,
+                    replace: true
                   });
                 }}
                 defaultValue={slug}
@@ -187,9 +187,9 @@ export function ProjectList() {
                             page: 1,
                             per_page,
                             sort_by,
-                            status: "Active",
+                            status: "Active"
                           },
-                          replace: true,
+                          replace: true
                         })
                       }
                     >
@@ -204,9 +204,9 @@ export function ProjectList() {
                             page: 1,
                             per_page,
                             sort_by,
-                            status: "Archived",
+                            status: "Archived"
                           },
-                          replace: true,
+                          replace: true
                         })
                       }
                     >
@@ -332,7 +332,7 @@ export function ProjectList() {
             <div
               className={cn("my-4 block", {
                 hidden: noArchivedProjects,
-                "opacity-40 pointer-events-none": slug !== debouncedValue,
+                "opacity-40 pointer-events-none": slug !== debouncedValue
               })}
             >
               <Pagination
@@ -342,7 +342,7 @@ export function ProjectList() {
                 onChangePage={(newPage) => {
                   navigate({
                     search: { slug, page: newPage, per_page, sort_by, status },
-                    replace: true,
+                    replace: true
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
@@ -352,9 +352,9 @@ export function ProjectList() {
                       page: 1,
                       per_page: newPerPage,
                       sort_by,
-                      status,
+                      status
                     },
-                    replace: true,
+                    replace: true
                   });
                 }}
               />
