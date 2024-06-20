@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -34,22 +34,25 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { projectSearchSchema } from "~/key-factories";
-import { useProjectList } from "~/lib/hooks/use-project-list";
+import {
+  useArchivedProject,
+  useProjectList,
+} from "~/lib/hooks/use-project-list";
 import { cn } from "~/lib/utils";
 import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -75,17 +78,22 @@ export function ProjectList() {
     slug = "",
     page = 1,
     per_page = 10,
-    sort_by = ["-updated_at"]
+    sort_by = ["-updated_at"],
+    status = "Active",
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
-  const query = useProjectList({
-    slug: debouncedValue,
-    page,
-    per_page,
-    sort_by
-  });
   const navigate = useNavigate();
+
+  const query =
+    status === "Archived"
+      ? useArchivedProject()
+      : useProjectList({
+          slug: debouncedValue,
+          page,
+          per_page,
+          sort_by,
+        });
 
   if (query.isLoading) {
     return <Loader />;
@@ -97,6 +105,8 @@ export function ProjectList() {
 
   const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
+  const noArchivedProjects = status === "Archived" && projectList.length === 0;
+  const noActiveProjects = status === "Active" && projectList.length === 0;
 
   const handleSort = (field: "slug" | "updated_at") => {
     const isDescending = sort_by.includes(`-${field}`);
@@ -106,7 +116,7 @@ export function ProjectList() {
     newSortBy.push(isDescending ? field : `-${field}`);
     navigate({
       search: { slug, page, per_page, sort_by: newSortBy },
-      replace: true
+      replace: true,
     });
   };
 
@@ -121,7 +131,7 @@ export function ProjectList() {
 
   return (
     <main>
-      {empty ? (
+      {noActiveProjects && empty ? (
         <section className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
           <div>
             <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
@@ -146,9 +156,10 @@ export function ProjectList() {
                       slug: e.target.value,
                       page: 1,
                       per_page,
-                      sort_by
+                      sort_by,
+                      status,
                     },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 defaultValue={slug}
@@ -165,8 +176,39 @@ export function ProjectList() {
                     <ChevronsUpDown className="w-4" />
                   </MenubarTrigger>
                   <MenubarContent className="border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border md:min-w-6 md:w-auto">
-                    <MenubarContentItem icon={Rocket} text="Active" />
-                    <MenubarContentItem icon={Trash} text="Archived" />
+                    <div
+                      onClick={() =>
+                        navigate({
+                          search: {
+                            slug,
+                            page: 1,
+                            per_page,
+                            sort_by,
+                            status: "Active",
+                          },
+                          replace: true,
+                        })
+                      }
+                    >
+                      <MenubarContentItem icon={Rocket} text="Active" />
+                    </div>
+
+                    <div
+                      onClick={() =>
+                        navigate({
+                          search: {
+                            slug,
+                            page: 1,
+                            per_page,
+                            sort_by,
+                            status: "Archived",
+                          },
+                          replace: true,
+                        })
+                      }
+                    >
+                      <MenubarContentItem icon={Trash} text="Archived" />
+                    </div>
                   </MenubarContent>
                 </MenubarMenu>
               </Menubar>
@@ -226,6 +268,15 @@ export function ProjectList() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {noArchivedProjects ? (
+                <TableRow className="border-border cursor-pointer">
+                  <TableCell colSpan={5} className="text-center py-4">
+                    <h1 className="text-2xl font-bold">No Archived Project</h1>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                ""
+              )}
               {noResults ? (
                 <TableRow className="border-border cursor-pointer">
                   <TableCell colSpan={5} className="text-center py-4">
@@ -276,10 +327,10 @@ export function ProjectList() {
 
           {!noResults && (
             <div
-              className={cn(
-                "my-4",
-                slug !== debouncedValue && "opacity-40 pointer-events-none"
-              )}
+              className={cn("my-4 block", {
+                hidden: noArchivedProjects,
+                "opacity-40 pointer-events-none": slug !== debouncedValue,
+              })}
             >
               <Pagination
                 totalPages={totalPages}
@@ -287,14 +338,20 @@ export function ProjectList() {
                 perPage={per_page}
                 onChangePage={(newPage) => {
                   navigate({
-                    search: { slug, page: newPage, per_page, sort_by },
-                    replace: true
+                    search: { slug, page: newPage, per_page, sort_by, status },
+                    replace: true,
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
-                    search: { slug, page: 1, per_page: newPerPage, sort_by },
-                    replace: true
+                    search: {
+                      slug,
+                      page: 1,
+                      per_page: newPerPage,
+                      sort_by,
+                      status,
+                    },
+                    replace: true,
                   });
                 }}
               />
