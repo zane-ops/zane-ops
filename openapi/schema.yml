@@ -2007,8 +2007,12 @@ components:
           type: string
           format: date-time
           readOnly: true
+        description:
+          type: string
+          nullable: true
       required:
       - archived_at
+      - description
       - slug
     ArchivedProjectsListError:
       oneOf:
