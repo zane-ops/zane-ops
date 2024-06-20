@@ -1999,6 +1999,9 @@ components:
     ArchivedProject:
       type: object
       properties:
+        id:
+          type: integer
+          readOnly: true
         slug:
           type: string
           maxLength: 255
@@ -2013,6 +2016,7 @@ components:
       required:
       - archived_at
       - description
+      - id
       - slug
     ArchivedProjectsListError:
       oneOf:
