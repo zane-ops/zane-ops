@@ -157,11 +157,9 @@ export function ProjectList() {
                 onChange={(e) => {
                   navigate({
                     search: {
+                      ...filters,
                       slug: e.target.value,
-                      page: 1,
-                      per_page,
-                      sort_by,
-                      status
+                      page: 1
                     },
                     replace: true
                   });
@@ -180,39 +178,35 @@ export function ProjectList() {
                     <ChevronsUpDown className="w-4" />
                   </MenubarTrigger>
                   <MenubarContent className="border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border md:min-w-6 md:w-auto">
-                    <div
+                    <MenubarContentItem
                       onClick={() =>
                         navigate({
                           search: {
-                            slug,
+                            ...filters,
                             page: 1,
-                            per_page,
-                            sort_by,
                             status: "active"
                           },
                           replace: true
                         })
                       }
-                    >
-                      <MenubarContentItem icon={Rocket} text="Active" />
-                    </div>
+                      icon={Rocket}
+                      text="Active"
+                    />
 
-                    <div
+                    <MenubarContentItem
                       onClick={() =>
                         navigate({
                           search: {
-                            slug,
+                            ...filters,
                             page: 1,
-                            per_page,
-                            sort_by,
-                            status: "archived"
+                            status: "active"
                           },
                           replace: true
                         })
                       }
-                    >
-                      <MenubarContentItem icon={Trash} text="Archived" />
-                    </div>
+                      icon={Trash}
+                      text="Archived"
+                    />
                   </MenubarContent>
                 </MenubarMenu>
               </Menubar>
@@ -352,18 +346,16 @@ export function ProjectList() {
                 perPage={per_page}
                 onChangePage={(newPage) => {
                   navigate({
-                    search: { slug, page: newPage, per_page, sort_by, status },
+                    search: { ...filters, page: newPage },
                     replace: true
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
                   navigate({
                     search: {
-                      slug,
+                      ...filters,
                       page: 1,
-                      per_page: newPerPage,
-                      sort_by,
-                      status
+                      per_page: newPerPage
                     },
                     replace: true
                   });

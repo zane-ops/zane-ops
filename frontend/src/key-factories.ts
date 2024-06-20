@@ -17,5 +17,6 @@ export type ProjectSearch = z.infer<typeof projectSearchSchema>;
 
 export const projectKeys = {
   list: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const,
-  archived: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const
+  archived: (filters: ProjectSearch) =>
+    ["ARCHIVED_PROJECT_LIST", filters] as const
 };
