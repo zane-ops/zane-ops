@@ -8,12 +8,25 @@ export const projectSearchSchema = z.object({
   page: z.number().optional().catch(1),
   per_page: z.number().optional().catch(10),
   sort_by: z
-    .array(z.enum(["slug", "-slug", "updated_at", "-updated_at"]))
+    .array(
+      z.enum([
+        "slug",
+        "-slug",
+        "updated_at",
+        "-updated_at",
+        "archived_at",
+        "-archived_at"
+      ])
+    )
     .optional()
-    .catch(["-updated_at"])
+    .catch(["-updated_at"]),
+  status: z.enum(["active", "archived"]).optional().catch("active")
 });
+
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
 
 export const projectKeys = {
-  list: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const
+  list: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const,
+  archived: (filters: ProjectSearch) =>
+    ["ARCHIVED_PROJECT_LIST", filters] as const
 };

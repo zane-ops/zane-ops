@@ -10,17 +10,46 @@ export function useProjectList(filters: ProjectSearch) {
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
-          query: filters
+          query: {
+            ...filters,
+            sort_by: filters.sort_by?.filter(
+              (criteria) =>
+                criteria !== "-archived_at" && criteria !== "archived_at"
+            )
+          }
         },
         signal
       });
     },
     placeholderData: keepPreviousData,
+    enabled: filters.status !== "archived",
     refetchInterval: (query) => {
       if (query.state.data?.data?.results) {
         return TEN_SECONDS;
       }
       return false;
     }
+  });
+}
+
+export function useArchivedProjectList(filters: ProjectSearch) {
+  return useQuery({
+    queryKey: projectKeys.archived(filters),
+    queryFn: ({ signal }) => {
+      return apiClient.GET("/api/archived-projects/", {
+        params: {
+          query: {
+            ...filters,
+            sort_by: filters.sort_by?.filter(
+              (criteria) =>
+                criteria !== "-updated_at" && criteria !== "updated_at"
+            )
+          }
+        },
+        signal
+      });
+    },
+    placeholderData: keepPreviousData,
+    enabled: filters.status === "archived"
   });
 }
