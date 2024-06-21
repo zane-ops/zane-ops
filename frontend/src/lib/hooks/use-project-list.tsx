@@ -15,10 +15,10 @@ export function useProjectList(filters: ProjectSearch) {
             sort_by: filters.sort_by?.filter(
               (criteria) =>
                 criteria !== "-archived_at" && criteria !== "archived_at"
-            ),
-          },
+            )
+          }
         },
-        signal,
+        signal
       });
     },
     placeholderData: keepPreviousData,
@@ -28,7 +28,7 @@ export function useProjectList(filters: ProjectSearch) {
         return TEN_SECONDS;
       }
       return false;
-    },
+    }
   });
 }
 
@@ -43,13 +43,13 @@ export function useArchivedProjectList(filters: ProjectSearch) {
             sort_by: filters.sort_by?.filter(
               (criteria) =>
                 criteria !== "-updated_at" && criteria !== "updated_at"
-            ),
-          },
+            )
+          }
         },
-        signal,
+        signal
       });
     },
     placeholderData: keepPreviousData,
-    enabled: filters.status === "archived",
+    enabled: filters.status === "archived"
   });
 }
