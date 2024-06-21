@@ -10,9 +10,15 @@ export function useProjectList(filters: ProjectSearch) {
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/", {
         params: {
-          query: filters
+          query: {
+            ...filters,
+            sort_by: filters.sort_by?.filter(
+              (criteria) =>
+                criteria !== "-archived_at" && criteria !== "archived_at"
+            ),
+          },
         },
-        signal
+        signal,
       });
     },
     placeholderData: keepPreviousData,
@@ -22,7 +28,7 @@ export function useProjectList(filters: ProjectSearch) {
         return TEN_SECONDS;
       }
       return false;
-    }
+    },
   });
 }
 
@@ -31,12 +37,19 @@ export function useArchivedProjectList(filters: ProjectSearch) {
     queryKey: projectKeys.archived(filters),
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/archived-projects/", {
-        param: {
-          query: filters
+        params: {
+          query: {
+            ...filters,
+            sort_by: filters.sort_by?.filter(
+              (criteria) =>
+                criteria !== "-updated_at" && criteria !== "updated_at"
+            ),
+          },
         },
-        signal
+        signal,
       });
     },
-    enabled: filters.status === "archived"
+    placeholderData: keepPreviousData,
+    enabled: filters.status === "archived",
   });
 }

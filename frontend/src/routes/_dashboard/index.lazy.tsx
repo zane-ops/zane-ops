@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -34,25 +34,25 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { projectSearchSchema } from "~/key-factories";
 import {
   useArchivedProjectList,
-  useProjectList
+  useProjectList,
 } from "~/lib/hooks/use-project-list";
 import { cn } from "~/lib/utils";
 import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -79,7 +79,7 @@ export function ProjectList() {
     page = 1,
     per_page = 10,
     sort_by = ["-updated_at"],
-    status = "active"
+    status = "active",
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
@@ -90,7 +90,7 @@ export function ProjectList() {
     page,
     per_page,
     sort_by,
-    status
+    status,
   };
 
   const projectActiveQuery = useProjectList(filters);
@@ -109,41 +109,35 @@ export function ProjectList() {
   const noResults = projectList.length === 0 && debouncedValue.trim() !== "";
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
-  const noArchivedProjects = status === "archived" && projectList.length === 0;
   const noActiveProjects = status === "active" && projectList.length === 0;
 
-  const handleSort = (field: "slug" | "updated_at") => {
+  const handleSort = (field: "slug" | "updated_at" | "archived_at") => {
     const isDescending = sort_by.includes(`-${field}`);
     const newSortBy = sort_by.filter(
       (criteria) => criteria !== field && criteria !== `-${field}`
     );
     newSortBy.push(isDescending ? field : `-${field}`);
     navigate({
-      search: { slug, page, per_page, sort_by: newSortBy },
-      replace: true
+      search: { ...filters, sort_by: newSortBy },
+      replace: true,
     });
   };
 
-  const getArrowDirection = (field: "slug" | "updated_at") => {
+  const getArrowDirection = (field: "slug" | "updated_at" | "archived_at") => {
     if (sort_by.includes(`-${field}`)) {
       return "descending";
     }
     return "ascending";
   };
   const slugDirection = getArrowDirection("slug");
-  const updatedAtDirection = getArrowDirection("updated_at");
+  const updatedAtDirection =
+    status === "active"
+      ? getArrowDirection("updated_at")
+      : getArrowDirection("archived_at");
 
   return (
     <main>
-      {empty && noActiveProjects ? (
-        <section className="flex gap-3 flex-col items-center justify-center flex-grow h-[75vh]">
-          <div>
-            <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
-            <h1 className="text-lg">You don't have any project yet</h1>
-          </div>
-          <Button>Create One</Button>
-        </section>
-      ) : (
+      {
         <section>
           <div className="md:my-10 my-5">
             <h1 className="text-3xl font-bold">Overview</h1>
@@ -159,9 +153,9 @@ export function ProjectList() {
                     search: {
                       ...filters,
                       slug: e.target.value,
-                      page: 1
+                      page: 1,
                     },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 defaultValue={slug}
@@ -184,9 +178,9 @@ export function ProjectList() {
                           search: {
                             ...filters,
                             page: 1,
-                            status: "active"
+                            status: "active",
                           },
-                          replace: true
+                          replace: true,
                         })
                       }
                       icon={Rocket}
@@ -199,9 +193,9 @@ export function ProjectList() {
                           search: {
                             ...filters,
                             page: 1,
-                            status: "active"
+                            status: "archived",
                           },
-                          replace: true
+                          replace: true,
                         })
                       }
                       icon={Trash}
@@ -244,10 +238,14 @@ export function ProjectList() {
                     <Tooltip delayDuration={0}>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => handleSort("updated_at")}
+                          onClick={() =>
+                            status === "active"
+                              ? handleSort("updated_at")
+                              : handleSort("archived_at")
+                          }
                           className="flex cursor-pointer items-center gap-2"
                         >
-                          Last Updated
+                          {status === "active" ? "Last Updated" : "Archived At"}
                           {updatedAtDirection === "ascending" ? (
                             <ArrowDown size={15} />
                           ) : (
@@ -263,7 +261,7 @@ export function ProjectList() {
                 </TableHead>
                 <TableHead
                   className={cn({
-                    hidden: status === "archived"
+                    hidden: status === "archived",
                   })}
                 >
                   Status
@@ -272,15 +270,22 @@ export function ProjectList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {noArchivedProjects ? (
-                <TableRow className="border-border cursor-pointer">
-                  <TableCell colSpan={5} className="text-center py-4">
-                    <h1 className="text-2xl font-bold">No Archived Project</h1>
-                  </TableCell>
-                </TableRow>
+              {empty && noActiveProjects ? (
+                <TableCell colSpan={5} className="text-center py-4">
+                  <section className="flex gap-3 flex-col items-center justify-center flex-grow py-20">
+                    <div>
+                      <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
+                      <h1 className="text-lg">
+                        You don't have any project yet
+                      </h1>
+                    </div>
+                    <Button>Create One</Button>
+                  </section>
+                </TableCell>
               ) : (
                 ""
               )}
+
               {noResults ? (
                 <TableRow className="border-border cursor-pointer">
                   <TableCell colSpan={5} className="text-center py-4">
@@ -300,27 +305,37 @@ export function ProjectList() {
                       </div>
                     </TableCell>
                     <TableCell>{project.description}</TableCell>
-                    <TableCell>{formattedDate(project.updated_at)}</TableCell>
-                    <TableCell
-                      className={cn({
-                        hidden: status === "archived"
-                      })}
-                    >
-                      <StatusBadge
-                        color={
-                          project.healthy_services === project.total_services
-                            ? "green"
-                            : project.healthy_services === 0
-                              ? "red"
-                              : "yellow"
-                        }
+                    {"updated_at" in project ? (
+                      <TableCell>{formattedDate(project.updated_at)}</TableCell>
+                    ) : (
+                      <TableCell>
+                        {formattedDate(project.archived_at)}
+                      </TableCell>
+                    )}
+
+                    {"healthy_services" in project && (
+                      <TableCell
+                        className={cn({
+                          hidden: status === "archived",
+                        })}
                       >
-                        <p>
-                          {project.healthy_services}/
-                          {`${project.total_services} Services Up`}
-                        </p>
-                      </StatusBadge>
-                    </TableCell>
+                        <StatusBadge
+                          color={
+                            project.healthy_services === project.total_services
+                              ? "green"
+                              : project.healthy_services === 0
+                                ? "red"
+                                : "yellow"
+                          }
+                        >
+                          <p>
+                            {project.healthy_services}/
+                            {`${project.total_services} Services Up`}
+                          </p>
+                        </StatusBadge>
+                      </TableCell>
+                    )}
+
                     <TableCell className="flex justify-end">
                       <div className="w-fit flex items-center gap-3">
                         Settings
@@ -333,11 +348,10 @@ export function ProjectList() {
             </TableBody>
           </Table>
 
-          {!noResults && (
+          {!noResults && !empty && (
             <div
               className={cn("my-4 block", {
-                hidden: noArchivedProjects,
-                "opacity-40 pointer-events-none": slug !== debouncedValue
+                "opacity-40 pointer-events-none": slug !== debouncedValue,
               })}
             >
               <Pagination
@@ -347,7 +361,7 @@ export function ProjectList() {
                 onChangePage={(newPage) => {
                   navigate({
                     search: { ...filters, page: newPage },
-                    replace: true
+                    replace: true,
                   });
                 }}
                 onChangePerPage={(newPerPage) => {
@@ -355,16 +369,16 @@ export function ProjectList() {
                     search: {
                       ...filters,
                       page: 1,
-                      per_page: newPerPage
+                      per_page: newPerPage,
                     },
-                    replace: true
+                    replace: true,
                   });
                 }}
               />
             </div>
           )}
         </section>
-      )}
+      }
     </main>
   );
 }
