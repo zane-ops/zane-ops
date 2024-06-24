@@ -93,6 +93,13 @@ services:
       - "8089:5540"
     volumes:
       - redisinsight:/data
+  fluentd:
+    image: fluentd:v1.16.2-1.1
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
 volumes:
   db-data:
   redis-data:
