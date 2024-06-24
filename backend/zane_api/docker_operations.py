@@ -1,4 +1,3 @@
-import json
 from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import List, TypedDict
@@ -564,7 +563,6 @@ def get_caddy_request_for_domain(domain: str):
                 "routes": [],
             }
         ],
-        "terminal": True,
     }
 
 
@@ -628,7 +626,6 @@ def get_caddy_request_for_deployment_url(
                 ],
             }
         ],
-        "terminal": True,
     }
 
 
@@ -721,27 +718,10 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
 
         # if the domain doesn't exist we create the config for the domain
         if response.status_code == status.HTTP_404_NOT_FOUND:
-            requests.post(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
+            requests.put(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
                 headers={"content-type": "application/json"},
                 json=get_caddy_request_for_domain(url.domain),
-                timeout=5,
-            )
-
-        # add logger if not exists
-        response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-            headers={"content-type": "application/json", "accept": "application/json"},
-            timeout=5,
-        )
-        if response.json() is None:
-            requests.post(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-                data=json.dumps(""),
-                headers={
-                    "content-type": "application/json",
-                    "accept": "application/json",
-                },
                 timeout=5,
             )
 
@@ -776,8 +756,8 @@ def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> No
 
         # if the domain doesn't exist we create the config for the domain
         if response.status_code == status.HTTP_404_NOT_FOUND:
-            requests.post(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/config/apps/http/servers/zane/routes",
+            requests.put(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
                 headers={"content-type": "application/json"},
                 json=get_caddy_request_for_deployment_url(
                     url=deployment.url,
@@ -786,26 +766,6 @@ def expose_docker_service_deployment_to_http(deployment: DockerDeployment) -> No
                 ),
                 timeout=5,
             )
-
-            # add logger if not exists
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
-                headers={
-                    "content-type": "application/json",
-                    "accept": "application/json",
-                },
-                timeout=5,
-            )
-            if response.json() is None:
-                requests.post(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
-                    data=json.dumps(""),
-                    headers={
-                        "content-type": "application/json",
-                        "accept": "application/json",
-                    },
-                    timeout=5,
-                )
 
 
 def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
@@ -825,18 +785,10 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
                 )
             )
 
-            # delete the domain and logger config when there are no routes for the domain anymore
+            # delete the domain config when there are no routes for the domain anymore
             if len(routes) == 0:
                 requests.delete(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
-                    timeout=5,
-                )
-                requests.delete(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-                    headers={
-                        "content-type": "application/json",
-                        "accept": "application/json",
-                    },
                     timeout=5,
                 )
             else:
@@ -849,14 +801,6 @@ def unexpose_docker_service_from_http(service: ArchivedDockerService) -> None:
     for url in service.deployment_urls:  # type: str
         requests.delete(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}",
-            timeout=5,
-        )
-        requests.delete(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url}",
-            headers={
-                "content-type": "application/json",
-                "accept": "application/json",
-            },
             timeout=5,
         )
 

@@ -70,7 +70,6 @@ def register_zaneops_app_on_proxy(
             }
         ],
         "match": [{"host": [zane_app_domain]}],
-        "terminal": True,
     }
 
     if response.status_code == 404:
