@@ -2,6 +2,11 @@ services:
   zane-proxy:
     image: fredkiss3/zane-caddy-proxy:dev
     command: caddy run --resume
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "host.docker.internal:24224"
+        tag: zane.proxy
     deploy:
       replicas: 1
       update_config:

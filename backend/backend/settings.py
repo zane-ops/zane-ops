@@ -250,7 +250,11 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "5/minute", "tls_certificates": "60/minute"},
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/minute",
+        "tls_certificates": "60/minute",
+        "log_collect": "30/minute",
+    },
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
     "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",
