@@ -17,9 +17,7 @@
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [
-            ":443"
-          ],
+          "listen": [":443"],
           "routes": [
             {
               "handle": [
@@ -43,9 +41,7 @@
               "terminal": true
             }
           ],
-          "tls_connection_policies": [
-            {}
-          ],
+          "tls_connection_policies": [{}],
           "logs": {}
         }
       }
