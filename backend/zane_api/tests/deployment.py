@@ -25,7 +25,6 @@ from ..models import (
     HealthCheck,
     DockerEnvVariable,
 )
-from ..utils import jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -1023,7 +1022,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_url_cannot_specify_custom_url_and_public_port_at_the_same_time(
