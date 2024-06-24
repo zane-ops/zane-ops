@@ -11,10 +11,19 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv_vault import load_dotenv
+
 from .api_description import API_DESCRIPTION
+from .bootstrap import register_zaneops_app_on_proxy
+
+try:
+    load_dotenv(".env", override=True)
+except FileNotFoundError:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +36,7 @@ SECRET_KEY = os.environ.get(
     "SECRET_KEY", "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx"
 )
 
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
 
@@ -40,10 +50,18 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
 # And it will be in the format domain.com (without `http://` or `https://`)
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
+ZANE_INTERNAL_DOMAIN = "zaneops.internal"
+
 ALLOWED_HOSTS = (
-    [f".{ROOT_DOMAIN}", "localhost", "127.0.0.1"]
+    [
+        f".{ROOT_DOMAIN}",
+        "localhost",
+        "127.0.0.1",
+        ZANE_APP_DOMAIN,
+        "host.docker.internal",
+    ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f".{ROOT_DOMAIN}"]
+    else [f".{ROOT_DOMAIN}", f"zane-api.{ZANE_INTERNAL_DOMAIN}"]
 )
 SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
 
@@ -186,7 +204,7 @@ LOGGING = {
         "django.db.backends": {
             "level": "DEBUG",
             # "handlers": ["console"],
-        }
+        },
     },
 }
 
@@ -197,7 +215,17 @@ if DEBUG:
                 "handlers": ["console"],
                 "level": "DEBUG",
                 "propagate": True,
-            }
+            },
+            "gunicorn.error": {
+                "handlers": ["console"],
+                "level": "INFO",
+                "propagate": True,
+            },
+            "gunicorn.access": {
+                "level": "DEBUG",
+                "handlers": ["console"],
+                "propagate": True,
+            },
         }
     )
 
@@ -222,9 +250,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {
-        "anon": "5/minute",
-    },
+    "DEFAULT_THROTTLE_RATES": {"anon": "5/minute", "tls_certificates": "60/minute"},
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
     "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",
@@ -293,13 +319,25 @@ CELERY_RESULT_EXPIRES = timedelta(hours=1)
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://127.0.0.1:2019"
 )
-ZANE_APP_SERVICE_HOST_FROM_PROXY = (
+ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
-    else "zane-api.zaneops.internal:8000"
+    else f"zane-api.{ZANE_INTERNAL_DOMAIN}:8000"
 )
-ZANE_INTERNAL_DOMAIN = "zaneops.internal"
+ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
+    "host.docker.internal:5678"
+    if ENVIRONMENT != PRODUCTION_ENV
+    else f"zane-front.{ZANE_INTERNAL_DOMAIN}:80"
+)
 
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
+
+if not TESTING:
+    register_zaneops_app_on_proxy(
+        proxy_url=CADDY_PROXY_ADMIN_HOST,
+        zane_app_domain=ZANE_APP_DOMAIN,
+        zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
+        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+    )

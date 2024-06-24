@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import re_path
 
 from . import views
@@ -59,10 +60,26 @@ urlpatterns = [
         views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
         name="services.docker.request_deployment_changes",
     ),
+]
+
+if settings.DEBUG:
+    urlpatterns += [
+        re_path(
+            r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
+            r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/_bulk/?$",
+            views.BulkRequestDockerServiceDeploymentChangesAPIView.as_view(),
+        ),
+        re_path(
+            "^_proxy/register-zane-to-proxy/?$",
+            views.RegisterZaneProxyAPIView.as_view(),
+        ),
+    ]
+
+
+urlpatterns += [
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/_bulk?$",
-        views.BulkRequestDockerServiceDeploymentChangesAPIView.as_view(),
+        "^_proxy/check-certiticates/?$",
+        views.CheckCertificatesAPIView.as_view(),
     ),
     re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-service-changes/docker"

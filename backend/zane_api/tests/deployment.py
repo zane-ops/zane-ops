@@ -972,6 +972,15 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.create(
+            field="ports",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "host": 80,
+                "forwarded": 3000,
+            },
+            service=service,
+        )
 
         changes_payload = {
             "field": "urls",
@@ -981,7 +990,35 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_cannot_use_root_domain_as_wildcard(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.create(
+            field="ports",
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "host": 80,
+                "forwarded": 3000,
+            },
+            service=service,
+        )
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {"domain": f"*.{settings.ROOT_DOMAIN}"},
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
             data=changes_payload,
         )

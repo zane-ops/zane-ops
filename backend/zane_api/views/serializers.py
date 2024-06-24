@@ -72,7 +72,7 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        "Using the domain where zaneOps is installed is not allowed."
+                        "Using the domain where ZaneOps is installed is not allowed."
                     ]
                 }
             )
@@ -80,7 +80,15 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        "Using the domain where zaneOps is installed as a wildcard domain is not allowed."
+                        "Using the domain where ZaneOps is installed as a wildcard domain is not allowed."
+                    ]
+                }
+            )
+        if url["domain"] == f"*.{settings.ROOT_DOMAIN}":
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        "Using the root domain as a wildcard is not allowed as it would shadow all the other services installed on ZaneOps."
                     ]
                 }
             )

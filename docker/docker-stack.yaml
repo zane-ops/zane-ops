@@ -1,8 +1,6 @@
-version: "3.4"
-
 services:
   zane-proxy:
-    image: caddy:2.8-alpine
+    image: fredkiss3/zane-caddy-proxy:dev
     command: caddy run --resume
     deploy:
       replicas: 1

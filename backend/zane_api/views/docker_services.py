@@ -445,7 +445,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
         service.apply_pending_changes(deployment=new_deployment)
 
         if len(service.urls.all()) > 0:
-            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
         latest_deployment = service.latest_production_deployment
         if (
@@ -548,7 +548,7 @@ class RedeployDockerServiceAPIView(APIView):
             new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
 
         if len(service.urls.all()) > 0:
-            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}"
+            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
         new_deployment.service_snapshot = DockerServiceSerializer(service).data
         new_deployment.save()
