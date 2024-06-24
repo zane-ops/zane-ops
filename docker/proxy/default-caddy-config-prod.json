@@ -1,83 +1,68 @@
 {
   "@id": "root",
+  "logging": {
+    "logs": {
+      "default": {
+        "writer": {
+          "output": "stderr"
+        },
+        "encoder": {
+          "format": "json"
+        }
+      }
+    }
+  },
   "apps": {
     "http": {
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [":443"],
-          "logs": {
-            "logger_names": {
-              "{{ZANE_HOST}}": ""
-            }
-          },
+          "listen": [
+            ":443"
+          ],
           "routes": [
             {
-              "@id": "{{ZANE_HOST}}",
               "handle": [
                 {
                   "handler": "subroute",
+                  "@id": "zane-url-root",
                   "routes": [
                     {
-                      "@id": "{{ZANE_HOST}}-api",
+                      "@id": "zane-catchall-404",
                       "handle": [
                         {
-                          "handler": "subroute",
-                          "routes": [
-                            {
-                              "handle": [
-                                {
-                                  "handler": "reverse_proxy",
-                                  "upstreams": [
-                                    {
-                                      "dial": "zane-api:80"
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ],
-                      "match": [
-                        {
-                          "path": ["/api/*"]
-                        }
-                      ]
-                    },
-                    {
-                      "@id": "{{ZANE_HOST}}-front",
-                      "handle": [
-                        {
-                          "handler": "subroute",
-                          "routes": [
-                            {
-                              "handle": [
-                                {
-                                  "handler": "reverse_proxy",
-                                  "upstreams": [
-                                    {
-                                      "dial": "zane-front:80"
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ]
+                          "body": "This deployment cannot be found on this server.",
+                          "handler": "static_response",
+                          "status_code": 404
                         }
                       ]
                     }
                   ]
                 }
               ],
-              "match": [
-                {
-                  "host": ["{{ZANE_HOST}}"]
-                }
-              ],
               "terminal": true
             }
-          ]
+          ],
+          "tls_connection_policies": [
+            {}
+          ],
+          "logs": {}
+        }
+      }
+    },
+    "tls": {
+      "automation": {
+        "policies": [
+          {
+            "on_demand": true
+          }
+        ],
+        "on_demand": {
+          "permission": {
+            "@id": "tls-endpoint",
+            "endpoint": "http://zane-api.zaneops.internal:8000/api/_proxy/check-certiticates",
+            "module": "http"
+          }
         }
       }
     }

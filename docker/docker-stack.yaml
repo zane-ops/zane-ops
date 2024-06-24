@@ -1,8 +1,6 @@
-version: "3.4"
-
 services:
   zane-proxy:
-    image: fredkiss3/caddy-with-cloudflare-dns:2.8
+    image: fredkiss3/zane-caddy-proxy:dev
     command: caddy run --resume
     deploy:
       replicas: 1

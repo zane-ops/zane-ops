@@ -47,14 +47,10 @@ echo "Deleting networks..."
 docker network rm $(docker network ls -q --filter label=zane-managed=true) 2>/dev/null
 
 echo "Resetting caddy config..."
-sed -i'.bak' "s#{{ZANE_HOST}}#app.zaneops.local#g" ./docker/proxy/default-caddy-config.json
-
-curl "http://localhost:2019/load" \
+curl "http://127.0.0.1:2019/load" \
 	-H "Content-Type: application/json" \
 	-d @docker/proxy/default-caddy-config.json
-
-rm ./docker/proxy/default-caddy-config.json
-mv ./docker/proxy/default-caddy-config.json.bak ./docker/proxy/default-caddy-config.json
+curl -X POST "http://127.0.0.1:8000/api/_proxy/register-zane-to-proxy"
 
 echo "Recreating the superuser..."
 source ./backend/venv/bin/activate && python ./backend/manage.py createsuperuser

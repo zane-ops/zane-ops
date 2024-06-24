@@ -613,7 +613,7 @@ def get_caddy_request_for_deployment_url(
                                     "uri": "/api/auth/me/with-token",
                                 },
                                 "upstreams": [
-                                    {"dial": settings.ZANE_APP_SERVICE_HOST_FROM_PROXY}
+                                    {"dial": settings.ZANE_API_SERVICE_INTERNAL_DOMAIN}
                                 ],
                             },
                             {

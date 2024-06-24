@@ -1,16 +1,11 @@
 ARG CADDY_VERSION=2.8
 FROM caddy:${CADDY_VERSION}-builder AS builder
 
-ADD "https://github.com/acouvreur/sablier.git#v1.6.0" /sablier
 
 RUN xcaddy build \
     --with github.com/caddy-dns/cloudflare
 
-FROM caddy:${CADDY_VERSION}
-
-ARG ZANE_HOST=app.zaneops.local
-ENV ZANE_HOST=$ZANE_HOST
+FROM caddy:${CADDY_VERSION}-alpine
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 COPY default-caddy-config.json /config/caddy/autosave.json
-RUN sed -i "s#{{ZANE_HOST}}#$ZANE_HOST#g" /config/caddy/autosave.json
