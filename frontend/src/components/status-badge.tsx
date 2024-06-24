@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { cn } from "~/lib/utils";
 
 type TrackerColor = "red" | "green" | "yellow";
@@ -23,16 +23,28 @@ export function StatusBadge({ color, children }: StatusBadgeProps) {
         }
       )}
     >
-      <div
-        className={cn(
-          "border w-2 h-2 text-white border-transparent p-0.5 rounded-full",
-          {
-            "bg-green-600 ": color === "green",
-            "bg-red-600": color === "red",
-            "bg-yellow-600": color === "yellow"
-          }
-        )}
-      ></div>
+      <div className="relative w-2 h-2">
+        <span
+          className={cn(
+            "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+            {
+              "bg-green-600 ": color === "green",
+              "bg-red-600": color === "red",
+              "bg-yellow-600": color === "yellow"
+            }
+          )}
+        ></span>
+        <div
+          className={cn(
+            "relative border w-full h-full text-white border-transparent p-0.5 rounded-full",
+            {
+              "bg-green-600 ": color === "green",
+              "bg-red-600": color === "red",
+              "bg-yellow-600": color === "yellow"
+            }
+          )}
+        ></div>
+      </div>
       {children}
     </div>
   );
