@@ -4,7 +4,7 @@
     "logs": {
       "default": {
         "writer": {
-          "output": "stderr"
+          "output": "stdout"
         },
         "encoder": {
           "format": "json"
@@ -17,7 +17,10 @@
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [":443", ":80"],
+          "listen": [
+            ":443",
+            ":80"
+          ],
           "routes": [
             {
               "handle": [
@@ -29,7 +32,17 @@
                       "@id": "zane-catchall-404",
                       "handle": [
                         {
-                          "body": "This deployment cannot be found on this server.",
+                          "handler": "headers",
+                          "response": {
+                            "set": {
+                              "Content-Type": [
+                                "text/html"
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "body": "\u003c!doctype html\u003e\n\u003chtml\u003e\n\u003cmeta charset=utf-8\u003e\n\u003cmeta name=viewport content=\"width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no\"\u003e\n\u003ctitle\u003eDeployment Not Found\u003c/title\u003e\n\u003cstyle\u003e\n:root {\n\t--colorDefaultTextColor: #A3A9AC;\n\t--colorDefaultTextColorCard: #2D3B41;\n\t--colorBgApp: rgb(14, 30, 37);\n\t--colorBgInverse: hsl(175, 48%, 98%);\n\t--colorTextMuted: rgb(100, 110, 115);\n\t--colorError: #D32254;\n\t--colorBgCard: #fff;\n\t--colorShadow: #0e1e251f;\n\t--colorErrorText: rgb(142, 11, 48);\n\t--colorCardTitleCard: #2D3B41;\n\t--colorStackText: #222;\n\t--colorCodeText: #F5F5F5\n}\n\n\n:root {\n\t--background: 164 62% 99%;\n\t--foreground: 164 67% 0%;\n\t--muted: 164 7% 89%;\n\t--muted-foreground: 164 0% 26%;\n\t--popover: 164 62% 99%;\n\t--popover-foreground: 164 67% 0%;\n\t--card: 219, 40%, 18%;\n\t--toggle: 180, 23%, 95%;\n\t--card-foreground: 164 67% 0%;\n\t--border: 164 9% 90%;\n\t--input: 164 9% 90%;\n\t--primary: 164 61% 70%;\n\t--primary-foreground: 164 61% 10%;\n\t--secondary: 201 94% 80%;\n\t--secondary-foreground: 201 94% 20%;\n\t--accent: 164 10% 85%;\n\t--accent-foreground: 164 10% 25%;\n\t--destructive: 11 98% 31%;\n\t--destructive-foreground: 11 98% 91%;\n\t--ring: 164 61% 70%;\n\t--radius: 0.5rem;\n\t--loader: #003c57;\n\t--status-success: #bbf7d0 ;\n\t--status-error: #fecaca;\n\t--status-warning: #fef08a ;\n}\n\n@media (prefers-color-scheme: dark) {\n\t:root {\n\t--background: 226 19% 13%;\n\t--foreground: 231 28% 73%;\n\t--muted: 226 12% 17%;\n\t--muted-foreground: 226 12% 67%;\n\t--popover: 226 19% 10%;\n\t--popover-foreground: 231 28% 83%;\n\t--card: 164 43% 2%;\n\t--card-foreground: 164 30% 100%;\n\t--border: 226 9% 18%;\n\t--input: 226 9% 21%;\n\t--primary: 164 61% 70%;\n\t--primary-foreground: 164 61% 10%;\n\t--secondary: 201 94% 80%;\n\t--secondary-foreground: 201 94% 20%;\n\t--accent: 164 18% 21%;\n\t--accent-foreground: 164 18% 81%;\n\t--destructive: 11 98% 56%;\n\t--destructive-foreground: 0 0% 100%;\n\t--toggle: 164 43% 2%;\n\t--ring: 164 61% 70%;\n\t--loader: white;\n\t}\n}\n\n\nbody {\n\tfont-family: -apple-system, BlinkMacSystemFont, segoe ui, Roboto, Helvetica, Arial, sans-serif, apple color emoji, segoe ui emoji, segoe ui symbol;\n\tbackground: hsl(var(--background));\n\toverflow: hidden;\n\tmargin: 0;\n\tpadding: 0;\n\tfont-size: 1rem;\n\tline-height: 1.5\n}\n\nh1 {\n\tmargin: 0;\n\tfont-size: 1.375rem;\n\tline-height: 1.2\n}\n\n.main {\n\tposition: relative;\n\tdisplay: flex;\n\tflex-direction: column;\n\talign-items: center;\n\tjustify-content: center;\n\theight: 100vh;\n\twidth: 100vw\n}\n\n.card {\n\tposition: relative;\n\tdisplay: flex;\n\tflex-direction: column;\n\twidth: 75%;\n\tmax-width: 500px;\n\tpadding: 24px;\n\tbackground: hsl(var(--card));\n\tcolor: #fff;\n\tborder-radius: 8px;\n\tbox-shadow: 0 2px 4px rgba(14, 30, 37, .16)\n}\n\np:last-of-type {\n\tmargin-bottom: 0\n}\n\u003c/style\u003e\n\u003cdiv class=main\u003e\n\u003cdiv class=card\u003e\n\u003cdiv class=header\u003e\n\u003ch1\u003eDeployment Not Found\u003c/h1\u003e\n\u003c/div\u003e\n\u003cdiv class=body\u003e\n\u003cp\u003eLooks like you've followed a broken link or entered a URL that\ndoesn't exist yet on ZaneOps.\n\u003c/div\u003e\n\u003c/div\u003e\n\u003c/div\u003e\n\u003c/html\u003e",
                           "handler": "static_response",
                           "status_code": 404
                         }
@@ -41,7 +54,9 @@
               "terminal": true
             }
           ],
-          "tls_connection_policies": [{}],
+          "tls_connection_policies": [
+            {}
+          ],
           "logs": {}
         }
       }

@@ -12,6 +12,8 @@ class LogCollectorAPIView(APIView):
 
     def post(self, request: Request):
         log_data = request.data
-        query = request.query_params
-        print(f"{log_data=} {query=}")
+        for log in log_data:
+            if log["service"] != "proxy":
+                continue
+            print(f"{log=}")
         return Response({"status": "success"}, status=status.HTTP_200_OK)

@@ -527,6 +527,11 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 max_attempts=MAX_SERVICE_RESTART_COUNT,
                 delay=5,
             ),
+            log_driver="fluentd",
+            log_driver_options={
+                "fluentd-address": "host.docker.internal:24224",
+                "tag": f"zane.{deployment.hash}",
+            },
         )
 
 
@@ -649,9 +654,29 @@ def get_caddy_id_for_url(url: URL | ArchivedURL | URLDto):
 
 
 def get_caddy_request_for_url(
-    url: URL, service: DockerRegistryService, http_port: PortConfiguration
+    url: URL,
+    service: DockerRegistryService,
+    http_port: PortConfiguration,
+    deployment_hash: str = None,
+    deployment_slot: str = None,
 ):
-    proxy_handlers = []
+    proxy_handlers = [
+        {
+            "handler": "log_append",
+            "key": "zane.deployment.current_hash",
+            "value": deployment_hash,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane.deployment.current_slot",
+            "value": deployment_slot,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane.deployment.upstream",
+            "value": "{http.reverse_proxy.upstream.hostport}",
+        },
+    ]
 
     if url.strip_prefix:
         proxy_handlers.append(
@@ -734,7 +759,15 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 lambda route: route["@id"] != get_caddy_id_for_url(url), response.json()
             )
         )
-        routes.append(get_caddy_request_for_url(url, service, http_port))
+        routes.append(
+            get_caddy_request_for_url(
+                url,
+                service,
+                http_port,
+                deployment_hash=deployment.hash,
+                deployment_slot=deployment.slot,
+            )
+        )
         routes = sort_proxy_routes(routes)
 
         requests.patch(
