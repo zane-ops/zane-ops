@@ -813,14 +813,6 @@ def unexpose_docker_deployment_from_http(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}",
             timeout=5,
         )
-        requests.delete(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
-            headers={
-                "content-type": "application/json",
-                "accept": "application/json",
-            },
-            timeout=5,
-        )
 
 
 def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
@@ -839,18 +831,10 @@ def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
                 )
             )
 
-            # delete the domain and logger config when there are no routes for the domain anymore
+            # delete the domain when there are no routes for the domain anymore
             if len(routes) == 0:
                 requests.delete(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
-                    timeout=5,
-                )
-                requests.delete(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-                    headers={
-                        "content-type": "application/json",
-                        "accept": "application/json",
-                    },
                     timeout=5,
                 )
             else:
