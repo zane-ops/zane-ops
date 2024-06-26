@@ -520,7 +520,8 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 NetworkAttachmentConfig(
                     target=get_network_resource_name(service.project.id),
                     aliases=[alias for alias in deployment.network_aliases],
-                )
+                ),
+                settings.ZANE_DEFAULT_NETWORK,
             ],
             restart_policy=RestartPolicy(
                 condition="on-failure",
@@ -529,8 +530,12 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
             ),
             log_driver="fluentd",
             log_driver_options={
-                "fluentd-address": "host.docker.internal:24224",
+                "fluentd-address": settings.ZANE_FLUENTD_HOST,
                 "tag": f"zane.{deployment.hash}",
+                "mode": "non-blocking",
+                "fluentd-async": "true",
+                "fluentd-max-retries": 10,
+                "fluentd-sub-second-precision": "true",
             },
         )
 
@@ -663,17 +668,17 @@ def get_caddy_request_for_url(
     proxy_handlers = [
         {
             "handler": "log_append",
-            "key": "zane.deployment.current_hash",
+            "key": "zane_deployment_current_hash",
             "value": deployment_hash,
         },
         {
             "handler": "log_append",
-            "key": "zane.deployment.current_slot",
+            "key": "zane_deployment_current_slot",
             "value": deployment_slot,
         },
         {
             "handler": "log_append",
-            "key": "zane.deployment.upstream",
+            "key": "zane_deployment_upstream",
             "value": "{http.reverse_proxy.upstream.hostport}",
         },
     ]
