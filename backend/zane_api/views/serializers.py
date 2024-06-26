@@ -805,3 +805,82 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
             "healthcheck",
         ],
     )
+
+
+# ==============================
+#            Logs              #
+# ==============================
+
+
+class DockerContainerLogSerializer(serializers.Serializer):
+    log = serializers.CharField(required=True)
+    container_id = serializers.CharField(required=True)
+    container_name = serializers.CharField(required=True)
+    time = serializers.DateTimeField(required=True)
+    service = serializers.CharField(required=True)
+    tag = serializers.CharField(required=True)
+    SOURCES = (
+        ("stdout", _("standard ouput")),
+        ("stderr", _("standard error")),
+    )
+    source = serializers.ChoiceField(choices=SOURCES, required=True)
+
+
+class HTTPProxyLogRequestSerializer(serializers.Serializer):
+    remote_ip = serializers.IPAddressField(required=True)
+    client_ip = serializers.IPAddressField(required=True)
+    remote_port = serializers.CharField(required=True)
+    PROTOCOLS = [
+        ("HTTP/1.0", "HTTP/1.0"),
+        ("HTTP/1.1", "HTTP/1.1"),
+        ("HTTP/2.0", "HTTP/2.0"),
+    ]
+    REQUEST_METHODS = [
+        ("GET", "GET"),
+        ("POST", "POST"),
+        ("PUT", "PUT"),
+        ("DELETE", "DELETE"),
+        ("PATCH", "PATCH"),
+        ("OPTIONS", "OPTIONS"),
+        ("HEAD", "HEAD"),
+    ]
+    proto = serializers.ChoiceField(choices=PROTOCOLS, required=True)
+    method = serializers.ChoiceField(choices=REQUEST_METHODS, required=True)
+    host = serializers.CharField(required=True)
+    uri = serializers.CharField(required=True)
+    headers = serializers.DictField(
+        child=serializers.ListField(child=serializers.CharField()),
+        required=True,
+    )
+
+
+class HTTPProxyLogSerializer(serializers.Serializer):
+    ts = serializers.FloatField(required=True)
+    msg = serializers.CharField(required=True)
+    LOG_LEVELS = (
+        ("debug", _("debug")),
+        ("info", _("info")),
+        ("warn", _("warn")),
+        ("error", _("error")),
+        ("panic", _("panic")),
+        ("fatal", _("fatal")),
+    )
+    level = serializers.ChoiceField(choices=LOG_LEVELS, required=True)
+
+    duration = serializers.FloatField()
+    status = serializers.IntegerField(min_value=100)
+    resp_headers = serializers.DictField(
+        child=serializers.ListField(child=serializers.CharField())
+    )
+    request = HTTPProxyLogRequestSerializer()
+    zane_deployment_upstream = serializers.CharField()
+    zane_deployment_current_slot = serializers.CharField()
+    zane_deployment_current_hash = serializers.CharField()
+
+
+class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
+    child = DockerContainerLogSerializer()
+
+
+class DockerContainerLogsResponseSerializer(serializers.ListSerializer):
+    success = serializers.BooleanField()

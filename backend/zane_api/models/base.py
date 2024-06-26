@@ -742,22 +742,40 @@ class GitDeployment(BaseDeployment):
 class Log(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    service_id = models.CharField(null=True)
 
     class Meta:
         abstract = True
 
 
 class SimpleLog(Log):
-    class LogType(models.TextChoices):
+    class LogLevel(models.TextChoices):
         ERROR = "ERROR", _("Error")
         INFO = "INFO", _("Info")
 
+    class LogSource(models.TextChoices):
+        SYSTEM = "SYSTEM", _("System Logs")
+        PROXY = "PROXY", _("Proxy Logs")
+        SERVICE = "SERVICE", _("Service Logs")
+
     content = models.TextField(blank=True)
-    log_type = models.CharField(
+    level = models.CharField(
         max_length=10,
-        choices=LogType.choices,
-        default=LogType.INFO,
+        choices=LogLevel.choices,
+        default=LogLevel.INFO,
     )
+    source = models.CharField(
+        max_length=10,
+        choices=LogSource.choices,
+        default=LogSource.SERVICE,
+    )
+    service_id = models.CharField(null=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["source"]),
+            models.Index(fields=["service_id"]),
+        ]
 
 
 class HttpLog(Log):
@@ -776,11 +794,19 @@ class HttpLog(Log):
     )
     status = models.PositiveIntegerField()
     request_duration_ms = models.PositiveIntegerField()
-    request_domain = models.URLField(max_length=1000)
     request_headers = models.JSONField()
     response_headers = models.JSONField()
-    ip = models.GenericIPAddressField()
-    path = models.CharField(max_length=2000)
+    request_host = models.URLField(max_length=1000)
+    request_uri = models.CharField(max_length=2000)
+    request_ip = models.GenericIPAddressField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["service_id"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["request_host"]),
+            models.Index(fields=["request_uri"]),
+        ]
 
 
 class CRON(models.Model):
