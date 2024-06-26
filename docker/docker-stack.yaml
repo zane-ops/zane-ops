@@ -7,7 +7,7 @@ services:
       options:
         mode: "non-blocking"
         fluentd-address: "unix://$HOME/.fluentd/fluentd.sock"
-        #        fluentd-async: "true"
+        fluentd-async: "true"
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
         tag: zane.proxy
