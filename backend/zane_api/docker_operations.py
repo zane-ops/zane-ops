@@ -521,7 +521,6 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                     target=get_network_resource_name(service.project.id),
                     aliases=[alias for alias in deployment.network_aliases],
                 ),
-                settings.ZANE_DEFAULT_NETWORK,
             ],
             restart_policy=RestartPolicy(
                 condition="on-failure",
