@@ -276,7 +276,9 @@ export function ProjectList() {
                     <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
                     <h1 className="text-lg">You don't have any project yet</h1>
                   </div>
-                  <Button>Create One</Button>
+                  <a href="/create-project">
+                    <Button>Create One</Button>
+                  </a>
                 </section>
               </TableCell>
             ) : (
