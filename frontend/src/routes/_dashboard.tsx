@@ -47,7 +47,7 @@ export const Route = createFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
       <Header />
-      <main className="flex-grow  container p-6">
+      <main className="flex-grow container p-6">
         <Outlet />
       </main>
       <Footer />
@@ -89,7 +89,7 @@ function Header() {
   return (
     <>
       <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle t justify-between gap-4">
-        <Link href="/">
+        <Link to="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
@@ -100,7 +100,9 @@ function Header() {
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
               <MenubarContent className=" border border-border min-w-6">
-                <MenubarContentItem icon={Folder} text="Project" />
+                <Link to="/create-project">
+                  <MenubarContentItem icon={Folder} text="Project" />
+                </Link>
                 <MenubarContentItem icon={Globe} text="Web Service" />
                 <MenubarContentItem icon={Hammer} text="Worker" />
                 <MenubarContentItem icon={AlarmCheck} text="CRON" />
