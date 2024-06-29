@@ -31,13 +31,13 @@ export function formattedDate(dateInput: string | Date): string {
   const formattedDate = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric"
+    year: "numeric",
   }).format(date);
 
   return formattedDate;
 }
 
-export async function getCsrfToken() {
+export async function getCsrfHeaderToken() {
   await apiClient.GET("/api/csrf/");
   return { "X-CSRFToken": getCookie("csrftoken") };
 }
