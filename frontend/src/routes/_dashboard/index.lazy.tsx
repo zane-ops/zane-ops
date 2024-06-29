@@ -7,7 +7,7 @@ import {
   Rocket,
   Search,
   Settings,
-  Trash
+  Trash,
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { useAuthUser } from "~/components/helper/use-auth-user";
@@ -19,7 +19,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger
+  MenubarTrigger,
 } from "~/components/ui/menubar";
 
 import { Loader } from "~/components/loader";
@@ -34,25 +34,25 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { projectSearchSchema } from "~/key-factories";
 import {
   useArchivedProjectList,
-  useProjectList
+  useProjectList,
 } from "~/lib/hooks/use-project-list";
 import { cn } from "~/lib/utils";
 import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(AuthedView),
 });
 
 function AuthedView() {
@@ -77,7 +77,7 @@ export function ProjectList() {
     page = 1,
     per_page = 10,
     sort_by = ["-updated_at"],
-    status = "active"
+    status = "active",
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
 
@@ -88,7 +88,7 @@ export function ProjectList() {
     page,
     per_page,
     sort_by,
-    status
+    status,
   };
 
   const projectActiveQuery = useProjectList(filters);
@@ -117,7 +117,7 @@ export function ProjectList() {
     newSortBy.push(isDescending ? field : `-${field}`);
     navigate({
       search: { ...filters, sort_by: newSortBy },
-      replace: true
+      replace: true,
     });
   };
 
@@ -150,9 +150,9 @@ export function ProjectList() {
                   search: {
                     ...filters,
                     slug: e.target.value,
-                    page: 1
+                    page: 1,
                   },
-                  replace: true
+                  replace: true,
                 });
               }}
               defaultValue={slug}
@@ -175,9 +175,9 @@ export function ProjectList() {
                         search: {
                           ...filters,
                           page: 1,
-                          status: "active"
+                          status: "active",
                         },
-                        replace: true
+                        replace: true,
                       })
                     }
                     icon={Rocket}
@@ -190,9 +190,9 @@ export function ProjectList() {
                         search: {
                           ...filters,
                           page: 1,
-                          status: "archived"
+                          status: "archived",
                         },
-                        replace: true
+                        replace: true,
                       })
                     }
                     icon={Trash}
@@ -258,7 +258,7 @@ export function ProjectList() {
               </TableHead>
               <TableHead
                 className={cn({
-                  hidden: status === "archived"
+                  hidden: status === "archived",
                 })}
               >
                 Status
@@ -274,9 +274,9 @@ export function ProjectList() {
                     <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
                     <h1 className="text-lg">You don't have any project yet</h1>
                   </div>
-                  <Link to="/create-project">
-                    <Button>Create One</Button>
-                  </Link>
+                  <Button asChild>
+                    <Link to="/create-project">Create One</Link>
+                  </Button>
                 </section>
               </TableCell>
             ) : (
@@ -311,7 +311,7 @@ export function ProjectList() {
                   {"healthy_services" in project && (
                     <TableCell
                       className={cn({
-                        hidden: status === "archived"
+                        hidden: status === "archived",
                       })}
                     >
                       <StatusBadge
@@ -346,7 +346,7 @@ export function ProjectList() {
         {!noResults && !empty && (
           <div
             className={cn("my-4 block", {
-              "opacity-40 pointer-events-none": slug !== debouncedValue
+              "opacity-40 pointer-events-none": slug !== debouncedValue,
             })}
           >
             <Pagination
@@ -356,7 +356,7 @@ export function ProjectList() {
               onChangePage={(newPage) => {
                 navigate({
                   search: { ...filters, page: newPage },
-                  replace: true
+                  replace: true,
                 });
               }}
               onChangePerPage={(newPerPage) => {
@@ -364,9 +364,9 @@ export function ProjectList() {
                   search: {
                     ...filters,
                     page: 1,
-                    per_page: newPerPage
+                    per_page: newPerPage,
                   },
-                  replace: true
+                  replace: true,
                 });
               }}
             />
