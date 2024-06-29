@@ -37,7 +37,7 @@ export function formattedDate(dateInput: string | Date): string {
   return formattedDate;
 }
 
-export async function getCsrfHeader() {
+export async function getCsrfToken() {
   await apiClient.GET("/api/csrf/");
-  return getCookie("csrftoken");
+  return { "X-CSRFToken": getCookie("csrftoken") };
 }

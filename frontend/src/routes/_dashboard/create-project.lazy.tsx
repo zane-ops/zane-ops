@@ -11,7 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfHeader } from "~/utils";
+import { getCsrfToken } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/create-project")({
   component: withAuthRedirect(AuthedView)
@@ -40,7 +40,7 @@ export function CreateProject() {
     mutationFn: async (input: RequestInput<"post", "/api/projects/">) => {
       const { error, data } = await apiClient.POST("/api/projects/", {
         headers: {
-          "X-CSRFToken": await getCsrfHeader()
+          ...(await getCsrfToken())
         },
         body: input
       });
