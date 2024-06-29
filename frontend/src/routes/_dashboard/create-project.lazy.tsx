@@ -1,5 +1,4 @@
 import * as Form from "@radix-ui/react-form";
-import slugify from "@sindresorhus/slugify";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
@@ -12,7 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCookie } from "~/utils";
+import { getCookie, getCsrf } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/create-project")({
   component: withAuthRedirect(AuthedView)
@@ -39,11 +38,9 @@ export function CreateProject() {
 
   const { isPending, mutate, data } = useMutation({
     mutationFn: async (input: RequestInput<"post", "/api/projects/">) => {
-      await apiClient.GET("/api/csrf/");
-      const csrfToken = getCookie("csrftoken");
       const { error, data } = await apiClient.POST("/api/projects/", {
         headers: {
-          "X-CSRFToken": csrfToken
+          "X-CSRFToken": await getCsrf()
         },
         body: input
       });
@@ -63,8 +60,8 @@ export function CreateProject() {
       <Form.Root
         action={(formData) =>
           mutate({
-            slug: slugify(formData.get("slug")!).toString().trim(),
-            description: formData.get("description")!.toString()
+            slug: formData.get("slug").toString().trim(),
+            description: formData.get("description")?.toString()
           })
         }
         className="flex h-[60vh] flex-grow justify-center items-center"
