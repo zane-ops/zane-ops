@@ -15,7 +15,7 @@ import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCookie } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/create-project")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -43,9 +43,9 @@ export function CreateProject() {
       const csrfToken = getCookie("csrftoken");
       const { error, data } = await apiClient.POST("/api/projects/", {
         headers: {
-          "X-CSRFToken": csrfToken,
+          "X-CSRFToken": csrfToken
         },
-        body: input,
+        body: input
       });
 
       if (error) return error;
@@ -53,7 +53,7 @@ export function CreateProject() {
         navigate({ to: "/" });
         return;
       }
-    },
+    }
   });
 
   const errors = getFormErrorsFromResponseData(data);
@@ -64,7 +64,7 @@ export function CreateProject() {
         action={(formData) =>
           mutate({
             slug: slugify(formData.get("slug")!).toString().trim(),
-            description: formData.get("description")!.toString(),
+            description: formData.get("description")!.toString()
           })
         }
         className="flex h-[60vh] flex-grow justify-center items-center"
