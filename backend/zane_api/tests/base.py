@@ -25,7 +25,7 @@ class CustomAPIClient(APIClient):
     def post(
         self, path, data=None, format=None, content_type=None, follow=False, **extra
     ):
-        if type(data) is dict:
+        if type(data) is not str:
             data = json.dumps(data)
 
         with self.parent.captureOnCommitCallbacks(execute=True) as callbacks:
@@ -42,7 +42,7 @@ class CustomAPIClient(APIClient):
     def put(
         self, path, data=None, format=None, content_type=None, follow=False, **extra
     ):
-        if type(data) is dict:
+        if type(data) is not str:
             data = json.dumps(data)
         with self.parent.captureOnCommitCallbacks(execute=True):
             response = super().put(
@@ -58,7 +58,7 @@ class CustomAPIClient(APIClient):
     def patch(
         self, path, data=None, format=None, content_type=None, follow=False, **extra
     ):
-        if type(data) is dict:
+        if type(data) is not str:
             data = json.dumps(data)
         with self.parent.captureOnCommitCallbacks(execute=True):
             response = super().patch(
@@ -74,7 +74,7 @@ class CustomAPIClient(APIClient):
     def delete(
         self, path, data=None, format=None, content_type=None, follow=False, **extra
     ):
-        if type(data) == dict:
+        if type(data) is not str:
             data = json.dumps(data)
         with self.parent.captureOnCommitCallbacks(execute=True):
             response = super().delete(

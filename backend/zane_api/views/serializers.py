@@ -813,7 +813,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
 
 
 class DockerContainerLogSerializer(serializers.Serializer):
-    log = serializers.CharField(required=True)
+    log = serializers.CharField(required=True, allow_blank=True)
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
     time = serializers.DateTimeField(required=True)
@@ -882,5 +882,5 @@ class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
     child = DockerContainerLogSerializer()
 
 
-class DockerContainerLogsResponseSerializer(serializers.ListSerializer):
+class DockerContainerLogsResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()

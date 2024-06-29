@@ -2,6 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import APITestCase
+from ..utils import jprint
 
 
 class HTTPLogCollectViewTests(APITestCase):
@@ -22,3 +23,4 @@ class HTTPLogCollectViewTests(APITestCase):
             reverse("zane_api:logs.tail"), data=simple_proxy_logs
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
