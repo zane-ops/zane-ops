@@ -20,18 +20,16 @@ function AuthedView() {
   }
 
   return (
-    <dl>
-      <h1>
-        <MetaTitle title="Create Project" />
-        <CreateProject />
-      </h1>
-    </dl>
+    <>
+      <MetaTitle title="Create Project" />
+      <CreateProject />
+    </>
   );
 }
 
 export function CreateProject() {
   return (
-    <>
+    <main>
       <Form.Root className="flex h-[60vh] flex-grow justify-center items-center">
         <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
           <h1 className="text-3xl font-bold">New Project</h1>
@@ -59,14 +57,12 @@ export function CreateProject() {
           </Form.Field>
 
           <Form.Submit asChild>
-            <div>
-              <Button className="lg:w-fit w-full lg:float-right  p-3 rounded-lg">
-                Create a new project
-              </Button>
-            </div>
+            <Button className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg">
+              Create a new project
+            </Button>
           </Form.Submit>
         </div>
       </Form.Root>
-    </>
+    </main>
   );
 }

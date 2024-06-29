@@ -89,9 +89,9 @@ function Header() {
   return (
     <>
       <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle t justify-between gap-4">
-        <a href="/">
+        <Link to="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
-        </a>
+        </Link>
         <div className="md:flex hidden  w-full items-center">
           <Menubar className="border-none w-fit text-black bg-primary">
             <MenubarMenu>
@@ -100,9 +100,9 @@ function Header() {
                 <ChevronsUpDown className="w-4" />
               </MenubarTrigger>
               <MenubarContent className=" border border-border min-w-6">
-                <a href="/create-project">
+                <Link to="/create-project">
                   <MenubarContentItem icon={Folder} text="Project" />
-                </a>
+                </Link>
                 <MenubarContentItem icon={Globe} text="Web Service" />
                 <MenubarContentItem icon={Hammer} text="Worker" />
                 <MenubarContentItem icon={AlarmCheck} text="CRON" />

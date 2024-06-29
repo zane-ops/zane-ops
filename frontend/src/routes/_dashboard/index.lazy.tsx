@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
@@ -64,12 +64,10 @@ function AuthedView() {
   }
 
   return (
-    <dl>
-      <h1>
-        <MetaTitle title="Dashboard" />
-        <ProjectList />
-      </h1>
-    </dl>
+    <>
+      <MetaTitle title="Create Project" />
+      <ProjectList />
+    </>
   );
 }
 
@@ -276,9 +274,9 @@ export function ProjectList() {
                     <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
                     <h1 className="text-lg">You don't have any project yet</h1>
                   </div>
-                  <a href="/create-project">
+                  <Link to="/create-project">
                     <Button>Create One</Button>
-                  </a>
+                  </Link>
                 </section>
               </TableCell>
             ) : (
