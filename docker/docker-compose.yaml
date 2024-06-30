@@ -141,10 +141,3 @@ volumes:
 networks:
   zane:
     external: true
-    #ipam:
-    #  config:
-    #    - subnet: 10.5.0.0/16
-    #      gateway: 10.5.0.1
-    # This network is created like this :
-    # `docker network create --driver overlay --attachable --subnet=10.5.0.0/16 zane`
-    # IP range is between 10.5.0.0 and 10.5.255.255
