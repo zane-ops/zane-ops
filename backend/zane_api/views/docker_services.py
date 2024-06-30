@@ -684,6 +684,23 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             )
 
 
+class DockerServiceDeploymentLogsAPIView(APIView):
+    # serializer_class = DockerServiceDeploymentSerializer
+
+    @extend_schema(
+        # request=DockerServiceCreateRequestSerializer,
+        operation_id="getDockerDeploymentLogs",
+    )
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        return Response()
+
+
 class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
         responses={
