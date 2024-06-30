@@ -72,6 +72,7 @@ if settings.DEBUG:
         re_path(
             "^_proxy/register-zane-to-proxy/?$",
             views.RegisterZaneProxyAPIView.as_view(),
+            name="proxy.register_zane",
         ),
     ]
 
@@ -80,6 +81,12 @@ urlpatterns += [
     re_path(
         "^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
+        name="proxy.check_certificates",
+    ),
+    re_path(
+        "^logs/tail/?$",
+        views.LogTailAPIView.as_view(),
+        name="logs.tail",
     ),
     re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-service-changes/docker"

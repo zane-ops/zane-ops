@@ -352,3 +352,9 @@ class DockerServiceSnapshot:
             healthcheck=healthcheck,
             credentials=credentials,
         )
+
+
+class ZaneServices:
+    PROXY = "zane.proxy"
+    API = "zane.api"
+    WORKER = "zane.worker"

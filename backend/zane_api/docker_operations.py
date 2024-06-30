@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import List, TypedDict
@@ -520,13 +521,27 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 NetworkAttachmentConfig(
                     target=get_network_resource_name(service.project.id),
                     aliases=[alias for alias in deployment.network_aliases],
-                )
+                ),
             ],
             restart_policy=RestartPolicy(
                 condition="on-failure",
                 max_attempts=MAX_SERVICE_RESTART_COUNT,
                 delay=5,
             ),
+            log_driver="fluentd",
+            log_driver_options={
+                "fluentd-address": settings.ZANE_FLUENTD_HOST,
+                "tag": json.dumps(
+                    {
+                        "service_id": deployment.service_id,
+                        "deployment_id": deployment.hash,
+                    }
+                ),
+                "mode": "non-blocking",
+                "fluentd-async": "true",
+                "fluentd-max-retries": "10",
+                "fluentd-sub-second-precision": "true",
+            },
         )
 
 
@@ -649,9 +664,29 @@ def get_caddy_id_for_url(url: URL | ArchivedURL | URLDto):
 
 
 def get_caddy_request_for_url(
-    url: URL, service: DockerRegistryService, http_port: PortConfiguration
+    url: URL,
+    service: DockerRegistryService,
+    http_port: PortConfiguration,
+    deployment_hash: str = None,
+    deployment_slot: str = None,
 ):
-    proxy_handlers = []
+    proxy_handlers = [
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_current_hash",
+            "value": deployment_hash,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_current_slot",
+            "value": deployment_slot,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_upstream",
+            "value": "{http.reverse_proxy.upstream.hostport}",
+        },
+    ]
 
     if url.strip_prefix:
         proxy_handlers.append(
@@ -734,7 +769,15 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 lambda route: route["@id"] != get_caddy_id_for_url(url), response.json()
             )
         )
-        routes.append(get_caddy_request_for_url(url, service, http_port))
+        routes.append(
+            get_caddy_request_for_url(
+                url,
+                service,
+                http_port,
+                deployment_hash=deployment.hash,
+                deployment_slot=deployment.slot,
+            )
+        )
         routes = sort_proxy_routes(routes)
 
         requests.patch(
@@ -813,14 +856,6 @@ def unexpose_docker_deployment_from_http(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}",
             timeout=5,
         )
-        requests.delete(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{deployment.url}",
-            headers={
-                "content-type": "application/json",
-                "accept": "application/json",
-            },
-            timeout=5,
-        )
 
 
 def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
@@ -839,18 +874,10 @@ def apply_deleted_urls_changes(urls_to_delete: list[URLDto]) -> None:
                 )
             )
 
-            # delete the domain and logger config when there are no routes for the domain anymore
+            # delete the domain when there are no routes for the domain anymore
             if len(routes) == 0:
                 requests.delete(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
-                    timeout=5,
-                )
-                requests.delete(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-server/logs/logger_names/{url.domain}",
-                    headers={
-                        "content-type": "application/json",
-                        "accept": "application/json",
-                    },
                     timeout=5,
                 )
             else:

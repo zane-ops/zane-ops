@@ -22,7 +22,14 @@ services:
     depends_on:
       - db
       - redis
-    network_mode: 'host'
+    environment:
+      REDIS_URL: redis://zane.cache:6379/0
+      DB_HOST: zane.db
+      DB_PORT: 5432
+      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+      ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
+    networks:
+      - zane
   celery-beat:
     build:
       context: ../backend
@@ -37,13 +44,15 @@ services:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      REDIS_URL: redis://redis:6379/0
-      DB_HOST: db
+      REDIS_URL: redis://zane.redis:6379/0
+      DB_HOST: zane.db
       DB_PORT: 5432
-      CADDY_PROXY_ADMIN_HOST: http://host.docker.internal:2019
+      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
     depends_on:
       - db
       - redis
+    networks:
+      - zane
   registry:
     image: registry:2
     container_name: zane-registry
@@ -59,6 +68,10 @@ services:
       - registry-lib-data:/var/lib/registry
     ports:
       - "9989:5000"
+    networks:
+      zane:
+        aliases:
+          - zane.registry
   redis:
     image: valkey/valkey:7.2.5-alpine
     container_name: zane-redis
@@ -66,6 +79,10 @@ services:
       - redis-data:/data
     ports:
       - "6381:6379"
+    networks:
+      zane:
+        aliases:
+          - zane.cache
   db:
     image: postgres:12-alpine
     container_name: zane-db
@@ -78,12 +95,18 @@ services:
       POSTGRES_DB: zane
     ports:
       - "5434:5432"
+    networks:
+      zane:
+        aliases:
+          - zane.db
   adminer:
     image: adminer
     container_name: zane-adminer
     restart: always
     ports:
       - "8081:8080"
+    networks:
+      - zane
   redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui
@@ -93,6 +116,21 @@ services:
       - "8089:5540"
     volumes:
       - redisinsight:/data
+    networks:
+      - zane
+  fluentd:
+    image: fluentd:v1.16.2-1.1
+    volumes:
+      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
+      - "$HOME/.fluentd/:/var/fluentd/"
+    networks:
+      zane:
+        aliases:
+          - zane.fluentd
+    environment:
+      - API_HOST=host.docker.internal
+    deploy:
+      mode: global
 volumes:
   db-data:
   redis-data:
@@ -100,3 +138,6 @@ volumes:
   caddy-data:
   registry-lib-data:
   pgadmin-data:
+networks:
+  zane:
+    external: true

@@ -2,6 +2,15 @@ services:
   zane-proxy:
     image: fredkiss3/zane-caddy-proxy:dev
     command: caddy run --resume
+    logging:
+      driver: "fluentd"
+      options:
+        mode: "non-blocking"
+        fluentd-address: "unix://$HOME/.fluentd/fluentd.sock"
+        fluentd-async: "true"
+        fluentd-max-retries: 10
+        fluentd-sub-second-precision: "true"
+        tag: "{\"service_id\":\"zane.proxy\"}"
     deploy:
       replicas: 1
       update_config:
@@ -28,6 +37,15 @@ services:
       - caddy-config:/config
     environment:
       CADDY_ADMIN: 0.0.0.0:2019
+    networks:
+      zane:
+        aliases:
+          - zane.proxy
 volumes:
   caddy-data:
   caddy-config:
+networks:
+  zane:
+    external: true
+    # This network is created like this :
+    # `docker network create --driver overlay --attachable --subnet=10.5.0.0/16 zane`

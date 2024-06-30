@@ -444,6 +444,13 @@ class DockerRegistryService(BaseService):
             case _:
                 change.save()
 
+    @property
+    def logs(self):
+        deployment = self.latest_production_deployment
+        if deployment is not None:
+            return deployment.logs
+        return None
+
 
 class GitRepositoryService(BaseService):
     ID_PREFIX = "srv_git_"
@@ -519,9 +526,6 @@ class Volume(TimestampedModel):
 
 class BaseDeployment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-
-    logs = models.ManyToManyField(to="SimpleLog")
-    http_logs = models.ManyToManyField(to="HttpLog")
     url = models.URLField(null=True)
 
     class Meta:
@@ -598,6 +602,14 @@ class DockerDeployment(BaseDeployment):
             models.Index(fields=["url"]),
             models.Index(fields=["is_current_production"]),
         ]
+
+    @property
+    def logs(self):
+        return SimpleLog.objects.filter(deployment_id=self.hash)
+
+    @property
+    def http_logs(self):
+        return HttpLog.objects.filter(deployment_id=self.hash)
 
 
 class BaseDeploymentChange(TimestampedModel):
@@ -742,22 +754,45 @@ class GitDeployment(BaseDeployment):
 class Log(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    service_id = models.CharField(null=True)
+    deployment_id = models.CharField(null=True)
+    time = models.DateTimeField()
 
     class Meta:
         abstract = True
 
 
 class SimpleLog(Log):
-    class LogType(models.TextChoices):
+    class LogLevel(models.TextChoices):
         ERROR = "ERROR", _("Error")
         INFO = "INFO", _("Info")
 
-    content = models.TextField(blank=True)
-    log_type = models.CharField(
+    class LogSource(models.TextChoices):
+        SYSTEM = "SYSTEM", _("System Logs")
+        PROXY = "PROXY", _("Proxy Logs")
+        SERVICE = "SERVICE", _("Service Logs")
+
+    content = models.JSONField(null=True)
+    level = models.CharField(
         max_length=10,
-        choices=LogType.choices,
-        default=LogType.INFO,
+        choices=LogLevel.choices,
+        default=LogLevel.INFO,
     )
+    source = models.CharField(
+        max_length=10,
+        choices=LogSource.choices,
+        default=LogSource.SERVICE,
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["deployment_id"]),
+            models.Index(fields=["service_id"]),
+            models.Index(fields=["source"]),
+            models.Index(fields=["level"]),
+            models.Index(fields=["time"]),
+        ]
+        ordering = ("time",)
 
 
 class HttpLog(Log):
@@ -776,11 +811,22 @@ class HttpLog(Log):
     )
     status = models.PositiveIntegerField()
     request_duration_ms = models.PositiveIntegerField()
-    request_domain = models.URLField(max_length=1000)
     request_headers = models.JSONField()
     response_headers = models.JSONField()
-    ip = models.GenericIPAddressField()
-    path = models.CharField(max_length=2000)
+    request_host = models.URLField(max_length=1000)
+    request_uri = models.CharField(max_length=2000)
+    request_ip = models.GenericIPAddressField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["deployment_id"]),
+            models.Index(fields=["service_id"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["request_host"]),
+            models.Index(fields=["request_uri"]),
+            models.Index(fields=["time"]),
+        ]
+        ordering = ("time",)
 
 
 class CRON(models.Model):

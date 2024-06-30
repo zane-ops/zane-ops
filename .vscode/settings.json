@@ -16,5 +16,8 @@
   "typescript.tsdk": "frontend/node_modules/typescript/lib",
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
   }
 }

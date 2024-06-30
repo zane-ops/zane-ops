@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, exceptions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from . import serializers
@@ -31,6 +32,7 @@ class CertificateCheckSerializer(serializers.Serializer):
 @extend_schema(exclude=True)
 class CheckCertificatesAPIView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
     throttle_scope = "tls_certificates"
 
     def get(self, request: Request):
