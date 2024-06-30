@@ -444,6 +444,13 @@ class DockerRegistryService(BaseService):
             case _:
                 change.save()
 
+    @property
+    def logs(self):
+        deployment = self.latest_production_deployment
+        if deployment is not None:
+            return deployment.logs
+        return None
+
 
 class GitRepositoryService(BaseService):
     ID_PREFIX = "srv_git_"
@@ -519,9 +526,6 @@ class Volume(TimestampedModel):
 
 class BaseDeployment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-
-    logs = models.ManyToManyField(to="SimpleLog")
-    http_logs = models.ManyToManyField(to="HttpLog")
     url = models.URLField(null=True)
 
     class Meta:
@@ -598,6 +602,14 @@ class DockerDeployment(BaseDeployment):
             models.Index(fields=["url"]),
             models.Index(fields=["is_current_production"]),
         ]
+
+    @property
+    def logs(self):
+        return SimpleLog.objects.filter(deployment_id=self.hash)
+
+    @property
+    def http_logs(self):
+        return HttpLog.objects.filter(deployment_id=self.hash)
 
 
 class BaseDeploymentChange(TimestampedModel):
@@ -743,6 +755,8 @@ class Log(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     service_id = models.CharField(null=True)
+    deployment_id = models.CharField(null=True)
+    time = models.DateTimeField()
 
     class Meta:
         abstract = True
@@ -758,7 +772,7 @@ class SimpleLog(Log):
         PROXY = "PROXY", _("Proxy Logs")
         SERVICE = "SERVICE", _("Service Logs")
 
-    content = models.TextField(blank=True)
+    content = models.JSONField(null=True)
     level = models.CharField(
         max_length=10,
         choices=LogLevel.choices,
@@ -769,13 +783,16 @@ class SimpleLog(Log):
         choices=LogSource.choices,
         default=LogSource.SERVICE,
     )
-    service_id = models.CharField(null=True)
 
     class Meta:
         indexes = [
-            models.Index(fields=["source"]),
+            models.Index(fields=["deployment_id"]),
             models.Index(fields=["service_id"]),
+            models.Index(fields=["source"]),
+            models.Index(fields=["level"]),
+            models.Index(fields=["time"]),
         ]
+        ordering = ("time",)
 
 
 class HttpLog(Log):
@@ -802,11 +819,14 @@ class HttpLog(Log):
 
     class Meta:
         indexes = [
+            models.Index(fields=["deployment_id"]),
             models.Index(fields=["service_id"]),
             models.Index(fields=["status"]),
             models.Index(fields=["request_host"]),
             models.Index(fields=["request_uri"]),
+            models.Index(fields=["time"]),
         ]
+        ordering = ("time",)
 
 
 class CRON(models.Model):

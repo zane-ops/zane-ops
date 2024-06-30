@@ -1,11 +1,13 @@
+import json
+
 from django.urls import reverse
 from rest_framework import status
 
-from .base import APITestCase
-from ..utils import jprint
+from .base import AuthAPITestCase
+from ..models import SimpleLog, DockerDeployment
 
 
-class HTTPLogCollectViewTests(APITestCase):
+class SimpleLogCollectViewTests(AuthAPITestCase):
     def test_collect_proxy_source_logs(self):
         simple_proxy_logs = [
             {
@@ -15,12 +17,131 @@ class HTTPLogCollectViewTests(APITestCase):
                 "container_name": "/zane_zane-proxy.1.kj2d879vqbnpishh4d66i47do",
                 "time": "2024-06-25T14:16:25+0000",
                 "service": "proxy",
-                "tag": "zane.proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
             }
         ]
+        json_log = json.loads(simple_proxy_logs[0]["log"])
 
         response = self.client.post(
             reverse("zane_api:logs.tail"), data=simple_proxy_logs
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        jprint(response.json())
+
+        self.assertEqual(1, SimpleLog.objects.count())
+        log: SimpleLog = SimpleLog.objects.first()
+        self.assertEqual(SimpleLog.LogSource.PROXY, log.source)
+        self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
+        self.assertIsNotNone(log.time)
+        self.assertEqual(json_log, log.content)
+
+    def test_collect_service_logs(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+
+        deployment: DockerDeployment = service.deployments.first()
+
+        simple_logs = [
+            {
+                "log": "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+            {
+                "log": "1:C 30 Jun 2024 03:17:14.369 * Redis version=7.2.5, bits=64, commit=00000000, modified=0, pid=1, just started",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+            {
+                "log": "1:C 30 Jun 2024 03:17:14.369 * Configuration loaded",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+            {
+                "log": "1:M 30 Jun 2024 03:17:14.369 * monotonic clock: POSIX clock_gettime",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+            {
+                "log": "1:M 30 Jun 2024 03:17:14.371 * Running mode=standalone, port=6379.",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+            {
+                "log": "1:M 30 Jun 2024 03:17:14.375 * Server initialized",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+            {
+                "log": "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+        ]
+
+        response = self.client.post(reverse("zane_api:logs.tail"), data=simple_logs)
+
+        self.assertEqual(len(simple_logs), deployment.logs.count())
+        log: SimpleLog = deployment.logs.first()
+        self.assertEqual(SimpleLog.LogSource.SERVICE, log.source)
+        self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
+        self.assertIsNotNone(log.time)
+        self.assertEqual(
+            "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
+            log.content,
+        )
+        self.assertIsNotNone(log.service_id)

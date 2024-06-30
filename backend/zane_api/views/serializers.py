@@ -817,7 +817,6 @@ class DockerContainerLogSerializer(serializers.Serializer):
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
     time = serializers.DateTimeField(required=True)
-    service = serializers.CharField(required=True)
     tag = serializers.CharField(required=True)
     SOURCES = (
         ("stdout", _("standard ouput")),
@@ -826,7 +825,7 @@ class DockerContainerLogSerializer(serializers.Serializer):
     source = serializers.ChoiceField(choices=SOURCES, required=True)
 
 
-class HTTPProxyLogRequestSerializer(serializers.Serializer):
+class HTTPServiceRequestSerializer(serializers.Serializer):
     remote_ip = serializers.IPAddressField(required=True)
     client_ip = serializers.IPAddressField(required=True)
     remote_port = serializers.CharField(required=True)
@@ -854,7 +853,7 @@ class HTTPProxyLogRequestSerializer(serializers.Serializer):
     )
 
 
-class HTTPProxyLogSerializer(serializers.Serializer):
+class HTTPServiceLogSerializer(serializers.Serializer):
     ts = serializers.FloatField(required=True)
     msg = serializers.CharField(required=True)
     LOG_LEVELS = (
@@ -872,7 +871,7 @@ class HTTPProxyLogSerializer(serializers.Serializer):
     resp_headers = serializers.DictField(
         child=serializers.ListField(child=serializers.CharField())
     )
-    request = HTTPProxyLogRequestSerializer()
+    request = HTTPServiceRequestSerializer()
     zane_deployment_upstream = serializers.CharField()
     zane_deployment_current_slot = serializers.CharField()
     zane_deployment_current_hash = serializers.CharField()
@@ -883,4 +882,5 @@ class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
 
 
 class DockerContainerLogsResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
+    simple_logs_inserted = serializers.IntegerField(min_value=0)
+    http_logs_inserted = serializers.IntegerField(min_value=0)

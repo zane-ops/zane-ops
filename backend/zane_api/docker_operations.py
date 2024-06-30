@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from time import monotonic, sleep
 from typing import List, TypedDict
@@ -530,7 +531,12 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
             log_driver="fluentd",
             log_driver_options={
                 "fluentd-address": settings.ZANE_FLUENTD_HOST,
-                "tag": f"zane.{deployment.hash}",
+                "tag": json.dumps(
+                    {
+                        "service_id": deployment.service_id,
+                        "deployment_id": deployment.hash,
+                    }
+                ),
                 "mode": "non-blocking",
                 "fluentd-async": "true",
                 "fluentd-max-retries": "10",

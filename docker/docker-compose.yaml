@@ -22,12 +22,12 @@ services:
     depends_on:
       - db
       - redis
-    #    network_mode: 'host'
     environment:
       REDIS_URL: redis://zane.cache:6379/0
       DB_HOST: zane.db
       DB_PORT: 5432
       CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+      ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
     networks:
       - zane
   celery-beat:

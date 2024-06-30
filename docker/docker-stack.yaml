@@ -10,7 +10,7 @@ services:
         fluentd-async: "true"
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
-        tag: zane.proxy
+        tag: "{\"service_id\":\"zane.proxy\"}"
     deploy:
       replicas: 1
       update_config:
