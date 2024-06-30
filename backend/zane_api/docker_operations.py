@@ -533,7 +533,7 @@ def create_resources_for_docker_service_deployment(deployment: DockerDeployment)
                 "tag": f"zane.{deployment.hash}",
                 "mode": "non-blocking",
                 "fluentd-async": "true",
-                "fluentd-max-retries": 10,
+                "fluentd-max-retries": "10",
                 "fluentd-sub-second-precision": "true",
             },
         )

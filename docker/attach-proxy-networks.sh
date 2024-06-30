@@ -13,13 +13,10 @@ if [ ! -f $file ]; then
 fi
 
 # Read and prepare network IDs from the file
-network_options=""
 while read p; do
   net_id=$(echo $p | sed 's/"//g')
-  network_options+=" --network-add $net_id"
+  if [ -n "$net_id" ]; then
+   docker service update --network-add $net_id $service_name
+  fi
 done <$file
-if [ -n "$network_options" ]; then
-    # Update the service with all networks
-    docker service update $network_options $service_name
-fi
 
