@@ -14,7 +14,7 @@ import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/create-project")({
-  component: withAuthRedirect(AuthedView),
+  component: withAuthRedirect(AuthedView)
 });
 
 function AuthedView() {
@@ -40,9 +40,9 @@ export function CreateProject() {
     mutationFn: async (input: RequestInput<"post", "/api/projects/">) => {
       const { error, data } = await apiClient.POST("/api/projects/", {
         headers: {
-          ...(await getCsrfTokenHeader()),
+          ...(await getCsrfTokenHeader())
         },
-        body: input,
+        body: input
       });
 
       if (error) return error;
@@ -50,7 +50,7 @@ export function CreateProject() {
         navigate({ to: "/" });
         return;
       }
-    },
+    }
   });
 
   const errors = getFormErrorsFromResponseData(data);
@@ -61,7 +61,7 @@ export function CreateProject() {
         action={(formData) =>
           mutate({
             slug: formData.get("slug")?.toString().trim(),
-            description: formData.get("description")?.toString(),
+            description: formData.get("description")?.toString()
           })
         }
         className="flex h-[60vh] flex-grow justify-center items-center"
