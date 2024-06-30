@@ -1,3 +1,5 @@
+import { apiClient } from "./api/client";
+
 /**
  * Get the value of a cookie with the given name.
  * @example
@@ -33,4 +35,9 @@ export function formattedDate(dateInput: string | Date): string {
   }).format(date);
 
   return formattedDate;
+}
+
+export async function getCsrfTokenHeader() {
+  await apiClient.GET("/api/csrf/");
+  return { "X-CSRFToken": getCookie("csrftoken") };
 }
