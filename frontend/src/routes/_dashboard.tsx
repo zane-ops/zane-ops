@@ -41,7 +41,7 @@ import {
   SheetTrigger
 } from "~/components/ui/sheet";
 import { userKeys } from "~/key-factories";
-import { deleteCookie, getCookie } from "~/utils";
+import { deleteCookie, getCookie, getCsrfTokenHeader } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard")({
   component: () => (
@@ -62,12 +62,9 @@ function Header() {
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
     mutationFn: async () => {
-      // set csrf cookie token
-      await apiClient.GET("/api/csrf/");
-      const csrfToken = getCookie("csrftoken");
       const { error } = await apiClient.DELETE("/api/auth/logout/", {
         headers: {
-          "X-CSRFToken": csrfToken
+          ...(await getCsrfTokenHeader())
         }
       });
       if (error) {
