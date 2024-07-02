@@ -80,40 +80,60 @@ function ProjectDetail() {
       <Separator />
       <div className="py-8  grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 place-content-center  gap-8">
         <GitServiceCard
-          name="API"
-          branchName="Master"
-          repository="https://github.com/zaneops/zaneops"
-          status="undeployed"
-          updatedAt="Monday"
-          lastCommitMessage="Fix: fix"
-          url="https://www.sandbox-blue-green-demo-docker-atkdanpihyn.zaneops.local"
+          name="api"
+          branchName="main"
+          repository="https://github.com/zaneops/zaneops/backend"
+          status="healthy"
+          updatedAt="yesterday"
+          lastCommitMessage="fix: logs api #fbe5f7d"
+          url="https://www.app.zaneops.dev/api/"
+        />
+
+        <GitServiceCard
+          name="frontend"
+          branchName="main"
+          repository="https://github.com/zaneops/zaneops/frontend"
+          status="healthy"
+          updatedAt="yesterday"
+          lastCommitMessage="fix: logs api #fbe5f7d"
+          url="https://www.app.zaneops.dev/"
+        />
+
+        <GitServiceCard
+          name="celery-worker"
+          branchName="main"
+          repository="https://github.com/zaneops/zaneops/backend"
+          status="sleeping"
+          updatedAt="yesterday"
+          lastCommitMessage="fix: logs api #fbe5f7d"
+          url="https://www.app.zaneops.dev/"
         />
 
         <DockerServiceCard
-          name="Redis"
+          name="redis"
           image="valkey/valkey"
           tag="latest"
           volumeNumber={1}
-          status="undeployed"
+          status="healthy"
           updatedAt="2 months ago"
         />
 
         <DockerServiceCard
-          name="Database"
+          name="database"
           image="postgres"
           tag="15:alpine"
           volumeNumber={0}
-          status="sleeping"
+          status="healthy"
           updatedAt="2 months ago"
         />
 
         <DockerServiceCard
-          name="Proxy"
+          name="proxy"
           image="ghcr.io/zaneops/proxy"
           tag="1.5.0"
           volumeNumber={1}
           url="https://www.ghcr.io/zaneops/proxy"
-          status="unhealthy"
+          status="healthy"
           updatedAt="2 months ago"
         />
       </div>

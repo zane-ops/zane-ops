@@ -15,6 +15,12 @@ import {
   CardTitle
 } from "./ui/card";
 import { Separator } from "./ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "./ui/tooltip";
 
 type DockerServiceCardProps = {
   name: string;
@@ -37,32 +43,47 @@ export function DockerServiceCard({
 }: DockerServiceCardProps) {
   return (
     <Card className="rounded-2xl flex flex-col h-[220px] bg-toggle relative">
-      <span className="absolute flex h-4 w-4 -top-2 -right-2">
-        {status !== "undeployed" && (
-          <span
-            className={cn(
-              "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
-              {
-                "bg-green-400": status === "healthy",
-                "bg-red-400": status === "unhealthy",
-                "bg-secondary": status === "sleeping"
-              }
-            )}
-          />
-        )}
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <span className="absolute cursor-pointer flex h-4 w-4 -top-2 -right-2">
+              {status !== "undeployed" && (
+                <span
+                  className={cn(
+                    "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
+                    {
+                      "bg-green-400": status === "healthy",
+                      "bg-red-400": status === "unhealthy",
+                      "bg-secondary": status === "sleeping"
+                    }
+                  )}
+                />
+              )}
 
-        <span
-          className={cn(
-            "relative inline-flex rounded-full h-4 w-4 bg-green-500",
-            {
-              "bg-green-500": status === "healthy",
-              "bg-red-500": status === "unhealthy",
-              "bg-secondary": status === "sleeping",
-              "bg-gray-400": status === "undeployed"
-            }
-          )}
-        ></span>
-      </span>
+              <span
+                className={cn(
+                  "relative inline-flex rounded-full h-4 w-4 bg-green-500",
+                  {
+                    "bg-green-500": status === "healthy",
+                    "bg-red-500": status === "unhealthy",
+                    "bg-secondary": status === "sleeping",
+                    "bg-gray-400": status === "undeployed"
+                  }
+                )}
+              ></span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div>
+              {status === "healthy" && "✅ "}
+              {status === "sleeping" && "💤 "}
+              {status === "unhealthy" && "❌ "}
+              {status === "undeployed" && "⏳ "}
+              {status}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <CardHeader className="p-0  pb-0  pt-4 px-6">
         <CardTitle className="flex gap-2 items-center">
@@ -129,32 +150,48 @@ export function GitServiceCard({
 }: GitServiceCardProps) {
   return (
     <Card className="rounded-2xl bg-toggle relative">
-      <span className="absolute flex h-4 w-4 -top-2 -right-2">
-        {status !== "undeployed" && (
-          <span
-            className={cn(
-              "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
-              {
-                "bg-green-400": status === "healthy",
-                "bg-red-400": status === "unhealthy",
-                "bg-secondary": status === "sleeping"
-              }
-            )}
-          />
-        )}
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <span className="absolute cursor-pointer flex h-4 w-4 -top-2 -right-2">
+              {status !== "undeployed" && (
+                <span
+                  className={cn(
+                    "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
+                    {
+                      "bg-green-400": status === "healthy",
+                      "bg-red-400": status === "unhealthy",
+                      "bg-secondary": status === "sleeping"
+                    }
+                  )}
+                />
+              )}
 
-        <span
-          className={cn(
-            "relative inline-flex rounded-full h-4 w-4 bg-green-500",
-            {
-              "bg-green-500": status === "healthy",
-              "bg-red-500": status === "unhealthy",
-              "bg-secondary": status === "sleeping",
-              "bg-gray-400": status === "undeployed"
-            }
-          )}
-        ></span>
-      </span>
+              <span
+                className={cn(
+                  "relative inline-flex rounded-full h-4 w-4 bg-green-500",
+                  {
+                    "bg-green-500": status === "healthy",
+                    "bg-red-500": status === "unhealthy",
+                    "bg-secondary": status === "sleeping",
+                    "bg-gray-400": status === "undeployed"
+                  }
+                )}
+              ></span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div>
+              {status === "healthy" && "✅ "}
+              {status === "sleeping" && "💤 "}
+              {status === "unhealthy" && "❌ "}
+              {status === "undeployed" && "⏳ "}
+              {status}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <CardHeader className="p-0  pb-0  pt-4 px-6">
         <CardTitle className="flex gap-2 items-center">
           <Github className="flex-none" size={30} />
