@@ -704,14 +704,12 @@ async def docker_service_deployment_logs(
             data={"message": "Only GET methods are allowed"},
         )
 
-    # last_id = request.GET.get("last_id")
-    limit = int(request.GET.get("limit", 20))
+    limit = int(request.GET.get("limit", 50))
 
     @sync_to_async
     def fetch_logs(
         last_time: datetime, limit: int, deployment: DockerDeployment
     ) -> list[dict]:
-        print(f"Running fetch_logs({last_time=}, {limit=}, {deployment=})")
         queryset = deployment.logs.order_by("-time")
         if last_time:
             queryset = queryset.filter(time__gt=last_time)
@@ -734,14 +732,11 @@ async def docker_service_deployment_logs(
         )
 
     deployment = await get_deployment()
-    print(f"{deployment=}")
-
     async def event_stream():
-        print("Running event_stream()")
         last_fetched_time = None
 
         while True:
-            print("Fetching new logs")
+            print(f"{time.monotonic()} fetching logs")
             try:
                 new_logs = await fetch_logs(last_fetched_time, limit, deployment)
                 if len(new_logs) > 0:
