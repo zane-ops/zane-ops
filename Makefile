@@ -4,6 +4,7 @@ help: ### Show this help
 
 setup: ### Initial setup of the project
 	echo 'Creating a virtual env...'
+	docker network create --driver overlay zane || true
 	python3 -m venv ./backend/venv
 	echo 'activating the virtualenv...'
 	chmod a+x ./backend/venv/bin/activate
@@ -20,7 +21,10 @@ migrate: ### Run db migration
 	python ./backend/manage.py migrate
 
 dev: ### Start the DEV server
-	pnpm --recursive --parallel run dev
+	pnpm run  --filter='!backend' --recursive --parallel dev
+
+dev-api: ### Start the API server
+	pnpm run  --filter='backend' --recursive dev
 
 reset-db: ### Wipe out the database and reset the application to its initial state
 	chmod a+x reset-db.sh

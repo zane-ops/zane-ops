@@ -47,5 +47,3 @@ volumes:
 networks:
   zane:
     external: true
-    # This network is created like this :
-    # `docker network create --driver overlay --attachable --subnet=10.5.0.0/16 zane`
