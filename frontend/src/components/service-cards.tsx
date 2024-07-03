@@ -78,8 +78,8 @@ export function DockerServiceCard({
               {status === "healthy" && "✅ "}
               {status === "sleeping" && "💤 "}
               {status === "unhealthy" && "❌ "}
-              {status === "undeployed" && "⏳ "}
-              {status}
+              {status === "undeployed" && "Not deployed yet ⏳ "}
+              {status === "undeployed" ? "" : status}
             </div>
           </TooltipContent>
         </Tooltip>
