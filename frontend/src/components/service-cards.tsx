@@ -116,13 +116,11 @@ export function DockerServiceCard({
         <p className="flex gap-2 items-center">{updatedAt}</p>
       </CardContent>
 
-      <>
-        <Separator />
-        <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">
-          <HardDrive size={20} /> {volumeNumber}
-          {volumeNumber > 1 ? " Volumes" : " Volume"}
-        </CardFooter>
-      </>
+      <Separator />
+      <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">
+        <HardDrive size={20} /> {volumeNumber}
+        {volumeNumber > 1 ? " Volumes" : " Volume"}
+      </CardFooter>
     </Card>
   );
 }

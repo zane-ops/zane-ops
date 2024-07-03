@@ -93,7 +93,7 @@ function ProjectDetail() {
           name="frontend"
           branchName="main"
           repository="https://github.com/zaneops/zaneops/frontend"
-          status="healthy"
+          status="unhealthy"
           updatedAt="yesterday"
           lastCommitMessage="fix: logs api #fbe5f7d"
           url="https://www.app.zaneops.dev/"
@@ -114,7 +114,7 @@ function ProjectDetail() {
           image="valkey/valkey"
           tag="latest"
           volumeNumber={1}
-          status="healthy"
+          status="undeployed"
           updatedAt="2 months ago"
         />
 
