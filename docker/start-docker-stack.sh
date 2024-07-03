@@ -24,17 +24,14 @@ source ./attach-proxy-networks.sh
 echo "Scaling up all zane-ops services..."
 
 # File containing the services to scale up
-file=".alive_services"
-
-if [ -f $file ]; then
-  while read service; do
-    if [ "$service"  != "zane_zane-proxy" ]; then
-      if [[ -n "$service" ]]; then
-        docker service scale --detach $service=1
-      fi
-    fi
-  done <$file
-fi
+exclude_label="zane-allow-sleeping=true"
+services=$(docker service ls --filter "label=zane-managed=true" --format "{{.ID}}" | xargs -I {} sh -c 'docker service inspect {} | grep -q "'$exclude_label'" || echo {}')
+echo "$services" | while IFS= read -r service; do
+  if [[ -n "$service" ]]; then
+    echo "Scaling down service: $service"
+    docker service scale --detach $service=1
+  fi
+done
 
 # Wait until Ctrl+C is pressed
 echo "Server launched at http://app.zaneops.local"
