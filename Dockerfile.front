@@ -1,6 +1,8 @@
 # Build and compile the webapp
 FROM node:20-alpine as builder
 
+LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
+
 ENV VITE_API_URL=""
 WORKDIR /app
 
@@ -17,10 +19,6 @@ RUN pnpm --prefix frontend run build
 
 # Webapp based on caddy
 FROM caddy:2.8-alpine
-
-LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
-LABEL org.opencontainers.image.description="Zaneops frontend build with vite & caddy v2.8"
-LABEL org.opencontainers.image.licenses=MIT
 
 WORKDIR /var/www/html
 COPY --from=builder /app/frontend/dist/ .

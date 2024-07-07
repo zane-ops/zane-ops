@@ -38,6 +38,26 @@ services:
       zane:
         aliases:
           - zane.proxy
+  frontend:
+    image: ghcr.io/zane-ops/frontend:${IMAGE_VERSION}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+    networks:
+      zane:
+        aliases:
+          - zane.frontend
   #  registry:
   #    image: registry:2
   #    container_name: zane-registry
