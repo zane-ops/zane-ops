@@ -29,3 +29,9 @@ dev-api: ### Start the API server
 reset-db: ### Wipe out the database and reset the application to its initial state
 	chmod a+x reset-db.sh
 	./reset-db.sh
+
+deploy: ### Deploy app (alpha)
+	echo "Do you want to deploy the app using docker swarm ?"
+	echo "⚠️ THIS IS STILL EXPERIMENTAL AND MAY UNEXPECTEDLY BREAK ⚠️"
+	read -p "Are you sure? (Y/N): " -n 1 -r
+	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file ./docker/docker-stack.prod.yaml zane-prod

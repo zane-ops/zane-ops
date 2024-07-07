@@ -33,7 +33,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
-    "SECRET_KEY", "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx"
+    "DJANGO_SECRET_KEY",
+    "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx",
 )
 
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
@@ -42,9 +43,11 @@ PRODUCTION_ENV = "PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT != PRODUCTION_ENV
+# SECURE_SSL_REDIRECT = ENVIRONMENT == PRODUCTION_ENV
 CSRF_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
+SECURE_HSTS_SECONDS = 0 if ENVIRONMENT != PRODUCTION_ENV else 60
 
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
@@ -61,7 +64,7 @@ ALLOWED_HOSTS = (
         "host.docker.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f".{ROOT_DOMAIN}", f"zane-api.{ZANE_INTERNAL_DOMAIN}"]
+    else [f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
 )
 SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
 
@@ -85,6 +88,7 @@ SESSION_EXTEND_PERIOD = 7
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -130,6 +134,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "backend.wsgi.application"
+ASGI_APPLICATION = "backend.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -326,14 +331,16 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
-    else f"zane-api.{ZANE_INTERNAL_DOMAIN}:8000"
+    else f"zane.api.zaneops.internal:8000"
 )
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:5678"
     if ENVIRONMENT != PRODUCTION_ENV
-    else f"zane-front.{ZANE_INTERNAL_DOMAIN}:80"
+    else f"zane.front.zaneops.internal:80"
 )
-ZANE_FLUENTD_HOST = os.environ.get("ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock")
+ZANE_FLUENTD_HOST = os.environ.get(
+    "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"
+)
 
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds

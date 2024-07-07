@@ -5,3 +5,4 @@ node_modules/
 server/
 frontend/src/routeTree.gen.ts
 .env
+.env.local
