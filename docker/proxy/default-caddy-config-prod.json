@@ -18,7 +18,8 @@
         "zane": {
           "@id": "zane-server",
           "listen": [
-            ":443"
+            ":443",
+            ":80"
           ],
           "routes": [
             {

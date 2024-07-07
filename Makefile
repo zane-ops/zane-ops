@@ -35,3 +35,9 @@ deploy: ### Deploy app (alpha)
 	echo "⚠️ THIS IS STILL EXPERIMENTAL AND MAY UNEXPECTEDLY BREAK ⚠️"
 	read -p "Are you sure? (Y/N): " -n 1 -r
 	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file ./docker/docker-stack.prod.yaml zane-prod
+
+deploy-with-http: ### Deploy app with HTTP port 80 open on the proxy, allow this only if you know what you do, or if you reverse proxy with cldouflare tunnel
+	echo "Do you want to deploy the app using docker swarm ?"
+	echo "⚠️ THIS IS STILL EXPERIMENTAL AND MAY UNEXPECTEDLY BREAK ⚠️"
+	read -p "Are you sure? (Y/N): " -n 1 -r
+	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file ./docker/docker-stack.prod.yaml --compose-file  ./docker/docker-stack.prod-http.yaml zane-prod

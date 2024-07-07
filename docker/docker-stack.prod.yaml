@@ -72,7 +72,7 @@ services:
       zane:
         aliases:
           - zane.frontend
-          - zane.api.zaneops.internal
+          - zane.front.zaneops.internal
   api:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
     deploy:
