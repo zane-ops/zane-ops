@@ -41,6 +41,10 @@ services:
       labels:
         zane.stack: "true"
         zane.role: "proxy"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 200M
     ports:
       - "443:443"
     volumes:
@@ -68,6 +72,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 100M
     networks:
       zane:
         aliases:
@@ -89,6 +97,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '1'
+          memory: 500M
     networks:
       zane:
         aliases:
@@ -125,6 +137,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 250M
     networks:
       - zane
     <<: *env-vars
@@ -151,6 +167,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 100M
     networks:
       - zane
     <<: *env-vars
@@ -190,6 +210,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 500M
     networks:
       zane:
         aliases:
@@ -220,6 +244,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '1'
+          memory: 500M
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
@@ -248,6 +276,10 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 100M
 volumes:
   db-data:
   redis-data:
