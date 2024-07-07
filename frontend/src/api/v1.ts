@@ -36,6 +36,12 @@ export interface paths {
   "/api/domain/root/": {
     get: operations["getRootDomain"];
   };
+  "/api/logs/tail/": {
+    post: operations["collectContainerLogs"];
+  };
+  "/api/ping/": {
+    get: operations["ping"];
+  };
   "/api/projects/": {
     get: operations["projects_list"];
     post: operations["createProject"];
@@ -168,6 +174,144 @@ export interface components {
      * @enum {string}
      */
     ClientErrorEnum: "client_error";
+    CollectContainerLogsError: components["schemas"]["CollectContainerLogsNonFieldErrorsErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXLogErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXContainerIdErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXContainerNameErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXTimeErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXTagErrorComponent"] | components["schemas"]["CollectContainerLogsINDEXSourceErrorComponent"];
+    CollectContainerLogsErrorResponse400: components["schemas"]["CollectContainerLogsValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CollectContainerLogsINDEXContainerIdErrorComponent: {
+      /**
+       * @description * `INDEX.container_id` - INDEX.container_id
+       * @enum {string}
+       */
+      attr: "INDEX.container_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CollectContainerLogsINDEXContainerNameErrorComponent: {
+      /**
+       * @description * `INDEX.container_name` - INDEX.container_name
+       * @enum {string}
+       */
+      attr: "INDEX.container_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CollectContainerLogsINDEXLogErrorComponent: {
+      /**
+       * @description * `INDEX.log` - INDEX.log
+       * @enum {string}
+       */
+      attr: "INDEX.log";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CollectContainerLogsINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `INDEX.non_field_errors` - INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    CollectContainerLogsINDEXSourceErrorComponent: {
+      /**
+       * @description * `INDEX.source` - INDEX.source
+       * @enum {string}
+       */
+      attr: "INDEX.source";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    CollectContainerLogsINDEXTagErrorComponent: {
+      /**
+       * @description * `INDEX.tag` - INDEX.tag
+       * @enum {string}
+       */
+      attr: "INDEX.tag";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CollectContainerLogsINDEXTimeErrorComponent: {
+      /**
+       * @description * `INDEX.time` - INDEX.time
+       * @enum {string}
+       */
+      attr: "INDEX.time";
+      /**
+       * @description * `date` - date
+       * * `invalid` - invalid
+       * * `make_aware` - make_aware
+       * * `null` - null
+       * * `overflow` - overflow
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "date" | "invalid" | "make_aware" | "null" | "overflow" | "required";
+      detail: string;
+    };
+    CollectContainerLogsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * @enum {string}
+       */
+      code: "not_a_list";
+      detail: string;
+    };
+    CollectContainerLogsValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CollectContainerLogsError"][];
+    };
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -340,6 +484,19 @@ export interface components {
       type?: components["schemas"]["Type20aEnum"];
       new_value: string | null;
       field: components["schemas"]["DockerCommandFieldChangeFieldEnum"];
+    };
+    DockerContainerLogRequest: {
+      log: string;
+      container_id: string;
+      container_name: string;
+      /** Format: date-time */
+      time: string;
+      tag: string;
+      source: components["schemas"]["SourceEnum"];
+    };
+    DockerContainerLogsResponse: {
+      simple_logs_inserted: number;
+      http_logs_inserted: number;
     };
     DockerCredential: {
       username: string;
@@ -725,6 +882,9 @@ export interface components {
       errors: components["schemas"]["LoginError"][];
     };
     LogoutErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    PING: {
+      ping: string;
+    };
     PaginatedArchivedProjectList: {
       /** @example 123 */
       count: number;
@@ -788,6 +948,7 @@ export interface components {
       slug?: string;
       description?: string;
     };
+    PingErrorResponse400: components["schemas"]["ParseErrorResponse"];
     PortConfiguration: {
       id: string;
       host: number | null;
@@ -1285,6 +1446,12 @@ export interface components {
      */
     SlotEnum: "BLUE" | "GREEN";
     /**
+     * @description * `stdout` - standard ouput
+     * * `stderr` - standard error
+     * @enum {string}
+     */
+    SourceEnum: "stdout" | "stderr";
+    /**
      * @description * `QUEUED` - Queued
      * * `CANCELLED` - Cancelled
      * * `FAILED` - Failed
@@ -1726,6 +1893,61 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  collectContainerLogs: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DockerContainerLogRequest"][];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerContainerLogRequest"][];
+        "multipart/form-data": components["schemas"]["DockerContainerLogRequest"][];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerContainerLogsResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CollectContainerLogsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  ping: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PING"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["PingErrorResponse400"];
         };
       };
       401: {
