@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronsUpDown, PlusIcon, Rocket, Search, Trash } from "lucide-react";
+import { z } from "zod";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MetaTitle } from "~/components/meta-title";
 import { DockerServiceCard, GitServiceCard } from "~/components/service-cards";
@@ -24,6 +25,12 @@ import {
 import { Separator } from "~/components/ui/separator";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
+  parseParams: (rawParams) => ({
+    slug: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+      .parse(rawParams.slug)
+  }),
   component: withAuthRedirect(ProjectDetail)
 });
 

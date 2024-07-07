@@ -7,10 +7,10 @@
   "scripts": {
     "generate:api": "openapi-typescript ../openapi/schema.yml -o src/api/v1.ts",
     "dev": "vite --host",
-    "build": "tsr --generate && tsc && vite build",
+    "build": "tsr generate && tsc && vite build",
     "check": "biome check .",
     "preview": "vite preview",
-    "predev": "npm run generate:api && tsr --watch && tsr --generate",
+    "predev": "npm run generate:api && tsr generate",
     "format": "biome check . --apply"
   },
   "dependencies": {
