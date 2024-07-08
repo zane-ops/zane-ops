@@ -9,7 +9,7 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
+  BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 
@@ -19,12 +19,12 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
-  MenubarTrigger,
+  MenubarTrigger
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
-  component: withAuthRedirect(ProjectDetail),
+  component: withAuthRedirect(ProjectDetail)
 });
 
 function ProjectDetail() {
