@@ -76,7 +76,6 @@ function ProjectDetail() {
         </div>
       </div>
 
-      <h1 className="text-base font-semibold py-3">Services</h1>
       <Separator />
       <div className="py-8  grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 place-content-center  gap-8">
         <GitServiceCard
