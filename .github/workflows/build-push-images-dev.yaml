@@ -32,7 +32,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/proxy:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
+          cache-from: |
+            type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
+            type=registry,ref=ghcr.io/zane-ops/proxy:canary
           cache-to: type=inline
   build-push-frontend:
     name: Build and Push Zane Frontend
@@ -63,7 +65,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/frontend:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/frontend:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:pr-${{ github.event.pull_request.number }}
+          cache-from: |
+            type=registry,ref=ghcr.io/zane-ops/frontend:pr-${{ github.event.pull_request.number }}
+            type=registry,ref=ghcr.io/zane-ops/frontend:canary
           cache-to: type=inline
   build-push-backend:
     name: Build and Push Zane Backend
@@ -94,5 +98,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/backend:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/backend:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/backend:pr-${{ github.event.pull_request.number }}
+          cache-from: |
+            type=registry,ref=ghcr.io/zane-ops/backend:pr-${{ github.event.pull_request.number }}
+            type=registry,ref=ghcr.io/zane-ops/backend:canary
           cache-to: type=inline
