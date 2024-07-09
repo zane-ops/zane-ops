@@ -35,7 +35,7 @@ jobs:
           context: ./docker/proxy
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/proxy:canary,ghcr.io/zane-ops/proxy:${{ vars.GITHUB_SHA }}
+          tags: ghcr.io/zane-ops/proxy:canary,ghcr.io/zane-ops/proxy:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:canary
           cache-to: type=inline
   build-push-frontend:
@@ -66,7 +66,7 @@ jobs:
           file: Dockerfile.front
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/frontend:canary,ghcr.io/zane-ops/frontend:${{ vars.GITHUB_SHA }}
+          tags: ghcr.io/zane-ops/frontend:canary,ghcr.io/zane-ops/frontend:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:canary
           cache-to: type=inline
   build-push-backend:
@@ -97,6 +97,6 @@ jobs:
           file: ./backend/Dockerfile.prod
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/backend:canary,ghcr.io/zane-ops/backend:${{ vars.GITHUB_SHA }}
+          tags: ghcr.io/zane-ops/backend:canary,ghcr.io/zane-ops/backend:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/backend:canary
           cache-to: type=inline
