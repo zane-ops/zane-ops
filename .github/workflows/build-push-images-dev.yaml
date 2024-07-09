@@ -31,7 +31,7 @@ jobs:
           context: ./docker/proxy
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/proxy:${{ env.GITHUB_SHA }}
+          tags: ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/proxy:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
           cache-to: type=inline
   build-push-frontend:
@@ -62,7 +62,7 @@ jobs:
           file: Dockerfile.front
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/frontend:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/frontend:${{ env.GITHUB_SHA }}
+          tags: ghcr.io/zane-ops/frontend:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/frontend:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:pr-${{ github.event.pull_request.number }}
           cache-to: type=inline
   build-push-backend:
@@ -93,6 +93,6 @@ jobs:
           file: ./backend/Dockerfile.prod
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/backend:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/backend:${{ env.GITHUB_SHA }}
+          tags: ghcr.io/zane-ops/backend:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/backend:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/backend:pr-${{ github.event.pull_request.number }}
           cache-to: type=inline
