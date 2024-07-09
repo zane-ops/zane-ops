@@ -366,7 +366,7 @@ class FakeDockerClient:
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
         self.service_map = {
             "proxy-service": FakeDockerClient.FakeService(
-                name="zane_zane-proxy", parent=self
+                name="zane_proxy", parent=self
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
