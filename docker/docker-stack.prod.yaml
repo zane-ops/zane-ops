@@ -99,7 +99,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '1'
+          cpus: '0.5'
           memory: 500M
     networks:
       zane:
@@ -139,8 +139,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
-          memory: 250M
+          cpus: '1'
+          memory: 500M
     networks:
       - zane
     <<: *env-vars
