@@ -17,6 +17,7 @@ setup: ### Launch initial setup before installing zaneops
 	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
 	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/attach-proxy-networks.sh > ./attach-proxy-networks.sh
+	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	chmod a+x ./attach-proxy-networks.sh
 	echo "Step 3️⃣ Done ✅"
 	echo "Step 4️⃣: Downloading the env file template..."

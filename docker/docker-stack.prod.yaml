@@ -255,8 +255,9 @@ services:
       start_period: 30s
       timeout: 10s
   fluentd:
-    image: ghcr.io/zane-ops/fluentd:${IMAGE_VERSION}
+    image: fluentd:v1.16.2-1.1
     volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent.conf:/fluentd/etc/fluent.conf:ro"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/:/var/fluentd/:rw"
     networks:
       zane:
