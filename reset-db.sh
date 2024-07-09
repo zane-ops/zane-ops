@@ -36,8 +36,8 @@ do
   network_options+=" --network-rm $net_id"
 done <<< "$zane_networks_ids"
 
-service_name="zane_zane-proxy"
-echo "docker service update $network_options zane_zane-proxy"
+service_name="zane_proxy"
+echo "docker service update $network_options zane_proxy"
 if [ -n "$network_options" ]; then
     # Update the service with all networks
     docker service update $network_options $service_name

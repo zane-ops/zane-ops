@@ -17,7 +17,7 @@
       "servers": {
         "zane": {
           "@id": "zane-server",
-          "listen": [":443"],
+          "listen": [":443", ":80"],
           "routes": [
             {
               "handle": [
@@ -64,7 +64,7 @@
         "on_demand": {
           "permission": {
             "@id": "tls-endpoint",
-            "endpoint": "http://zane-api.zaneops.internal:8000/api/_proxy/check-certiticates",
+            "endpoint": "http://zane.api.zaneops.internal:8000/api/_proxy/check-certiticates",
             "module": "http"
           }
         }

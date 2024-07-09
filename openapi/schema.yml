@@ -647,6 +647,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetRootDomain'
           description: ''
+  /api/ping/:
+    get:
+      operationId: ping
+      tags:
+      - ping
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PING'
+          description: ''
   /api/projects/:
     get:
       operationId: projects_list
@@ -3473,6 +3529,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    PING:
+      type: object
+      properties:
+        ping:
+          type: string
+      required:
+      - ping
     PaginatedArchivedProjectList:
       type: object
       properties:
@@ -3590,6 +3653,13 @@ components:
         description:
           type: string
           minLength: 1
+    PingErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     PortConfiguration:
       type: object
       properties:

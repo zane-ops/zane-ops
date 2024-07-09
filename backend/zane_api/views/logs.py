@@ -15,16 +15,13 @@ from .serializers import (
 from ..models import SimpleLog, HttpLog
 
 
+@extend_schema(exclude=True)
 class LogTailAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_scope = "log_collect"
     throttle_classes = [ScopedRateThrottle]
     serializer_class = DockerContainerLogsResponseSerializer
 
-    @extend_schema(
-        request=DockerContainerLogsRequestSerializer,
-        operation_id="collectContainerLogs",
-    )
     def post(self, request: Request):
         serializer = DockerContainerLogsRequestSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):

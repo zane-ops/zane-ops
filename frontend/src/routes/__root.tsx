@@ -1,3 +1,4 @@
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Logo } from "~/components/logo";
@@ -9,8 +10,13 @@ export const Route = createRootRoute({
   component: () => (
     <div className="bg-background">
       <Outlet />
-      <TailwindIndicator />
-      <TanStackRouterDevtools />
+      {!import.meta.env.PROD && (
+        <>
+          <ReactQueryDevtools />
+          <TanStackRouterDevtools />
+          <TailwindIndicator />
+        </>
+      )}
     </div>
   ),
   notFoundComponent: NotFound

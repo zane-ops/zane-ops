@@ -1,5 +1,5 @@
 services:
-  zane-proxy:
+  proxy:
     image: fredkiss3/zane-caddy-proxy:dev
     command: caddy run --resume
     logging:
