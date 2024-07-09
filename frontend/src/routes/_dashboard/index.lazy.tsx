@@ -91,6 +91,7 @@ export function ProjectList() {
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
   const noActiveProjects = status === "active" && projectList.length === 0;
+  const noArchivedProject = status === "archived" && projectList.length === 0;
 
   const handleSort = (field: "slug" | "updated_at" | "archived_at") => {
     const isDescending = sort_by.includes(`-${field}`);
@@ -265,6 +266,14 @@ export function ProjectList() {
               </TableCell>
             ) : (
               ""
+            )}
+
+            {noArchivedProject && (
+              <TableCell colSpan={5} className="text-center py-4">
+                <section className="flex gap-3 flex-col items-center justify-center flex-grow py-16">
+                  <h1 className="text-2xl font-bold">No archived project</h1>
+                </section>
+              </TableCell>
             )}
 
             {noResults ? (
