@@ -16,7 +16,47 @@
 
 ## 📸 Screenshots
 
-> *TODO: Screenshots will be added once available.*
+### Login
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./images/login-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./images/login-light.png">
+    <img src="./images/login-dark.png" alt="Login page" />
+  </picture>
+</p>
+
+### Dashboard
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./images/dashboard-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./images/dashboard-light.png">
+    <img src="./images/dashboard-dark.png" alt="Login page" />
+  </picture>
+</p>
+
+### Creating a Project
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./images/create-project-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./images/create-project-light.png">
+    <img src="./images/create-project-dark.png" alt="Login page" />
+  </picture>
+</p>
+
+### Project detail
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./images/project-detail-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./images/project-detail-light.png">
+    <img src="./images/project-detail-dark.png" alt="Login page" />
+  </picture>
+</p>
+
+> More to come
 
 ## 🚀 Features
 
@@ -31,11 +71,7 @@
 
 ## 🍙 Getting Started
 
-1. **Setup**
-   > *TODO: A quick-start tutorial will be provided.*
-
-2. **Usage**
-   > *TODO: A quick-start tutorial will be provided.*
+You can follow the steps in [here](./docs/deploying.md).
 
 ## 📚 Terminologies
 
