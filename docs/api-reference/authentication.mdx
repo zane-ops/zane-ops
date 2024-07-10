@@ -1,46 +1,98 @@
 ---
-title: Authorization
-"og:title": "How to authorize API requests in ZaneOps"
-description: "Learn how to authorize your API requests."
+title: Authentication
+"og:title": "How to authenticate API requests in ZaneOps"
+description: "Learn how to authenticate your API requests."
 ---
 
-API request requires a `Bearer` token in `Authorization` header, which could be generated from the UI.
+API request requires a session `Cookie`, which you get when you login to the app. 
 
-# Generate a Token
+For mutative requests (`DELETE`, `POST`, `PUT`, `PATCH`), you need add a `csrftoken` to the cookie header and the same value need to be sent as a header `X-CSRFToken`.
 
-1. Go to `Keys & Tokens` / `API tokens`.
-2. Define a name for your token and click `Create New Token`.
+# Get a session cookie
 
-<Tip>
-  You will see the token once, so make sure to copy it and store it in a safe
-  place.
-</Tip>
+To get a session cookie, you need to login, then get the cookie in `sessionid`.
 
-# Scope
+```http
+### Request
+POST /api/auth/login HTTP/1.1
+Content-Type: application/json
 
-The token will only be able to access resources that are owned by the team that the token is scoped to.
+{
+  "username": "<your-username>",
+  "password": "<your-password>"
+}
 
-```php
-# Sample token
-3|WaobqX9tJQshKPuQFHsyApxuOOggg4wOfvGc9xa233c376d7
+### Response
+HTTP/1.1 201 Created
+Content-Type: application/json
+Set-Cookie: sessionid=tvmt1xp0c2ep33htukqm140fb4igkz4u; Domain=.zaneops.local; expires=Wed, 24 Jul 2024 16:49:05 GMT; HttpOnly; Max-Age=1209600; Path=/; SameSite=Lax
+
+{
+  "id": 2,
+  "name": "New Resource Name",
+  "description": "New Resource Description"
+}
 ```
 
-# Permissions
+# Perform an authorized Request
 
-Currently there are three types of permissions:
 
-- read-only `(default)`
-- view:sensitive
-- `*` (all permissions)
 
-## `read-only`
+```http
+### Request
+GET /api/auth/me HTTP/1.1
+Cookie: sessionid=tvmt1xp0c2ep33htukqm140fb4igkz4u;
 
-With this permission, you can only read data from the API, but you can't create, update, or delete any resources. Also you can't see sensitive data.
+### Response
+HTTP/1.1 201 Created
+Content-Type: application/json
 
-## `view:sensitive`
+{
+  "user": {
+    "username": "fredkiss3",
+    "first_name": "",
+    "last_name": ""
+  }
+}
+```
 
-Without this permission, passwords, api keys, and other sensitive data will be redacted from the API response.
 
-## `*`
+# Perform a mutative request 
 
-Full access to all resources and sensitive data.
+1. You need to get a csrf token : 
+
+```http
+### Request
+GET /api/csrf HTTP/1.1
+
+### Response
+HTTP/1.1 200 OK
+Set-Cookie: csrftoken=zydcEbNXQGJFxzLphKEO8Mg88VdEwi8c; expires=Wed, 09 Jul 2025 17:03:09 GMT; Max-Age=31449600; Path=/; SameSite=Lax
+```
+
+2. Then add the `csrftoken` both in the cookie and in `X-Csrftoken` header :
+
+```http
+### Request
+POST /api/projects HTTP/1.1
+Content-Type: application/json
+Cookie: sessionid=tvmt1xp0c2ep33htukqm140fb4igkz4u; csrftoken=zydcEbNXQGJFxzLphKEO8Mg88VdEwi8c;
+User-Agent: HTTPie
+X-Csrftoken: zydcEbNXQGJFxzLphKEO8Mg88VdEwi8c
+
+{
+  "slug": "sandbox"
+}
+
+### Response
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "description": null,
+  "id": "prj_GxCy6Tg35ax",
+  "slug": "sandbox-2",
+  "created_at": "2024-07-10T17:05:56.276194Z",
+  "updated_at": "2024-07-10T17:05:56.276180Z"
+}
+```

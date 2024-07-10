@@ -73,6 +73,8 @@ class CreateDockerServiceAPIView(APIView):
             201: DockerServiceSerializer,
         },
         operation_id="createDockerService",
+        summary="Create a docker service",
+        description="Create a service from a docker image.",
     )
     @transaction.atomic()
     def post(self, request: Request, project_slug: str):
@@ -151,6 +153,8 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             200: DockerServiceSerializer,
         },
         operation_id="requestDeploymentChanges",
+        summary="Request config changes",
+        description="Request a change to the configuration of a service.",
     )
     def put(self, request: Request, project_slug: str, service_slug: str):
         try:
@@ -354,6 +358,8 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             ),
         },
         operation_id="cancelDeploymentChanges",
+        summary="Cancel a config change",
+        description="Cancel a config change that was requested.",
     )
     def delete(
         self, request: Request, project_slug: str, service_slug: str, change_id: str
@@ -418,6 +424,8 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
     @extend_schema(
         request=None,
         operation_id="applyDeploymentChanges",
+        summary="Deploy a docker service",
+        description="Apply all pending changes for the service and trigger a new deployment.",
     )
     def put(self, request: Request, project_slug: str, service_slug: str):
         try:
@@ -486,6 +494,8 @@ class RedeployDockerServiceAPIView(APIView):
     @extend_schema(
         request=None,
         operation_id="redeployDockerService",
+        summary="Redeploy a docker service",
+        description="Revert the service to the state of a previous deployment.",
     )
     def put(
         self,
@@ -576,6 +586,8 @@ class GetDockerServiceAPIView(APIView):
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         operation_id="getDockerService",
+        summary="Get single service",
+        description="See all the details of a service.",
     )
     def get(self, request: Request, project_slug: str, service_slug: str):
         try:
@@ -612,6 +624,10 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
         DockerDeployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
+    @extend_schema(
+        summary="List all deployments",
+        description="List all deployments for a service, the default order is last created descendant.",
+    )
     def get(self, request, *args, **kwargs):
         try:
             return super().get(request, *args, **kwargs)
@@ -683,6 +699,10 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
+    @extend_schema(summary="Get single deployment")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
@@ -692,6 +712,8 @@ class ArchiveDockerServiceAPIView(APIView):
             ),
         },
         operation_id="archiveDockerService",
+        summary="Archive a docker service",
+        description="Archive a service created from a docker image.",
     )
     @transaction.atomic()
     def delete(self, request: Request, project_slug: str, service_slug: str):

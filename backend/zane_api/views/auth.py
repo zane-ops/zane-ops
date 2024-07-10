@@ -46,7 +46,8 @@ class LoginView(APIView):
         },
         operation_id="login",
         summary="Login",
-        description="Authenticate User, what is returned is a cookie named `sessionid` that will be used for authentication of the next requests",
+        description="Authenticate User, what is returned is a cookie named `sessionid` "
+        "that will be used for authentication of the next requests.",
     )
     def post(self, request: Request) -> Response:
         form = LoginRequestSerializer(data=request.data)
@@ -79,7 +80,7 @@ class AuthedView(APIView):
     @extend_schema(
         operation_id="getAuthedUser",
         summary="Get current user",
-        description="Get current authenticated user",
+        description="Get current authenticated user.",
     )
     def get(self, request: Request):
         now = timezone.now()
@@ -138,7 +139,6 @@ class AuthLogoutView(APIView):
         },
         operation_id="logout",
         summary="Logout",
-        description="Logout",
     )
     def delete(self, request: Request):
         logout(request)

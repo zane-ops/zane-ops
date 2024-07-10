@@ -32,14 +32,12 @@ urlpatterns = [
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
     ),
-    re_path(r"^docker/login/?$", views.DockerLoginView.as_view(), name="docker.login"),
     re_path(r"^domain/root/?$", views.GetRootDomainView.as_view(), name="domain.root"),
     re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
     ),
-    re_path(r"^docker/login/?$", views.DockerLoginView.as_view(), name="docker.login"),
     re_path(
         r"^docker/check-port/?$",
         views.DockerPortCheckView.as_view(),

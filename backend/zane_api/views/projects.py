@@ -100,6 +100,7 @@ class ProjectsListAPIView(ListCreateAPIView):
 
         return queryset
 
+    @extend_schema(operation_id="getProjectList", summary="List all active projects")
     def get(self, request, *args, **kwargs):
         try:
             return super().get(request, *args, **kwargs)
@@ -113,6 +114,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             201: ProjectSerializer,
         },
         operation_id="createProject",
+        summary="Create a new project",
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -155,6 +157,10 @@ class ArchivedProjectsListAPIView(ListAPIView):
     filterset_class = ArchivedProjectListFilterSet
     queryset = ArchivedProject.objects.all()
 
+    @extend_schema(
+        operation_id="getArchivedProjectList",
+        summary="List archived projects",
+    )
     def get(self, request, *args, **kwargs):
         try:
             return super().get(request, *args, **kwargs)
@@ -167,7 +173,8 @@ class ProjectDetailsView(APIView):
 
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
-        operation_id="updateProjectName",
+        operation_id="updateProject",
+        summary="Update a project",
     )
     def patch(self, request: Request, slug: str) -> Response:
         try:
@@ -191,9 +198,7 @@ class ProjectDetailsView(APIView):
                 response = ProjectSerializer(project)
                 return Response(response.data)
 
-    @extend_schema(
-        operation_id="getSingleProject",
-    )
+    @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug.lower())
@@ -209,6 +214,7 @@ class ProjectDetailsView(APIView):
             200: inline_serializer("DeleteProjectResponseSerializer", fields={}),
         },
         operation_id="archiveSingleProject",
+        summary="Archive a Project",
     )
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:

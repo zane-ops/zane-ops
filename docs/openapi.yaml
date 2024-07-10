@@ -27,7 +27,8 @@ info:
 paths:
   /api/archived-projects/:
     get:
-      operationId: archived_projects_list
+      operationId: getArchivedProjectList
+      summary: List archived projects
       parameters:
       - name: page
         required: false
@@ -74,7 +75,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ArchivedProjectsListErrorResponse400'
+                $ref: '#/components/schemas/GetArchivedProjectListErrorResponse400'
           description: ''
         '401':
           content:
@@ -135,7 +136,7 @@ paths:
     post:
       operationId: login
       description: Authenticate User, what is returned is a cookie named `sessionid`
-        that will be used for authentication of the next requests
+        that will be used for authentication of the next requests.
       summary: Login
       tags:
       - auth
@@ -207,7 +208,6 @@ paths:
   /api/auth/logout/:
     delete:
       operationId: logout
-      description: Logout
       summary: Logout
       tags:
       - auth
@@ -260,7 +260,7 @@ paths:
   /api/auth/me/:
     get:
       operationId: getAuthedUser
-      description: Get current authenticated user
+      description: Get current authenticated user.
       summary: Get current user
       tags:
       - auth
@@ -317,7 +317,11 @@ paths:
   /api/csrf/:
     get:
       operationId: getCSRF
-      description: CSRF cookie view for retrieving CSRF before doing requests
+      description: CSRF cookie endpoint for retrieving a CSRF token before doing mutative
+        requests (`DELETE`, `POST`, `PUT`, `PATCH`).You need to pass the cookie named
+        `csrftoken` to all requests alongside a `X-CSRFToken` with the value of the
+        token.
+      summary: Get CSRF cookie
       tags:
       - csrf
       security:
@@ -349,6 +353,8 @@ paths:
   /api/docker/check-port/:
     post:
       operationId: checkIfPortIsAvailable
+      description: Check If Port is available on host machine
+      summary: Check Port
       tags:
       - docker
       requestBody:
@@ -416,6 +422,8 @@ paths:
   /api/docker/image-search/:
     get:
       operationId: searchDockerRegistry
+      description: Search a docker Image in docker hub Registry
+      summary: Search docker hub
       parameters:
       - in: query
         name: q
@@ -475,76 +483,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerImageSearchResponse'
           description: ''
-  /api/docker/login/:
-    post:
-      operationId: dockerLogin
-      tags:
-      - docker
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DockerLoginRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/DockerLoginRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/DockerLoginRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerLoginErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerLoginSuccessResponse'
-          description: ''
   /api/domain/root/:
     get:
       operationId: getRootDomain
+      description: Get the root domain used by ZaneOps to generate automatic subdomains
+        for services.
+      summary: Get Root Domain
       tags:
       - domain
       security:
@@ -600,6 +544,8 @@ paths:
   /api/ping/:
     get:
       operationId: ping
+      description: simple healthcheck endpoint.
+      summary: Ping
       tags:
       - ping
       security:
@@ -655,7 +601,8 @@ paths:
           description: ''
   /api/projects/:
     get:
-      operationId: projects_list
+      operationId: getProjectList
+      summary: List all active projects
       parameters:
       - name: page
         required: false
@@ -702,7 +649,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsListErrorResponse400'
+                $ref: '#/components/schemas/GetProjectListErrorResponse400'
           description: ''
         '401':
           content:
@@ -761,6 +708,7 @@ paths:
           description: ''
     post:
       operationId: createProject
+      summary: Create a new project
       tags:
       - projects
       requestBody:
@@ -847,6 +795,8 @@ paths:
   /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveDockerService
+      description: Archive a service created from a docker image.
+      summary: Archive a docker service
       parameters:
       - in: path
         name: project_slug
@@ -925,6 +875,8 @@ paths:
   /api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
     delete:
       operationId: cancelDeploymentChanges
+      description: Cancel a config change that was requested.
+      summary: Cancel a config change
       parameters:
       - in: path
         name: change_id
@@ -1015,6 +967,8 @@ paths:
   /api/projects/{project_slug}/create-service/docker/:
     post:
       operationId: createDockerService
+      description: Create a service from a docker image.
+      summary: Create a docker service
       parameters:
       - in: path
         name: project_slug
@@ -1109,6 +1063,8 @@ paths:
   /api/projects/{project_slug}/deploy-service/docker/{service_slug}/:
     put:
       operationId: applyDeploymentChanges
+      description: Apply all pending changes for the service and trigger a new deployment.
+      summary: Deploy a docker service
       parameters:
       - in: path
         name: project_slug
@@ -1191,6 +1147,8 @@ paths:
   /api/projects/{project_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
     put:
       operationId: redeployDockerService
+      description: Revert the service to the state of a previous deployment.
+      summary: Redeploy a docker service
       parameters:
       - in: path
         name: deployment_hash
@@ -1279,6 +1237,8 @@ paths:
   /api/projects/{project_slug}/request-service-changes/docker/{service_slug}/:
     put:
       operationId: requestDeploymentChanges
+      description: Request a change to the configuration of a service.
+      summary: Request config changes
       parameters:
       - in: path
         name: project_slug
@@ -1372,6 +1332,8 @@ paths:
   /api/projects/{project_slug}/service-details/docker/{service_slug}/:
     get:
       operationId: getDockerService
+      description: See all the details of a service.
+      summary: Get single service
       parameters:
       - in: path
         name: project_slug
@@ -1454,6 +1416,9 @@ paths:
   /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/:
     get:
       operationId: projects_service_details_docker_deployments_list
+      description: List all deployments for a service, the default order is last created
+        descendant.
+      summary: List all deployments
       parameters:
       - in: query
         name: created_at
@@ -1585,6 +1550,7 @@ paths:
   /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
     get:
       operationId: projects_service_details_docker_deployments_retrieve
+      summary: Get single deployment
       parameters:
       - in: path
         name: deployment_hash
@@ -1673,6 +1639,7 @@ paths:
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
+      summary: Get single project
       parameters:
       - in: path
         name: slug
@@ -1747,7 +1714,8 @@ paths:
                 $ref: '#/components/schemas/Project'
           description: ''
     patch:
-      operationId: updateProjectName
+      operationId: updateProject
+      summary: Update a project
       parameters:
       - in: path
         name: slug
@@ -1775,7 +1743,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateProjectNameErrorResponse400'
+                $ref: '#/components/schemas/UpdateProjectErrorResponse400'
           description: ''
         '401':
           content:
@@ -1834,6 +1802,7 @@ paths:
           description: ''
     delete:
       operationId: archiveSingleProject
+      summary: Archive a Project
       parameters:
       - in: path
         name: slug
@@ -1906,6 +1875,8 @@ paths:
   /api/volumes/{volume_id}/size/:
     get:
       operationId: getVolumeSize
+      description: Get the total data size in the volume, in bytes.
+      summary: Get volume size
       parameters:
       - in: path
         name: volume_id
@@ -2024,74 +1995,6 @@ components:
       - description
       - id
       - slug
-    ArchivedProjectsListError:
-      oneOf:
-      - $ref: '#/components/schemas/ArchivedProjectsListSlugErrorComponent'
-      - $ref: '#/components/schemas/ArchivedProjectsListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          slug: '#/components/schemas/ArchivedProjectsListSlugErrorComponent'
-          sort_by: '#/components/schemas/ArchivedProjectsListSortByErrorComponent'
-    ArchivedProjectsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ArchivedProjectsListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ArchivedProjectsListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ArchivedProjectsListSlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ArchivedProjectsListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ArchivedProjectsListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ArchivedProjectsListError'
-      required:
-      - errors
-      - type
     AuthedSuccessResponse:
       type: object
       properties:
@@ -2693,176 +2596,6 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
-    DockerLoginError:
-      oneOf:
-      - $ref: '#/components/schemas/DockerLoginNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/DockerLoginUsernameErrorComponent'
-      - $ref: '#/components/schemas/DockerLoginPasswordErrorComponent'
-      - $ref: '#/components/schemas/DockerLoginRegistryUrlErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/DockerLoginNonFieldErrorsErrorComponent'
-          username: '#/components/schemas/DockerLoginUsernameErrorComponent'
-          password: '#/components/schemas/DockerLoginPasswordErrorComponent'
-          registry_url: '#/components/schemas/DockerLoginRegistryUrlErrorComponent'
-    DockerLoginErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/DockerLoginValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/DockerLoginValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    DockerLoginNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    DockerLoginPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - password
-          type: string
-          description: '* `password` - password'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    DockerLoginRegistryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - registry_url
-          type: string
-          description: '* `registry_url` - registry_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    DockerLoginRequestRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 1
-          maxLength: 255
-        password:
-          type: string
-          minLength: 1
-          maxLength: 255
-        registry_url:
-          type: string
-          format: uri
-          minLength: 1
-      required:
-      - password
-      - username
-    DockerLoginSuccessResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-      required:
-      - success
-    DockerLoginUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - username
-          type: string
-          description: '* `username` - username'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    DockerLoginValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerLoginError'
-      required:
-      - errors
-      - type
     DockerPortCheckRequestRequest:
       type: object
       properties:
@@ -3191,6 +2924,74 @@ components:
       - UPDATE
       type: string
       description: '* `UPDATE` - Update'
+    GetArchivedProjectListError:
+      oneOf:
+      - $ref: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
+      - $ref: '#/components/schemas/GetArchivedProjectListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          slug: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
+          sort_by: '#/components/schemas/GetArchivedProjectListSortByErrorComponent'
+    GetArchivedProjectListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/GetArchivedProjectListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/GetArchivedProjectListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetArchivedProjectListSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetArchivedProjectListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetArchivedProjectListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetArchivedProjectListError'
+      required:
+      - errors
+      - type
     GetAuthedUserErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3212,6 +3013,74 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetProjectListError:
+      oneOf:
+      - $ref: '#/components/schemas/GetProjectListSlugErrorComponent'
+      - $ref: '#/components/schemas/GetProjectListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          slug: '#/components/schemas/GetProjectListSlugErrorComponent'
+          sort_by: '#/components/schemas/GetProjectListSortByErrorComponent'
+    GetProjectListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/GetProjectListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/GetProjectListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetProjectListSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProjectListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProjectListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetProjectListError'
+      required:
+      - errors
+      - type
     GetRootDomain:
       type: object
       properties:
@@ -3424,11 +3293,8 @@ components:
       properties:
         success:
           type: boolean
-        token:
-          type: string
       required:
       - success
-      - token
     LoginUsernameErrorComponent:
       type: object
       properties:
@@ -3486,7 +3352,7 @@ components:
       type: object
       properties:
         ping:
-          type: string
+          $ref: '#/components/schemas/PingEnum'
       required:
       - ping
     PaginatedArchivedProjectList:
@@ -3606,6 +3472,11 @@ components:
         description:
           type: string
           minLength: 1
+    PingEnum:
+      enum:
+      - pong
+      type: string
+      description: '* `pong` - pong'
     PingErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3699,74 +3570,6 @@ components:
         description:
           type: string
           minLength: 1
-    ProjectsListError:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsListSlugErrorComponent'
-      - $ref: '#/components/schemas/ProjectsListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          slug: '#/components/schemas/ProjectsListSlugErrorComponent'
-          sort_by: '#/components/schemas/ProjectsListSortByErrorComponent'
-    ProjectsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ProjectsListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsListSlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectsListError'
-      required:
-      - errors
-      - type
     ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent:
       type: object
       properties:
@@ -4647,7 +4450,7 @@ components:
           default: true
       required:
       - domain
-    UpdateProjectNameDescriptionErrorComponent:
+    UpdateProjectDescriptionErrorComponent:
       type: object
       properties:
         attr:
@@ -4675,27 +4478,27 @@ components:
       - attr
       - code
       - detail
-    UpdateProjectNameError:
+    UpdateProjectError:
       oneOf:
-      - $ref: '#/components/schemas/UpdateProjectNameNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateProjectNameSlugErrorComponent'
-      - $ref: '#/components/schemas/UpdateProjectNameDescriptionErrorComponent'
+      - $ref: '#/components/schemas/UpdateProjectNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateProjectSlugErrorComponent'
+      - $ref: '#/components/schemas/UpdateProjectDescriptionErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/UpdateProjectNameNonFieldErrorsErrorComponent'
-          slug: '#/components/schemas/UpdateProjectNameSlugErrorComponent'
-          description: '#/components/schemas/UpdateProjectNameDescriptionErrorComponent'
-    UpdateProjectNameErrorResponse400:
+          non_field_errors: '#/components/schemas/UpdateProjectNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/UpdateProjectSlugErrorComponent'
+          description: '#/components/schemas/UpdateProjectDescriptionErrorComponent'
+    UpdateProjectErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/UpdateProjectNameValidationError'
+      - $ref: '#/components/schemas/UpdateProjectValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/UpdateProjectNameValidationError'
+          validation_error: '#/components/schemas/UpdateProjectValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    UpdateProjectNameNonFieldErrorsErrorComponent:
+    UpdateProjectNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -4714,7 +4517,7 @@ components:
       - attr
       - code
       - detail
-    UpdateProjectNameSlugErrorComponent:
+    UpdateProjectSlugErrorComponent:
       type: object
       properties:
         attr:
@@ -4744,7 +4547,7 @@ components:
       - attr
       - code
       - detail
-    UpdateProjectNameValidationError:
+    UpdateProjectValidationError:
       type: object
       properties:
         type:
@@ -4752,7 +4555,7 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/UpdateProjectNameError'
+            $ref: '#/components/schemas/UpdateProjectError'
       required:
       - errors
       - type
