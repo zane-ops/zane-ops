@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import { ChevronsUpDown, PlusIcon, Rocket, Search, Trash } from "lucide-react";
 import { z } from "zod";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -24,13 +24,7 @@ import {
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
 
-export const Route = createFileRoute("/_dashboard/project/$slug")({
-  parseParams: (rawParams) => ({
-    slug: z
-      .string()
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-      .parse(rawParams.slug)
-  }),
+export const Route = createLazyFileRoute("/_dashboard/project/$slug")({
   component: withAuthRedirect(ProjectDetail)
 });
 
@@ -42,7 +36,9 @@ function ProjectDetail() {
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Projects</BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/">Projects</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
