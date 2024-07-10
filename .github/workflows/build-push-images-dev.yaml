@@ -102,7 +102,6 @@ jobs:
             type=registry,ref=ghcr.io/zane-ops/docs:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/docs:canary
           cache-to: type=inline
- 
   build-push-backend:
     name: Build and Push Zane Backend
     runs-on: ubuntu-latest
