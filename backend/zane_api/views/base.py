@@ -53,13 +53,16 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
     for name, schema in schemas.items():  # type: str, Any
         if "properties" not in schema:
             continue
+        # Add required fields in the api where the api lacks to add it
         if name.endswith("FieldChangeRequest") or name.endswith("ItemChangeRequest"):
             if "required" in schema:
-                schema["required"] += ["field"]
+                if "field" not in schema["required"]:
+                    schema["required"] += ["field"]
             else:
                 schema["required"] = ["field"]
-            if name.endswith("ChangeFieldRequest"):
-                schema["required"] += ["new_value"]
+            if name.endswith("FieldChangeRequest"):
+                if "new_value" not in schema["required"]:
+                    schema["required"] += ["new_value"]
         if name.endswith("Request"):
             continue
         schema["required"] = sorted(schema["properties"].keys())

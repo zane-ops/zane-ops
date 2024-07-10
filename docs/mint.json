@@ -1,0 +1,105 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "ZaneOps Documentation",
+  "openapi": ["/openapi.yaml"],
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "https://github.com/zane-ops/zane-ops/issues"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get started",
+    "url": "quickstart"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": ["introduction", "quickstart", "screenshots"]
+    },
+    {
+      "group": "Contributing",
+      "pages": ["development", "architecture"]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/introduction",
+        "api-reference/authentication",
+        "api-reference/ping/get-apiping",
+        {
+          "group": "auth",
+          "pages": [
+            "api-reference/auth/login",
+            "api-reference/auth/logout",
+            "api-reference/auth/get-current-user",
+            "api-reference/csrf/get-apicsrf"
+          ]
+        },
+        {
+          "group": "projects",
+          "pages": [
+            "api-reference/archived-projects/get-apiarchived-projects",
+            "api-reference/projects/get-apiprojects",
+            "api-reference/projects/post-apiprojects",
+            "api-reference/projects/get-apiprojects-",
+            "api-reference/projects/delete-apiprojects-",
+            "api-reference/projects/patch-apiprojects-"
+          ]
+        },
+        {
+          "group": "services",
+          "pages": [
+            "api-reference/projects/delete-apiprojects-archive-servicedocker-",
+            "api-reference/projects/delete-apiprojects-cancel-service-changesdocker-",
+            "api-reference/projects/post-apiprojects-create-servicedocker",
+            "api-reference/projects/put-apiprojects-deploy-servicedocker-",
+            "api-reference/projects/put-apiprojects-deploy-servicedocker--1",
+            "api-reference/projects/put-apiprojects-request-service-changesdocker-",
+            "api-reference/projects/get-apiprojects-service-detailsdocker-",
+            "api-reference/projects/get-apiprojects-service-detailsdocker-deployments",
+            "api-reference/projects/get-apiprojects-service-detailsdocker-deployments-"
+          ]
+        },
+        {
+          "group": "docker",
+          "pages": [
+            "api-reference/docker/post-apidockercheck-port",
+            "api-reference/docker/get-apidockerimage-search",
+            "api-reference/docker/post-apidockerlogin"
+          ]
+        },
+        {
+          "group": "domain",
+          "pages": ["api-reference/domain/get-apidomainroot"]
+        },
+
+        {
+          "group": "volumes",
+          "pages": ["api-reference/volumes/get-apivolumes-size"]
+        }
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/zaneopsdev",
+    "github": "https://github.com/zane-ops/zane-ops"
+  }
+}

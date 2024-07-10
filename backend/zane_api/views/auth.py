@@ -25,7 +25,6 @@ from .. import serializers
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
-    token = serializers.CharField(required=False)
 
 
 class LoginRequestSerializer(serializers.Serializer):
@@ -46,6 +45,8 @@ class LoginView(APIView):
             302: None,
         },
         operation_id="login",
+        summary="Login",
+        description="Authenticate User, what is returned is a cookie named `sessionid` that will be used for authentication of the next requests",
     )
     def post(self, request: Request) -> Response:
         form = LoginRequestSerializer(data=request.data)
@@ -59,9 +60,7 @@ class LoginView(APIView):
                 token, _ = Token.objects.get_or_create(
                     user=user
                 )  # this is fine, Token is only used to authenticated internally
-                response = LoginSuccessResponseSerializer(
-                    {"success": True, "token": token.key if settings.DEBUG else None}
-                )
+                response = LoginSuccessResponseSerializer({"success": True})
                 query_params = request.query_params.dict()
                 redirect_uri = query_params.get("redirect_to")
                 if redirect_uri is not None:
@@ -79,6 +78,8 @@ class AuthedView(APIView):
 
     @extend_schema(
         operation_id="getAuthedUser",
+        summary="Get current user",
+        description="Get current authenticated user",
     )
     def get(self, request: Request):
         now = timezone.now()
@@ -96,14 +97,12 @@ class AuthedView(APIView):
         )
 
 
+@extend_schema(exclude=True)
 class TokenAuthedView(APIView):
     authentication_classes = [TokenAuthentication, SessionAuthentication]
     serializer_class = AuthedSuccessResponseSerializer
     permission_classes = [permissions.AllowAny]
 
-    @extend_schema(
-        operation_id="getAuthedUserWithToken",
-    )
     def get(self, request: Request):
         if isinstance(request.user, AnonymousUser):
             accept_header = request.headers.get("accept")
@@ -138,6 +137,8 @@ class AuthLogoutView(APIView):
             204: None,
         },
         operation_id="logout",
+        summary="Logout",
+        description="Logout",
     )
     def delete(self, request: Request):
         logout(request)
@@ -149,10 +150,6 @@ class CSRFSerializer(serializers.Serializer):
 
 
 class CSRFCookieView(APIView):
-    """
-    CSRF cookie view for retrieving CSRF before doing requests
-    """
-
     serializer_class = CSRFSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -161,6 +158,9 @@ class CSRFCookieView(APIView):
             401: None,
         },
         operation_id="getCSRF",
+        summary="Get CSRF cookie",
+        description="CSRF cookie endpoint for retrieving a CSRF token before doing mutative requests (`DELETE`, `POST`, `PUT`, `PATCH`)."
+        "You need to pass the cookie named `csrftoken` to all requests alongside a `X-CSRFToken` with the value of the token.",
     )
     @method_decorator(ensure_csrf_cookie)
     def get(self, _: Request) -> Response:

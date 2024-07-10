@@ -1,3 +1,8 @@
+---
+title: 'Get started'
+description: 'Setup and install zaneops'
+---
+
 # Deploying Zaneops to your server (alpha)
 
 This guide will show how to deploy zaneops to your server, keep in mind that this is very alpha and is subject to change
@@ -9,11 +14,11 @@ For now the features implemented are :
 - UI : login/logout, creating project
 - API : login/logout, creating,updating,archiving projects, creating services from docker images, archiving services,
   updating services (by redeploying them). You can find a reference of the API
-  at [https://zane-api-docs.fkiss.me](https://zane-api-docs.fkiss.me/).
+  at https://zane-docs.fkiss.me/
 
 ## 📋 Prerequesites
 
-You need to install docker (https://docs.docker.com/engine/install/) and be on a linux machine.
+You need to install [docker](https://docs.docker.com/engine/install/) and be on a linux machine.
 
 ## 1. Go to the folder where you want to install zaneops, ex : `/var/www/zaneops` :
 
@@ -49,7 +54,7 @@ After this step, you should have a folder looking like this :
 
 please modify the contents to better suit your needs :
 
-```dotenv
+```shell
 # This is an EXAMPLE, don't copy this in production
 IMAGE_VERSION=alpha # zaneops version to install
 ZANE_APP_DIRECTORY=/var/www/zaneops # where you will install zaneops 
