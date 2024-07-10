@@ -59,7 +59,7 @@ export function ProjectList() {
     slug = "",
     page = 1,
     per_page = 10,
-    sort_by,
+    sort_by = ["-updated_at"],
     status = "active"
   } = Route.useSearch();
   const [debouncedValue] = useDebounce(slug, 300);
