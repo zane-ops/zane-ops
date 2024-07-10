@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 current_dir = $(shell pwd)
 .DEFAULT_GOAL := help
 help: ### Show this help
@@ -49,7 +50,7 @@ deploy: ### Install and deploy zaneops
 	@echo "Wait for all services to show up as \`replicated   1/1\` to attest that everything started succesfully"
 
 create-user: ### Create the first user to login in into the dashboard
-	@set -a; . ./.env.local; set +a && docker exec -it $(docker ps -qf "name=zane-prod_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
+	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
 
 remove: ### Take down zaneops
 	@echo "Taking down zaneops..."
