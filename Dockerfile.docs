@@ -17,4 +17,4 @@ RUN pnpm install --frozen-lockfile
 COPY ./openapi/schema.yml /app/openapi/schema.yml
 RUN pnpm --prefix docs run generate:docs
 
-CMD pnpm --prefix docs run dev
+CMD pnpm --prefix docs run start
