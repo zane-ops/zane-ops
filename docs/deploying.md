@@ -51,7 +51,7 @@ please modify the contents to better suit your needs :
 
 ```dotenv
 # This is an EXAMPLE, don't copy this in production
-IMAGE_VERSION=alpha # zaneops version to install
+IMAGE_VERSION=canary # zaneops version to install
 ZANE_APP_DIRECTORY=/var/www/zaneops # where you will install zaneops 
 ZANE_DB_USER=zane
 ZANE_DB_PASSWORD=password # ⚠️ PLEASE CHANGE THIS ⚠️ 
