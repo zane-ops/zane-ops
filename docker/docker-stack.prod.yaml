@@ -178,25 +178,6 @@ services:
       - db
       - valkey
       - proxy
-  #  registry:
-  #    image: registry:2
-  #    container_name: zane-registry
-  #    restart: always
-  #    environment:
-  #      REGISTRY_AUTH: htpasswd
-  #      REGISTRY_AUTH_HTPASSWD_REALM: Registry
-  #      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-  #      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
-  #    volumes:
-  #      - ./registry/auth:/auth
-  #      - ./registry/data:/data
-  #      - registry-lib-data:/var/lib/registry
-  #    ports:
-  #      - "9989:5000"
-  #    networks:
-  #      zane:
-  #        aliases:
-  #          - zane.registry
   valkey:
     image: valkey/valkey:7.2.5-alpine
     volumes:
@@ -281,12 +262,41 @@ services:
         limits:
           cpus: '0.1'
           memory: 100M
+  #  registry:
+  #    image: registry:2
+  #    container_name: zane-registry
+  #    restart: always
+  #    environment:
+  #      REGISTRY_AUTH: htpasswd
+  #      REGISTRY_AUTH_HTPASSWD_REALM: Registry
+  #      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+  #      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+  #    volumes:
+  #      - ./registry/auth:/auth
+  #      - ./registry/data:/data
+  #      - registry-lib-data:/var/lib/registry
+  #    ports:
+  #      - "9989:5000"
+  #    networks:
+  #      zane:
+  #        aliases:
+  #          - zane.registry
 volumes:
   db-data:
+    labels:
+      zane.stack: "true"
   redis-data:
-  registry-lib-data:
+    labels:
+      zane.stack: "true"
+  #  registry-lib-data:
+  #    labels:
+  #      zane.stack: "true"
   caddy-data:
+    labels:
+      zane.stack: "true"
   caddy-config:
+    labels:
+      zane.stack: "true"
 networks:
   zane:
     external: true

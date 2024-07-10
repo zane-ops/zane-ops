@@ -85,8 +85,20 @@ ZANE_APP_DOMAIN=app.zaneops.local # the domain where the zaneops dashboard will 
 make deploy
 ```
 
-## Removing zaneops
+## 6.️ Create your first user to login to the dashboard
+
+```shell
+make create-user
+```
+
+## Shutting down zaneops
 
 ```shell
 make remove
+```
+
+## Deleting zaneops & all resources created by it
+
+```shell
+make delete-resources
 ```
