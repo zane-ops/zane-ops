@@ -29,7 +29,7 @@ setup: ### Launch initial setup before installing zaneops
   	fi
 	@echo "Step 4️⃣ Done ✅"
 	@echo "Step 5️⃣: Create docker network for zaneops..."
-	@docker network create --attachable --driver overlay zane || true
+	@docker network create --attachable --driver overlay --label zane.stack=true zane || true
 	@echo "Step 5️⃣ Done ✅"
 	@echo "Setup finished 🏁"
 
@@ -37,7 +37,7 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@echo "    🚀   DEPLOYMENT OF ZANEOPS   🚀"
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel) ? (Y/N): " use_http && \
+	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
 	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
 	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 	else \
@@ -48,6 +48,22 @@ deploy: ### Install and deploy zaneops
 	@echo "You can monitor the services deployed by running \`docker service ls --filter label=\"zane.stack=true\"\`"
 	@echo "Wait for all services to show up as \`replicated   1/1\` to attest that everything started succesfully"
 
+create-user: ### Create the first user to login in into the dashboard
+	@set -a; . ./.env.local; set +a && docker exec -it $(docker ps -qf "name=zane-prod_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
+
 remove: ### Take down zaneops
 	@echo "Taking down zaneops..."
 	docker stack rm zane
+
+delete-resources: ### Delete all resources created by zaneops
+	@echo "Taking down zaneops..."
+	docker stack rm zane
+	docker network rm zane
+	@echo "Removing zane-ops volumes..."
+	docker volume rm $(docker volume ls --filter "label=zane.stack=true" -q)
+	@echo "Removing down all services created by zane-ops..."
+	docker service rm $(docker service ls --filter "label=zane-managed=true" -q) || true
+	@echo "Removing all networks created by zane-ops..."
+	docker network rm $(docker network ls --filter "label=zane-managed=true" -q) || true
+	@echo "Removing all volumes created by zane-ops..."
+	docker volume rm $(docker volume ls --filter "label=zane-managed=true" -q) || true

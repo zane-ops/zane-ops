@@ -85,8 +85,34 @@ ZANE_APP_DOMAIN=app.zaneops.local # the domain where the zaneops dashboard will 
 make deploy
 ```
 
-## Removing zaneops
+## 6.️ Create your first user to login to the dashboard
+
+```shell
+make create-user
+```
+
+## Shutting down zaneops
 
 ```shell
 make remove
 ```
+
+## Deleting zaneops & all resources created by it
+
+```shell
+make delete-resources
+```
+
+## In case you want to deploy locally
+
+In case you don't want to deploy to a server online and want to test instead
+on your local machine, add the host for zaneops to your `/etc/hosts` config :
+
+```shell
+nano /etc/hosts
+
+# add the hosts
+127.0.0.1       app.zaneops.local
+```
+
+If you deploy any service to zaneops, you'll need to add the domain to this file.
