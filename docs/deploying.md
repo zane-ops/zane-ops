@@ -102,3 +102,17 @@ make remove
 ```shell
 make delete-resources
 ```
+
+## In case you want to deploy locally
+
+In case you don't want to deploy to a server online and want to test instead
+on your local machine, add the host for zaneops to your `/etc/hosts` config :
+
+```shell
+nano /etc/hosts
+
+# add the hosts
+127.0.0.1       app.zaneops.local
+```
+
+If you deploy any service to zaneops, you'll need to add the domain to this file.

@@ -37,7 +37,7 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@echo "    🚀   DEPLOYMENT OF ZANEOPS   🚀"
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel) ? (Y/N): " use_http && \
+	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
 	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
 	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 	else \
