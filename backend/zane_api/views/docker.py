@@ -1,6 +1,4 @@
-import docker.errors
 from drf_spectacular.utils import extend_schema
-from rest_framework import exceptions
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -10,7 +8,6 @@ from .. import serializers
 from ..docker_operations import (
     search_images_docker_hub,
     check_if_port_is_available_on_host,
-    login_to_docker_registry,
 )
 
 
@@ -35,6 +32,8 @@ class DockerImageSearchView(APIView):
             DockerImageSearchParamsSerializer,
         ],
         operation_id="searchDockerRegistry",
+        summary="Search docker hub",
+        description="Search a docker Image in docker hub Registry",
     )
     def get(self, request: Request):
         query_params = request.query_params.dict()
@@ -57,27 +56,6 @@ class DockerLoginRequestSerializer(serializers.Serializer):
     registry_url = serializers.URLField(required=False)
 
 
-class DockerLoginView(APIView):
-    serializer_class = DockerLoginSuccessResponseSerializer
-
-    @extend_schema(
-        request=DockerLoginRequestSerializer,
-        operation_id="dockerLogin",
-    )
-    def post(self, request: Request):
-        form = DockerLoginRequestSerializer(data=request.data)
-
-        if form.is_valid(raise_exception=True):
-            data = form.data
-            try:
-                login_to_docker_registry(**data)
-            except docker.errors.APIError:
-                raise exceptions.AuthenticationFailed("Invalid credentials")
-            else:
-                response = self.serializer_class({"success": True})
-                return Response(response.data, status=status.HTTP_200_OK)
-
-
 class DockerPortCheckResponseSerializer(serializers.Serializer):
     available = serializers.BooleanField()
 
@@ -92,6 +70,8 @@ class DockerPortCheckView(APIView):
     @extend_schema(
         request=DockerPortCheckRequestSerializer,
         operation_id="checkIfPortIsAvailable",
+        summary="Check Port",
+        description="Check If Port is available on host machine",
     )
     def post(self, request: Request):
         form = DockerPortCheckRequestSerializer(data=request.data)

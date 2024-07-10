@@ -284,7 +284,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": API_DESCRIPTION,
     "VERSION": "0.0.1-alpha",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SERVERS": [{"url": "https://zaneops.fredkiss.dev"}],
+    "SERVERS": [{"url": "https://lab.fkiss.me/"}],
     "ENUM_NAME_OVERRIDES": {
         "ValidationErrorEnum": "drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices",
         "ClientErrorEnum": "drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices",
@@ -297,6 +297,12 @@ SPECTACULAR_SETTINGS = {
         "ErrorCode415Enum": "drf_standardized_errors.openapi_serializers.ErrorCode415Enum.choices",
         "ErrorCode429Enum": "drf_standardized_errors.openapi_serializers.ErrorCode429Enum.choices",
         "ErrorCode500Enum": "drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices",
+        "ItemChangeTypeEnum": (
+            ("ADD", "Add"),
+            ("DELETE", "Delete"),
+            ("UPDATE", "Update"),
+        ),
+        "FieldChangeTypeEnum": (("UPDATE", "Update"),),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

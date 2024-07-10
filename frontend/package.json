@@ -10,7 +10,7 @@
     "build": "tsr generate && tsc && vite build",
     "check": "biome check .",
     "preview": "vite preview",
-    "predev": "npm run generate:api && tsr generate",
+    "predev": "pnpm run generate:api && tsr generate",
     "format": "biome check . --apply"
   },
   "dependencies": {

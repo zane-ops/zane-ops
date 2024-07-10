@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -13,7 +13,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
-export const Route = createFileRoute("/_dashboard/create-project")({
+export const Route = createLazyFileRoute("/_dashboard/create-project")({
   component: withAuthRedirect(CreateProject)
 });
 

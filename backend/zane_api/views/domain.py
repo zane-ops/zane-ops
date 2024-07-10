@@ -16,6 +16,8 @@ class GetRootDomainView(APIView):
 
     @extend_schema(
         operation_id="getRootDomain",
+        summary="Get Root Domain",
+        description="Get the root domain used by ZaneOps to generate automatic subdomains for services.",
     )
     def get(self, _: Request) -> Response:
         response = GetRootDomainSerializer(data={"domain": settings.ROOT_DOMAIN})

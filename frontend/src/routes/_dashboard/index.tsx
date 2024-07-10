@@ -277,22 +277,26 @@ export function ProjectList() {
             )}
 
             {noResults ? (
-              <TableRow className="border-border cursor-pointer">
+              <TableRow className="border-border">
                 <TableCell colSpan={5} className="text-center py-4">
                   <h1 className="text-2xl font-bold">No results found</h1>
                 </TableCell>
               </TableRow>
             ) : (
               projectList.map((project) => (
-                <TableRow
-                  className="border-border cursor-pointer"
-                  key={project.id}
-                >
+                <TableRow className="border-border" key={project.id}>
                   <TableCell className="font-medium ">
-                    <div className="flex gap-2">
+                    <Link
+                      className={cn(
+                        "flex gap-2",
+                        status === "active" && "hover:underline"
+                      )}
+                      to={`/project/${project.slug}`}
+                      disabled={status !== "active"}
+                    >
                       <Folder size={18} />
                       {project.slug}
-                    </div>
+                    </Link>
                   </TableCell>
                   <TableCell>{project.description}</TableCell>
                   {"updated_at" in project ? (
