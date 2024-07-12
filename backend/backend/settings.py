@@ -350,9 +350,6 @@ ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
 ZANE_FLUENTD_HOST = os.environ.get(
     "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"
 )
-ZANE_FLUENTD_HOST = os.environ.get(
-    "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"
-)
 
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
