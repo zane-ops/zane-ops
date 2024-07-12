@@ -18,6 +18,8 @@ class VolumeGetSizeView(APIView):
 
     @extend_schema(
         operation_id="getVolumeSize",
+        summary="Get volume size",
+        description="Get the total data size in the volume, in bytes.",
     )
     def get(self, request: Request, volume_id: str):
         try:

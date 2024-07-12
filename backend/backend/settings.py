@@ -33,7 +33,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
-    "SECRET_KEY", "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx"
+    "DJANGO_SECRET_KEY",
+    "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx",
 )
 
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
@@ -42,9 +43,11 @@ PRODUCTION_ENV = "PRODUCTION"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT != PRODUCTION_ENV
+# SECURE_SSL_REDIRECT = ENVIRONMENT == PRODUCTION_ENV
 CSRF_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
 SESSION_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
+SECURE_HSTS_SECONDS = 0 if ENVIRONMENT != PRODUCTION_ENV else 60
 
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
@@ -61,7 +64,7 @@ ALLOWED_HOSTS = (
         "host.docker.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f".{ROOT_DOMAIN}", f"zane-api.{ZANE_INTERNAL_DOMAIN}"]
+    else [f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
 )
 SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
 
@@ -284,7 +287,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": API_DESCRIPTION,
     "VERSION": "0.0.1-alpha",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SERVERS": [{"url": "https://zaneops.fredkiss.dev"}],
+    "SERVERS": [{"url": "https://lab.fkiss.me/"}],
     "ENUM_NAME_OVERRIDES": {
         "ValidationErrorEnum": "drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices",
         "ClientErrorEnum": "drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices",
@@ -297,6 +300,12 @@ SPECTACULAR_SETTINGS = {
         "ErrorCode415Enum": "drf_standardized_errors.openapi_serializers.ErrorCode415Enum.choices",
         "ErrorCode429Enum": "drf_standardized_errors.openapi_serializers.ErrorCode429Enum.choices",
         "ErrorCode500Enum": "drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices",
+        "ItemChangeTypeEnum": (
+            ("ADD", "Add"),
+            ("DELETE", "Delete"),
+            ("UPDATE", "Update"),
+        ),
+        "FieldChangeTypeEnum": (("UPDATE", "Update"),),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",
@@ -331,12 +340,15 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
-    else f"zane-api.{ZANE_INTERNAL_DOMAIN}:8000"
+    else f"zane.api.zaneops.internal:8000"
 )
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:5678"
     if ENVIRONMENT != PRODUCTION_ENV
-    else f"zane-front.{ZANE_INTERNAL_DOMAIN}:80"
+    else f"zane.front.zaneops.internal:80"
+)
+ZANE_FLUENTD_HOST = os.environ.get(
+    "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"
 )
 ZANE_FLUENTD_HOST = os.environ.get(
     "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"

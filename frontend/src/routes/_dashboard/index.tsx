@@ -10,7 +10,6 @@ import {
   Trash
 } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
-import { useAuthUser } from "~/components/helper/use-auth-user";
 import { MetaTitle } from "~/components/meta-title";
 import { Input } from "~/components/ui/input";
 
@@ -52,24 +51,8 @@ import { formattedDate } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
-  component: withAuthRedirect(AuthedView)
+  component: withAuthRedirect(ProjectList)
 });
-
-function AuthedView() {
-  const query = useAuthUser();
-  const user = query.data?.data?.user;
-
-  if (!user) {
-    return null;
-  }
-
-  return (
-    <>
-      <MetaTitle title="Create Project" />
-      <ProjectList />
-    </>
-  );
-}
 
 export function ProjectList() {
   const {
@@ -108,6 +91,7 @@ export function ProjectList() {
   const empty = projectList.length === 0 && debouncedValue.trim() === "";
 
   const noActiveProjects = status === "active" && projectList.length === 0;
+  const noArchivedProject = status === "archived" && projectList.length === 0;
 
   const handleSort = (field: "slug" | "updated_at" | "archived_at") => {
     const isDescending = sort_by.includes(`-${field}`);
@@ -135,6 +119,7 @@ export function ProjectList() {
 
   return (
     <main>
+      <MetaTitle title="Dashboard" />
       <section>
         <div className="md:my-10 my-5">
           <h1 className="text-3xl font-bold">Overview</h1>
@@ -283,23 +268,35 @@ export function ProjectList() {
               ""
             )}
 
+            {noArchivedProject && (
+              <TableCell colSpan={5} className="text-center py-4">
+                <section className="flex gap-3 flex-col items-center justify-center flex-grow py-16">
+                  <h1 className="text-2xl font-bold">No archived project</h1>
+                </section>
+              </TableCell>
+            )}
+
             {noResults ? (
-              <TableRow className="border-border cursor-pointer">
+              <TableRow className="border-border">
                 <TableCell colSpan={5} className="text-center py-4">
                   <h1 className="text-2xl font-bold">No results found</h1>
                 </TableCell>
               </TableRow>
             ) : (
               projectList.map((project) => (
-                <TableRow
-                  className="border-border cursor-pointer"
-                  key={project.id}
-                >
+                <TableRow className="border-border" key={project.id}>
                   <TableCell className="font-medium ">
-                    <div className="flex gap-2">
+                    <Link
+                      className={cn(
+                        "flex gap-2",
+                        status === "active" && "hover:underline"
+                      )}
+                      to={`/project/${project.slug}`}
+                      disabled={status !== "active"}
+                    >
                       <Folder size={18} />
                       {project.slug}
-                    </div>
+                    </Link>
                   </TableCell>
                   <TableCell>{project.description}</TableCell>
                   {"updated_at" in project ? (

@@ -14,6 +14,7 @@ urlpatterns = [
     ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(r"^csrf/?$", views.CSRFCookieView.as_view(), name="csrf"),
+    re_path(r"^ping/?$", views.PINGView.as_view(), name="ping"),
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
     re_path(r"^projects/?$", views.ProjectsListAPIView.as_view(), name="projects.list"),
     re_path(
@@ -31,14 +32,12 @@ urlpatterns = [
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
     ),
-    re_path(r"^docker/login/?$", views.DockerLoginView.as_view(), name="docker.login"),
     re_path(r"^domain/root/?$", views.GetRootDomainView.as_view(), name="domain.root"),
     re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
     ),
-    re_path(r"^docker/login/?$", views.DockerLoginView.as_view(), name="docker.login"),
     re_path(
         r"^docker/check-port/?$",
         views.DockerPortCheckView.as_view(),

@@ -1,0 +1,4 @@
+services:
+  proxy:
+    ports:
+      - "80:80"

@@ -7,10 +7,10 @@
   "scripts": {
     "generate:api": "openapi-typescript ../openapi/schema.yml -o src/api/v1.ts",
     "dev": "vite --host",
-    "build": "tsc && vite build",
+    "build": "tsr generate && tsc && vite build",
     "check": "biome check .",
     "preview": "vite preview",
-    "predev": "npm run generate:api && tsr --watch && tsr --generate",
+    "predev": "pnpm run generate:api && tsr generate",
     "format": "biome check . --apply"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "@radix-ui/react-form": "^0.0.3",
     "@radix-ui/react-menubar": "^1.0.4",
     "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tooltip": "^1.1.0",
     "@radix-ui/themes": "^3.0.3",

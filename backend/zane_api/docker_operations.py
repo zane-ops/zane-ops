@@ -90,15 +90,6 @@ def search_images_docker_hub(term: str) -> List[DockerImageResult]:
     return images_to_return
 
 
-def login_to_docker_registry(
-    username: str, password: str, registry_url: str = DOCKER_HUB_REGISTRY_URL
-):
-    client = get_docker_client()
-    client.login(
-        username=username, password=password, registry=registry_url, reauth=True
-    )
-
-
 class DockerAuthConfig(TypedDict):
     username: str
     password: str

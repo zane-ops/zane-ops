@@ -1,0 +1,302 @@
+x-backend-vars: &env-vars
+  environment:
+    ENVIRONMENT: PRODUCTION
+    REDIS_URL: redis://zane.valkey:6379/0
+    DB_HOST: zane.db
+    DB_PORT: 5432
+    DB_NAME: zane
+    DB_USER: ${ZANE_DB_USER:-zane}
+    DB_PASSWORD: ${ZANE_DB_PASSWORD}
+    ROOT_DOMAIN: ${ROOT_DOMAIN}
+    ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+    ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+
+services:
+  proxy:
+    image: ghcr.io/zane-ops/proxy:${IMAGE_VERSION}
+    command: caddy run --resume
+    logging:
+      driver: "fluentd"
+      options:
+        mode: "non-blocking"
+        fluentd-address: "unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock"
+        fluentd-async: "true"
+        fluentd-max-retries: 10
+        fluentd-sub-second-precision: "true"
+        tag: "{\"service_id\":\"zane.proxy\"}"
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+        zane.role: "proxy"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 200M
+    ports:
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      CADDY_ADMIN: 0.0.0.0:2019
+    networks:
+      zane:
+        aliases:
+          - zane.proxy
+  frontend:
+    image: ghcr.io/zane-ops/frontend:${IMAGE_VERSION}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 100M
+    networks:
+      zane:
+        aliases:
+          - zane.frontend
+          - zane.front.zaneops.internal
+  api:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 500M
+    networks:
+      zane:
+        aliases:
+          - zane.api
+          - zane.api.zaneops.internal
+    <<: *env-vars
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+  #    healthcheck:
+  #      # https://stackoverflow.com/a/47722899/5008962
+  #      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "http://localhost:8000/api/ping", "||", "exit", "1" ]
+  #      interval: 5s
+  #      timeout: 10s
+  #      retries: 3
+  #      start_period: 5s
+  celery-worker:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    command: /bin/bash -c "source /venv/bin/activate && celery -A backend worker -E -l info"
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '1'
+          memory: 500M
+    networks:
+      - zane
+    <<: *env-vars
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+  celery-beat:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    command: /bin/bash -c "source /venv/bin/activate && celery -A backend beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 100M
+    networks:
+      - zane
+    <<: *env-vars
+    depends_on:
+      - db
+      - valkey
+      - proxy
+  valkey:
+    image: valkey/valkey:7.2.5-alpine
+    volumes:
+      - redis-data:/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 500M
+    networks:
+      zane:
+        aliases:
+          - zane.valkey
+    healthcheck:
+      test: [ "CMD", "valkey-cli", "ping" ]
+      interval: 5s
+      retries: 10
+      timeout: 2s
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${ZANE_DB_USER:-zane}
+      POSTGRES_PASSWORD: ${ZANE_DB_PASSWORD}
+      POSTGRES_DB: zane
+    networks:
+      zane:
+        aliases:
+          - zane.db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '1'
+          memory: 500M
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+  fluentd:
+    image: fluentd:v1.16.2-1.1
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent.conf:/fluentd/etc/fluent.conf:ro"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/:/var/fluentd/:rw"
+    networks:
+      zane:
+        aliases:
+          - zane.fluentd
+    environment:
+      - API_HOST=zane.api.zaneops.internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 1
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 100M
+  #  registry:
+  #    image: registry:2
+  #    container_name: zane-registry
+  #    restart: always
+  #    environment:
+  #      REGISTRY_AUTH: htpasswd
+  #      REGISTRY_AUTH_HTPASSWD_REALM: Registry
+  #      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+  #      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+  #    volumes:
+  #      - ./registry/auth:/auth
+  #      - ./registry/data:/data
+  #      - registry-lib-data:/var/lib/registry
+  #    ports:
+  #      - "9989:5000"
+  #    networks:
+  #      zane:
+  #        aliases:
+  #          - zane.registry
+volumes:
+  db-data:
+    labels:
+      zane.stack: "true"
+  redis-data:
+    labels:
+      zane.stack: "true"
+  #  registry-lib-data:
+  #    labels:
+  #      zane.stack: "true"
+  caddy-data:
+    labels:
+      zane.stack: "true"
+  caddy-config:
+    labels:
+      zane.stack: "true"
+networks:
+  zane:
+    external: true

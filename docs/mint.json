@@ -1,0 +1,96 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "ZaneOps Documentation",
+  "openapi": ["/openapi.yaml"],
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "https://github.com/zane-ops/zane-ops/issues"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get started",
+    "url": "quickstart"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": ["introduction", "quickstart", "screenshots"]
+    },
+    {
+      "group": "Contributing",
+      "pages": ["development", "architecture"]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/introduction",
+        "api-reference/authentication",
+        "api-reference/ping/ping",
+        "api-reference/volumes/get-volume-size",
+        "api-reference/domain/get-root-domain",
+        "api-reference/docker/check-port",
+        "api-reference/docker/search-docker-hub",
+        {
+          "group": "Auth",
+          "pages": [
+            "api-reference/auth/login",
+            "api-reference/auth/logout",
+            "api-reference/auth/get-current-user",
+            "api-reference/csrf/get-csrf-cookie"
+          ]
+        },
+        {
+          "group": "Projects",
+          "pages": [
+            "api-reference/projects/list-all-active-projects",
+            "api-reference/archived-projects/list-archived-projects",
+            "api-reference/projects/create-a-new-project",
+            "api-reference/projects/archive-a-project",
+            "api-reference/projects/update-a-project"
+          ]
+        },
+        {
+          "group": "Services",
+          "pages": [
+            {
+              "group": "Docker",
+              "pages": [
+                "api-reference/projects/create-a-docker-service",
+                "api-reference/projects/archive-a-docker-service",
+                "api-reference/projects/get-single-service",
+                "api-reference/projects/request-config-changes",
+                "api-reference/projects/cancel-a-config-change",
+                "api-reference/projects/deploy-a-docker-service",
+                "api-reference/projects/redeploy-a-docker-service",
+                "api-reference/projects/get-single-deployment",
+                "api-reference/projects/list-all-deployments"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/zaneopsdev",
+    "github": "https://github.com/zane-ops/zane-ops"
+  }
+}

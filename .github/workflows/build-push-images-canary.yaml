@@ -1,0 +1,133 @@
+name: Build and Push Canary Images
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches:
+      - main
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-push-proxy:
+    name: Build and Push Zane Proxy
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: ./docker/proxy
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/zane-ops/proxy:canary,ghcr.io/zane-ops/proxy:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:canary
+          cache-to: type=inline
+  build-push-frontend:
+    name: Build and Push Zane Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: Dockerfile.front
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/zane-ops/frontend:canary,ghcr.io/zane-ops/frontend:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:canary
+          cache-to: type=inline
+  build-push-docs:
+    name: Build and Push Zane Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: Dockerfile.docs
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/zane-ops/docs:canary,ghcr.io/zane-ops/docs:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/docs:canary
+          cache-to: type=inline
+  build-push-backend:
+    name: Build and Push Zane Backend
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/zane-ops/backend:canary,ghcr.io/zane-ops/backend:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/backend:canary
+          cache-to: type=inline

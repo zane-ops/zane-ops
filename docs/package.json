@@ -1,0 +1,17 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "mintlify dev",
+    "dev": "pnpm run generate:docs && mintlify dev",
+    "generate:docs": "mintlify-scrape openapi-file ../openapi/schema.yml -o api-reference && cp ../openapi/schema.yml ./openapi.yaml"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mintlify/scraping": "^3.0.134",
+    "mintlify": "^4.0.184"
+  }
+}

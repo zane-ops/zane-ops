@@ -36,6 +36,9 @@ export interface paths {
   "/api/domain/root/": {
     get: operations["getRootDomain"];
   };
+  "/api/ping/": {
+    get: operations["ping"];
+  };
   "/api/projects/": {
     get: operations["projects_list"];
     post: operations["createProject"];
@@ -725,6 +728,9 @@ export interface components {
       errors: components["schemas"]["LoginError"][];
     };
     LogoutErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    PING: {
+      ping: string;
+    };
     PaginatedArchivedProjectList: {
       /** @example 123 */
       count: number;
@@ -788,6 +794,7 @@ export interface components {
       slug?: string;
       description?: string;
     };
+    PingErrorResponse400: components["schemas"]["ParseErrorResponse"];
     PortConfiguration: {
       id: string;
       host: number | null;
@@ -1726,6 +1733,30 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  ping: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PING"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["PingErrorResponse400"];
         };
       };
       401: {
