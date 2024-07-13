@@ -912,5 +912,33 @@ class DeploymentLogsPagination(pagination.CursorPagination):
 # ==============================
 
 
-class ServiceListFilterSet(django_filters.FilterSet):
-    slug = django_filters.CharFilter(lookup_expr="istartswith")
+class ServiceListParamSerializer(serializers.Serializer):
+    query = serializers.CharField(required=False)
+
+
+class BaseServiceCardSerializer(serializers.Serializer):
+    updated_at = serializers.DateTimeField(required=True)
+    volume_number = serializers.IntegerField(required=True)
+    slug = serializers.CharField(required=True)
+    url = serializers.URLField(allow_null=True)
+    STATUS_CHOICES = (
+        ("HEALTHY", _("Healthy")),
+        ("UNHEALTHY", _("Unhealthy")),
+        ("SLEEPING", _("Sleeping")),
+    )
+    status = serializers.ChoiceField(
+        choices=STATUS_CHOICES, required=True, allow_null=True
+    )
+
+
+class DockerServiceCardSerializer(BaseServiceCardSerializer):
+    type = serializers.ChoiceField(choices=["docker"], default="docker")
+    image = serializers.CharField(required=True)
+    tag = serializers.CharField(required=True)
+
+
+class GitServiceCardSerializer(BaseServiceCardSerializer):
+    type = serializers.ChoiceField(choices=["git"], default="git")
+    repository = serializers.CharField(required=True)
+    last_commit_message = serializers.CharField(required=False)
+    branch = serializers.CharField(required=True)

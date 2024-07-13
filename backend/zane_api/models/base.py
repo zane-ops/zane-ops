@@ -77,7 +77,7 @@ class URL(models.Model):
             base_path="/",
         )
 
-    def __str__(self):
+    def __repr__(self):
         base_path = (
             "/"
             if self.base_path == "/"
@@ -86,6 +86,16 @@ class URL(models.Model):
             )
         )
         return f'URL(domain="{self.domain}"), base_path="{base_path}")'
+
+    def __str__(self):
+        base_path = (
+            "/"
+            if self.base_path == "/"
+            else strip_slash_if_exists(
+                self.base_path, strip_start=False, strip_end=True
+            )
+        )
+        return f"https://{self.domain}{base_path}"
 
     class Meta:
         unique_together = (
@@ -703,6 +713,7 @@ class GitDeployment(BaseDeployment):
         QUEUED = "QUEUED", _("Queued")
         PREPARING = "PREPARING", _("Preparing")
         FAILED = "FAILED", _("Failed")
+        REMOVED = "REMOVED", _("Removed")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
         BUILDING = "BUILDING", _("Building")

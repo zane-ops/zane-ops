@@ -1999,8 +1999,15 @@ paths:
           description: No response body
   /api/projects/{slug}/service-list/:
     get:
-      operationId: projects_service_list_retrieve
+      operationId: projects_service_list_list
+      description: Get all services in a project
+      summary: Get service list
       parameters:
+      - in: query
+        name: query
+        schema:
+          type: string
+          minLength: 1
       - in: path
         name: slug
         schema:
@@ -2016,7 +2023,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceListRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceListListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2068,7 +2075,13 @@ paths:
                       attr: null
           description: ''
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceCardResponse'
+          description: ''
   /api/volumes/{volume_id}/size/:
     get:
       operationId: getVolumeSize
@@ -2887,6 +2900,47 @@ components:
       - updated_at
       - urls
       - volumes
+    DockerServiceCard:
+      type: object
+      properties:
+        updated_at:
+          type: string
+          format: date-time
+        volume_number:
+          type: integer
+        slug:
+          type: string
+        url:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ServiceStatusEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        type:
+          allOf:
+          - $ref: '#/components/schemas/DockerServiceCardTypeEnum'
+          default: docker
+        image:
+          type: string
+        tag:
+          type: string
+      required:
+      - image
+      - slug
+      - status
+      - tag
+      - type
+      - updated_at
+      - url
+      - volume_number
+    DockerServiceCardTypeEnum:
+      enum:
+      - docker
+      type: string
+      description: '* `docker` - docker'
     DockerServiceCreateRequestRequest:
       type: object
       properties:
@@ -2921,7 +2975,7 @@ components:
           type: string
           maxLength: 255
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/DockerServiceDeploymentStatusEnum'
         status_reason:
           type: string
           nullable: true
@@ -2956,6 +3010,28 @@ components:
       - status
       - status_reason
       - url
+    DockerServiceDeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - CANCELLED
+      - FAILED
+      - PREPARING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      - REMOVED
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `FAILED` - Failed
+        * `PREPARING` - Preparing
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `REMOVED` - Removed
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -3306,6 +3382,50 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GitServiceCard:
+      type: object
+      properties:
+        updated_at:
+          type: string
+          format: date-time
+        volume_number:
+          type: integer
+        slug:
+          type: string
+        url:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ServiceStatusEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        type:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceCardTypeEnum'
+          default: git
+        repository:
+          type: string
+        last_commit_message:
+          type: string
+        branch:
+          type: string
+      required:
+      - branch
+      - last_commit_message
+      - repository
+      - slug
+      - status
+      - type
+      - updated_at
+      - url
+      - volume_number
+    GitServiceCardTypeEnum:
+      enum:
+      - git
+      type: string
+      description: '* `git` - git'
     HealthCheck:
       type: object
       properties:
@@ -3553,6 +3673,9 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    NullEnum:
+      enum:
+      - null
     PING:
       type: object
       properties:
@@ -3980,7 +4103,7 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceListRetrieveErrorResponse400:
+    ProjectsServiceListListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -4672,6 +4795,14 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ServiceCardResponse:
+      oneOf:
+      - $ref: '#/components/schemas/DockerServiceCard'
+      - $ref: '#/components/schemas/GitServiceCard'
+      discriminator:
+        propertyName: type
+        mapping:
+          null: '#/components/schemas/GitServiceCard'
     ServicePortsRequestRequest:
       type: object
       properties:
@@ -4682,6 +4813,16 @@ components:
           type: integer
       required:
       - forwarded
+    ServiceStatusEnum:
+      enum:
+      - HEALTHY
+      - UNHEALTHY
+      - SLEEPING
+      type: string
+      description: |-
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `SLEEPING` - Sleeping
     SimpleLog:
       type: object
       properties:
@@ -4730,28 +4871,6 @@ components:
         * `SYSTEM` - System Logs
         * `PROXY` - Proxy Logs
         * `SERVICE` - Service Logs
-    StatusEnum:
-      enum:
-      - QUEUED
-      - CANCELLED
-      - FAILED
-      - PREPARING
-      - STARTING
-      - RESTARTING
-      - HEALTHY
-      - UNHEALTHY
-      - REMOVED
-      type: string
-      description: |-
-        * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
-        * `FAILED` - Failed
-        * `PREPARING` - Preparing
-        * `STARTING` - Starting
-        * `RESTARTING` - Restarting
-        * `HEALTHY` - Healthy
-        * `UNHEALTHY` - Unhealthy
-        * `REMOVED` - Removed
     URLItemChangeFieldEnum:
       enum:
       - urls
