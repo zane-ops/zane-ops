@@ -23,17 +23,17 @@ import {
 } from "./ui/tooltip";
 
 type DockerServiceCardProps = {
-  name: string;
+  slug: string;
   image: string;
-  url?: string;
+  url?: string | null;
   tag: string;
   updatedAt: string;
   volumeNumber?: number;
-  status: "healthy" | "unhealthy" | "sleeping" | "undeployed";
+  status: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | null;
 };
 
 export function DockerServiceCard({
-  name,
+  slug,
   image,
   url,
   tag,
@@ -47,14 +47,14 @@ export function DockerServiceCard({
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <span className="absolute cursor-pointer flex h-4 w-4 -top-2 -right-2">
-              {status !== "undeployed" && (
+              {status !== null && (
                 <span
                   className={cn(
                     "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
                     {
-                      "bg-green-400": status === "healthy",
-                      "bg-red-400": status === "unhealthy",
-                      "bg-secondary": status === "sleeping"
+                      "bg-green-400": status === "HEALTHY",
+                      "bg-red-400": status === "UNHEALTHY",
+                      "bg-secondary": status === "SLEEPING"
                     }
                   )}
                 />
@@ -64,22 +64,21 @@ export function DockerServiceCard({
                 className={cn(
                   "relative inline-flex rounded-full h-4 w-4 bg-green-500",
                   {
-                    "bg-green-500": status === "healthy",
-                    "bg-red-500": status === "unhealthy",
-                    "bg-secondary": status === "sleeping",
-                    "bg-gray-400": status === "undeployed"
+                    "bg-green-500": status === "HEALTHY",
+                    "bg-red-500": status === "UNHEALTHY",
+                    "bg-secondary": status === "SLEEPING",
+                    "bg-gray-400": status === null
                   }
                 )}
               ></span>
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <div>
-              {status === "healthy" && "✅ "}
-              {status === "sleeping" && "💤 "}
-              {status === "unhealthy" && "❌ "}
-              {status === "undeployed" && "⏳ "}
-              {status === "undeployed" ? "Not deployed yet" : status}
+            <div className="capitalize">
+              {status === "HEALTHY" && "✅ "}
+              {status === "SLEEPING" && "💤 "}
+              {status === "UNHEALTHY" && "❌ "}
+              {status === null ? "⏳ Not deployed yet" : status}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -89,7 +88,7 @@ export function DockerServiceCard({
         <CardTitle className="flex gap-2 items-center">
           <Container className="flex-none" size={30} />
           <div className="w-[calc(100%-38px)]">
-            <h1 className="text-lg leading-tight">{name}</h1>
+            <h1 className="text-lg leading-tight">{slug}</h1>
             <p className="text-sm font-medium overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
               {image}
             </p>
@@ -126,18 +125,18 @@ export function DockerServiceCard({
 }
 
 type GitServiceCardProps = {
-  name: string;
+  slug: string;
   repository: string;
-  url?: string;
+  url?: string | null;
   updatedAt: string;
   lastCommitMessage?: string;
   branchName: string;
   volumeNumber?: number;
-  status: "healthy" | "unhealthy" | "sleeping" | "undeployed";
+  status: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | null;
 };
 
 export function GitServiceCard({
-  name,
+  slug,
   repository,
   url,
   updatedAt,
@@ -152,14 +151,14 @@ export function GitServiceCard({
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <span className="absolute cursor-pointer flex h-4 w-4 -top-2 -right-2">
-              {status !== "undeployed" && (
+              {status !== null && (
                 <span
                   className={cn(
                     "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
                     {
-                      "bg-green-400": status === "healthy",
-                      "bg-red-400": status === "unhealthy",
-                      "bg-secondary": status === "sleeping"
+                      "bg-green-400": status === "HEALTHY",
+                      "bg-red-400": status === "UNHEALTHY",
+                      "bg-secondary": status === "SLEEPING"
                     }
                   )}
                 />
@@ -169,10 +168,10 @@ export function GitServiceCard({
                 className={cn(
                   "relative inline-flex rounded-full h-4 w-4 bg-green-500",
                   {
-                    "bg-green-500": status === "healthy",
-                    "bg-red-500": status === "unhealthy",
-                    "bg-secondary": status === "sleeping",
-                    "bg-gray-400": status === "undeployed"
+                    "bg-green-500": status === "HEALTHY",
+                    "bg-red-500": status === "UNHEALTHY",
+                    "bg-secondary": status === "SLEEPING",
+                    "bg-gray-400": status === null
                   }
                 )}
               ></span>
@@ -180,11 +179,10 @@ export function GitServiceCard({
           </TooltipTrigger>
           <TooltipContent>
             <div>
-              {status === "healthy" && "✅ "}
-              {status === "sleeping" && "💤 "}
-              {status === "unhealthy" && "❌ "}
-              {status === "undeployed" && "⏳ "}
-              {status === "undeployed" ? "Not deployed yet" : status}
+              {status === "HEALTHY" && "✅ "}
+              {status === "SLEEPING" && "💤 "}
+              {status === "UNHEALTHY" && "❌ "}
+              {status === null ? "⏳ Not deployed yet" : status}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -194,7 +192,7 @@ export function GitServiceCard({
         <CardTitle className="flex gap-2 items-center">
           <Github className="flex-none" size={30} />
           <div className="w-[calc(100%-38px)]">
-            <h1 className="text-lg leading-tight">{name}</h1>
+            <h1 className="text-lg leading-tight">{slug}</h1>
             <p className="text-sm font-medium overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
               {repository}
             </p>
