@@ -95,7 +95,7 @@ class URL(models.Model):
                 self.base_path, strip_start=False, strip_end=True
             )
         )
-        return f"https://{self.domain}{base_path}"
+        return f"{self.domain}{base_path}"
 
     class Meta:
         unique_together = (
