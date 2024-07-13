@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.urls import reverse
@@ -134,6 +135,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(reverse("zane_api:logs.tail"), data=simple_logs)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(len(simple_logs), deployment.logs.count())
         log: SimpleLog = deployment.logs.first()
@@ -145,3 +147,163 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
             log.content,
         )
         self.assertIsNotNone(log.service_id)
+
+
+class LogStreamViewTests(AuthAPITestCase):
+    sample_log_contents = [
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:43 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 42, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:42 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 39, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:39 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:37 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 34, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:34 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 32, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:32 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 29, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:29 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 27, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 24, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+    ]
+
+    def test_view_logs(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        simple_logs = SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=(
+                        SimpleLog.LogLevel.INFO
+                        if i % 2 == 0
+                        else SimpleLog.LogLevel.ERROR
+                    ),
+                )
+                for i, (time, content) in enumerate(self.sample_log_contents)
+            ]
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(10, len(response.json()["results"]))
+
+    def test_paginate(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        simple_logs = SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=(
+                        SimpleLog.LogLevel.INFO
+                        if i % 2 == 0
+                        else SimpleLog.LogLevel.ERROR
+                    ),
+                )
+                for i, (time, content) in enumerate(self.sample_log_contents)
+            ]
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING="per_page=5",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        self.assertIsNotNone(data["next"])
+        self.assertEqual(5, len(data["results"]))
+
+    def test_complex_filter(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        simple_logs = SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=(
+                        SimpleLog.LogLevel.INFO
+                        if i % 2 == 0
+                        else SimpleLog.LogLevel.ERROR
+                    ),
+                )
+                for i, (time, content) in enumerate(self.sample_log_contents)
+            ]
+        )
+
+        time_after = datetime.datetime(
+            2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc
+        )
+        time_before = datetime.datetime(
+            2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc
+        )
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"level=ERROR&time_after={time_after.strftime('%Y-%m-%dT%H:%M:%SZ')}&time_before={time_before.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, len(response.json()["results"]))

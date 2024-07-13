@@ -74,6 +74,7 @@ CSRF_TRUSTED_ORIGINS = (
     if ENVIRONMENT != PRODUCTION_ENV
     else [f"https://{ZANE_APP_DOMAIN}"]
 )
+CORS_ALLOW_ALL_ORIGINS = True if ENVIRONMENT != PRODUCTION_ENV else CSRF_TRUSTED_ORIGINS
 
 CACHES = {
     "default": {
@@ -96,6 +97,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
+    "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_spectacular",
@@ -106,6 +108,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
