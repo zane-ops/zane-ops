@@ -17,6 +17,7 @@ from ..models import (
     URL,
     DockerDeploymentChange,
 )
+from ..utils import jprint
 from ..views import EMPTY_PAGINATED_RESPONSE
 
 
@@ -548,3 +549,51 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project_in_response = response.json().get("results", [])[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
+
+
+class ProjectResourcesViewTests(AuthAPITestCase):
+    def test_show_resources(self):
+        self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field="volumes",
+                    type="ADD",
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                )
+            ]
+        )
+        p, _ = self.create_and_deploy_caddy_docker_service()
+
+        response = self.client.get(
+            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug})
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertTrue(type(response.json()) is list)
+        self.assertEqual(2, len(response.json()))
+
+    def test_filter_resources(self):
+        self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field="volumes",
+                    type="ADD",
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                )
+            ]
+        )
+        p, _ = self.create_and_deploy_caddy_docker_service()
+
+        response = self.client.get(
+            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug}),
+            QUERY_STRING="query=redis",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()))

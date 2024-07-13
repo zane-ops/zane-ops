@@ -64,7 +64,8 @@
             "api-reference/archived-projects/list-archived-projects",
             "api-reference/projects/create-a-new-project",
             "api-reference/projects/archive-a-project",
-            "api-reference/projects/update-a-project"
+            "api-reference/projects/update-a-project",
+            "api-reference/projects/get-service-list"
           ]
         },
         {
@@ -77,9 +78,9 @@
             "api-reference/projects/cancel-a-config-change",
             "api-reference/projects/deploy-a-docker-service",
             "api-reference/projects/redeploy-a-docker-service",
+            "api-reference/projects/list-all-deployments",
             "api-reference/projects/get-single-deployment",
-            "api-reference/projects/get-deployment-logs",
-            "api-reference/projects/list-all-deployments"
+            "api-reference/projects/get-deployment-logs"
           ]
         }
       ]

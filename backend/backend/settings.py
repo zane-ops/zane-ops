@@ -211,7 +211,7 @@ LOGGING = {
     "loggers": {
         "django.db.backends": {
             "level": "DEBUG",
-            # "handlers": ["console"],
+            "handlers": ["console"],
         },
     },
 }
@@ -306,6 +306,11 @@ SPECTACULAR_SETTINGS = {
             ("UPDATE", "Update"),
         ),
         "FieldChangeTypeEnum": (("UPDATE", "Update"),),
+        "ServiceStatusEnum": (
+            ("HEALTHY", ("Healthy")),
+            ("UNHEALTHY", ("Unhealthy")),
+            ("SLEEPING", ("Sleeping")),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

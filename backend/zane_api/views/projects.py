@@ -1,9 +1,24 @@
 import time
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q, When, IntegerField, QuerySet, Sum, Case
+from django.db.models import (
+    Q,
+    When,
+    IntegerField,
+    QuerySet,
+    Sum,
+    Case,
+    Prefetch,
+    Count,
+    OuterRef,
+    Subquery,
+)
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    extend_schema,
+    inline_serializer,
+    PolymorphicProxySerializer,
+)
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
@@ -19,6 +34,9 @@ from .serializers import (
     ArchivedProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
+    DockerServiceCardSerializer,
+    GitServiceCardSerializer,
+    ServiceListParamSerializer,
 )
 from ..models import (
     Project,
@@ -258,3 +276,100 @@ class ProjectDetailsView(APIView):
         )
         project.delete()
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class ProjectServiceListView(APIView):
+
+    @extend_schema(
+        parameters=[ServiceListParamSerializer],
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name="ServiceCardResponse",
+                serializers=[
+                    DockerServiceCardSerializer,
+                    GitServiceCardSerializer,
+                ],
+                resource_type_field_name="type",
+                many=True,
+            )
+        },
+        summary="Get service list",
+        description="Get all services in a project",
+    )
+    def get(self, request: Request, slug: str):
+        try:
+            project = Project.objects.get(slug=slug.lower())
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+
+        latest_production_deployment_subquery = (
+            DockerDeployment.objects.filter(
+                service_id=OuterRef("pk"), is_current_production=True
+            )
+            .order_by("-created_at")
+            .values("status")[:1]
+        )
+
+        # Prefetch related fields and use annotate to count volumes
+        docker_services = (
+            DockerRegistryService.objects.filter(
+                project=project, slug__istartswith=request.query_params.get("query", "")
+            )
+            .prefetch_related(
+                Prefetch("urls", to_attr="url_list"),
+                Prefetch(
+                    "volumes", queryset=Volume.objects.only("id"), to_attr="volume_list"
+                ),
+            )
+            .annotate(
+                volume_number=Count("volumes"),
+                latest_production_deployment_status=Subquery(
+                    latest_production_deployment_subquery
+                ),
+            )
+        )
+
+        service_list: list[dict] = []
+        for service in docker_services:
+            url = service.url_list[0] if service.url_list else None
+            status_map = {
+                DockerDeployment.DeploymentStatus.HEALTHY: "HEALTHY",
+                DockerDeployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
+                DockerDeployment.DeploymentStatus.FAILED: "UNHEALTHY",
+                DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
+                DockerDeployment.DeploymentStatus.QUEUED: None,
+                DockerDeployment.DeploymentStatus.PREPARING: None,
+                DockerDeployment.DeploymentStatus.STARTING: None,
+                DockerDeployment.DeploymentStatus.RESTARTING: None,
+                DockerDeployment.DeploymentStatus.CANCELLED: None,
+            }
+
+            parts = service.image.split(":")
+            if len(parts) == 1:
+                tag = "latest"
+                image = service.image
+            else:
+                tag = parts[-1]
+                parts.pop()  # remove the tag
+                image = ":".join(parts)
+
+            service_list.append(
+                DockerServiceCardSerializer(
+                    dict(
+                        image=image,
+                        tag=tag,
+                        updated_at=service.updated_at,
+                        slug=service.slug,
+                        volume_number=service.volume_number,
+                        url=str(url) if url is not None else None,
+                        status=(
+                            status_map[service.latest_production_deployment_status]
+                            if service.latest_production_deployment_status is not None
+                            else None
+                        ),
+                    )
+                ).data
+            )
+        return Response(data=service_list)
