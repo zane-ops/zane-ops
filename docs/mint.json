@@ -68,22 +68,18 @@
           ]
         },
         {
-          "group": "Services",
+          "group": "Docker Services",
           "pages": [
-            {
-              "group": "Docker",
-              "pages": [
-                "api-reference/projects/create-a-docker-service",
-                "api-reference/projects/archive-a-docker-service",
-                "api-reference/projects/get-single-service",
-                "api-reference/projects/request-config-changes",
-                "api-reference/projects/cancel-a-config-change",
-                "api-reference/projects/deploy-a-docker-service",
-                "api-reference/projects/redeploy-a-docker-service",
-                "api-reference/projects/get-single-deployment",
-                "api-reference/projects/list-all-deployments"
-              ]
-            }
+            "api-reference/projects/create-a-docker-service",
+            "api-reference/projects/archive-a-docker-service",
+            "api-reference/projects/get-single-service",
+            "api-reference/projects/request-config-changes",
+            "api-reference/projects/cancel-a-config-change",
+            "api-reference/projects/deploy-a-docker-service",
+            "api-reference/projects/redeploy-a-docker-service",
+            "api-reference/projects/get-single-deployment",
+            "api-reference/projects/get-deployment-logs",
+            "api-reference/projects/list-all-deployments"
           ]
         }
       ]
