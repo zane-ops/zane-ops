@@ -8,6 +8,9 @@ EMPTY_RESPONSE = {}
 EMPTY_PAGINATED_RESPONSE = OrderedDict(
     [("count", 0), ("next", None), ("previous", None), ("results", [])]
 )
+EMPTY_CURSOR_RESPONSE = OrderedDict(
+    [("next", None), ("previous", None), ("results", [])]
+)
 
 
 class ThrottledExceptionWithWaitTime(exceptions.Throttled):

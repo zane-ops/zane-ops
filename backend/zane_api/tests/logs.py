@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.urls import reverse
@@ -149,106 +150,70 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
 
 
 class LogStreamViewTests(AuthAPITestCase):
-    def test_stream_deployment_logs(self):
+    sample_log_contents = [
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:43 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 42, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:42 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 39, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:39 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:37 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 34, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:34 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 32, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:32 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 29, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:29 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 27, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 24, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
+    ]
+
+    def test_view_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = [
-            {
-                "log": "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-            {
-                "log": "1:C 30 Jun 2024 03:17:14.369 * Redis version=7.2.5, bits=64, commit=00000000, modified=0, pid=1, just started",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-            {
-                "log": "1:C 30 Jun 2024 03:17:14.369 * Configuration loaded",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-            {
-                "log": "1:M 30 Jun 2024 03:17:14.369 * monotonic clock: POSIX clock_gettime",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-            {
-                "log": "1:M 30 Jun 2024 03:17:14.371 * Running mode=standalone, port=6379.",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-            {
-                "log": "1:M 30 Jun 2024 03:17:14.375 * Server initialized",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-            {
-                "log": "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-        ]
-
-        response = self.client.post(reverse("zane_api:logs.tail"), data=simple_logs)
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        simple_logs = SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=(
+                        SimpleLog.LogLevel.INFO
+                        if i % 2 == 0
+                        else SimpleLog.LogLevel.ERROR
+                    ),
+                )
+                for i, (time, content) in enumerate(self.sample_log_contents)
+            ]
+        )
 
         response = self.client.get(
             reverse(
@@ -259,5 +224,86 @@ class LogStreamViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            data=simple_logs,
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(10, len(response.json()["results"]))
+
+    def test_paginate(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        simple_logs = SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=(
+                        SimpleLog.LogLevel.INFO
+                        if i % 2 == 0
+                        else SimpleLog.LogLevel.ERROR
+                    ),
+                )
+                for i, (time, content) in enumerate(self.sample_log_contents)
+            ]
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING="per_page=5",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        self.assertIsNotNone(data["next"])
+        self.assertEqual(5, len(data["results"]))
+
+    def test_complex_filter(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        simple_logs = SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=(
+                        SimpleLog.LogLevel.INFO
+                        if i % 2 == 0
+                        else SimpleLog.LogLevel.ERROR
+                    ),
+                )
+                for i, (time, content) in enumerate(self.sample_log_contents)
+            ]
+        )
+
+        time_after = datetime.datetime(
+            2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc
+        )
+        time_before = datetime.datetime(
+            2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc
+        )
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"level=ERROR&time_after={time_after.strftime('%Y-%m-%dT%H:%M:%SZ')}&time_before={time_before.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, len(response.json()["results"]))

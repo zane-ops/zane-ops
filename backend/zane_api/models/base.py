@@ -795,7 +795,7 @@ class SimpleLog(Log):
             models.Index(fields=["level"]),
             models.Index(fields=["time"]),
         ]
-        ordering = ("time",)
+        ordering = ("-time",)
 
 
 class HttpLog(Log):

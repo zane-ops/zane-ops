@@ -28,6 +28,7 @@ from ..models import (
     Volume,
     DockerEnvVariable,
     PortConfiguration,
+    SimpleLog,
 )
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
@@ -808,7 +809,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
 
 
 # ==============================
-#            Logs              #
+#       Collect Logs           #
 # ==============================
 
 
@@ -884,3 +885,23 @@ class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
 class DockerContainerLogsResponseSerializer(serializers.Serializer):
     simple_logs_inserted = serializers.IntegerField(min_value=0)
     http_logs_inserted = serializers.IntegerField(min_value=0)
+
+
+# ==============================
+#      Deployment Logs         #
+# ==============================
+
+
+class DeploymentLogsFilterSet(django_filters.FilterSet):
+    time = django_filters.DateTimeFromToRangeFilter()
+    content = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = SimpleLog
+        fields = ["level", "content", "time"]
+
+
+class DeploymentLogsPagination(pagination.CursorPagination):
+    page_size = 50
+    page_size_query_param = "per_page"
+    ordering = "-time"
