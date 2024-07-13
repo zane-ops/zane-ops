@@ -905,3 +905,12 @@ class DeploymentLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
     ordering = "-time"
+
+
+# ==============================
+#     Project Service List     #
+# ==============================
+
+
+class ServiceListFilterSet(django_filters.FilterSet):
+    slug = django_filters.CharFilter(lookup_expr="istartswith")

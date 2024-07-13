@@ -19,6 +19,7 @@ from .serializers import (
     ArchivedProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
+    ServiceListFilterSet,
 )
 from ..models import (
     Project,
@@ -258,3 +259,22 @@ class ProjectDetailsView(APIView):
         )
         project.delete()
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class ProjectServiceListView(APIView):
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ServiceListFilterSet
+
+    def get(self, request: Request, slug: str):
+        try:
+            project = Project.objects.get(slug=slug.lower())
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+
+        # docker_services = DockerRegistryService.objects.filter(project=project)
+
+        # Filter = ServiceListFilterSet({"slug": request.query_params.get("slug", "")})
+
+        return Response()

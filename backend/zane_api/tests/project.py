@@ -548,3 +548,8 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project_in_response = response.json().get("results", [])[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
+
+
+class ProjectResourcesViewTests(AuthAPITestCase):
+    def test_show_resources(self):
+        pass

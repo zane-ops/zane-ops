@@ -28,6 +28,11 @@ urlpatterns = [
         name="projects.details",
     ),
     re_path(
+        r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-list/$",
+        views.ProjectServiceListView.as_view(),
+        name="projects.service_list",
+    ),
+    re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
