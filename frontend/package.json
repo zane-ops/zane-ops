@@ -11,7 +11,7 @@
     "check": "biome check .",
     "preview": "vite preview",
     "predev": "pnpm run generate:api && tsr generate",
-    "format": "biome check . --apply"
+    "format": "biome check . --write"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.0.4",
