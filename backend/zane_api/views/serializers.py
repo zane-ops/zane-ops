@@ -211,7 +211,7 @@ class ProjectListFilterSet(django_filters.FilterSet):
             "slug": "name",
         },
     )
-    slug = django_filters.CharFilter(lookup_expr="istartswith")
+    slug = django_filters.CharFilter(lookup_expr="icontains")
 
     class Meta:
         model = Project
@@ -225,7 +225,7 @@ class ArchivedProjectListFilterSet(django_filters.FilterSet):
             "slug": "name",
         },
     )
-    slug = django_filters.CharFilter(lookup_expr="istartswith")
+    slug = django_filters.CharFilter(lookup_expr="icontains")
 
     class Meta:
         model = ArchivedProject
@@ -279,10 +279,10 @@ class BaseChangeItemSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=ITEM_CHANGE_TYPE_CHOICES, required=True)
     item_id = serializers.CharField(max_length=255, required=False)
     new_value = serializers.SerializerMethodField()
-    # field = serializers.SerializerMethodField()
+    field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService = self.context.get("service")
+        service: DockerRegistryService | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -292,10 +292,10 @@ class BaseChangeItemSerializer(serializers.Serializer):
             "This field should be subclassed by specific child classes"
         )
 
-    # def get_field(self, obj: Any):
-    #     raise NotImplementedError(
-    #         "This field should be subclassed by specific child classes"
-    #     )
+    def get_field(self, obj: Any):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
 
     def validate(self, attrs: dict[str, str | None]):
         item_id = attrs.get("item_id")

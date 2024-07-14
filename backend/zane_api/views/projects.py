@@ -313,10 +313,14 @@ class ProjectServiceListView(APIView):
         )
 
         # Prefetch related fields and use annotate to count volumes
+        filters = Q(project=project)
+        query = request.query_params.get("query", "")
+        print(f"{query=}")
+        if query:
+            filters = filters & Q(slug__icontains=query)
+
         docker_services = (
-            DockerRegistryService.objects.filter(
-                project=project, slug__istartswith=request.query_params.get("query", "")
-            )
+            DockerRegistryService.objects.filter(filters)
             .prefetch_related(
                 Prefetch("urls", to_attr="url_list"),
                 Prefetch(
