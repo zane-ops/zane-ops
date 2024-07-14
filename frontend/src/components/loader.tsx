@@ -1,6 +1,9 @@
-export function Loader() {
+import { cn } from "~/lib/utils";
+
+type LoaderProps = { className?: string };
+export function Loader({ className }: LoaderProps) {
   return (
-    <div className="flex h-screen items-center justify-center">
+    <div className={cn("flex h-screen items-center justify-center", className)}>
       <svg
         className="loader-svg w-52"
         data-name="Layer 1"

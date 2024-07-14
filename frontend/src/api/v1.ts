@@ -6,76 +6,152 @@
 
 export interface paths {
   "/api/archived-projects/": {
-    get: operations["archived_projects_list"];
+    /** List archived projects */
+    get: operations["getArchivedProjectList"];
   };
   "/api/auth/login/": {
+    /**
+     * Login
+     * @description Authenticate User, what is returned is a cookie named `sessionid` that will be used for authentication of the next requests.
+     */
     post: operations["login"];
   };
   "/api/auth/logout/": {
+    /** Logout */
     delete: operations["logout"];
   };
   "/api/auth/me/": {
+    /**
+     * Get current user
+     * @description Get current authenticated user.
+     */
     get: operations["getAuthedUser"];
   };
-  "/api/auth/me/with-token/": {
-    get: operations["getAuthedUserWithToken"];
-  };
   "/api/csrf/": {
-    /** @description CSRF cookie view for retrieving CSRF before doing requests */
+    /**
+     * Get CSRF cookie
+     * @description CSRF cookie endpoint for retrieving a CSRF token before doing mutative requests (`DELETE`, `POST`, `PUT`, `PATCH`).You need to pass the cookie named `csrftoken` to all requests alongside a `X-CSRFToken` with the value of the token.
+     */
     get: operations["getCSRF"];
   };
   "/api/docker/check-port/": {
+    /**
+     * Check Port
+     * @description Check If Port is available on host machine
+     */
     post: operations["checkIfPortIsAvailable"];
   };
   "/api/docker/image-search/": {
+    /**
+     * Search docker hub
+     * @description Search a docker Image in docker hub Registry
+     */
     get: operations["searchDockerRegistry"];
   };
-  "/api/docker/login/": {
-    post: operations["dockerLogin"];
-  };
   "/api/domain/root/": {
+    /**
+     * Get Root Domain
+     * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
+     */
     get: operations["getRootDomain"];
   };
   "/api/ping/": {
+    /**
+     * Ping
+     * @description simple healthcheck endpoint.
+     */
     get: operations["ping"];
   };
   "/api/projects/": {
-    get: operations["projects_list"];
+    /** List all active projects */
+    get: operations["getProjectList"];
+    /** Create a new project */
     post: operations["createProject"];
   };
   "/api/projects/{project_slug}/archive-service/docker/{service_slug}/": {
+    /**
+     * Archive a docker service
+     * @description Archive a service created from a docker image.
+     */
     delete: operations["archiveDockerService"];
   };
   "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/": {
+    /**
+     * Cancel a config change
+     * @description Cancel a config change that was requested.
+     */
     delete: operations["cancelDeploymentChanges"];
   };
   "/api/projects/{project_slug}/create-service/docker/": {
+    /**
+     * Create a docker service
+     * @description Create a service from a docker image.
+     */
     post: operations["createDockerService"];
   };
   "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/": {
+    /**
+     * Deploy a docker service
+     * @description Apply all pending changes for the service and trigger a new deployment.
+     */
     put: operations["applyDeploymentChanges"];
   };
   "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/": {
+    /**
+     * Redeploy a docker service
+     * @description Revert the service to the state of a previous deployment.
+     */
     put: operations["redeployDockerService"];
   };
   "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/": {
+    /**
+     * Request config changes
+     * @description Request a change to the configuration of a service.
+     */
     put: operations["requestDeploymentChanges"];
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/": {
+    /**
+     * Get single service
+     * @description See all the details of a service.
+     */
     get: operations["getDockerService"];
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/": {
+    /**
+     * List all deployments
+     * @description List all deployments for a service, the default order is last created descendant.
+     */
     get: operations["projects_service_details_docker_deployments_list"];
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/": {
+    /** Get single deployment */
     get: operations["projects_service_details_docker_deployments_retrieve"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
+    /** Get deployment logs */
+    get: operations["projects_service_details_docker_deployments_logs_list"];
+  };
   "/api/projects/{slug}/": {
+    /** Get single project */
     get: operations["getSingleProject"];
+    /** Archive a Project */
     delete: operations["archiveSingleProject"];
-    patch: operations["updateProjectName"];
+    /** Update a project */
+    patch: operations["updateProject"];
+  };
+  "/api/projects/{slug}/service-list/": {
+    /**
+     * Get service list
+     * @description Get all services in a project
+     */
+    get: operations["projects_service_list_list"];
   };
   "/api/volumes/{volume_id}/size/": {
+    /**
+     * Get volume size
+     * @description Get the total data size in the volume, in bytes.
+     */
     get: operations["getVolumeSize"];
   };
 }
@@ -93,38 +169,6 @@ export interface components {
       /** Format: date-time */
       archived_at: string;
       description: string | null;
-    };
-    ArchivedProjectsListError: components["schemas"]["ArchivedProjectsListSlugErrorComponent"] | components["schemas"]["ArchivedProjectsListSortByErrorComponent"];
-    ArchivedProjectsListErrorResponse400: components["schemas"]["ArchivedProjectsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ArchivedProjectsListSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ArchivedProjectsListSortByErrorComponent: {
-      /**
-       * @description * `sort_by` - sort_by
-       * @enum {string}
-       */
-      attr: "sort_by";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    ArchivedProjectsListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ArchivedProjectsListError"][];
     };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
@@ -340,7 +384,7 @@ export interface components {
     DockerCommandFieldChangeFieldEnum: "command";
     DockerCommandFieldChangeRequest: {
       /** @default UPDATE */
-      type?: components["schemas"]["Type20aEnum"];
+      type?: components["schemas"]["FieldChangeTypeEnum"];
       new_value: string | null;
       field: components["schemas"]["DockerCommandFieldChangeFieldEnum"];
     };
@@ -355,7 +399,7 @@ export interface components {
     DockerCredentialsFieldChangeFieldEnum: "credentials";
     DockerCredentialsFieldChangeRequest: {
       /** @default UPDATE */
-      type?: components["schemas"]["Type20aEnum"];
+      type?: components["schemas"]["FieldChangeTypeEnum"];
       new_value: components["schemas"]["DockerCredentialsRequestRequest"] | null;
       field: components["schemas"]["DockerCredentialsFieldChangeFieldEnum"];
     };
@@ -406,95 +450,12 @@ export interface components {
     DockerImageFieldChangeFieldEnum: "image";
     DockerImageFieldChangeRequest: {
       /** @default UPDATE */
-      type?: components["schemas"]["Type20aEnum"];
+      type?: components["schemas"]["FieldChangeTypeEnum"];
       new_value: string;
       field: components["schemas"]["DockerImageFieldChangeFieldEnum"];
     };
     DockerImageSearchResponse: {
       images: components["schemas"]["DockerImage"][];
-    };
-    DockerLoginError: components["schemas"]["DockerLoginNonFieldErrorsErrorComponent"] | components["schemas"]["DockerLoginUsernameErrorComponent"] | components["schemas"]["DockerLoginPasswordErrorComponent"] | components["schemas"]["DockerLoginRegistryUrlErrorComponent"];
-    DockerLoginErrorResponse400: components["schemas"]["DockerLoginValidationError"] | components["schemas"]["ParseErrorResponse"];
-    DockerLoginNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    DockerLoginPasswordErrorComponent: {
-      /**
-       * @description * `password` - password
-       * @enum {string}
-       */
-      attr: "password";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    DockerLoginRegistryUrlErrorComponent: {
-      /**
-       * @description * `registry_url` - registry_url
-       * @enum {string}
-       */
-      attr: "registry_url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    DockerLoginRequestRequest: {
-      username: string;
-      password: string;
-      /** Format: uri */
-      registry_url?: string;
-    };
-    DockerLoginSuccessResponse: {
-      success: boolean;
-    };
-    DockerLoginUsernameErrorComponent: {
-      /**
-       * @description * `username` - username
-       * @enum {string}
-       */
-      attr: "username";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    DockerLoginValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["DockerLoginError"][];
     };
     DockerPortCheckRequestRequest: {
       port: number;
@@ -520,6 +481,24 @@ export interface components {
       network_aliases: readonly string[];
       unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
     };
+    DockerServiceCard: {
+      /** Format: date-time */
+      updated_at: string;
+      volume_number: number;
+      slug: string;
+      /** Format: uri */
+      url: string | null;
+      status: components["schemas"]["ServiceStatusEnum"];
+      /** @default docker */
+      type: components["schemas"]["DockerServiceCardTypeEnum"];
+      image: string;
+      tag: string;
+    };
+    /**
+     * @description * `docker` - docker
+     * @enum {string}
+     */
+    DockerServiceCardTypeEnum: "docker";
     DockerServiceCreateRequestRequest: {
       slug?: string;
       image: string;
@@ -532,7 +511,7 @@ export interface components {
       created_at: string;
       redeploy_hash: string | null;
       hash: string;
-      status: components["schemas"]["StatusEnum"];
+      status: components["schemas"]["DockerServiceDeploymentStatusEnum"];
       status_reason: string | null;
       /** Format: uri */
       url: string | null;
@@ -541,12 +520,26 @@ export interface components {
       changes: readonly components["schemas"]["DockerDeploymentChange"][];
     };
     /**
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `FAILED` - Failed
+     * * `PREPARING` - Preparing
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
+     * @enum {string}
+     */
+    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    /**
      * @description * `env_variables` - env_variables
      * @enum {string}
      */
     EnvItemChangeFieldEnum: "env_variables";
     EnvItemChangeRequest: {
-      type: components["schemas"]["Type676Enum"];
+      type: components["schemas"]["ItemChangeTypeEnum"];
       item_id?: string;
       new_value?: components["schemas"]["EnvRequestRequest"];
       field: components["schemas"]["EnvItemChangeFieldEnum"];
@@ -612,16 +605,103 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["Error429"][];
     };
+    /**
+     * @description * `UPDATE` - Update
+     * @enum {string}
+     */
+    FieldChangeTypeEnum: "UPDATE";
+    GetArchivedProjectListError: components["schemas"]["GetArchivedProjectListSlugErrorComponent"] | components["schemas"]["GetArchivedProjectListSortByErrorComponent"];
+    GetArchivedProjectListErrorResponse400: components["schemas"]["GetArchivedProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    GetArchivedProjectListSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetArchivedProjectListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    GetArchivedProjectListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["GetArchivedProjectListError"][];
+    };
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetAuthedUserWithTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
+    GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    GetProjectListSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetProjectListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    GetProjectListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["GetProjectListError"][];
+    };
     GetRootDomain: {
       domain: string;
     };
     GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetVolumeSizeErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GitServiceCard: {
+      /** Format: date-time */
+      updated_at: string;
+      volume_number: number;
+      slug: string;
+      /** Format: uri */
+      url: string | null;
+      status: components["schemas"]["ServiceStatusEnum"];
+      /** @default git */
+      type: components["schemas"]["GitServiceCardTypeEnum"];
+      repository: string;
+      last_commit_message: string;
+      branch: string;
+    };
+    /**
+     * @description * `git` - git
+     * @enum {string}
+     */
+    GitServiceCardTypeEnum: "git";
     HealthCheck: {
       id: string;
       type: components["schemas"]["HealthCheckTypeEnum"];
@@ -656,10 +736,23 @@ export interface components {
     HealthcheckFieldChangeFieldEnum: "healthcheck";
     HealthcheckFieldChangeRequest: {
       /** @default UPDATE */
-      type?: components["schemas"]["Type20aEnum"];
+      type?: components["schemas"]["FieldChangeTypeEnum"];
       new_value: components["schemas"]["HealthCheckRequestRequest"] | null;
       field: components["schemas"]["HealthcheckFieldChangeFieldEnum"];
     };
+    /**
+     * @description * `ADD` - Add
+     * * `DELETE` - Delete
+     * * `UPDATE` - Update
+     * @enum {string}
+     */
+    ItemChangeTypeEnum: "ADD" | "DELETE" | "UPDATE";
+    /**
+     * @description * `ERROR` - Error
+     * * `INFO` - Info
+     * @enum {string}
+     */
+    LevelEnum: "ERROR" | "INFO";
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -701,7 +794,6 @@ export interface components {
     };
     LoginSuccessResponse: {
       success: boolean;
-      token: string;
     };
     LoginUsernameErrorComponent: {
       /**
@@ -729,7 +821,7 @@ export interface components {
     };
     LogoutErrorResponse400: components["schemas"]["ParseErrorResponse"];
     PING: {
-      ping: string;
+      ping: components["schemas"]["PingEnum"];
     };
     PaginatedArchivedProjectList: {
       /** @example 123 */
@@ -776,6 +868,11 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["Project"][];
     };
+    PaginatedSimpleLogList: {
+      next: string | null;
+      previous: string | null;
+      results: components["schemas"]["SimpleLog"][];
+    };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
       detail: string;
@@ -794,6 +891,11 @@ export interface components {
       slug?: string;
       description?: string;
     };
+    /**
+     * @description * `pong` - pong
+     * @enum {string}
+     */
+    PingEnum: "pong";
     PingErrorResponse400: components["schemas"]["ParseErrorResponse"];
     PortConfiguration: {
       id: string;
@@ -806,7 +908,7 @@ export interface components {
      */
     PortItemChangeFieldEnum: "ports";
     PortItemChangeRequest: {
-      type: components["schemas"]["Type676Enum"];
+      type: components["schemas"]["ItemChangeTypeEnum"];
       item_id?: string;
       new_value?: components["schemas"]["ServicePortsRequestRequest"];
       field: components["schemas"]["PortItemChangeFieldEnum"];
@@ -825,38 +927,6 @@ export interface components {
     ProjectCreateRequestRequest: {
       slug?: string;
       description?: string;
-    };
-    ProjectsListError: components["schemas"]["ProjectsListSlugErrorComponent"] | components["schemas"]["ProjectsListSortByErrorComponent"];
-    ProjectsListErrorResponse400: components["schemas"]["ProjectsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsListSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsListSortByErrorComponent: {
-      /**
-       * @description * `sort_by` - sort_by
-       * @enum {string}
-       */
-      attr: "sort_by";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    ProjectsListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsListError"][];
     };
     ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent: {
       /**
@@ -904,7 +974,53 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListError"][];
     };
+    ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent: {
+      /**
+       * @description * `content` - content
+       * @enum {string}
+       */
+      attr: "content";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent: {
+      /**
+       * @description * `level` - level
+       * @enum {string}
+       */
+      attr: "level";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent: {
+      /**
+       * @description * `time` - time
+       * @enum {string}
+       */
+      attr: "time";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsLogsListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListError"][];
+    };
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -1280,10 +1396,30 @@ export interface components {
       errors: components["schemas"]["RequestDeploymentChangesError"][];
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
       /** @default 80 */
       host?: number;
       forwarded: number;
+    };
+    /**
+     * @description * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * * `SLEEPING` - Sleeping
+     * * `NOT_DEPLOYED_YET` - Not deployed yet
+     * @enum {string}
+     */
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET";
+    SimpleLog: {
+      /** Format: uuid */
+      id: string;
+      content: unknown;
+      /** Format: date-time */
+      time: string;
+      level: components["schemas"]["LevelEnum"];
+      deployment_id: string | null;
+      service_id: string | null;
+      source: components["schemas"]["SourceEnum"];
     };
     /**
      * @description * `BLUE` - Blue
@@ -1292,37 +1428,19 @@ export interface components {
      */
     SlotEnum: "BLUE" | "GREEN";
     /**
-     * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
-     * * `FAILED` - Failed
-     * * `PREPARING` - Preparing
-     * * `STARTING` - Starting
-     * * `RESTARTING` - Restarting
-     * * `HEALTHY` - Healthy
-     * * `UNHEALTHY` - Unhealthy
-     * * `REMOVED` - Removed
+     * @description * `SYSTEM` - System Logs
+     * * `PROXY` - Proxy Logs
+     * * `SERVICE` - Service Logs
      * @enum {string}
      */
-    StatusEnum: "QUEUED" | "CANCELLED" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED";
-    /**
-     * @description * `UPDATE` - Update
-     * @enum {string}
-     */
-    Type20aEnum: "UPDATE";
-    /**
-     * @description * `ADD` - Add
-     * * `DELETE` - Delete
-     * * `UPDATE` - Update
-     * @enum {string}
-     */
-    Type676Enum: "ADD" | "DELETE" | "UPDATE";
+    SourceEnum: "SYSTEM" | "PROXY" | "SERVICE";
     /**
      * @description * `urls` - urls
      * @enum {string}
      */
     URLItemChangeFieldEnum: "urls";
     URLItemChangeRequest: {
-      type: components["schemas"]["Type676Enum"];
+      type: components["schemas"]["ItemChangeTypeEnum"];
       item_id?: string;
       new_value?: components["schemas"]["URLRequestRequest"];
       field: components["schemas"]["URLItemChangeFieldEnum"];
@@ -1341,7 +1459,7 @@ export interface components {
       /** @default true */
       strip_prefix?: boolean;
     };
-    UpdateProjectNameDescriptionErrorComponent: {
+    UpdateProjectDescriptionErrorComponent: {
       /**
        * @description * `description` - description
        * @enum {string}
@@ -1358,9 +1476,9 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    UpdateProjectNameError: components["schemas"]["UpdateProjectNameNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProjectNameSlugErrorComponent"] | components["schemas"]["UpdateProjectNameDescriptionErrorComponent"];
-    UpdateProjectNameErrorResponse400: components["schemas"]["UpdateProjectNameValidationError"] | components["schemas"]["ParseErrorResponse"];
-    UpdateProjectNameNonFieldErrorsErrorComponent: {
+    UpdateProjectError: components["schemas"]["UpdateProjectNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProjectSlugErrorComponent"] | components["schemas"]["UpdateProjectDescriptionErrorComponent"];
+    UpdateProjectErrorResponse400: components["schemas"]["UpdateProjectValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateProjectNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -1373,7 +1491,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    UpdateProjectNameSlugErrorComponent: {
+    UpdateProjectSlugErrorComponent: {
       /**
        * @description * `slug` - slug
        * @enum {string}
@@ -1391,9 +1509,9 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    UpdateProjectNameValidationError: {
+    UpdateProjectValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["UpdateProjectNameError"][];
+      errors: components["schemas"]["UpdateProjectError"][];
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -1422,7 +1540,7 @@ export interface components {
      */
     VolumeItemChangeFieldEnum: "volumes";
     VolumeItemChangeRequest: {
-      type: components["schemas"]["Type676Enum"];
+      type: components["schemas"]["ItemChangeTypeEnum"];
       item_id?: string;
       new_value?: components["schemas"]["VolumeRequestRequest"];
       field: components["schemas"]["VolumeItemChangeFieldEnum"];
@@ -1460,7 +1578,8 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  archived_projects_list: {
+  /** List archived projects */
+  getArchivedProjectList: {
     parameters: {
       query?: {
         /** @description A page number within the paginated result set. */
@@ -1487,7 +1606,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ArchivedProjectsListErrorResponse400"];
+          "application/json": components["schemas"]["GetArchivedProjectListErrorResponse400"];
         };
       };
       401: {
@@ -1507,6 +1626,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Login
+   * @description Authenticate User, what is returned is a cookie named `sessionid` that will be used for authentication of the next requests.
+   */
   login: {
     requestBody: {
       content: {
@@ -1542,6 +1665,7 @@ export interface operations {
       };
     };
   };
+  /** Logout */
   logout: {
     responses: {
       /** @description No response body */
@@ -1565,6 +1689,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Get current user
+   * @description Get current authenticated user.
+   */
   getAuthedUser: {
     responses: {
       200: {
@@ -1589,31 +1717,10 @@ export interface operations {
       };
     };
   };
-  getAuthedUserWithToken: {
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["AuthedSuccessResponse"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetAuthedUserWithTokenErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** @description CSRF cookie view for retrieving CSRF before doing requests */
+  /**
+   * Get CSRF cookie
+   * @description CSRF cookie endpoint for retrieving a CSRF token before doing mutative requests (`DELETE`, `POST`, `PUT`, `PATCH`).You need to pass the cookie named `csrftoken` to all requests alongside a `X-CSRFToken` with the value of the token.
+   */
   getCSRF: {
     responses: {
       400: {
@@ -1632,6 +1739,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Check Port
+   * @description Check If Port is available on host machine
+   */
   checkIfPortIsAvailable: {
     requestBody: {
       content: {
@@ -1663,6 +1774,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Search docker hub
+   * @description Search a docker Image in docker hub Registry
+   */
   searchDockerRegistry: {
     parameters: {
       query: {
@@ -1692,37 +1807,10 @@ export interface operations {
       };
     };
   };
-  dockerLogin: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DockerLoginRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["DockerLoginRequestRequest"];
-        "multipart/form-data": components["schemas"]["DockerLoginRequestRequest"];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["DockerLoginSuccessResponse"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["DockerLoginErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
+  /**
+   * Get Root Domain
+   * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
+   */
   getRootDomain: {
     responses: {
       200: {
@@ -1747,6 +1835,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Ping
+   * @description simple healthcheck endpoint.
+   */
   ping: {
     responses: {
       200: {
@@ -1771,7 +1863,8 @@ export interface operations {
       };
     };
   };
-  projects_list: {
+  /** List all active projects */
+  getProjectList: {
     parameters: {
       query?: {
         /** @description A page number within the paginated result set. */
@@ -1798,7 +1891,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsListErrorResponse400"];
+          "application/json": components["schemas"]["GetProjectListErrorResponse400"];
         };
       };
       401: {
@@ -1818,6 +1911,7 @@ export interface operations {
       };
     };
   };
+  /** Create a new project */
   createProject: {
     requestBody?: {
       content: {
@@ -1859,6 +1953,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Archive a docker service
+   * @description Archive a service created from a docker image.
+   */
   archiveDockerService: {
     parameters: {
       path: {
@@ -1893,6 +1991,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Cancel a config change
+   * @description Cancel a config change that was requested.
+   */
   cancelDeploymentChanges: {
     parameters: {
       path: {
@@ -1933,6 +2035,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Create a docker service
+   * @description Create a service from a docker image.
+   */
   createDockerService: {
     parameters: {
       path: {
@@ -1979,6 +2085,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Deploy a docker service
+   * @description Apply all pending changes for the service and trigger a new deployment.
+   */
   applyDeploymentChanges: {
     parameters: {
       path: {
@@ -2014,6 +2124,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Redeploy a docker service
+   * @description Revert the service to the state of a previous deployment.
+   */
   redeployDockerService: {
     parameters: {
       path: {
@@ -2050,6 +2164,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Request config changes
+   * @description Request a change to the configuration of a service.
+   */
   requestDeploymentChanges: {
     parameters: {
       path: {
@@ -2092,6 +2210,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * Get single service
+   * @description See all the details of a service.
+   */
   getDockerService: {
     parameters: {
       path: {
@@ -2127,6 +2249,10 @@ export interface operations {
       };
     };
   };
+  /**
+   * List all deployments
+   * @description List all deployments for a service, the default order is last created descendant.
+   */
   projects_service_details_docker_deployments_list: {
     parameters: {
       query?: {
@@ -2146,8 +2272,9 @@ export interface operations {
          * * `HEALTHY` - Healthy
          * * `UNHEALTHY` - Unhealthy
          * * `REMOVED` - Removed
+         * * `SLEEPING` - Sleeping
          */
-        status?: ("CANCELLED" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "STARTING" | "UNHEALTHY")[];
+        status?: ("CANCELLED" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
       };
       path: {
         project_slug: string;
@@ -2182,6 +2309,7 @@ export interface operations {
       };
     };
   };
+  /** Get single deployment */
   projects_service_details_docker_deployments_retrieve: {
     parameters: {
       path: {
@@ -2218,6 +2346,58 @@ export interface operations {
       };
     };
   };
+  /** Get deployment logs */
+  projects_service_details_docker_deployments_logs_list: {
+    parameters: {
+      query?: {
+        content?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /**
+         * @description * `ERROR` - Error
+         * * `INFO` - Info
+         */
+        level?: "ERROR" | "INFO";
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        time_after?: string;
+        time_before?: string;
+      };
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSimpleLogList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get single project */
   getSingleProject: {
     parameters: {
       path: {
@@ -2252,6 +2432,7 @@ export interface operations {
       };
     };
   };
+  /** Archive a Project */
   archiveSingleProject: {
     parameters: {
       path: {
@@ -2285,7 +2466,8 @@ export interface operations {
       };
     };
   };
-  updateProjectName: {
+  /** Update a project */
+  updateProject: {
     parameters: {
       path: {
         slug: string;
@@ -2306,7 +2488,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["UpdateProjectNameErrorResponse400"];
+          "application/json": components["schemas"]["UpdateProjectErrorResponse400"];
         };
       };
       401: {
@@ -2326,6 +2508,51 @@ export interface operations {
       };
     };
   };
+  /**
+   * Get service list
+   * @description Get all services in a project
+   */
+  projects_service_list_list: {
+    parameters: {
+      query?: {
+        query?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceCardResponse"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceListListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get volume size
+   * @description Get the total data size in the volume, in bytes.
+   */
   getVolumeSize: {
     parameters: {
       path: {
