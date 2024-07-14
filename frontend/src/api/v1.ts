@@ -488,7 +488,7 @@ export interface components {
       slug: string;
       /** Format: uri */
       url: string | null;
-      status: components["schemas"]["ServiceStatusEnum"] | components["schemas"]["NullEnum"] | null;
+      status: components["schemas"]["ServiceStatusEnum"];
       /** @default docker */
       type: components["schemas"]["DockerServiceCardTypeEnum"];
       image: string;
@@ -529,9 +529,10 @@ export interface components {
      * * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
      * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
      * @enum {string}
      */
-    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED";
+    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
      * @description * `env_variables` - env_variables
      * @enum {string}
@@ -689,7 +690,7 @@ export interface components {
       slug: string;
       /** Format: uri */
       url: string | null;
-      status: components["schemas"]["ServiceStatusEnum"] | components["schemas"]["NullEnum"] | null;
+      status: components["schemas"]["ServiceStatusEnum"];
       /** @default git */
       type: components["schemas"]["GitServiceCardTypeEnum"];
       repository: string;
@@ -819,8 +820,6 @@ export interface components {
       errors: components["schemas"]["LoginError"][];
     };
     LogoutErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    /** @enum {unknown} */
-    NullEnum: "";
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
@@ -1407,9 +1406,10 @@ export interface components {
      * @description * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
      * * `SLEEPING` - Sleeping
+     * * `NOT_DEPLOYED_YET` - Not deployed yet
      * @enum {string}
      */
-    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET";
     SimpleLog: {
       /** Format: uuid */
       id: string;
@@ -2272,8 +2272,9 @@ export interface operations {
          * * `HEALTHY` - Healthy
          * * `UNHEALTHY` - Unhealthy
          * * `REMOVED` - Removed
+         * * `SLEEPING` - Sleeping
          */
-        status?: ("CANCELLED" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "STARTING" | "UNHEALTHY")[];
+        status?: ("CANCELLED" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
       };
       path: {
         project_slug: string;
