@@ -78,7 +78,9 @@ export function DockerServiceCard({
               {status === "HEALTHY" && "✅ "}
               {status === "SLEEPING" && "💤 "}
               {status === "UNHEALTHY" && "❌ "}
-              {status === "NOT_DEPLOYED_YET" ? "⏳ Not deployed yet" : status}
+              {status === "NOT_DEPLOYED_YET"
+                ? "⏳ Not deployed yet"
+                : status.toLowerCase()}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -102,7 +104,7 @@ export function DockerServiceCard({
             target="_blank"
             className="text-sm flex items-center gap-2 text-link"
           >
-            <LinkIcon className="flex-none" size={15} />{" "}
+            <LinkIcon className="flex-none" size={15} />
             <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
               {url}
             </div>
@@ -112,7 +114,7 @@ export function DockerServiceCard({
         <p className="flex items-center gap-2">
           <Tag size={15} /> {tag}
         </p>
-        <p className="flex gap-2 items-center capitalize">{updatedAt}</p>
+        <p className="flex gap-2 items-center">{updatedAt}</p>
       </CardContent>
 
       <Separator />
@@ -206,7 +208,7 @@ export function GitServiceCard({
             target="_blank"
             className="text-sm flex items-center gap-2 text-link"
           >
-            <LinkIcon className="flex-none" size={15} />{" "}
+            <LinkIcon className="flex-none" size={15} />
             <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
               {url}
             </div>
