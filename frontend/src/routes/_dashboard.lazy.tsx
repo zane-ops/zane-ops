@@ -85,7 +85,7 @@ function Header() {
   }
   return (
     <>
-      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-50">
+      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle t justify-between gap-4">
         <Link to="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
