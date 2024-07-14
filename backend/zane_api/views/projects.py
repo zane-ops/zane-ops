@@ -339,11 +339,12 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.FAILED: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.QUEUED: None,
-                DockerDeployment.DeploymentStatus.PREPARING: None,
-                DockerDeployment.DeploymentStatus.STARTING: None,
-                DockerDeployment.DeploymentStatus.RESTARTING: None,
-                DockerDeployment.DeploymentStatus.CANCELLED: None,
+                DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
+                DockerDeployment.DeploymentStatus.QUEUED: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.PREPARING: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.STARTING: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.RESTARTING: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.CANCELLED: "NOT_DEPLOYED_YET",
             }
 
             parts = service.image.split(":")
