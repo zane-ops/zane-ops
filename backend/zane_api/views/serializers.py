@@ -925,10 +925,9 @@ class BaseServiceCardSerializer(serializers.Serializer):
         ("HEALTHY", _("Healthy")),
         ("UNHEALTHY", _("Unhealthy")),
         ("SLEEPING", _("Sleeping")),
+        ("NOT_DEPLOYED_YET", _("Not deployed yet")),
     )
-    status = serializers.ChoiceField(
-        choices=STATUS_CHOICES, required=True, allow_null=True
-    )
+    status = serializers.ChoiceField(choices=STATUS_CHOICES)
 
 
 class DockerServiceCardSerializer(BaseServiceCardSerializer):
