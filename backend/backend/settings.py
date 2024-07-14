@@ -309,9 +309,10 @@ SPECTACULAR_SETTINGS = {
         ),
         "FieldChangeTypeEnum": (("UPDATE", "Update"),),
         "ServiceStatusEnum": (
-            ("HEALTHY", ("Healthy")),
-            ("UNHEALTHY", ("Unhealthy")),
-            ("SLEEPING", ("Sleeping")),
+            ("HEALTHY", "Healthy"),
+            ("UNHEALTHY", "Unhealthy"),
+            ("SLEEPING", "Sleeping"),
+            ("NOT_DEPLOYED_YET", "Not deployed yet"),
         ),
     },
     "POSTPROCESSING_HOOKS": [
