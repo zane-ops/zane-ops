@@ -200,16 +200,19 @@ export function GitServiceCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex  gap-0.5 flex-col text-sm text-gray-400 p-0 px-6 py-6">
-        <a
-          href={url}
-          target="_blank"
-          className="text-sm flex items-center gap-2 text-link"
-        >
-          <LinkIcon className="flex-none" size={15} />{" "}
-          <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
-            {url}
-          </div>
-        </a>
+        {!!url && (
+          <a
+            href={url}
+            target="_blank"
+            className="text-sm flex items-center gap-2 text-link"
+          >
+            <LinkIcon className="flex-none" size={15} />{" "}
+            <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
+              {url}
+            </div>
+          </a>
+        )}
+
         <p className="text-ellipsis overflow-x-hidden whitespace-nowrap">
           {lastCommitMessage}
         </p>
