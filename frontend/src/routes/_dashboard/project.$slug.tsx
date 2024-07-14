@@ -166,7 +166,8 @@ function ProjectDetail() {
                         No services match the filter criteria
                       </h2>
                       <h3 className="text-lg text-gray-500">
-                        There's no services starting with `{debouncedValue}`
+                        Your search for`{debouncedValue}` did not return any
+                        results.
                       </h3>
                     </>
                   ) : (
