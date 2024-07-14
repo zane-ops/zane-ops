@@ -26,6 +26,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { projectDetailsSearchSchema } from "~/key-factories";
 import { useProjectDetails } from "~/lib/hooks/use-project-details";
+import { timeAgoFormatter } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
   validateSearch: (search) => projectDetailsSearchSchema.parse(search),
@@ -197,9 +198,8 @@ function ProjectDetail() {
                     image={service.image}
                     tag={service.tag}
                     volumeNumber={service.volume_number}
-                    //@ts-ignore
                     status={service.status}
-                    updatedAt="2 months ago"
+                    updatedAt={timeAgoFormatter(service.updated_at)}
                     url={service.url}
                   />
                 );
@@ -210,9 +210,8 @@ function ProjectDetail() {
                   slug={service.slug}
                   branchName={service.branch}
                   repository={service.repository}
-                  //@ts-ignore
                   status={service.status}
-                  updatedAt="yesterday"
+                  updatedAt={timeAgoFormatter(service.updated_at)}
                   lastCommitMessage={service.last_commit_message}
                   url={service.url}
                 />
