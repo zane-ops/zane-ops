@@ -78,7 +78,9 @@ export function DockerServiceCard({
               {status === "HEALTHY" && "✅ "}
               {status === "SLEEPING" && "💤 "}
               {status === "UNHEALTHY" && "❌ "}
-              {status === "NOT_DEPLOYED_YET" ? "⏳ Not deployed yet" : status}
+              {status === "NOT_DEPLOYED_YET"
+                ? "⏳ Not deployed yet"
+                : status.toLowerCase()}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -89,7 +91,7 @@ export function DockerServiceCard({
           <Container className="flex-none" size={30} />
           <div className="w-[calc(100%-38px)]">
             <h1 className="text-lg leading-tight">{slug}</h1>
-            <p className="text-sm font-medium overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
+            <p className="text-sm font-normal overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
               {image}
             </p>
           </div>
@@ -98,11 +100,11 @@ export function DockerServiceCard({
       <CardContent className="flex  justify-end flex-grow gap-0.5 flex-col text-sm text-gray-400 p-6">
         {!!url && (
           <a
-            href={url}
+            href={`//${url}`}
             target="_blank"
             className="text-sm flex items-center gap-2 text-link"
           >
-            <LinkIcon className="flex-none" size={15} />{" "}
+            <LinkIcon className="flex-none" size={15} />
             <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
               {url}
             </div>
@@ -202,11 +204,11 @@ export function GitServiceCard({
       <CardContent className="flex  gap-0.5 flex-col text-sm text-gray-400 p-0 px-6 py-6">
         {!!url && (
           <a
-            href={url}
+            href={`//${url}`}
             target="_blank"
             className="text-sm flex items-center gap-2 text-link"
           >
-            <LinkIcon className="flex-none" size={15} />{" "}
+            <LinkIcon className="flex-none" size={15} />
             <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
               {url}
             </div>
