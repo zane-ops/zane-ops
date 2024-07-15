@@ -88,9 +88,9 @@ function ProjectDetail() {
                 <h1 className="text-3xl font-bold">Error 404</h1>
                 <p className="text-lg">This project does not exist</p>
               </div>
-              <a href="/">
+              <Link to="/">
                 <Button>Go home</Button>
-              </a>
+              </Link>
             </div>
           </section>
         </>

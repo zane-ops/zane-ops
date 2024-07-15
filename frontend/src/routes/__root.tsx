@@ -1,5 +1,5 @@
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
@@ -32,9 +32,9 @@ function NotFound() {
           <h1 className="text-3xl font-bold">Error 404</h1>
           <p className="text-lg">Looks like you're lost 😛</p>
         </div>
-        <a href="/">
+        <Link to="/">
           <Button>Go home</Button>
-        </a>
+        </Link>
       </div>
     </>
   );
