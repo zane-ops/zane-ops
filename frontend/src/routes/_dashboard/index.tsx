@@ -257,7 +257,7 @@ export function ProjectList() {
                 <section className="flex gap-3 flex-col items-center justify-center flex-grow py-20">
                   <div>
                     <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
-                    <h1 className="text-lg">You don't have any project yet</h1>
+                    <h2 className="text-lg">You don't have any project yet</h2>
                   </div>
                   <Button asChild>
                     <Link to="/create-project">Create One</Link>

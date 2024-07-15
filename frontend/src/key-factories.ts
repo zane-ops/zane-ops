@@ -28,5 +28,12 @@ export type ProjectSearch = z.infer<typeof projectSearchSchema>;
 export const projectKeys = {
   list: (filters: ProjectSearch) => ["PROJECT_LIST", filters] as const,
   archived: (filters: ProjectSearch) =>
-    ["ARCHIVED_PROJECT_LIST", filters] as const
+    ["ARCHIVED_PROJECT_LIST", filters] as const,
+  detail: (slug: string, filters: ProjectDetailsSearch) =>
+    ["PROJECT_DETAILS", slug, filters] as const
 };
+
+export const projectDetailsSearchSchema = z.object({
+  query: z.string().optional().catch("")
+});
+export type ProjectDetailsSearch = z.infer<typeof projectDetailsSearchSchema>;

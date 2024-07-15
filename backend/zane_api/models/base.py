@@ -558,6 +558,7 @@ class DockerDeployment(BaseDeployment):
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("Unhealthy")
         REMOVED = "REMOVED", _("Removed")
+        SLEEPING = "SLEEPING", _("Sleeping")
 
     class DeploymentSlot(models.TextChoices):
         BLUE = "BLUE", _("Blue")

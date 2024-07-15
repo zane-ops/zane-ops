@@ -74,7 +74,9 @@ CSRF_TRUSTED_ORIGINS = (
     if ENVIRONMENT != PRODUCTION_ENV
     else [f"https://{ZANE_APP_DOMAIN}"]
 )
-CORS_ALLOW_ALL_ORIGINS = True if ENVIRONMENT != PRODUCTION_ENV else CSRF_TRUSTED_ORIGINS
+CORS_ALLOW_ALL_ORIGINS = ENVIRONMENT != PRODUCTION_ENV
+if ENVIRONMENT == PRODUCTION_ENV:
+    CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
 CACHES = {
     "default": {
@@ -307,9 +309,10 @@ SPECTACULAR_SETTINGS = {
         ),
         "FieldChangeTypeEnum": (("UPDATE", "Update"),),
         "ServiceStatusEnum": (
-            ("HEALTHY", ("Healthy")),
-            ("UNHEALTHY", ("Unhealthy")),
-            ("SLEEPING", ("Sleeping")),
+            ("HEALTHY", "Healthy"),
+            ("UNHEALTHY", "Unhealthy"),
+            ("SLEEPING", "Sleeping"),
+            ("NOT_DEPLOYED_YET", "Not deployed yet"),
         ),
     },
     "POSTPROCESSING_HOOKS": [

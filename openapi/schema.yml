@@ -1467,6 +1467,7 @@ paths:
             - QUEUED
             - REMOVED
             - RESTARTING
+            - SLEEPING
             - STARTING
             - UNHEALTHY
         description: |-
@@ -1479,6 +1480,7 @@ paths:
           * `HEALTHY` - Healthy
           * `UNHEALTHY` - Unhealthy
           * `REMOVED` - Removed
+          * `SLEEPING` - Sleeping
         explode: true
         style: form
       tags:
@@ -2915,10 +2917,7 @@ components:
           format: uri
           nullable: true
         status:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/ServiceStatusEnum'
-          - $ref: '#/components/schemas/NullEnum'
+          $ref: '#/components/schemas/ServiceStatusEnum'
         type:
           allOf:
           - $ref: '#/components/schemas/DockerServiceCardTypeEnum'
@@ -3021,6 +3020,7 @@ components:
       - HEALTHY
       - UNHEALTHY
       - REMOVED
+      - SLEEPING
       type: string
       description: |-
         * `QUEUED` - Queued
@@ -3032,6 +3032,7 @@ components:
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
+        * `SLEEPING` - Sleeping
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -3397,10 +3398,7 @@ components:
           format: uri
           nullable: true
         status:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/ServiceStatusEnum'
-          - $ref: '#/components/schemas/NullEnum'
+          $ref: '#/components/schemas/ServiceStatusEnum'
         type:
           allOf:
           - $ref: '#/components/schemas/GitServiceCardTypeEnum'
@@ -3673,9 +3671,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    NullEnum:
-      enum:
-      - null
     PING:
       type: object
       properties:
@@ -4818,11 +4813,13 @@ components:
       - HEALTHY
       - UNHEALTHY
       - SLEEPING
+      - NOT_DEPLOYED_YET
       type: string
       description: |-
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
         * `SLEEPING` - Sleeping
+        * `NOT_DEPLOYED_YET` - Not deployed yet
     SimpleLog:
       type: object
       properties:
