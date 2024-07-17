@@ -322,7 +322,7 @@ class LogStreamViewTests(AuthAPITestCase):
                     source=SimpleLog.LogSource.SERVICE,
                     level=SimpleLog.LogLevel.INFO,
                 )
-                for (time, content) in enumerate(self.sample_log_contents)
+                for (time, content) in self.sample_log_contents
             ]
         )
 
