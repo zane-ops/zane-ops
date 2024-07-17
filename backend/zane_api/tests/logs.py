@@ -339,4 +339,4 @@ class LogStreamViewTests(AuthAPITestCase):
         self.assertIsNone(deleted_service)
 
         logs_for_service = SimpleLog.objects.filter(service_id=service.id).count()
-        self.assertEqual(0, len(logs_for_service))
+        self.assertEqual(0, logs_for_service)
