@@ -5,7 +5,7 @@ from typing import Any
 import django_filters
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from rest_framework import pagination
@@ -894,7 +894,14 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(lookup_expr="icontains")
+    content = django_filters.CharFilter(
+        lookup_expr="icontains", method="filter_content"
+    )
+
+    def filter_content(self, queryset: QuerySet, name: str, value: str):
+        # construct the full lookup expression.
+        lookup = f"{name}__icontains"
+        return queryset.filter(**{lookup: value.replace('"', '\\"')})
 
     class Meta:
         model = SimpleLog
