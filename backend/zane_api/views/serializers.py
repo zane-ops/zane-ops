@@ -894,9 +894,7 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(
-        lookup_expr="icontains", method="filter_content"
-    )
+    content = django_filters.CharFilter(method="filter_content")
 
     def filter_content(self, queryset: QuerySet, name: str, value: str):
         # construct the full lookup expression.
