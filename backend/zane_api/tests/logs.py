@@ -191,6 +191,10 @@ class LogStreamViewTests(AuthAPITestCase):
             datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
     ]
 
     def test_view_logs(self):
@@ -226,7 +230,7 @@ class LogStreamViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(10, len(response.json()["results"]))
+        self.assertEqual(len(simple_logs), len(response.json()["results"]))
 
     def test_paginate(self):
         p, service = self.create_and_deploy_redis_docker_service()
@@ -307,6 +311,38 @@ class LogStreamViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, len(response.json()["results"]))
+
+    def test_quote_in_query(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=SimpleLog.LogLevel.INFO,
+                )
+                for (time, content) in self.sample_log_contents
+            ]
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"content=%2B0000%5D%20%22POST",  # searching for `+0000] "POST`
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()["results"]))
 
     def test_delete_logs_after_archiving_a_service(self):
         p, service = self.create_and_deploy_redis_docker_service()
