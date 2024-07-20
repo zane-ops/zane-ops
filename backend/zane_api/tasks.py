@@ -248,8 +248,12 @@ def cleanup_docker_resources_for_deployment(
         map(
             lambda change: URLDto.from_dict(change.old_value),
             new_deployment.changes.filter(
-                field=DockerDeploymentChange.ChangeField.URLS,
-                type=DockerDeploymentChange.ChangeType.DELETE,
+                Q(field=DockerDeploymentChange.ChangeField.URLS)
+                & Q(old_value__isnull=False)
+                & (
+                    Q(type=DockerDeploymentChange.ChangeType.DELETE)
+                    | Q(type=DockerDeploymentChange.ChangeType.UPDATE)
+                ),
             ),
         )
     )
