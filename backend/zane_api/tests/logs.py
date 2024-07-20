@@ -149,7 +149,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         self.assertIsNotNone(log.service_id)
 
 
-class LogStreamViewTests(AuthAPITestCase):
+class SimpleLogViewTests(AuthAPITestCase):
     sample_log_contents = [
         (
             datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
