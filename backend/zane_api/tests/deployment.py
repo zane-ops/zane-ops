@@ -25,6 +25,7 @@ from ..models import (
     HealthCheck,
     DockerEnvVariable,
 )
+from ..serializers import DockerServiceSerializer
 from ..views.helpers import URLDto
 
 
@@ -2937,6 +2938,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 "base_path": "/config",
                 "strip_prefix": False,
             },
+            old_value=DockerServiceSerializer(service).data.get("urls")[0],
             service=service,
         )
 
@@ -2959,7 +2961,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "proxy.fredkiss.dev",
                         "base_path": "/",
@@ -2971,15 +2973,16 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         url: URL = service.urls.first()
 
-        change = DockerDeploymentChange.objects.create(
+        DockerDeploymentChange.objects.create(
             field=DockerDeploymentChange.ChangeField.URLS,
             type=DockerDeploymentChange.ChangeType.UPDATE,
             item_id=url.id,
             new_value={
                 "domain": "proxy.fredkiss.dev",
-                "base_path": "/config",
+                "base_path": "/",
                 "strip_prefix": True,
             },
+            old_value=DockerServiceSerializer(service).data.get("urls")[0],
             service=service,
         )
 
