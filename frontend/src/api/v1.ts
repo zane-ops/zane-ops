@@ -489,6 +489,7 @@ export interface components {
       /** Format: uri */
       url: string | null;
       status: components["schemas"]["ServiceStatusEnum"];
+      id: string;
       /** @default docker */
       type: components["schemas"]["DockerServiceCardTypeEnum"];
       image: string;
@@ -691,6 +692,7 @@ export interface components {
       /** Format: uri */
       url: string | null;
       status: components["schemas"]["ServiceStatusEnum"];
+      id: string;
       /** @default git */
       type: components["schemas"]["GitServiceCardTypeEnum"];
       repository: string;

@@ -363,6 +363,7 @@ class ProjectServiceListView(APIView):
             service_list.append(
                 DockerServiceCardSerializer(
                     dict(
+                        id=service.id,
                         image=image,
                         tag=tag,
                         updated_at=service.updated_at,
