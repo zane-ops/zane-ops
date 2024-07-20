@@ -201,7 +201,7 @@ class LogStreamViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        SimpleLog.objects.bulk_create(
+        simple_logs = SimpleLog.objects.bulk_create(
             [
                 SimpleLog(
                     time=time,
