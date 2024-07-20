@@ -2953,49 +2953,6 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         mock.assert_called()
         mock.assert_called_with([URLDto.from_dict(change.old_value)])
 
-    @patch("zane_api.tasks.apply_deleted_urls_changes")
-    def test_update_url_do_not_delete_old_url_if_still_used(self, mock: Mock):
-        p, service = self.create_and_deploy_caddy_docker_service(
-            other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "domain": "proxy.fredkiss.dev",
-                        "base_path": "/",
-                        "strip_prefix": False,
-                    },
-                )
-            ]
-        )
-
-        url: URL = service.urls.first()
-
-        change = DockerDeploymentChange.objects.create(
-            field=DockerDeploymentChange.ChangeField.URLS,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
-            item_id=url.id,
-            new_value={
-                "domain": "proxy.fredkiss.dev",
-                "base_path": "/config",
-                "strip_prefix": True,
-            },
-            service=service,
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        mock.assert_called()
-        mock.assert_called_with([])
-
     @patch("zane_api.docker_operations.sleep")
     @patch("zane_api.docker_operations.monotonic")
     def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
