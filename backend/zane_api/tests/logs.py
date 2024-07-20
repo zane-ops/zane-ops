@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..models import SimpleLog, DockerDeployment
+from ..models import SimpleLog, DockerDeployment, DockerRegistryService
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
@@ -149,7 +149,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         self.assertIsNotNone(log.service_id)
 
 
-class LogStreamViewTests(AuthAPITestCase):
+class SimpleLogViewTests(AuthAPITestCase):
     sample_log_contents = [
         (
             datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
@@ -236,7 +236,7 @@ class LogStreamViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = SimpleLog.objects.bulk_create(
+        SimpleLog.objects.bulk_create(
             [
                 SimpleLog(
                     time=time,
@@ -274,7 +274,7 @@ class LogStreamViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = SimpleLog.objects.bulk_create(
+        SimpleLog.objects.bulk_create(
             [
                 SimpleLog(
                     time=time,
@@ -343,3 +343,36 @@ class LogStreamViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
+
+    def test_delete_logs_after_archiving_a_service(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=SimpleLog.LogLevel.INFO,
+                )
+                for (time, content) in self.sample_log_contents
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        deleted_service = DockerRegistryService.objects.filter(
+            slug=service.slug
+        ).first()
+        self.assertIsNone(deleted_service)
+
+        logs_for_service = SimpleLog.objects.filter(service_id=service.id).count()
+        self.assertEqual(0, logs_for_service)

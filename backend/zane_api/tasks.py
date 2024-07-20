@@ -32,6 +32,7 @@ from .models import (
     ArchivedProject,
     ArchivedDockerService,
     DockerDeploymentChange,
+    SimpleLog,
 )
 from .utils import cache_lock, LockAcquisitionError, find_item_in_list
 from .views.helpers import URLDto
@@ -312,7 +313,7 @@ def delete_docker_resources_for_project(archived_project_id: int):
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
 def delete_resources_for_docker_service(archived_service_id: id):
-    archived_service = (
+    archived_service: ArchivedDockerService = (
         ArchivedDockerService.objects.filter(id=archived_service_id)
         .select_related("project")
         .prefetch_related("volumes", "urls")
@@ -323,6 +324,7 @@ def delete_resources_for_docker_service(archived_service_id: id):
         )
     unexpose_docker_service_from_http(archived_service)
     cleanup_docker_service_resources(archived_service)
+    SimpleLog.objects.filter(service_id=archived_service.original_id).delete()
 
 
 @shared_task
