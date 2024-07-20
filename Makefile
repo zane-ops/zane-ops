@@ -8,7 +8,7 @@ setup: ### Initial setup of the project
 	python3 -m venv ./backend/venv
 	echo 'activating the virtualenv...'
 	chmod a+x ./backend/venv/bin/activate
-	./backend/venv/bin/activate
+	. ./backend/venv/bin/activate
 	echo 'installing dependencies...'
 	pip install uv
 	uv pip install -r ./backend/requirements.txt
@@ -17,7 +17,7 @@ setup: ### Initial setup of the project
 	docker swarm init || true
 
 migrate: ### Run db migration
-	./backend/venv/bin/activate
+	. ./backend/venv/bin/activate
 	python ./backend/manage.py migrate
 
 dev: ### Start the DEV server
