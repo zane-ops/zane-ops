@@ -933,6 +933,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
     )
     status = serializers.ChoiceField(choices=STATUS_CHOICES)
+    id = serializers.CharField(required=True)
 
 
 class DockerServiceCardSerializer(BaseServiceCardSerializer):

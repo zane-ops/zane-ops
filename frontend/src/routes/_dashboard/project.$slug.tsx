@@ -197,6 +197,7 @@ function ProjectDetail() {
                   <DockerServiceCard
                     slug={service.slug}
                     image={service.image}
+                    key={service.id}
                     tag={service.tag}
                     volumeNumber={service.volume_number}
                     status={service.status}
@@ -212,6 +213,7 @@ function ProjectDetail() {
                   branchName={service.branch}
                   repository={service.repository}
                   status={service.status}
+                  key={service.id}
                   updatedAt={timeAgoFormatter(service.updated_at)}
                   lastCommitMessage={service.last_commit_message}
                   url={service.url}

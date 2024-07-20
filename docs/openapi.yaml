@@ -2918,6 +2918,8 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/ServiceStatusEnum'
+        id:
+          type: string
         type:
           allOf:
           - $ref: '#/components/schemas/DockerServiceCardTypeEnum'
@@ -2927,6 +2929,7 @@ components:
         tag:
           type: string
       required:
+      - id
       - image
       - slug
       - status
@@ -3399,6 +3402,8 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/ServiceStatusEnum'
+        id:
+          type: string
         type:
           allOf:
           - $ref: '#/components/schemas/GitServiceCardTypeEnum'
@@ -3411,6 +3416,7 @@ components:
           type: string
       required:
       - branch
+      - id
       - last_commit_message
       - repository
       - slug
