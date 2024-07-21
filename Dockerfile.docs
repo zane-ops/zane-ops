@@ -1,5 +1,5 @@
 # Build and compile the webapp
-FROM node:20-alpine as builder
+FROM node:20-buster as builder
 
 LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
 
