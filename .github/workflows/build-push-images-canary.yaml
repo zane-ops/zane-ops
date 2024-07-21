@@ -98,8 +98,10 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/docs:canary,ghcr.io/zane-ops/docs:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/docs:canary
-          cache-to: type=inline
+          cache-from: |
+            type=registry,ref=ghcr.io/zane-ops/docs-build-cache:canary
+            type=registry,ref=ghcr.io/zane-ops/docs:canary
+          cache-to: type=registry,ref=ghcr.io/zane-ops/docs-build-cache:canary,mode=max
   build-push-backend:
     name: Build and Push Zane Backend
     runs-on: ubuntu-latest
