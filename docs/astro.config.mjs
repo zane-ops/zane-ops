@@ -53,6 +53,23 @@ export default defineConfig({
               slug: "development/architecture"
             }
           ]
+        },
+        {
+          label: "API Reference",
+          items: [
+            {
+              label: "Introduction",
+              slug: "api-reference/introduction"
+            },
+            {
+              label: "Authentication",
+              slug: "api-reference/authentication"
+            }
+            // {
+            //   label: "Architecture",
+            //   slug: "development/architecture"
+            // }
+          ]
         }
       ]
     }),
