@@ -27,6 +27,9 @@ export default defineConfig({
         github: "https://github.com/zane-ops/zane-ops",
         twitter: "https://twitter.com/zaneopsdev"
       },
+      components: {
+        Footer: "./src/components/Footer.astro"
+      },
       sidebar: [
         {
           label: "Start here",
