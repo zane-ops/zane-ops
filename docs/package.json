@@ -1,17 +1,22 @@
 {
   "name": "docs",
-  "version": "1.0.0",
-  "description": "",
+  "type": "module",
+  "version": "0.0.1",
   "scripts": {
-    "start": "mintlify dev",
-    "dev": "pnpm run generate:docs && mintlify dev",
-    "generate:docs": "mintlify-scrape openapi-file ../openapi/schema.yml -o api-reference && cp ../openapi/schema.yml ./openapi.yaml"
+    "dev": "astro dev --port 3000 --host",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@mintlify/scraping": "^3.0.134",
-    "mintlify": "^4.0.184"
+    "@astrojs/check": "^0.8.2",
+    "@astrojs/starlight": "^0.25.1",
+    "@astrojs/starlight-tailwind": "^2.0.3",
+    "@astrojs/tailwind": "^5.1.0",
+    "astro": "^4.10.2",
+    "sharp": "^0.32.5",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.5.3"
   }
 }
