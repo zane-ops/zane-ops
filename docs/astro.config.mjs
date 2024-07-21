@@ -40,13 +40,20 @@ export default defineConfig({
               slug: "screenshots"
             }
           ]
+        },
+        {
+          label: "Development",
+          items: [
+            {
+              label: "Development",
+              slug: "development/development"
+            },
+            {
+              label: "Architecture",
+              slug: "development/architecture"
+            }
+          ]
         }
-        // {
-        //   label: "Reference",
-        //   autogenerate: {
-        //     directory: "reference"
-        //   }
-        // }
       ]
     }),
     tailwind({
