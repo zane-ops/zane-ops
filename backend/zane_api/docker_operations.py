@@ -722,7 +722,11 @@ def get_caddy_request_for_url(
         "match": [
             {
                 "path": [
-                    f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}/*"
+                    (
+                        "/*"
+                        if url.base_path == "/"
+                        else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
+                    )
                 ],
             }
         ],
