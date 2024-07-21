@@ -1,26 +1,10 @@
-# Build and compile the webapp
-FROM node:20-alpine as builder
-
-LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
-
-WORKDIR /app
-
-RUN npm install -g pnpm@8
-
-COPY ./pnpm-lock.yaml ./
-COPY ./pnpm-workspace.yaml ./
-COPY ./package.json ./
-COPY ./biome.json ./
-COPY ./docs /app/docs
-
-RUN pnpm install --frozen-lockfile
-RUN pnpm --prefix docs run build
-
 # Webapp based on caddy
 FROM caddy:2.8-alpine
 
+LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
+
 WORKDIR /var/www/html
 
-COPY --from=builder /app/docs/dist/ ./docs
+COPY ./docs/dist/ ./docs
 COPY ./openapi/schema.yml ./docs
 COPY ./docs/Caddyfile /etc/caddy/Caddyfile
