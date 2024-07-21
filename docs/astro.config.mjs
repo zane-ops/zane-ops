@@ -7,6 +7,9 @@ import tailwind from "@astrojs/tailwind";
 export default defineConfig({
   site: "https://zane.fredkiss.dev",
   base: "/docs",
+  devToolbar: {
+    enabled: false
+  },
   integrations: [
     starlight({
       title: "ZaneOps documentation",
@@ -67,11 +70,11 @@ export default defineConfig({
             {
               label: "Authentication",
               slug: "api-reference/authentication"
+            },
+            {
+              label: "OpenAPI reference ↗",
+              link: "/api-reference/openapi"
             }
-            // {
-            //   label: "Architecture",
-            //   slug: "development/architecture"
-            // }
           ]
         }
       ]
