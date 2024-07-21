@@ -99,9 +99,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/docs:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/docs:${{ github.sha }}
           cache-from: |
+            type=registry,ref=ghcr.io/zane-ops/docs-build-cache:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/docs:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/docs:canary
-          cache-to: type=inline
+          cache-to: type=registry,ref=ghcr.io/zane-ops/docs-build-cache:pr-${{ github.event.pull_request.number }},mode=max
   build-push-backend:
     name: Build and Push Zane Backend
     runs-on: ubuntu-latest
