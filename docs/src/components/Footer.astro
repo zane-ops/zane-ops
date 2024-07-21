@@ -22,14 +22,6 @@ const editUrl = Astro.props.editUrl;
         <p>
           Built with Astro &amp; deployed on ZaneOps
         </p>
-        <p>
-          Last updated —&nbsp;
-          { lastUpdated && (
-          <time datetime={lastUpdated.toISOString()}>
-            {lastUpdated.toLocaleDateString(lang, { dateStyle: 'medium', timeZone: 'UTC' })}
-          </time>
-          )}
-        </p>
       </div>
     </div>
   </footer>
