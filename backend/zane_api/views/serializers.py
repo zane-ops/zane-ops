@@ -876,6 +876,7 @@ class HTTPServiceLogSerializer(serializers.Serializer):
     zane_deployment_upstream = serializers.CharField()
     zane_deployment_current_slot = serializers.CharField()
     zane_deployment_current_hash = serializers.CharField()
+    zane_service_id = serializers.CharField()
 
 
 class DockerContainerLogsRequestSerializer(serializers.ListSerializer):

@@ -660,12 +660,18 @@ def get_caddy_request_for_url(
     http_port: PortConfiguration,
     deployment_hash: str = None,
     deployment_slot: str = None,
+    service_id: str = None,
 ):
     proxy_handlers = [
         {
             "handler": "log_append",
             "key": "zane_deployment_current_hash",
             "value": deployment_hash,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_service_id",
+            "value": service_id,
         },
         {
             "handler": "log_append",
@@ -771,6 +777,7 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 http_port,
                 deployment_hash=deployment.hash,
                 deployment_slot=deployment.slot,
+                service_id=deployment.service.id,
             )
         )
         routes = sort_proxy_routes(routes)
