@@ -16,6 +16,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.astro/
 
 node_modules
 dist
@@ -34,3 +35,7 @@ dist-ssr
 
 #ignoring auto generated files 
 ./src/routeTree.gen.ts
+# environment variables
+.env
+.env.production
+

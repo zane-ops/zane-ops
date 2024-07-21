@@ -1,0 +1,130 @@
+---
+title: Deploying Zaneops to your server (alpha)
+description: 'Setup and install zaneops'
+---
+
+This guide will show how to deploy zaneops to your server, keep in mind that this is very alpha and is subject to change
+and/or break, do not use this for production.
+
+But if you like living on the edge 😎, feel free to test the app and report any bug encountered.
+For now the features implemented are :
+
+- **UI** : login/logout, creating project
+- **API** : login/logout, creating,updating,archiving projects, creating services from docker images, archiving services,
+  updating services (by redeploying them). You can find a reference of the API
+  at https://zane.fredkiss.dev/docs/api-reference/openapi
+
+## Prerequesites
+
+You need to install [docker](https://docs.docker.com/engine/install/) and be on a linux machine.
+
+## Process
+
+### Go to the folder where you want to install zaneops
+
+This can be any folder, but in this setup we will choose `/var/www/zaneops` :
+
+```shell
+mkdir -p /var/www/zaneops 
+cd /var/www/zaneops
+```
+
+### Download the makefile for the project :
+
+```shell
+curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/deploy.mk > Makefile
+```
+
+### Launch the setup process :
+
+```shell
+make setup
+```
+
+After this step, you should have a folder looking like this :
+
+
+import { FileTree } from '@astrojs/starlight/components';
+
+<FileTree>
+
+- zaneops
+   - .fluentd 
+   - docker-stack.prod-http.yaml
+   - docker-stack.prod.yaml
+   - .env.local
+   - Makefile
+
+</FileTree>
+
+### Update environment variables in `.env.local`
+
+please modify the contents to better suit your needs :
+
+```shell
+# This is an EXAMPLE, don't copy this in production
+IMAGE_VERSION=alpha # zaneops version to install
+ZANE_APP_DIRECTORY=/var/www/zaneops # where you will install zaneops 
+ZANE_DB_USER=zane
+ZANE_DB_PASSWORD=password # ⚠️ PLEASE CHANGE THIS ⚠️ 
+DJANGO_SECRET_KEY=  # A secret key used by the API to hash tokens, this need to be at least 64 chars long
+ROOT_DOMAIN=zaneops.local # The root domain which will be used to generate domains for applications
+ZANE_APP_DOMAIN=app.zaneops.local # the domain where the zaneops dashboard will be installed 
+```
+
+#### How is each env variable used
+
+1. `IMAGE_VERSION` : used to tell which version of zaneops to install
+2. `ZANE_APP_DIRECTORY` : Used for telling where is the directory where zaneops will be installed
+3. `ZANE_DB_USER` / `ZANE_DB_PASSWORD` : credentials used for authenticating to DB where zaneops is installed
+4. `DJANGO_SECRET_KEY` :
+    1. This is used by the API to do many things, such as hashing user session tokens, read more
+       here  https://stackoverflow.com/a/47117966/10322846
+    2. This needs to be really secure and at least 64 chars for good mesure, you can use a tool
+       like [`pwgen`](https://github.com/kherrick/pwgen)
+       to generate a strong password, ex: `pwgen -n 64 -sB`
+5. `ROOT_DOMAIN` :
+    1. ZaneOps will use this domain to generate subdomains for the web apps deployed with zaneops, like
+       this: `my-web-app.zaneops.local`
+    2. The domain in itself won't be used for anything else, you may use the root domain to put the zaneops there
+6. `ZANE_APP_DOMAIN` :
+    1. ZaneOps will use this domain as the access point where it will be installed and accessible, once deployed you
+       will be able to access the dashboard using this domain.
+
+### Deploy zaneops
+
+```shell
+make deploy
+```
+
+### Create your first user to login to the dashboard
+
+```shell
+make create-user
+```
+
+### Shutting down zaneops
+
+```shell
+make remove
+```
+
+### Deleting zaneops & all resources created by it
+
+```shell
+make delete-resources
+```
+
+### In case you want to deploy locally
+
+In case you don't want to deploy to a server online and want to test instead
+on your local machine, add the host for zaneops to your `/etc/hosts` config :
+
+```shell
+nano /etc/hosts
+
+# add the hosts
+127.0.0.1       app.zaneops.local
+```
+
+If you deploy any service to zaneops, you'll need to add the domain to this file.

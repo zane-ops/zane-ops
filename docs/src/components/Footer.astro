@@ -1,0 +1,81 @@
+---
+import { Icon } from "@astrojs/starlight/components";
+import type { Props } from "@astrojs/starlight/props";
+const { lang, lastUpdated } = Astro.props;
+
+const editUrl = Astro.props.editUrl;
+---
+
+<footer>
+    <div class="meta sl-flex">
+      <div>
+        <a href={editUrl} class="sl-flex">
+          <Icon name="pencil" size="1em" />
+          Edit this page
+        </a>
+        <a href={`https://github.com/zane-ops/zane-ops/issues/new`} class="sl-flex">
+          <Icon name="github" size="1em" />
+          Find a bug? Open an issue
+        </a>
+      </div>
+      <div>
+        <p>
+          Built with Astro &amp; deployed on ZaneOps
+        </p>
+        <p>
+          Last updated —&nbsp;
+          { lastUpdated && (
+          <time datetime={lastUpdated.toISOString()}>
+            {lastUpdated.toLocaleDateString(lang, { dateStyle: 'medium', timeZone: 'UTC' })}
+          </time>
+          )}
+        </p>
+      </div>
+    </div>
+  </footer>
+  
+  <style>
+    footer {
+      margin-top: 3rem;
+      border-top: 1px solid var(--sl-color-hairline);
+    }
+    .meta {
+      gap: 0.75rem 3rem;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-block: 3rem 1.5rem;
+      font-size: var(--sl-text-sm);
+    }
+    @media (min-width: 30rem) {
+      .meta {
+        flex-direction: row;
+      }
+    }
+    a, p {
+      padding-block: 0.125rem;
+    }
+    a {
+      gap: 0.4375rem;
+      align-items: center;
+      text-decoration: none;
+      color: var(--color-text);
+      font-size: var(--sl-text-sm);
+    }
+    a svg {
+      opacity: var(--icon-opacity);
+    }
+    a:hover {
+      color: var(--sl-color-text-accent);
+    }
+    p {
+      color: var(--color-text-dimmed);
+    }
+    @media (min-width: 30rem) {
+      p {
+        text-align: right;
+      }
+    }
+    p a {
+      color: var(--color-text-dimmed);
+    }
+  </style>

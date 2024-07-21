@@ -10,11 +10,17 @@ RUN npm install -g pnpm@8
 COPY ./pnpm-lock.yaml ./
 COPY ./pnpm-workspace.yaml ./
 COPY ./package.json ./
+COPY ./biome.json ./
 COPY ./docs /app/docs
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --prefix docs run build
 
-COPY ./openapi/schema.yml /app/openapi/schema.yml
-RUN pnpm --prefix docs run generate:docs
+# Webapp based on caddy
+FROM caddy:2.8-alpine
 
-CMD pnpm --prefix docs run start
+WORKDIR /var/www/html
+
+COPY --from=builder /app/docs/dist/ ./docs
+COPY ./openapi/schema.yml ./docs
+COPY ./docs/Caddyfile /etc/caddy/Caddyfile

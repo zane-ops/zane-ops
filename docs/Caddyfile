@@ -1,0 +1,24 @@
+:80 {
+	# Set the root directory for static files
+	handle {
+		root * /var/www/html
+		file_server
+		header Cache-Control "public, max-age=604800, immutable"
+	}
+
+	# Specific handling for robots.txt
+	@robots {
+		path /robots.txt
+	}
+	handle @robots {
+		rewrite @robots ./docs/robots.txt
+		file_server
+	}
+	handle_errors {
+        @404 {
+            expression {http.error.status_code} == 404
+        }
+        rewrite @404 ./docs/404.html
+        file_server
+    }
+}
