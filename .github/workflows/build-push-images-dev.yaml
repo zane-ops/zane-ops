@@ -70,7 +70,7 @@ jobs:
             type=registry,ref=ghcr.io/zane-ops/frontend:canary
           cache-to: type=inline
   build-docs-arm64:
-    name: Build and Push Zane Documentation
+    name: Build and Push Zane docs (ARM64)
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -103,7 +103,7 @@ jobs:
             type=registry,ref=ghcr.io/zane-ops/docs:canary
           cache-to: type=inline
   build-docs-amd64:
-    name: Build and Push Zane Documentation
+    name: Build and Push Zane docs (AMD64)
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -139,7 +139,7 @@ jobs:
     needs: 
       - build-docs-arm64
       - build-docs-amd64
-    name: Build and Push Zane Documentation
+    name: Build and Push Zane docs (multi)
     runs-on: ubuntu-latest
     permissions:
       packages: write
