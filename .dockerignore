@@ -34,5 +34,4 @@ dist-ssr/
 
 #ignoring auto generated files 
 ./src/routeTree.gen.ts
-docs/dist/
 frontend/dist/

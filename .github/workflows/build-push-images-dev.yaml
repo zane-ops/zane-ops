@@ -70,7 +70,7 @@ jobs:
             type=registry,ref=ghcr.io/zane-ops/frontend:canary
           cache-to: type=inline
   build-push-docs:
-    name: Build and Push Zane Documentation
+    name: Build and Push Zane docs 
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -80,6 +80,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.OS }}-pnpm-cache-
+      - name: Build docs with node
+        run: |
+          npm install -g pnpm@8
+          pnpm install --frozen-lockfile
+          pnpm --prefix docs run build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -99,11 +114,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/docs:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/docs:${{ github.sha }}
           cache-from: |
-            type=registry,ref=ghcr.io/zane-ops/docs-build-cache:pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/zane-ops/docs-build-cache:canary
             type=registry,ref=ghcr.io/zane-ops/docs:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/docs:canary
-          cache-to: type=registry,ref=ghcr.io/zane-ops/docs-build-cache:pr-${{ github.event.pull_request.number }},mode=max
+          cache-to: type=inline
+
   build-push-backend:
     name: Build and Push Zane Backend
     runs-on: ubuntu-latest
