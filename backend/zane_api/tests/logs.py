@@ -650,7 +650,7 @@ class HttpLogViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
-                        "zane_deployment_request_id": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -695,7 +695,7 @@ class HttpLogViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
-                        "zane_deployment_request_id": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -760,7 +760,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
             },
             "bytes_read": 0,
             "user_id": "",
-            "duration": 0.006841144,
+            "duration": 252.619561756,
             "size": 12119,
             "status": 200,
             "resp_headers": {
@@ -997,7 +997,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
-                        "zane_deployment_request_id": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -1061,7 +1061,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": "",
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
-                        "zane_deployment_request_id": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -1083,7 +1083,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": latest_deployment.hash,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
-                        "zane_deployment_request_id": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -1105,7 +1105,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": latest_deployment.hash,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
-                        "zane_deployment_request_id": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
