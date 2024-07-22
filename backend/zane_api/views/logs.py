@@ -14,7 +14,6 @@ from .serializers import (
     HTTPServiceLogSerializer,
 )
 from ..models import SimpleLog, HttpLog
-from ..utils import jprint
 
 
 @extend_schema(exclude=True)
@@ -45,49 +44,59 @@ class LogTailAPIView(APIView):
                             # Ignore this log
                             continue
                         case ZaneServices.PROXY:
-                            log_added = False
                             try:
                                 content = json.loads(log["log"])
                             except json.JSONDecodeError:
                                 pass
                             else:
-                                deployment_id = content.get(
-                                    "zane_deployment_current_hash"
-                                )
-                                if deployment_id:
+                                service_id = content.get("zane_service_id")
+                                if service_id:
                                     log_serializer = HTTPServiceLogSerializer(
                                         data=content
                                     )
                                     if log_serializer.is_valid():
                                         log_content = log_serializer.data
-                                        jprint(log_content)
-                                        req = log_content.get("request")
-                                        duration_in_seconds = log_content.get(
-                                            "duration"
+                                        upstream: str = log_content.get(
+                                            "zane_deployment_upstream"
                                         )
-                                        http_logs.append(
-                                            HttpLog(
-                                                time=log["time"],
-                                                service_id=log_content.get(
-                                                    "zane_service_id"
-                                                ),
-                                                deployment_id=log_content.get(
-                                                    "zane_deployment_current_hash"
-                                                ),
-                                                request_duration_ns=(
-                                                    duration_in_seconds * 1_000_000_000
-                                                ),
-                                                request_uri=req["uri"],
-                                                request_host=req["host"],
-                                                status=log_content.get("status"),
-                                                request_headers=req.get("headers"),
-                                                response_headers=log_content.get(
-                                                    "resp_headers"
-                                                ),
-                                                request_ip=req.get("remote_ip"),
-                                                request_method=req.get("method"),
+                                        deployment_id = None
+                                        if "blue.zaneops.internal" in upstream:
+                                            deployment_id = log_content.get(
+                                                "zane_deployment_blue_hash"
                                             )
-                                        )
+                                        elif "green.zaneops.internal" in upstream:
+                                            deployment_id = log_content.get(
+                                                "zane_deployment_green_hash"
+                                            )
+
+                                        if deployment_id is not None:
+                                            req = log_content.get("request")
+                                            duration_in_seconds = log_content.get(
+                                                "duration"
+                                            )
+                                            http_logs.append(
+                                                HttpLog(
+                                                    time=log["time"],
+                                                    service_id=log_content.get(
+                                                        "zane_service_id"
+                                                    ),
+                                                    deployment_id=deployment_id,
+                                                    request_duration_ns=(
+                                                        duration_in_seconds
+                                                        * 1_000_000_000
+                                                    ),
+                                                    request_uri=req["uri"],
+                                                    request_host=req["host"],
+                                                    status=log_content.get("status"),
+                                                    request_headers=req.get("headers"),
+                                                    response_headers=log_content.get(
+                                                        "resp_headers"
+                                                    ),
+                                                    request_ip=req.get("remote_ip"),
+                                                    request_method=req.get("method"),
+                                                )
+                                            )
+                                            continue
                                 simple_logs.append(
                                     SimpleLog(
                                         source=SimpleLog.LogSource.PROXY,

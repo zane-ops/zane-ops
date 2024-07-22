@@ -678,21 +678,11 @@ def get_caddy_request_for_url(
         green_hash = previous_deployment_hash
 
     proxy_handlers = [
-        # {
-        #     "handler": "log_append",
-        #     "key": "zane_deployment_current_hash",
-        #     "value": current_deployment_hash,
-        # },
         {
             "handler": "log_append",
             "key": "zane_service_id",
             "value": service_id,
         },
-        # {
-        #     "handler": "log_append",
-        #     "key": "zane_deployment_current_slot",
-        #     "value": current_deployment_slot,
-        # },
         {
             "handler": "log_append",
             "key": "zane_deployment_blue_hash",

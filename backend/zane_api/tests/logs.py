@@ -587,6 +587,50 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                 "Cache-Control": ["no-cache"],
             },
         },
+        {
+            "level": "info",
+            "ts": 1721612466.7106614,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "57224",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs?query",
+                "headers": {
+                    "Cookie": ["REDACTED"],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Sec-Gpc": ["1"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.009803894,
+            "size": 12123,
+            "status": 200,
+            "resp_headers": {
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Content-Type": ["text/html"],
+                "Expires": ["Mon, 22 Jul 2024 01:41:05 GMT"],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Mon, 22 Jul 2024 01:41:06 GMT"],
+            },
+        },
     ]
 
     def test_collect_service_http_logs(self):
@@ -602,8 +646,10 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                     {
                         **log,
                         "zane_deployment_upstream": f"{fist_deployment.network_aliases[-1]}:80",
-                        "zane_deployment_current_slot": fist_deployment.slot,
-                        "zane_deployment_current_hash": fist_deployment.hash,
+                        # "zane_deployment_current_slot": fist_deployment.slot,
+                        # "zane_deployment_current_hash": fist_deployment.hash,
+                        "zane_deployment_green_hash": None,
+                        "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
                     }
                 ),
@@ -614,13 +660,14 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
             }
             for log in self.sample_log_entries
         ]
-        json_log = json.loads(simple_proxy_logs[0]["log"])
 
         response = self.client.post(
             reverse("zane_api:logs.tail"), data=simple_proxy_logs
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(0, SimpleLog.objects.count())
         self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
+
         log: HttpLog = HttpLog.objects.first()
         self.assertEqual(service.id, log.service_id)
         self.assertEqual(fist_deployment.hash, log.deployment_id)
@@ -635,4 +682,93 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         self.assertEqual("nginx-demo.zaneops.local", log.request_host)
 
     def test_correctly_split_logs_per_deployment(self):
-        pass
+        p, service = self.create_and_deploy_caddy_docker_service()
+        # Make a second deployment
+        self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            )
+        )
+
+        latest_deployment: DockerDeployment = service.deployments.first()
+        initial_deployment: DockerDeployment = (
+            latest_deployment.get_previous_by_created_at()
+        )
+
+        # First deployment logs
+        first_deploy_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{initial_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": None,
+                        "zane_deployment_blue_hash": initial_deployment.hash,
+                        "zane_service_id": service.id,
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries[:3]
+        ]
+
+        first_deploy_proxy_logs.append(
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **self.sample_log_entries[3],
+                        "zane_deployment_upstream": f"{initial_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": latest_deployment.hash,
+                        "zane_deployment_blue_hash": initial_deployment.hash,
+                        "zane_service_id": service.id,
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+        )
+
+        # Second deployment logs
+        second_deploy_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{latest_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": latest_deployment.hash,
+                        "zane_deployment_blue_hash": initial_deployment.hash,
+                        "zane_service_id": service.id,
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries[4:]
+        ]
+
+        response = self.client.post(
+            reverse("zane_api:logs.tail"),
+            data=first_deploy_proxy_logs + second_deploy_proxy_logs,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
+
+        self.assertEqual(4, initial_deployment.http_logs.count())
+        self.assertEqual(2, latest_deployment.http_logs.count())
