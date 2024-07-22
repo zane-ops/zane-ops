@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid
 
 from django.urls import reverse
 from rest_framework import status
@@ -649,6 +650,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_request_id": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -678,6 +680,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         self.assertEqual("/docs?query", log.request_uri)
         self.assertEqual("10.0.0.2", log.request_ip)
         self.assertEqual("nginx-demo.zaneops.local", log.request_host)
+        self.assertIsNotNone(log.request_id)
 
     def test_correctly_split_logs_per_deployment(self):
         p, service = self.create_and_deploy_caddy_docker_service()
@@ -709,6 +712,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_request_id": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -730,6 +734,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": latest_deployment.hash,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_request_id": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
@@ -751,6 +756,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": latest_deployment.hash,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_request_id": str(uuid.uuid4()),
                     }
                 ),
                 "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",

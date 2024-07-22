@@ -93,6 +93,9 @@ class LogTailAPIView(APIView):
                                                         "resp_headers"
                                                     ),
                                                     request_ip=req.get("remote_ip"),
+                                                    request_id=log_content.get(
+                                                        "zane_deployment_request_id"
+                                                    ),
                                                     request_method=req.get("method"),
                                                 )
                                             )
