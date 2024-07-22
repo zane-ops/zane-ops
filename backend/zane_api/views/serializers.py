@@ -29,6 +29,7 @@ from ..models import (
     DockerEnvVariable,
     PortConfiguration,
     SimpleLog,
+    HttpLog,
 )
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
@@ -834,6 +835,7 @@ class HTTPServiceRequestSerializer(serializers.Serializer):
         ("HTTP/1.0", "HTTP/1.0"),
         ("HTTP/1.1", "HTTP/1.1"),
         ("HTTP/2.0", "HTTP/2.0"),
+        ("HTTP/3.0", "HTTP/3.0"),
     ]
     REQUEST_METHODS = [
         ("GET", "GET"),
@@ -877,7 +879,7 @@ class HTTPServiceLogSerializer(serializers.Serializer):
     zane_deployment_green_hash = serializers.CharField(allow_null=True, required=False)
     zane_deployment_blue_hash = serializers.CharField(allow_null=True, required=False)
     zane_service_id = serializers.CharField()
-    zane_deployment_request_id = serializers.CharField()
+    zane_deployment_request_id = serializers.CharField(allow_null=True, required=False)
 
 
 class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
@@ -912,6 +914,24 @@ class DeploymentLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
     ordering = "-time"
+
+
+class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
+    time = django_filters.DateTimeFromToRangeFilter()
+    request_method = django_filters.MultipleChoiceFilter(
+        choices=HttpLog.RequestMethod.choices
+    )
+
+    class Meta:
+        model = HttpLog
+        fields = [
+            "time",
+            "request_method",
+            "request_path",
+            "request_host",
+            "status",
+            "request_ip",
+        ]
 
 
 # ==============================

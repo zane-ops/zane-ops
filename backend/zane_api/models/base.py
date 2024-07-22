@@ -820,6 +820,12 @@ class HttpLog(Log):
         OPTIONS = "OPTIONS", _("OPTIONS")
         HEAD = "HEAD", _("HEAD")
 
+    class RequestProtocols(models.TextChoices):
+        HTTP_1_0 = "HTTP/1.0", _("HTTP/1.0")
+        HTTP_1_1 = "HTTP/1.1", _("HTTP/1.1")
+        HTTP_2 = "HTTP/2.0", _("HTTP/2.0")
+        HTTP_3 = "HTTP/3.0", _("HTTP/3.0")
+
     request_method = models.CharField(
         max_length=7,
         choices=RequestMethod.choices,
@@ -828,8 +834,12 @@ class HttpLog(Log):
     request_duration_ns = models.PositiveIntegerField()
     request_headers = models.JSONField()
     response_headers = models.JSONField()
+    request_protocol = models.CharField(
+        max_length=10, choices=RequestProtocols, default=RequestProtocols.HTTP_1_1
+    )
     request_host = models.URLField(max_length=1000)
-    request_uri = models.CharField(max_length=2000)
+    request_path = models.CharField(max_length=2000)
+    request_query = models.CharField(max_length=2000, null=True, blank=True)
     request_ip = models.GenericIPAddressField()
     request_id = models.CharField(null=True, max_length=255)
 
@@ -837,9 +847,10 @@ class HttpLog(Log):
         indexes = [
             models.Index(fields=["deployment_id"]),
             models.Index(fields=["service_id"]),
+            models.Index(fields=["request_method"]),
             models.Index(fields=["status"]),
             models.Index(fields=["request_host"]),
-            models.Index(fields=["request_uri"]),
+            models.Index(fields=["request_path"]),
             models.Index(fields=["time"]),
         ]
         ordering = ("time",)
