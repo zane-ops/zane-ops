@@ -876,10 +876,16 @@ class HTTPServiceLogSerializer(serializers.Serializer):
     )
     request = HTTPServiceRequestSerializer()
     zane_deployment_upstream = serializers.CharField()
-    zane_deployment_green_hash = serializers.CharField(allow_null=True, required=False)
-    zane_deployment_blue_hash = serializers.CharField(allow_null=True, required=False)
+    zane_deployment_green_hash = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
+    zane_deployment_blue_hash = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
     zane_service_id = serializers.CharField()
-    zane_deployment_request_id = serializers.CharField(allow_null=True, required=False)
+    zane_deployment_request_id = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
 
 
 class DockerContainerLogsRequestSerializer(serializers.ListSerializer):

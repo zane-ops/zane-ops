@@ -1058,7 +1058,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                     {
                         **log,
                         "zane_deployment_upstream": f"{initial_deployment.network_aliases[-1]}:80",
-                        "zane_deployment_green_hash": None,
+                        "zane_deployment_green_hash": "",
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
                         "zane_deployment_request_id": str(uuid.uuid4()),

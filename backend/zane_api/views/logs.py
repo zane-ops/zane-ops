@@ -70,7 +70,7 @@ class LogTailAPIView(APIView):
                                                 "zane_deployment_green_hash"
                                             )
 
-                                        if deployment_id is not None:
+                                        if deployment_id:
                                             req = log_content.get("request")
                                             duration_in_seconds = log_content.get(
                                                 "duration"
