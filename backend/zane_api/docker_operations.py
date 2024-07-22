@@ -698,11 +698,6 @@ def get_caddy_request_for_url(
             "key": "zane_deployment_upstream",
             "value": "{http.reverse_proxy.upstream.hostport}",
         },
-        {
-            "handler": "log_append",
-            "key": "zane_deployment_request_id",
-            "value": "{http.request.uuid}",
-        },
     ]
 
     if url.strip_prefix:
