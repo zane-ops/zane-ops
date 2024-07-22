@@ -6,5 +6,5 @@ LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
 WORKDIR /var/www/html
 
 COPY ./docs/dist/ ./docs
-COPY ./openapi/schema.yml ./docs
+COPY ./openapi/schema.yml ./docs/openapi.yaml
 COPY ./docs/Caddyfile /etc/caddy/Caddyfile
