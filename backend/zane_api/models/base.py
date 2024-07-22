@@ -831,6 +831,7 @@ class HttpLog(Log):
     request_host = models.URLField(max_length=1000)
     request_uri = models.CharField(max_length=2000)
     request_ip = models.GenericIPAddressField()
+    request_id = models.CharField(null=True, max_length=255)
 
     class Meta:
         indexes = [
