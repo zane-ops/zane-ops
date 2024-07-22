@@ -757,7 +757,7 @@ def get_caddy_request_for_url(
 def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
     service = deployment.service
     previous_deployment: DockerDeployment | None = (
-        deployment.get_previous_by_created_at()
+        deployment.get_previous_by_created_at(service=deployment.service)
     )
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is None:
