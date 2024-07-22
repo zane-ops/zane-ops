@@ -646,8 +646,6 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                     {
                         **log,
                         "zane_deployment_upstream": f"{fist_deployment.network_aliases[-1]}:80",
-                        # "zane_deployment_current_slot": fist_deployment.slot,
-                        # "zane_deployment_current_hash": fist_deployment.hash,
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
