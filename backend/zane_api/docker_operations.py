@@ -698,11 +698,6 @@ def get_caddy_request_for_url(
             "key": "zane_deployment_upstream",
             "value": "{http.reverse_proxy.upstream.hostport}",
         },
-        {
-            "handler": "log_append",
-            "key": "zane_deployment_request_id",
-            "value": "{http.request.uuid}",
-        },
     ]
 
     if url.strip_prefix:
@@ -762,7 +757,7 @@ def get_caddy_request_for_url(
 def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
     service = deployment.service
     previous_deployment: DockerDeployment | None = (
-        deployment.get_previous_by_created_at()
+        deployment.get_previous_by_created_at(service=deployment.service)
     )
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is None:

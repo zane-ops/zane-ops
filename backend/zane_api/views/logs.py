@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlparse
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, permissions
@@ -69,10 +70,14 @@ class LogTailAPIView(APIView):
                                                 "zane_deployment_green_hash"
                                             )
 
-                                        if deployment_id is not None:
+                                        if deployment_id:
                                             req = log_content.get("request")
                                             duration_in_seconds = log_content.get(
                                                 "duration"
+                                            )
+
+                                            full_url = urlparse(
+                                                f"https://{req['host']}{req['uri']}"
                                             )
                                             http_logs.append(
                                                 HttpLog(
@@ -85,18 +90,18 @@ class LogTailAPIView(APIView):
                                                         duration_in_seconds
                                                         * 1_000_000_000
                                                     ),
-                                                    request_uri=req["uri"],
+                                                    request_path=full_url.path,
+                                                    request_query=full_url.query,
+                                                    request_protocol=req["proto"],
                                                     request_host=req["host"],
-                                                    status=log_content.get("status"),
-                                                    request_headers=req.get("headers"),
-                                                    response_headers=log_content.get(
+                                                    status=log_content["status"],
+                                                    request_headers=req["headers"],
+                                                    response_headers=log_content[
                                                         "resp_headers"
-                                                    ),
-                                                    request_ip=req.get("remote_ip"),
-                                                    request_id=log_content.get(
-                                                        "zane_deployment_request_id"
-                                                    ),
-                                                    request_method=req.get("method"),
+                                                    ],
+                                                    request_ip=req["remote_ip"],
+                                                    request_id=log_content.get("uuid"),
+                                                    request_method=req["method"],
                                                 )
                                             )
                                             continue
