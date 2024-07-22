@@ -658,19 +658,40 @@ def get_caddy_request_for_url(
     url: URL,
     service: DockerRegistryService,
     http_port: PortConfiguration,
-    deployment_hash: str = None,
-    deployment_slot: str = None,
+    current_deployment_hash: str = None,
+    current_deployment_slot: str = None,
+    service_id: str = None,
+    previous_deployment_hash: str = None,
+    previous_deployment_slot: str = None,
 ):
+    blue_hash = None
+    green_hash = None
+
+    if current_deployment_slot == "BLUE":
+        blue_hash = current_deployment_hash
+    elif current_deployment_slot == "GREEN":
+        green_hash = current_deployment_hash
+
+    if previous_deployment_slot == "BLUE":
+        blue_hash = previous_deployment_hash
+    elif previous_deployment_slot == "GREEN":
+        green_hash = previous_deployment_hash
+
     proxy_handlers = [
         {
             "handler": "log_append",
-            "key": "zane_deployment_current_hash",
-            "value": deployment_hash,
+            "key": "zane_service_id",
+            "value": service_id,
         },
         {
             "handler": "log_append",
-            "key": "zane_deployment_current_slot",
-            "value": deployment_slot,
+            "key": "zane_deployment_blue_hash",
+            "value": blue_hash,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_green_hash",
+            "value": green_hash,
         },
         {
             "handler": "log_append",
@@ -735,6 +756,9 @@ def get_caddy_request_for_url(
 
 def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
     service = deployment.service
+    previous_deployment: DockerDeployment | None = (
+        deployment.get_previous_by_created_at()
+    )
     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
     if http_port is None:
         raise Exception(
@@ -769,8 +793,19 @@ def expose_docker_service_to_http(deployment: DockerDeployment) -> None:
                 url,
                 service,
                 http_port,
-                deployment_hash=deployment.hash,
-                deployment_slot=deployment.slot,
+                current_deployment_hash=deployment.hash,
+                current_deployment_slot=deployment.slot,
+                service_id=deployment.service.id,
+                previous_deployment_hash=(
+                    previous_deployment.hash
+                    if previous_deployment is not None
+                    else None
+                ),
+                previous_deployment_slot=(
+                    previous_deployment.slot
+                    if previous_deployment is not None
+                    else None
+                ),
             )
         )
         routes = sort_proxy_routes(routes)
