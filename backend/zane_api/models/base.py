@@ -831,7 +831,7 @@ class HttpLog(Log):
         choices=RequestMethod.choices,
     )
     status = models.PositiveIntegerField()
-    request_duration_ns = models.PositiveIntegerField()
+    request_duration_ns = models.BigIntegerField()
     request_headers = models.JSONField()
     response_headers = models.JSONField()
     request_protocol = models.CharField(

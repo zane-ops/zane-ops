@@ -3706,8 +3706,9 @@ components:
           $ref: '#/components/schemas/RequestMethodEnum'
         request_duration_ns:
           type: integer
-          maximum: 2147483647
-          minimum: 0
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
         request_headers:
           type: object
           additionalProperties:
