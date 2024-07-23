@@ -107,6 +107,8 @@ services:
       - "8081:8080"
     networks:
       - zane
+    volumes:
+      - adminer-sessions:/var/www/html/sessions
   redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui
@@ -138,6 +140,7 @@ volumes:
   caddy-data:
   registry-lib-data:
   pgadmin-data:
+  adminer-sessions:
 networks:
   zane:
     external: true
