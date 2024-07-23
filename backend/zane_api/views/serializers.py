@@ -5,7 +5,7 @@ from typing import Any
 import django_filters
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from rest_framework import pagination
@@ -29,6 +29,7 @@ from ..models import (
     DockerEnvVariable,
     PortConfiguration,
     SimpleLog,
+    HttpLog,
 )
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
@@ -834,6 +835,7 @@ class HTTPServiceRequestSerializer(serializers.Serializer):
         ("HTTP/1.0", "HTTP/1.0"),
         ("HTTP/1.1", "HTTP/1.1"),
         ("HTTP/2.0", "HTTP/2.0"),
+        ("HTTP/3.0", "HTTP/3.0"),
     ]
     REQUEST_METHODS = [
         ("GET", "GET"),
@@ -874,8 +876,14 @@ class HTTPServiceLogSerializer(serializers.Serializer):
     )
     request = HTTPServiceRequestSerializer()
     zane_deployment_upstream = serializers.CharField()
-    zane_deployment_current_slot = serializers.CharField()
-    zane_deployment_current_hash = serializers.CharField()
+    zane_deployment_green_hash = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
+    zane_deployment_blue_hash = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
+    zane_service_id = serializers.CharField()
+    uuid = serializers.CharField(allow_null=True, required=False, allow_blank=True)
 
 
 class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
@@ -894,7 +902,12 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(lookup_expr="icontains")
+    content = django_filters.CharFilter(method="filter_content")
+
+    def filter_content(self, queryset: QuerySet, name: str, value: str):
+        # construct the full lookup expression.
+        lookup = f"{name}__icontains"
+        return queryset.filter(**{lookup: value.replace('"', '\\"')})
 
     class Meta:
         model = SimpleLog
@@ -905,6 +918,24 @@ class DeploymentLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
     ordering = "-time"
+
+
+class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
+    time = django_filters.DateTimeFromToRangeFilter()
+    request_method = django_filters.MultipleChoiceFilter(
+        choices=HttpLog.RequestMethod.choices
+    )
+
+    class Meta:
+        model = HttpLog
+        fields = [
+            "time",
+            "request_method",
+            "request_path",
+            "request_host",
+            "status",
+            "request_ip",
+        ]
 
 
 # ==============================
@@ -928,6 +959,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
     )
     status = serializers.ChoiceField(choices=STATUS_CHOICES)
+    id = serializers.CharField(required=True)
 
 
 class DockerServiceCardSerializer(BaseServiceCardSerializer):

@@ -1,0 +1,37 @@
+---
+title: Welcome to ZaneOps
+description: ZaneOps is a self-hosted, open source platform as a service for hosting static sites, web apps, databases, CRONS, Workers using docker swarm as the engine.
+template: splash
+hero:
+  tagline: ZaneOps is a self-hosted, open source platform for hosting static sites, web apps, databases, CRONS, Workers using docker swarm as the engine.
+  image:
+    file: ../../assets/Logo.svg
+  actions:
+    - text: Get started
+      link: get-started/
+      icon: right-arrow
+      variant: primary
+    - text: API Reference
+      link: api-reference/openapi
+      icon: right-arrow
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Features
+
+<CardGrid stagger>
+	<Card title="Deploy services" icon="seti:docker">
+		Writen in any language, whether it is starting a REDIS instance, creating a database, a wordpress instance, and more.
+	</Card>
+
+	<Card title="Deploy application from github" icon="github">
+		Link your repositories and automatically build and deploy apps from GitHub on push, or pull requests.
+	</Card>
+	<Card title="Preview Deployments & Environments" icon="setting">
+		Easily manage app versions, roll back to any version at any time, and control storage duration—whether indefinitely or temporarily post-merge.
+	</Card>
+	<Card title="Deploy CRONS" icon="seti:clock">
+		Create scheduled jobs for tasks such as backing up your databases, reporting legal informations or anything you want.
+	</Card>
+</CardGrid>

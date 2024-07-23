@@ -198,6 +198,8 @@ class AuthAPITestCase(APITestCase):
         owner = self.loginUser()
         project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="caddy", project=project)
+        service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+        service.save()
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -245,6 +247,7 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
         return project, service
 
 

@@ -1638,6 +1638,157 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/:
+    get:
+      operationId: projects_service_details_docker_deployments_http_logs_list
+      summary: Get deployment HTTP logs
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: query
+        name: request_host
+        schema:
+          type: string
+      - in: query
+        name: request_ip
+        schema:
+          type: string
+      - in: query
+        name: request_method
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+        description: |-
+          * `GET` - GET
+          * `POST` - POST
+          * `PUT` - PUT
+          * `DELETE` - DELETE
+          * `PATCH` - PATCH
+          * `OPTIONS` - OPTIONS
+          * `HEAD` - HEAD
+        explode: true
+        style: form
+      - in: query
+        name: request_path
+        schema:
+          type: string
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: query
+        name: status
+        schema:
+          type: integer
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHttpLogList'
+          description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
     get:
       operationId: projects_service_details_docker_deployments_logs_list
@@ -2918,6 +3069,8 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/ServiceStatusEnum'
+        id:
+          type: string
         type:
           allOf:
           - $ref: '#/components/schemas/DockerServiceCardTypeEnum'
@@ -2927,6 +3080,7 @@ components:
         tag:
           type: string
       required:
+      - id
       - image
       - slug
       - status
@@ -3399,6 +3553,8 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/ServiceStatusEnum'
+        id:
+          type: string
         type:
           allOf:
           - $ref: '#/components/schemas/GitServiceCardTypeEnum'
@@ -3411,6 +3567,7 @@ components:
           type: string
       required:
       - branch
+      - id
       - last_commit_message
       - repository
       - slug
@@ -3506,6 +3663,80 @@ components:
       required:
       - field
       - new_value
+    HttpLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        time:
+          type: string
+          format: date-time
+        deployment_id:
+          type: string
+          nullable: true
+        service_id:
+          type: string
+          nullable: true
+        request_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        request_ip:
+          type: string
+        request_path:
+          type: string
+          maxLength: 2000
+        request_query:
+          type: string
+          nullable: true
+          maxLength: 2000
+        request_host:
+          type: string
+          format: uri
+          maxLength: 1000
+        request_protocol:
+          $ref: '#/components/schemas/RequestProtocolEnum'
+        request_method:
+          $ref: '#/components/schemas/RequestMethodEnum'
+        request_duration_ns:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        request_headers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        response_headers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+      - deployment_id
+      - id
+      - request_duration_ns
+      - request_headers
+      - request_host
+      - request_id
+      - request_ip
+      - request_method
+      - request_path
+      - request_protocol
+      - request_query
+      - response_headers
+      - service_id
+      - status
+      - time
     ItemChangeTypeEnum:
       enum:
       - ADD
@@ -3728,6 +3959,23 @@ components:
       - next
       - previous
       - results
+    PaginatedHttpLogList:
+      type: object
+      properties:
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HttpLog'
+      required:
+      - next
+      - previous
+      - results
     PaginatedProjectList:
       type: object
       properties:
@@ -3910,6 +4158,164 @@ components:
         description:
           type: string
           minLength: 1
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
+          request_path: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
+          request_host: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
+          status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
+          request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_host
+          type: string
+          description: '* `request_host` - request_host'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_ip
+          type: string
+          description: '* `request_ip` - request_ip'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_method
+          type: string
+          description: '* `request_method` - request_method'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_path
+          type: string
+          description: '* `request_path` - request_path'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - status
+          type: string
+          description: '* `status` - status'
+        code:
+          enum:
+          - invalid
+          - max_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_value` - max_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - time
+          type: string
+          description: '* `time` - time'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListError'
+      required:
+      - errors
+      - type
     ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent:
       type: object
       properties:
@@ -4783,6 +5189,36 @@ components:
       required:
       - errors
       - type
+    RequestMethodEnum:
+      enum:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+      - OPTIONS
+      - HEAD
+      type: string
+      description: |-
+        * `GET` - GET
+        * `POST` - POST
+        * `PUT` - PUT
+        * `DELETE` - DELETE
+        * `PATCH` - PATCH
+        * `OPTIONS` - OPTIONS
+        * `HEAD` - HEAD
+    RequestProtocolEnum:
+      enum:
+      - HTTP/1.0
+      - HTTP/1.1
+      - HTTP/2.0
+      - HTTP/3.0
+      type: string
+      description: |-
+        * `HTTP/1.0` - HTTP/1.0
+        * `HTTP/1.1` - HTTP/1.1
+        * `HTTP/2.0` - HTTP/2.0
+        * `HTTP/3.0` - HTTP/3.0
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

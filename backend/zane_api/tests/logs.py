@@ -1,11 +1,12 @@
 import datetime
 import json
+import uuid
 
 from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..models import SimpleLog, DockerDeployment
+from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
@@ -149,7 +150,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         self.assertIsNotNone(log.service_id)
 
 
-class LogStreamViewTests(AuthAPITestCase):
+class SimpleLogViewTests(AuthAPITestCase):
     sample_log_contents = [
         (
             datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
@@ -191,6 +192,10 @@ class LogStreamViewTests(AuthAPITestCase):
             datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
     ]
 
     def test_view_logs(self):
@@ -226,13 +231,13 @@ class LogStreamViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(10, len(response.json()["results"]))
+        self.assertEqual(len(simple_logs), len(response.json()["results"]))
 
     def test_paginate(self):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = SimpleLog.objects.bulk_create(
+        SimpleLog.objects.bulk_create(
             [
                 SimpleLog(
                     time=time,
@@ -270,7 +275,7 @@ class LogStreamViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = SimpleLog.objects.bulk_create(
+        SimpleLog.objects.bulk_create(
             [
                 SimpleLog(
                     time=time,
@@ -307,3 +312,816 @@ class LogStreamViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, len(response.json()["results"]))
+
+    def test_quote_in_query(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=SimpleLog.LogLevel.INFO,
+                )
+                for (time, content) in self.sample_log_contents
+            ]
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"content=%2B0000%5D%20%22POST",  # searching for `+0000] "POST`
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()["results"]))
+
+    def test_delete_logs_after_archiving_a_service(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        SimpleLog.objects.bulk_create(
+            [
+                SimpleLog(
+                    time=time,
+                    content=content,
+                    service_id=service.id,
+                    deployment_id=deployment.hash,
+                    source=SimpleLog.LogSource.SERVICE,
+                    level=SimpleLog.LogLevel.INFO,
+                )
+                for (time, content) in self.sample_log_contents
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        deleted_service = DockerRegistryService.objects.filter(
+            slug=service.slug
+        ).first()
+        self.assertIsNone(deleted_service)
+
+        logs_for_service = SimpleLog.objects.filter(service_id=service.id).count()
+        self.assertEqual(0, logs_for_service)
+
+
+class HttpLogViewTests(AuthAPITestCase):
+    sample_log_entries = [
+        {
+            "level": "info",
+            "ts": 1721578245.8976514,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "33632",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs?query",
+                "headers": {
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Cookie": ["REDACTED"],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Sec-Gpc": ["1"],
+                    "Priority": ["u=0, i"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Accept-Encoding": ["gzip, deflate"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.006841144,
+            "size": 12119,
+            "status": 200,
+            "resp_headers": {
+                "Content-Type": ["text/html"],
+                "Expires": ["Sun, 21 Jul 2024 16:10:44 GMT"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Sun, 21 Jul 2024 16:10:45 GMT"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578227.3117847,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "47142",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "POST",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/abc?a=c",
+                "headers": {
+                    "Content-Length": ["0"],
+                    "User-Agent": ["HTTPie"],
+                    "Connection": ["close"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.006406094,
+            "size": 157,
+            "status": 405,
+            "resp_headers": {
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Date": ["Sun, 21 Jul 2024 16:10:27 GMT"],
+                "Content-Type": ["text/html"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578160.8126135,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "33632",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs",
+                "headers": {
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Cookie": ["REDACTED"],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Sec-Gpc": ["1"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.010405301,
+            "size": 12113,
+            "status": 200,
+            "resp_headers": {
+                "Date": ["Sun, 21 Jul 2024 16:09:20 GMT"],
+                "Content-Type": ["text/html"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Expires": ["Sun, 21 Jul 2024 16:09:19 GMT"],
+                "Cache-Control": ["no-cache"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578161.903769,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "33632",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs",
+                "headers": {
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Connection": ["keep-alive"],
+                    "Priority": ["u=0, i"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Sec-Gpc": ["1"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Dnt": ["1"],
+                    "Cookie": ["REDACTED"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.001357747,
+            "size": 12113,
+            "status": 200,
+            "resp_headers": {
+                "Expires": ["Sun, 21 Jul 2024 16:09:20 GMT"],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Sun, 21 Jul 2024 16:09:21 GMT"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Content-Type": ["text/html"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578015.8651662,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "53524",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs",
+                "headers": {
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Connection": ["keep-alive"],
+                    "Cookie": ["REDACTED"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Dnt": ["1"],
+                    "Sec-Gpc": ["1"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.007462656,
+            "size": 12113,
+            "status": 200,
+            "resp_headers": {
+                "Date": ["Sun, 21 Jul 2024 16:06:55 GMT"],
+                "Content-Type": ["text/html"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Expires": ["Sun, 21 Jul 2024 16:06:54 GMT"],
+                "Cache-Control": ["no-cache"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721612466.7106614,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "57224",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs?query",
+                "headers": {
+                    "Cookie": ["REDACTED"],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Sec-Gpc": ["1"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.009803894,
+            "size": 12123,
+            "status": 200,
+            "resp_headers": {
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Content-Type": ["text/html"],
+                "Expires": ["Mon, 22 Jul 2024 01:41:05 GMT"],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Mon, 22 Jul 2024 01:41:06 GMT"],
+            },
+        },
+    ]
+
+    def test_view_logs(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        fist_deployment: DockerDeployment = service.deployments.first()
+
+        simple_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{fist_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": None,
+                        "zane_deployment_blue_hash": fist_deployment.hash,
+                        "zane_service_id": service.id,
+                        "uuid": str(uuid.uuid4()),
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries
+        ]
+
+        response = self.client.post(
+            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_http_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": fist_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(simple_proxy_logs), len(response.json()["results"]))
+
+    def test_filter(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        fist_deployment: DockerDeployment = service.deployments.first()
+
+        simple_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{fist_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": None,
+                        "zane_deployment_blue_hash": fist_deployment.hash,
+                        "zane_service_id": service.id,
+                        "uuid": str(uuid.uuid4()),
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries
+        ]
+
+        response = self.client.post(
+            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_http_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": fist_deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"request_path=/abc&request_method=POST",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()["results"]))
+
+
+class HTTPLogCollectViewTests(AuthAPITestCase):
+    sample_log_entries = [
+        {
+            "level": "info",
+            "ts": 1721578245.8976514,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "33632",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/2.0",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs?query",
+                "headers": {
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Cookie": ["REDACTED"],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Sec-Gpc": ["1"],
+                    "Priority": ["u=0, i"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Accept-Encoding": ["gzip, deflate"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 252.619561756,
+            "size": 12119,
+            "status": 200,
+            "resp_headers": {
+                "Content-Type": ["text/html"],
+                "Expires": ["Sun, 21 Jul 2024 16:10:44 GMT"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Sun, 21 Jul 2024 16:10:45 GMT"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578227.3117847,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "47142",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "POST",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs/",
+                "headers": {
+                    "Content-Length": ["0"],
+                    "User-Agent": ["HTTPie"],
+                    "Connection": ["close"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.006406094,
+            "size": 157,
+            "status": 405,
+            "resp_headers": {
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Date": ["Sun, 21 Jul 2024 16:10:27 GMT"],
+                "Content-Type": ["text/html"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578160.8126135,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "33632",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs",
+                "headers": {
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Cookie": ["REDACTED"],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Sec-Gpc": ["1"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.010405301,
+            "size": 12113,
+            "status": 200,
+            "resp_headers": {
+                "Date": ["Sun, 21 Jul 2024 16:09:20 GMT"],
+                "Content-Type": ["text/html"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Expires": ["Sun, 21 Jul 2024 16:09:19 GMT"],
+                "Cache-Control": ["no-cache"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578161.903769,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "33632",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs",
+                "headers": {
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Connection": ["keep-alive"],
+                    "Priority": ["u=0, i"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Sec-Gpc": ["1"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Dnt": ["1"],
+                    "Cookie": ["REDACTED"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.001357747,
+            "size": 12113,
+            "status": 200,
+            "resp_headers": {
+                "Expires": ["Sun, 21 Jul 2024 16:09:20 GMT"],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Sun, 21 Jul 2024 16:09:21 GMT"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Content-Type": ["text/html"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721578015.8651662,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "53524",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs",
+                "headers": {
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Connection": ["keep-alive"],
+                    "Cookie": ["REDACTED"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Dnt": ["1"],
+                    "Sec-Gpc": ["1"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.007462656,
+            "size": 12113,
+            "status": 200,
+            "resp_headers": {
+                "Date": ["Sun, 21 Jul 2024 16:06:55 GMT"],
+                "Content-Type": ["text/html"],
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Expires": ["Sun, 21 Jul 2024 16:06:54 GMT"],
+                "Cache-Control": ["no-cache"],
+            },
+        },
+        {
+            "level": "info",
+            "ts": 1721612466.7106614,
+            "logger": "http.log.access",
+            "msg": "handled request",
+            "request": {
+                "remote_ip": "10.0.0.2",
+                "remote_port": "57224",
+                "client_ip": "10.0.0.2",
+                "proto": "HTTP/1.1",
+                "method": "GET",
+                "host": "nginx-demo.zaneops.local",
+                "uri": "/docs?query",
+                "headers": {
+                    "Cookie": ["REDACTED"],
+                    "Upgrade-Insecure-Requests": ["1"],
+                    "Dnt": ["1"],
+                    "Connection": ["keep-alive"],
+                    "Sec-Gpc": ["1"],
+                    "User-Agent": [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    ],
+                    "Accept": [
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8"
+                    ],
+                    "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
+                    "Accept-Encoding": ["gzip, deflate"],
+                    "Priority": ["u=0, i"],
+                },
+            },
+            "bytes_read": 0,
+            "user_id": "",
+            "duration": 0.009803894,
+            "size": 12123,
+            "status": 200,
+            "resp_headers": {
+                "Server": ["Caddy", "nginx/1.27.0"],
+                "Alt-Svc": ['h3=":443"; ma=2592000'],
+                "Content-Type": ["text/html"],
+                "Expires": ["Mon, 22 Jul 2024 01:41:05 GMT"],
+                "Cache-Control": ["no-cache"],
+                "Date": ["Mon, 22 Jul 2024 01:41:06 GMT"],
+            },
+        },
+    ]
+
+    def test_collect_service_http_logs(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        fist_deployment: DockerDeployment = service.deployments.first()
+
+        simple_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{fist_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": None,
+                        "zane_deployment_blue_hash": fist_deployment.hash,
+                        "zane_service_id": service.id,
+                        "uuid": str(uuid.uuid4()),
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries
+        ]
+
+        response = self.client.post(
+            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(0, SimpleLog.objects.count())
+        self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
+
+        log: HttpLog = HttpLog.objects.first()
+        self.assertEqual(service.id, log.service_id)
+        self.assertEqual(fist_deployment.hash, log.deployment_id)
+        self.assertEqual(HttpLog.RequestMethod.GET, log.request_method)
+        self.assertEqual(200, log.status)
+        duration_nano_seconds = int(
+            self.sample_log_entries[0]["duration"] * 1_000_000_000
+        )
+        self.assertEqual(duration_nano_seconds, log.request_duration_ns)
+        self.assertEqual("/docs", log.request_path)
+        self.assertEqual("query", log.request_query)
+        self.assertEqual("10.0.0.2", log.request_ip)
+        self.assertEqual("nginx-demo.zaneops.local", log.request_host)
+        self.assertEqual(HttpLog.RequestProtocols.HTTP_2, log.request_protocol)
+        self.assertIsNotNone(log.request_id)
+
+    def test_correctly_split_logs_per_deployment(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        # Make a second deployment
+        self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            )
+        )
+
+        latest_deployment: DockerDeployment = service.deployments.first()
+        initial_deployment: DockerDeployment = (
+            latest_deployment.get_previous_by_created_at()
+        )
+
+        # First deployment logs
+        first_deploy_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{initial_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": "",
+                        "zane_deployment_blue_hash": initial_deployment.hash,
+                        "zane_service_id": service.id,
+                        "uuid": str(uuid.uuid4()),
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries[:3]
+        ]
+
+        first_deploy_proxy_logs.append(
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **self.sample_log_entries[3],
+                        "zane_deployment_upstream": f"{initial_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": latest_deployment.hash,
+                        "zane_deployment_blue_hash": initial_deployment.hash,
+                        "zane_service_id": service.id,
+                        "uuid": str(uuid.uuid4()),
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+        )
+
+        # Second deployment logs
+        second_deploy_proxy_logs = [
+            {
+                "source": "stdout",
+                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
+                "log": json.dumps(
+                    {
+                        **log,
+                        "zane_deployment_upstream": f"{latest_deployment.network_aliases[-1]}:80",
+                        "zane_deployment_green_hash": latest_deployment.hash,
+                        "zane_deployment_blue_hash": initial_deployment.hash,
+                        "zane_service_id": service.id,
+                        "uuid": str(uuid.uuid4()),
+                    }
+                ),
+                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
+                "time": "2024-06-25T14:16:25+0000",
+                "service": "proxy",
+                "tag": json.dumps({"service_id": "zane.proxy"}),
+            }
+            for log in self.sample_log_entries[4:]
+        ]
+
+        response = self.client.post(
+            reverse("zane_api:logs.tail"),
+            data=first_deploy_proxy_logs + second_deploy_proxy_logs,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
+
+        self.assertEqual(4, initial_deployment.http_logs.count())
+        self.assertEqual(2, latest_deployment.http_logs.count())

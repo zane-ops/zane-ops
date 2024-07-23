@@ -40,6 +40,7 @@ from .serializers import (
     DeploymentListPagination,
     DeploymentLogsPagination,
     DeploymentLogsFilterSet,
+    DeploymentHttpLogsFilterSet,
 )
 from ..models import (
     Project,
@@ -49,6 +50,7 @@ from ..models import (
     ArchivedDockerService,
     DockerDeploymentChange,
     SimpleLog,
+    HttpLog,
 )
 from ..serializers import (
     DockerServiceDeploymentSerializer,
@@ -60,6 +62,7 @@ from ..serializers import (
     DockerEnvVariableSerializer,
     ErrorResponse409Serializer,
     SimpleLogSerializer,
+    HttpLogSerializer,
 )
 from ..tasks import (
     delete_resources_for_docker_service,
@@ -742,6 +745,54 @@ class DockerServiceDeploymentLogsAPIView(ListAPIView):
                 service=service, hash=deployment_hash
             )
             return deployment.logs
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+
+class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = (
+        HttpLog.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    pagination_class = DeploymentLogsPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DeploymentHttpLogsFilterSet
+
+    @extend_schema(
+        summary="Get deployment HTTP logs",
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound as e:
+            if "Invalid cursor" in str(e.detail):
+                return Response(EMPTY_CURSOR_RESPONSE)
+            raise e
+
+    def get_queryset(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        deployment_hash = self.kwargs["deployment_hash"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment = DockerDeployment.objects.get(
+                service=service, hash=deployment_hash
+            )
+            return deployment.http_logs
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."

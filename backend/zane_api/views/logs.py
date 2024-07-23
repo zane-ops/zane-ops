@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlparse
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, permissions
@@ -11,6 +12,7 @@ from .helpers import ZaneServices
 from .serializers import (
     DockerContainerLogsResponseSerializer,
     DockerContainerLogsRequestSerializer,
+    HTTPServiceLogSerializer,
 )
 from ..models import SimpleLog, HttpLog
 
@@ -46,19 +48,76 @@ class LogTailAPIView(APIView):
                             try:
                                 content = json.loads(log["log"])
                             except json.JSONDecodeError:
-                                content = log["log"]
-                            simple_logs.append(
-                                SimpleLog(
-                                    source=SimpleLog.LogSource.PROXY,
-                                    level=(
-                                        SimpleLog.LogLevel.INFO
-                                        if log["source"] == "stdout"
-                                        else SimpleLog.LogLevel.ERROR
-                                    ),
-                                    content=content,
-                                    time=log["time"],
+                                pass
+                            else:
+                                service_id = content.get("zane_service_id")
+                                if service_id:
+                                    log_serializer = HTTPServiceLogSerializer(
+                                        data=content
+                                    )
+                                    if log_serializer.is_valid():
+                                        log_content = log_serializer.data
+                                        upstream: str = log_content.get(
+                                            "zane_deployment_upstream"
+                                        )
+                                        deployment_id = None
+                                        if "blue.zaneops.internal" in upstream:
+                                            deployment_id = log_content.get(
+                                                "zane_deployment_blue_hash"
+                                            )
+                                        elif "green.zaneops.internal" in upstream:
+                                            deployment_id = log_content.get(
+                                                "zane_deployment_green_hash"
+                                            )
+
+                                        if deployment_id:
+                                            req = log_content.get("request")
+                                            duration_in_seconds = log_content.get(
+                                                "duration"
+                                            )
+
+                                            full_url = urlparse(
+                                                f"https://{req['host']}{req['uri']}"
+                                            )
+                                            http_logs.append(
+                                                HttpLog(
+                                                    time=log["time"],
+                                                    service_id=log_content.get(
+                                                        "zane_service_id"
+                                                    ),
+                                                    deployment_id=deployment_id,
+                                                    request_duration_ns=(
+                                                        duration_in_seconds
+                                                        * 1_000_000_000
+                                                    ),
+                                                    request_path=full_url.path,
+                                                    request_query=full_url.query,
+                                                    request_protocol=req["proto"],
+                                                    request_host=req["host"],
+                                                    status=log_content["status"],
+                                                    request_headers=req["headers"],
+                                                    response_headers=log_content[
+                                                        "resp_headers"
+                                                    ],
+                                                    request_ip=req["remote_ip"],
+                                                    request_id=log_content.get("uuid"),
+                                                    request_method=req["method"],
+                                                )
+                                            )
+                                            continue
+                                simple_logs.append(
+                                    SimpleLog(
+                                        source=SimpleLog.LogSource.PROXY,
+                                        level=(
+                                            SimpleLog.LogLevel.INFO
+                                            if log["source"] == "stdout"
+                                            else SimpleLog.LogLevel.ERROR
+                                        ),
+                                        content=content,
+                                        time=log["time"],
+                                    )
                                 )
-                            )
+
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass
@@ -79,6 +138,7 @@ class LogTailAPIView(APIView):
                                 )
                             )
             SimpleLog.objects.bulk_create(simple_logs)
+            HttpLog.objects.bulk_create(http_logs)
 
             response = DockerContainerLogsResponseSerializer(
                 {

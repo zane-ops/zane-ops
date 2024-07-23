@@ -196,3 +196,32 @@ class SimpleLogSerializer(ModelSerializer):
             "service_id",
             "source",
         ]
+
+
+class HttpLogSerializer(ModelSerializer):
+    request_headers = serializers.DictField(
+        child=serializers.ListField(child=serializers.CharField())
+    )
+    response_headers = serializers.DictField(
+        child=serializers.ListField(child=serializers.CharField())
+    )
+
+    class Meta:
+        model = models.HttpLog
+        fields = [
+            "id",
+            "status",
+            "time",
+            "deployment_id",
+            "service_id",
+            "request_id",
+            "request_ip",
+            "request_path",
+            "request_query",
+            "request_host",
+            "request_protocol",
+            "request_method",
+            "request_duration_ns",
+            "request_headers",
+            "response_headers",
+        ]
