@@ -1,4 +1,4 @@
-FROM python:3.11.7
+FROM python:3.11.7-alpine
 WORKDIR /app
 
 # set environment variables
@@ -15,4 +15,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD /bin/bash -c "source /venv/bin/activate && python manage.py migrate && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
+CMD /bin/sh -c ". /venv/bin/activate && python manage.py migrate && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
