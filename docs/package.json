@@ -10,11 +10,6 @@
     "astro": "astro"
   },
   "dependencies": {
-<<<<<<< HEAD
-    "@mintlify/scraping": "^3.0.134",
-    "mintlify": "^4.0.184",
-    "sharp": "^0.33.4"
-=======
     "@astrojs/check": "^0.8.2",
     "@astrojs/starlight": "^0.25.1",
     "@astrojs/starlight-tailwind": "^2.0.3",
@@ -23,6 +18,5 @@
     "sharp": "^0.32.5",
     "tailwindcss": "^3.4.6",
     "typescript": "^5.5.3"
->>>>>>> main
   }
 }

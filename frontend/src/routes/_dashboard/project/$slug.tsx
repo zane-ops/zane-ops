@@ -116,7 +116,7 @@ function ProjectDetail() {
               <h1 className="text-3xl capitalize font-medium">{slug}</h1>
 
               <Button asChild variant={"secondary"} className="flex gap-2">
-                <Link to={`/project/${slug}/create-service`}>
+                <Link to={`/project/create-service/${slug}`}>
                   New Service <PlusIcon size={18} />
                 </Link>
               </Button>
@@ -181,7 +181,7 @@ function ProjectDetail() {
                         </h2>
                       </div>
                       <Button asChild>
-                        <Link to={`/project/${slug}/create-service`}>
+                        <Link to={`/project/create-service/${slug}`}>
                           Create a new service
                         </Link>
                       </Button>

@@ -1,10 +1,12 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Container, Github } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MetaTitle } from "~/components/meta-title";
 import { Button } from "~/components/ui/button";
 
-export const Route = createLazyFileRoute("/_dashboard/create-service")({
+export const Route = createFileRoute(
+  "/_dashboard/project/create-service/$slug"
+)({
   component: withAuthRedirect(CreateService)
 });
 
@@ -17,18 +19,24 @@ function CreateService() {
           <h1 className="text-3xl font-bold">New Service</h1>
           <div className="flex flex-col gap-3">
             <Button
+              asChild
               variant="secondary"
               className="flex gap-3  font-semibold items-center justify-center p-10"
             >
-              <Container /> From Docker Image <ArrowRight />
+              <Link to="">
+                <Container /> From Docker Image <ArrowRight />
+              </Link>
             </Button>
 
             <Button
+              asChild
               variant="secondary"
               className="flex gap-3 items-center  font-semibold  justify-center p-10"
             >
-              <Github /> From A Github Repository
-              <ArrowRight />
+              <Link to="/docker">
+                <Github /> From A Github Repository
+                <ArrowRight />
+              </Link>
             </Button>
           </div>
         </div>
