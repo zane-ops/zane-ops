@@ -1,12 +1,20 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation } from "@tanstack/react-query";
-import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 
 import { MetaTitle } from "~/components/meta-title";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -42,6 +50,19 @@ export function CreateProject() {
   return (
     <main>
       <MetaTitle title="Create Project" />
+      <Breadcrumb>
+        <BreadcrumbList className="text-sm">
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Create project</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <Form.Root
         action={(formData) => {
           mutate({
