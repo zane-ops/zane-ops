@@ -62,6 +62,8 @@ function Docker() {
       </Breadcrumb>
 
       <StepServiceForm />
+      <StepServiceDeployed slug={slug} serviceSlug="railway" />
+      <StepServiceCreated slug={slug} serviceSlug="railway" />
     </main>
   );
 }
