@@ -351,7 +351,12 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.CANCELLED: "NOT_DEPLOYED_YET",
             }
 
-            parts = service.image.split(":")
+            service_image = service.image
+            if service_image is None:
+                image_change = service.unapplied_changes.filter(field="image").first()
+                service_image = image_change.new_value
+
+            parts = service_image.split(":")
             if len(parts) == 1:
                 tag = "latest"
                 image = service.image
@@ -373,7 +378,7 @@ class ProjectServiceListView(APIView):
                         status=(
                             status_map[service.latest_production_deployment_status]
                             if service.latest_production_deployment_status is not None
-                            else None
+                            else "NOT_DEPLOYED_YET"
                         ),
                     )
                 ).data
