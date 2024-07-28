@@ -142,7 +142,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           image: formData.get("image")?.toString() ?? ""
         });
       }}
-      className="flex mt-10 flex-grow justify-center items-center"
+      className="flex my-10 flex-grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Service</h1>
@@ -244,7 +244,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         </Form.Field>
 
         <Form.Submit asChild>
-          <Button className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg">
+          <Button className="p-3 rounded-lg">
             {isPending ? "Creating Service..." : " Create New Service"}
           </Button>
         </Form.Submit>
