@@ -1,7 +1,10 @@
 import * as Form from "@radix-ui/react-form";
+import { useMutation } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Check, Container } from "lucide-react";
 import * as React from "react";
+import { useDebounce } from "use-debounce";
+import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
@@ -20,6 +23,9 @@ import {
   CommandList
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
+import { useSearchDockerHub } from "~/lib/hooks/use-search-docker-hub";
+import { cn } from "~/lib/utils";
+import { getCsrfTokenHeader } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$slug/create-service/docker"
@@ -29,6 +35,10 @@ export const Route = createFileRoute(
 
 function Docker() {
   const { slug } = Route.useParams();
+  const [currentStep, setCurrentStep] = React.useState<
+    "FORM" | "CREATED" | "DEPLOYED"
+  >("FORM");
+
   return (
     <main>
       <Breadcrumb>
@@ -61,16 +71,79 @@ function Docker() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <StepServiceForm />
+      {currentStep === "FORM" && (
+        <StepServiceForm
+          slug={slug}
+          onSuccess={() => {
+            setCurrentStep("CREATED");
+          }}
+        />
+      )}
+
+      {currentStep === "CREATED" && (
+        <StepServiceCreated slug={slug} serviceSlug="railway" />
+      )}
+
+      {currentStep === "DEPLOYED" && (
+        <StepServiceDeployed slug={slug} serviceSlug="railway" />
+      )}
     </main>
   );
 }
 
-function StepServiceForm() {
+type StepServiceFormProps = {
+  slug: string;
+  onSuccess: () => void;
+};
+
+function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = React.useState("");
+
+  const [debouncedValue] = useDebounce(imageSearchQuery, 300);
+  const { data: imageListData } = useSearchDockerHub(debouncedValue);
+
+  const { isPending, mutate } = useMutation({
+    onSuccess,
+    mutationFn: async (
+      input: RequestInput<
+        "post",
+        "/api/projects/{project_slug}/create-service/docker/"
+      >
+    ) => {
+      const { error, data } = await apiClient.POST(
+        "/api/projects/{project_slug}/create-service/docker/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug: slug
+            }
+          },
+          body: input
+        }
+      );
+
+      if (error) return error;
+
+      return data;
+    }
+  });
+
+  const imageList = imageListData?.data?.images ?? [];
 
   return (
-    <Form.Root className="flex mt-10 flex-grow justify-center items-center">
+    <Form.Root
+      action={(formData) => {
+        mutate({
+          slug: formData.get("slug")?.toString().trim(),
+          image: formData.get("image")?.toString() ?? ""
+        });
+      }}
+      className="flex mt-10 flex-grow justify-center items-center"
+    >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Service</h1>
 
@@ -89,28 +162,25 @@ function StepServiceForm() {
         <Form.Field className="my-2 flex flex-col gap-1" name="username">
           <Form.Label>Image</Form.Label>
           <Form.Control asChild>
-            <Command>
+            <Command filter={() => 1}>
               <CommandInput
                 onFocus={() => setComboxOpen(true)}
+                onValueChange={(query) => setImageSearchQuery(query)}
                 onBlur={() => setComboxOpen(false)}
                 className="p-3"
+                value={imageSearchQuery}
                 placeholder="ex: bitnami/redis"
                 name="image"
               />
               {isComboxOpen && (
-                <CommandList>
-                  <CommandItem className="flex items-center gap-2">
-                    <Container size={15} /> <span>valkey/valkey</span>
-                  </CommandItem>
-                  <CommandItem className="flex items-center gap-2">
-                    <Container size={15} /> <span>postgres:alpine</span>
-                  </CommandItem>
-                  <CommandItem className="flex items-center gap-2">
-                    <Container size={15} /> <span>example/example</span>
-                  </CommandItem>
-                  <CommandItem className="flex items-center gap-2">
-                    <Container size={15} /> <span>caddy:caddy</span>
-                  </CommandItem>
+                <CommandList
+                  className={cn(imageList.length === 0 && "!hidden")}
+                >
+                  {imageList.map((image) => (
+                    <CommandItem className="flex items-center gap-2">
+                      <Container size={15} /> <span>{image.full_image}</span>
+                    </CommandItem>
+                  ))}
                 </CommandList>
               )}
             </Command>
@@ -152,7 +222,9 @@ function StepServiceForm() {
         </Form.Field>
 
         <Form.Submit asChild>
-          <Button className="p-3 rounded-lg">Create New Service</Button>
+          <Button className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg">
+            {isPending ? "Creating Service..." : " Create New Service"}
+          </Button>
         </Form.Submit>
       </div>
     </Form.Root>
