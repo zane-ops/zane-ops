@@ -80,13 +80,12 @@ def search_images_docker_hub(term: str) -> List[DockerImageResult]:
     images_to_return: List[DockerImageResult] = []
 
     for image in result:
-        api_image_result = {}
-        if image["is_official"]:
-            api_image_result["full_image"] = f'library/{image["name"]}:latest'
-        else:
-            api_image_result["full_image"] = f'{image["name"]}:latest'
-        api_image_result["description"] = image["description"]
-        images_to_return.append(api_image_result)
+        images_to_return.append(
+            dict(
+                full_image=image["name"],
+                description=image["description"],
+            )
+        )
     return images_to_return
 
 

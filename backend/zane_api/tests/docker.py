@@ -17,8 +17,8 @@ class DockerViewTests(AuthAPITestCase):
 
         self.assertIsNotNone(response.json().get("images"))
         images = response.json().get("images")
-        self.assertEqual(images[0]["full_image"], "library/caddy:latest")
-        self.assertEqual(images[1]["full_image"], "siwecos/caddy:latest")
+        self.assertEqual(images[0]["full_image"], "caddy")
+        self.assertEqual(images[1]["full_image"], "siwecos/caddy")
 
     def test_search_query_empty(self):
         response = self.client.get(reverse("zane_api:docker.image_search"))
