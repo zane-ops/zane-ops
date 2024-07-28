@@ -193,7 +193,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
                     setComboxOpen(false);
                   }}
                 >
-                  <Container size={15} className="flex-none relative top-0.5" />
+                  <Container size={15} className="flex-none relative top-1" />
                   <div className="flex flex-col gap-1">
                     <span>{image.full_image}</span>
                     <small className="text-xs text-gray-400/80">
