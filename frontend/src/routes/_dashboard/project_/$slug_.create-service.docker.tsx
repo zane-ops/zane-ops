@@ -147,7 +147,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Service</h1>
 
-        <Form.Field className="my-2 flex flex-col gap-1" name="username">
+        <Form.Field className="my-2 flex flex-col gap-1" name="slug">
           <Form.Label>Slug</Form.Label>
           <Form.Control asChild>
             <Input
@@ -159,7 +159,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </Form.Control>
         </Form.Field>
 
-        <Form.Field className="my-2 flex flex-col gap-1" name="username">
+        <Form.Field className="my-2 flex flex-col gap-1" name="image">
           <Form.Label>Image</Form.Label>
           <Form.Control asChild>
             <Command shouldFilter={false}>
@@ -215,7 +215,10 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </p>
         </div>
 
-        <Form.Field className="my-2 flex flex-col gap-1" name="username">
+        <Form.Field
+          className="my-2 flex flex-col gap-1"
+          name="credentials.username"
+        >
           <Form.Label>Username for registry</Form.Label>
           <Form.Control asChild>
             <Input
@@ -227,7 +230,10 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </Form.Control>
         </Form.Field>
 
-        <Form.Field className="my-2 flex flex-col gap-1" name="username">
+        <Form.Field
+          className="my-2 flex flex-col gap-1"
+          name="credentials.password"
+        >
           <Form.Label>Password for registry</Form.Label>
           <Form.Control asChild>
             <Input
