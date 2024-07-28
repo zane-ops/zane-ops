@@ -47,40 +47,27 @@ function ProjectDetail() {
 
   return (
     <main>
+      <Breadcrumb>
+        <BreadcrumbList className="text-sm">
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="capitalize">{slug}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       {projectDetailsQuery.isLoading ? (
         <>
-          <Breadcrumb>
-            <BreadcrumbList className="text-sm">
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/">Projects</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{slug}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
           <div className="col-span-full">
             <Loader className="h-[70vh]" />
           </div>
         </>
       ) : !projectDetailsQuery.isLoading && serviceList === undefined ? (
         <>
-          <Breadcrumb>
-            <BreadcrumbList className="text-sm">
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/">Projects</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{slug}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
           <section className="col-span-full ">
             <MetaTitle title="404 - Project does not exist" />
             <div className="flex flex-col gap-5 h-[70vh] items-center justify-center">
@@ -97,26 +84,13 @@ function ProjectDetail() {
       ) : (
         <>
           <MetaTitle title="Project Detail" />
-          <Breadcrumb>
-            <BreadcrumbList className="text-sm">
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/">Projects</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{slug}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
 
           <div className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap  gap-3 justify-between ">
             <div className="flex items-center gap-4 ">
               <h1 className="text-3xl capitalize font-medium">{slug}</h1>
 
               <Button asChild variant={"secondary"} className="flex gap-2">
-                <Link to={`/project/${slug}/create-service`}>
+                <Link to={`create-service`}>
                   New Service <PlusIcon size={18} />
                 </Link>
               </Button>
@@ -181,9 +155,7 @@ function ProjectDetail() {
                         </h2>
                       </div>
                       <Button asChild>
-                        <Link to={`/project/${slug}/create-service`}>
-                          Create a new service
-                        </Link>
+                        <Link to={`create-service`}>Create a new service</Link>
                       </Button>
                     </>
                   )}
