@@ -159,51 +159,49 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </Form.Control>
         </Form.Field>
 
-        <Form.Field className="my-2 flex flex-col gap-1" name="image">
-          <Form.Label>Image</Form.Label>
-          <Form.Control asChild>
-            <Command shouldFilter={false}>
-              <CommandInput
-                onFocus={() => setComboxOpen(true)}
-                onValueChange={(query) => {
-                  setImageSearchQuery(query);
-                  setComboxOpen(true);
-                }}
-                onBlur={() => setComboxOpen(false)}
-                className="p-3"
-                value={imageSearchQuery}
-                placeholder="ex: bitnami/redis"
-                name="image"
-              />
-              <CommandList
-                className={cn({
-                  "!hidden":
-                    imageList.length === 0 ||
-                    imageSearchQuery.trim().length === 0 ||
-                    !isComboxOpen
-                })}
-              >
-                {imageList.map((image) => (
-                  <CommandItem
-                    key={image.full_image}
-                    value={image.full_image}
-                    className="flex items-start gap-2"
-                    onSelect={(value) => {
-                      setImageSearchQuery(value);
-                      setComboxOpen(false);
-                    }}
-                  >
-                    <Container
-                      size={15}
-                      className="flex-none relative top-0.5"
-                    />
-                    <span>{image.full_image}</span>
-                  </CommandItem>
-                ))}
-              </CommandList>
-            </Command>
-          </Form.Control>
-        </Form.Field>
+        <fieldset className="my-2 flex flex-col gap-1">
+          <label htmlFor="image" aria-hidden="true">
+            Image
+          </label>
+          <Command shouldFilter={false} label="Image">
+            <CommandInput
+              id="image"
+              onFocus={() => setComboxOpen(true)}
+              onValueChange={(query) => {
+                setImageSearchQuery(query);
+                setComboxOpen(true);
+              }}
+              onBlur={() => setComboxOpen(false)}
+              className="p-3"
+              value={imageSearchQuery}
+              placeholder="ex: bitnami/redis"
+              name="image"
+            />
+            <CommandList
+              className={cn({
+                "!hidden":
+                  imageList.length === 0 ||
+                  imageSearchQuery.trim().length === 0 ||
+                  !isComboxOpen
+              })}
+            >
+              {imageList.map((image) => (
+                <CommandItem
+                  key={image.full_image}
+                  value={image.full_image}
+                  className="flex items-start gap-2"
+                  onSelect={(value) => {
+                    setImageSearchQuery(value);
+                    setComboxOpen(false);
+                  }}
+                >
+                  <Container size={15} className="flex-none relative top-0.5" />
+                  <span>{image.full_image}</span>
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </fieldset>
 
         <div className="flex flex-col gap-3">
           <h1 className="text-lg">
