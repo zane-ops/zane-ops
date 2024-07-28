@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Container } from "lucide-react";
 import * as React from "react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -101,10 +101,18 @@ function StepServiceForm() {
               />
               {isComboxOpen && (
                 <CommandList>
-                  <CommandItem>valkey/valkey</CommandItem>
-                  <CommandItem>postgres:alpine</CommandItem>
-                  <CommandItem>example/example</CommandItem>
-                  <CommandItem>caddy:caddy</CommandItem>
+                  <CommandItem className="flex items-center gap-2">
+                    <Container size={15} /> <span>valkey/valkey</span>
+                  </CommandItem>
+                  <CommandItem className="flex items-center gap-2">
+                    <Container size={15} /> <span>postgres:alpine</span>
+                  </CommandItem>
+                  <CommandItem className="flex items-center gap-2">
+                    <Container size={15} /> <span>example/example</span>
+                  </CommandItem>
+                  <CommandItem className="flex items-center gap-2">
+                    <Container size={15} /> <span>caddy:caddy</span>
+                  </CommandItem>
                 </CommandList>
               )}
             </Command>
