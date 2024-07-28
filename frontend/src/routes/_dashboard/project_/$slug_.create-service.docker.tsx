@@ -160,9 +160,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         </Form.Field>
 
         <fieldset className="my-2 flex flex-col gap-1">
-          <label htmlFor="image" aria-hidden="true">
-            Image
-          </label>
+          <label aria-hidden="true">Image</label>
           <Command shouldFilter={false} label="Image">
             <CommandInput
               id="image"
@@ -196,7 +194,12 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
                   }}
                 >
                   <Container size={15} className="flex-none relative top-0.5" />
-                  <span>{image.full_image}</span>
+                  <div className="flex flex-col gap-1">
+                    <span>{image.full_image}</span>
+                    <small className="text-xs text-gray-400/80">
+                      {image.description}
+                    </small>
+                  </div>
                 </CommandItem>
               ))}
             </CommandList>
