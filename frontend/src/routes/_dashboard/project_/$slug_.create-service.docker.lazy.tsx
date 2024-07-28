@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation } from "@tanstack/react-query";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import {
   AlertCircle,
   ArrowRight,
@@ -36,7 +36,7 @@ import { useSearchDockerHub } from "~/lib/hooks/use-search-docker-hub";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
-export const Route = createFileRoute(
+export const Route = createLazyFileRoute(
   "/_dashboard/project/$slug/create-service/docker"
 )({
   component: withAuthRedirect(Docker)
