@@ -162,27 +162,45 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         <Form.Field className="my-2 flex flex-col gap-1" name="username">
           <Form.Label>Image</Form.Label>
           <Form.Control asChild>
-            <Command filter={() => 1}>
+            <Command shouldFilter={false}>
               <CommandInput
                 onFocus={() => setComboxOpen(true)}
-                onValueChange={(query) => setImageSearchQuery(query)}
+                onValueChange={(query) => {
+                  setImageSearchQuery(query);
+                  setComboxOpen(true);
+                }}
                 onBlur={() => setComboxOpen(false)}
                 className="p-3"
                 value={imageSearchQuery}
                 placeholder="ex: bitnami/redis"
                 name="image"
               />
-              {isComboxOpen && (
-                <CommandList
-                  className={cn(imageList.length === 0 && "!hidden")}
-                >
-                  {imageList.map((image) => (
-                    <CommandItem className="flex items-center gap-2">
-                      <Container size={15} /> <span>{image.full_image}</span>
-                    </CommandItem>
-                  ))}
-                </CommandList>
-              )}
+              <CommandList
+                className={cn({
+                  "!hidden":
+                    imageList.length === 0 ||
+                    imageSearchQuery.trim().length === 0 ||
+                    !isComboxOpen
+                })}
+              >
+                {imageList.map((image) => (
+                  <CommandItem
+                    key={image.full_image}
+                    value={image.full_image}
+                    className="flex items-start gap-2"
+                    onSelect={(value) => {
+                      setImageSearchQuery(value);
+                      setComboxOpen(false);
+                    }}
+                  >
+                    <Container
+                      size={15}
+                      className="flex-none relative top-0.5"
+                    />
+                    <span>{image.full_image}</span>
+                  </CommandItem>
+                ))}
+              </CommandList>
             </Command>
           </Form.Control>
         </Form.Field>
