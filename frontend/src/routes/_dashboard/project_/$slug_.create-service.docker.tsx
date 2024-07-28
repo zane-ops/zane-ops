@@ -1,11 +1,20 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Check, Container } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Check,
+  Clock,
+  Clock1Icon,
+  ClockArrowUp,
+  Container
+} from "lucide-react";
 import * as React from "react";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
+import { MetaTitle } from "~/components/meta-title";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Breadcrumb,
@@ -24,7 +33,7 @@ import {
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import { useSearchDockerHub } from "~/lib/hooks/use-search-docker-hub";
-import { cn } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
 export const Route = createFileRoute(
@@ -39,8 +48,12 @@ function Docker() {
     "FORM" | "CREATED" | "DEPLOYED"
   >("FORM");
 
+  const [serviceSlug, setServiceSlug] = React.useState("");
+  const [deploymentHash, setDeploymentHash] = React.useState("");
+
   return (
     <main>
+      <MetaTitle title="New docker service" />
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
@@ -74,18 +87,30 @@ function Docker() {
       {currentStep === "FORM" && (
         <StepServiceForm
           slug={slug}
-          onSuccess={() => {
+          onSuccess={(slug) => {
             setCurrentStep("CREATED");
+            setServiceSlug(slug);
           }}
         />
       )}
 
       {currentStep === "CREATED" && (
-        <StepServiceCreated slug={slug} serviceSlug="railway" />
+        <StepServiceCreated
+          slug={slug}
+          onSuccess={(hash) => {
+            setCurrentStep("DEPLOYED");
+            setDeploymentHash(hash);
+          }}
+          serviceSlug={serviceSlug}
+        />
       )}
 
       {currentStep === "DEPLOYED" && (
-        <StepServiceDeployed slug={slug} serviceSlug="railway" />
+        <StepServiceDeployed
+          slug={slug}
+          serviceSlug={serviceSlug}
+          deploymentHash={deploymentHash}
+        />
       )}
     </main>
   );
@@ -93,7 +118,7 @@ function Docker() {
 
 type StepServiceFormProps = {
   slug: string;
-  onSuccess: () => void;
+  onSuccess: (slug: string) => void;
 };
 
 function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
@@ -103,8 +128,12 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   const [debouncedValue] = useDebounce(imageSearchQuery, 300);
   const { data: imageListData } = useSearchDockerHub(debouncedValue);
 
-  const { isPending, mutate } = useMutation({
-    onSuccess,
+  const { isPending, mutate, data } = useMutation({
+    onSuccess: (data) => {
+      if (data.data) {
+        onSuccess(data.data.slug);
+      }
+    },
     mutationFn: async (
       input: RequestInput<
         "post",
@@ -126,29 +155,50 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         }
       );
 
-      if (error) return error;
-
-      return data;
+      return { error, data };
     }
   });
+
+  const errors = getFormErrorsFromResponseData(data?.error);
 
   const imageList = imageListData?.data?.images ?? [];
 
   return (
     <Form.Root
       action={(formData) => {
+        let credentials = undefined;
+        if (
+          formData.get("credentials.username") ||
+          formData.get("credentials.password")
+        ) {
+          credentials = {
+            password: formData.get("credentials.password")!.toString(),
+            username: formData.get("credentials.username")!.toString().trim()
+          };
+        }
+
         mutate({
-          slug: formData.get("slug")?.toString().trim(),
-          image: formData.get("image")?.toString() ?? ""
+          slug: formData.get("slug")?.toString().trim() ?? "",
+          image: formData.get("image")?.toString() ?? "",
+          credentials
         });
       }}
       className="flex my-10 flex-grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
-        <h1 className="text-3xl font-bold">New Service</h1>
+        <h1 className="text-3xl font-bold">New Docker Service</h1>
+
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
 
         <Form.Field className="my-2 flex flex-col gap-1" name="slug">
           <Form.Label>Slug</Form.Label>
+
           <Form.Control asChild>
             <Input
               className="p-3"
@@ -157,9 +207,14 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
               type="text"
             />
           </Form.Control>
+          {errors.slug && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.slug}
+            </Form.Message>
+          )}
         </Form.Field>
 
-        <fieldset className="my-2 flex flex-col gap-1">
+        <Form.Field name="image" className="my-2 flex flex-col gap-1">
           <label aria-hidden="true">Image</label>
           <Command shouldFilter={false} label="Image">
             <CommandInput
@@ -204,7 +259,13 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
               ))}
             </CommandList>
           </Command>
-        </fieldset>
+
+          {errors.image && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.image}
+            </Form.Message>
+          )}
+        </Form.Field>
 
         <div className="flex flex-col gap-3">
           <h1 className="text-lg">
@@ -222,13 +283,13 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         >
           <Form.Label>Username for registry</Form.Label>
           <Form.Control asChild>
-            <Input
-              className="p-3"
-              placeholder="ex: mocherif"
-              name="slug"
-              type="text"
-            />
+            <Input className="p-3" placeholder="ex: mocherif" type="text" />
           </Form.Control>
+          {errors["credentials.username"] && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors["credentials.username"]}
+            </Form.Message>
+          )}
         </Form.Field>
 
         <Form.Field
@@ -237,13 +298,13 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         >
           <Form.Label>Password for registry</Form.Label>
           <Form.Control asChild>
-            <Input
-              className="p-3"
-              placeholder="************"
-              name="slug"
-              type="text"
-            />
+            <Input className="p-3" type="password" />
           </Form.Control>
+          {errors["credentials.password"] && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors["credentials.password"]}
+            </Form.Message>
+          )}
         </Form.Field>
 
         <Form.Submit asChild>
@@ -256,13 +317,59 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   );
 }
 
+type StepServiceCreatedProps = {
+  slug: string;
+  serviceSlug: string;
+  onSuccess: (deploymentHash: string) => void;
+};
+
 function StepServiceCreated({
   slug,
-  serviceSlug
-}: { slug: string; serviceSlug: string }) {
+  serviceSlug,
+  onSuccess
+}: StepServiceCreatedProps) {
+  const { isPending, mutate, data } = useMutation({
+    onSuccess: (data) => {
+      if (data.data) {
+        onSuccess(data.data.hash);
+      }
+    },
+    mutationFn: async () => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug: slug,
+              service_slug: serviceSlug
+            }
+          }
+        }
+      );
+
+      return { error, data };
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(data?.error);
+
   return (
     <div className="flex  flex-col h-[70vh] justify-center items-center">
-      <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <Form.Root
+        action={() => mutate()}
+        className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
+      >
         <Alert variant="success">
           <Check className="h-5 w-5 text-green-400" />
           <AlertTitle className="text-lg">Success</AlertTitle>
@@ -274,10 +381,8 @@ function StepServiceCreated({
         </Alert>
 
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
-          <Button asChild className="flex-1">
-            <Link className="flex gap-2 items-center" to="">
-              Deploy Now
-            </Link>
+          <Button className="p-3 rounded-lg">
+            {isPending ? "Deploying service..." : "Deploy Now"}
           </Button>
 
           <Button asChild className="flex-1" variant="outline">
@@ -289,35 +394,42 @@ function StepServiceCreated({
             </Link>
           </Button>
         </div>
-      </div>
+      </Form.Root>
     </div>
   );
 }
 
+type StepServiceDeployedProps = {
+  slug: string;
+  serviceSlug: string;
+  deploymentHash: string;
+};
+
 function StepServiceDeployed({
   slug,
-  serviceSlug
-}: { slug: string; serviceSlug: string }) {
+  serviceSlug,
+  deploymentHash
+}: StepServiceDeployedProps) {
   return (
     <div className="flex  flex-col h-[70vh] justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
-        <Alert variant="success">
-          <Check className="h-5 w-5 text-green-400" />
-          <AlertTitle className="text-lg">Success</AlertTitle>
+        <Alert variant="info">
+          <ClockArrowUp className="h-5 w-5" />
+          <AlertTitle className="text-lg">Queued</AlertTitle>
 
           <AlertDescription>
-            Service <span className="capitalize">`{serviceSlug}`</span> Deployed
-            Successfuly
+            Deployment queued for service{" "}
+            <span className="capitalize">`{serviceSlug}`</span>
           </AlertDescription>
         </Alert>
 
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${slug}/services/docker/${serviceSlug}`}
+              to={`/project/${slug}/services/docker/${serviceSlug}/deployments/${deploymentHash}`}
               className="flex gap-2  items-center"
             >
-              Go to service details <ArrowRight size={20} />
+              Inspect deployment <ArrowRight size={20} />
             </Link>
           </Button>
         </div>
