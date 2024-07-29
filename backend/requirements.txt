@@ -1,7 +1,6 @@
 amqp==5.2.0
 asgiref==3.7.2
 attrs==23.2.0
-autobahn==23.6.2
 Automat==22.10.0
 billiard==4.2.0
 black==24.3.0
@@ -17,7 +16,6 @@ click-repl==0.3.0
 constantly==23.10.4
 cron-descriptor==1.4.3
 cryptography==41.0.7
-daphne==4.1.2
 dill==0.3.8
 Django==5.0.4
 django-celery-beat @ git+https://github.com/kwongtn/django-celery-beat.git@1f013413bbbeaa03f9c377297c865ac633ceae6a
