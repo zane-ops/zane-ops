@@ -3,6 +3,10 @@ export const userKeys = {
   authedUser: ["AUTHED_USER"] as const
 };
 
+export const dockerHubKeys = {
+  images: (query: string) => ["DOCKER_HUB_IMAGES", query] as const
+};
+
 export const projectSearchSchema = z.object({
   slug: z.string().optional().catch(""),
   page: z.number().optional().catch(1),

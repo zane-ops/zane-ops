@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Container, Github } from "lucide-react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MetaTitle } from "~/components/meta-title";
@@ -18,7 +18,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 
-export const Route = createFileRoute(
+export const Route = createLazyFileRoute(
   "/_dashboard/project/$slug/create-service"
 )({
   component: withAuthRedirect(CreateService)
