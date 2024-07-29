@@ -74,9 +74,11 @@ def search_images_docker_hub(term: str) -> List[DockerImageResult]:
     List all images in registry starting with a certain term.
     """
     client = get_docker_client()
-    result: List[DockerImageResultFromRegistry] = client.images.search(
-        term=term, limit=30
-    )
+    result: List[DockerImageResultFromRegistry] = []
+    try:
+        result = client.images.search(term=term, limit=30)
+    except docker.errors.APIError:
+        pass
     images_to_return: List[DockerImageResult] = []
 
     for image in result:
