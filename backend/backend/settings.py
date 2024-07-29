@@ -313,6 +313,7 @@ SPECTACULAR_SETTINGS = {
             ("SLEEPING", "Sleeping"),
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
             ("DEPLOYING", "Deploying"),
+            ("CANCELLED", "Cancelled"),
         ),
     },
     "POSTPROCESSING_HOOKS": [

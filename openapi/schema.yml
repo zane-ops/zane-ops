@@ -5230,6 +5230,7 @@ components:
       - SLEEPING
       - NOT_DEPLOYED_YET
       - DEPLOYING
+      - CANCELLED
       type: string
       description: |-
         * `HEALTHY` - Healthy
@@ -5237,6 +5238,7 @@ components:
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
         * `DEPLOYING` - Deploying
+        * `CANCELLED` - Cancelled
     SimpleLog:
       type: object
       properties:
