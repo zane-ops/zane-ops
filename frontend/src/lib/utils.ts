@@ -1,5 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type {
+  DotNotationToObject,
+  MergeUnions,
+  RecursivePartial
+} from "~/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,39 +22,48 @@ type ClientErrorDetail = {
   attr: string | null;
 };
 
-export function getFormErrorsFromResponseData<
-  T extends
-    | {
-        type: string;
-        errors: ValidationErrorDetail[] | ClientErrorDetail[];
-      }
-    | undefined
->(
-  data: T
-): Record<
-  T extends {
-    type: "validation_error";
-    errors: ValidationErrorDetail[];
-  }
-    ? T["errors"][number]["attr"]
-    : T extends {
-          type: "client_error";
-          errors: ClientErrorDetail[];
-        }
-      ? "non_field_errors"
-      : never,
-  string[]
+type Input =
+  | { type: "validation_error"; errors: ValidationErrorDetail[] }
+  | { type: "client_error"; errors: ClientErrorDetail[] }
+  | { type: "server_error"; errors: ClientErrorDetail[] };
+
+export function getFormErrorsFromResponseData<T extends Input>(
+  data: T | undefined
+): MergeUnions<
+  T extends { type: "validation_error"; errors: ValidationErrorDetail[] }
+    ? RecursivePartial<
+        DotNotationToObject<T["errors"][number]["attr"], string[]>
+      >
+    : T extends
+          | { type: "client_error"; errors: ClientErrorDetail[] }
+          | { type: "server_error"; errors: ClientErrorDetail[] }
+      ? { non_field_errors?: string[] }
+      : never
 > {
-  const errors: Record<string, string[]> = {};
+  const errors: any = {};
 
   if (data?.type === "validation_error") {
     for (const error of data.errors) {
       const key = error.attr;
       if (key) {
-        if (!errors[key]) {
-          errors[key] = [];
+        const keys = key.split(".");
+        if (keys.length === 0) {
+          if (!errors[key]) {
+            errors[key] = [];
+          }
+          errors[key].push(error.detail);
+        } else {
+          const [prefix, suffix] = keys;
+          if (!errors[prefix]) {
+            errors[prefix] = {
+              [suffix]: []
+            };
+          }
+          errors[prefix][suffix] = {
+            ...errors[prefix],
+            [suffix]: [...(errors[prefix][suffix] ?? []), error.detail]
+          };
         }
-        errors[key].push(error.detail);
       }
     }
   } else if (data?.type === "client_error" || data?.type === "server_error") {

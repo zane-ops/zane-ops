@@ -284,9 +284,9 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           <Form.Control asChild>
             <Input className="p-3" placeholder="ex: mocherif" type="text" />
           </Form.Control>
-          {errors["credentials.username"] && (
+          {errors.credentials?.username && (
             <Form.Message className="text-red-500 text-sm">
-              {errors["credentials.username"]}
+              {errors.credentials.username}
             </Form.Message>
           )}
         </Form.Field>
@@ -299,9 +299,9 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           <Form.Control asChild>
             <Input className="p-3" type="password" />
           </Form.Control>
-          {errors["credentials.password"] && (
+          {errors.credentials?.password && (
             <Form.Message className="text-red-500 text-sm">
-              {errors["credentials.password"]}
+              {errors.credentials.password}
             </Form.Message>
           )}
         </Form.Field>
