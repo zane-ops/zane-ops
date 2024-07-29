@@ -1,20 +1,27 @@
 import json
 from urllib.parse import urlparse
 
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
-from rest_framework import status, permissions
+from rest_framework import status, permissions, exceptions
+from rest_framework.generics import ListAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from . import DeploymentLogsPagination, DeploymentLogsFilterSet, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
 from .serializers import (
     DockerContainerLogsResponseSerializer,
     DockerContainerLogsRequestSerializer,
     HTTPServiceLogSerializer,
 )
-from ..models import SimpleLog, HttpLog
+from ..models import (
+    SimpleLog,
+    HttpLog,
+)
+from ..serializers import SimpleLogSerializer
 
 
 @extend_schema(exclude=True)
@@ -147,3 +154,22 @@ class LogTailAPIView(APIView):
                 }
             )
             return Response(response.data, status=status.HTTP_200_OK)
+
+
+class ProxyLogsAPIView(ListAPIView):
+    serializer_class = SimpleLogSerializer
+    queryset = SimpleLog.objects.filter(source=SimpleLog.LogSource.PROXY)
+    pagination_class = DeploymentLogsPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DeploymentLogsFilterSet
+
+    @extend_schema(
+        summary="Get caddy proxy logs",
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound as e:
+            if "Invalid cursor" in str(e.detail):
+                return Response(EMPTY_CURSOR_RESPONSE)
+            raise e

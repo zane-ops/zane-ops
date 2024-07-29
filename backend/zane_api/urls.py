@@ -148,7 +148,7 @@ urlpatterns += [
     ),
     re_path(
         r"^_proxy/logs/?$",
-        views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
+        views.ProxyLogsAPIView.as_view(),
         name="proxy.logs",
     ),
 ]
