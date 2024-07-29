@@ -342,11 +342,7 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
-                # This will only be set for the initial deployment,
-                # for the rest of the deployments, if a deployment is cancelled,
-                # it will not be added as production, so the state returned to the user
-                # is the state of the last production deployment
-                DockerDeployment.DeploymentStatus.CANCELLED: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.CANCELLED: "UNHEALTHY",
             }
 
             service_image = service.image
