@@ -29,6 +29,7 @@ from ..models import (
     DockerEnvVariable,
     PortConfiguration,
     SimpleLog,
+    HttpLog,
 )
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
@@ -834,6 +835,7 @@ class HTTPServiceRequestSerializer(serializers.Serializer):
         ("HTTP/1.0", "HTTP/1.0"),
         ("HTTP/1.1", "HTTP/1.1"),
         ("HTTP/2.0", "HTTP/2.0"),
+        ("HTTP/3.0", "HTTP/3.0"),
     ]
     REQUEST_METHODS = [
         ("GET", "GET"),
@@ -874,8 +876,14 @@ class HTTPServiceLogSerializer(serializers.Serializer):
     )
     request = HTTPServiceRequestSerializer()
     zane_deployment_upstream = serializers.CharField()
-    zane_deployment_current_slot = serializers.CharField()
-    zane_deployment_current_hash = serializers.CharField()
+    zane_deployment_green_hash = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
+    zane_deployment_blue_hash = serializers.CharField(
+        allow_null=True, required=False, allow_blank=True
+    )
+    zane_service_id = serializers.CharField()
+    uuid = serializers.CharField(allow_null=True, required=False, allow_blank=True)
 
 
 class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
@@ -912,6 +920,24 @@ class DeploymentLogsPagination(pagination.CursorPagination):
     ordering = "-time"
 
 
+class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
+    time = django_filters.DateTimeFromToRangeFilter()
+    request_method = django_filters.MultipleChoiceFilter(
+        choices=HttpLog.RequestMethod.choices
+    )
+
+    class Meta:
+        model = HttpLog
+        fields = [
+            "time",
+            "request_method",
+            "request_path",
+            "request_host",
+            "status",
+            "request_ip",
+        ]
+
+
 # ==============================
 #     Project Service List     #
 # ==============================
@@ -931,6 +957,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
         ("UNHEALTHY", _("Unhealthy")),
         ("SLEEPING", _("Sleeping")),
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
+        ("DEPLOYING", _("Deploying")),
     )
     status = serializers.ChoiceField(choices=STATUS_CHOICES)
     id = serializers.CharField(required=True)

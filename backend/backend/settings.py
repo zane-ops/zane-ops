@@ -91,7 +91,6 @@ SESSION_EXTEND_PERIOD = 7
 # Application definition
 
 INSTALLED_APPS = [
-    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -313,6 +312,7 @@ SPECTACULAR_SETTINGS = {
             ("UNHEALTHY", "Unhealthy"),
             ("SLEEPING", "Sleeping"),
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
+            ("DEPLOYING", "Deploying"),
         ),
     },
     "POSTPROCESSING_HOOKS": [

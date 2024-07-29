@@ -54,7 +54,7 @@ importers:
         specifier: ^1.0.4
         version: 1.1.0(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
       '@radix-ui/react-dialog':
-        specifier: ^1.0.5
+        specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
       '@radix-ui/react-form':
         specifier: ^0.0.3
@@ -108,8 +108,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
       lucide-react:
-        specifier: ^0.341.0
-        version: 0.341.0(react@18.3.0-canary-47beb96cc-20240222)
+        specifier: ^0.417.0
+        version: 0.417.0(react@18.3.0-canary-47beb96cc-20240222)
       openapi-fetch:
         specifier: ^0.9.2
         version: 0.9.8
@@ -5771,10 +5771,10 @@ packages:
     dependencies:
       yallist: 3.1.1
 
-  /lucide-react@0.341.0(react@18.3.0-canary-47beb96cc-20240222):
-    resolution: {integrity: sha512-fqI0TLU/VbzC3p90MHP3kdCRRUMTRT5qBfxwaXlllkZieYfRrMVd/RORXytqJUC2GBrvZdWYs6yvJIrqdsOmDQ==}
+  /lucide-react@0.417.0(react@18.3.0-canary-47beb96cc-20240222):
+    resolution: {integrity: sha512-F/MDUHDter8YMZ7JKQpW/5/+v38tdaoShKX3e+opYsqfCnaHwn+5zz3+lBrMDFMNtSsvxtNpchLIaMpEfsi/4w==}
     peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
     dependencies:
       react: 18.3.0-canary-47beb96cc-20240222
     dev: false

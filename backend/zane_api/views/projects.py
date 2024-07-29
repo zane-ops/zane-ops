@@ -344,14 +344,23 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.FAILED: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
-                DockerDeployment.DeploymentStatus.QUEUED: "NOT_DEPLOYED_YET",
-                DockerDeployment.DeploymentStatus.PREPARING: "NOT_DEPLOYED_YET",
-                DockerDeployment.DeploymentStatus.STARTING: "NOT_DEPLOYED_YET",
-                DockerDeployment.DeploymentStatus.RESTARTING: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
+                # This will only be set for the initial deployment,
+                # for the rest of the deployments, if a deployment is cancelled,
+                # it will not be added as production, so the state returned to the user
+                # is the state of the last production deployment
                 DockerDeployment.DeploymentStatus.CANCELLED: "NOT_DEPLOYED_YET",
             }
 
-            parts = service.image.split(":")
+            service_image = service.image
+            if service_image is None:
+                image_change = service.unapplied_changes.filter(field="image").first()
+                service_image = image_change.new_value
+
+            parts = service_image.split(":")
             if len(parts) == 1:
                 tag = "latest"
                 image = service.image
@@ -373,7 +382,7 @@ class ProjectServiceListView(APIView):
                         status=(
                             status_map[service.latest_production_deployment_status]
                             if service.latest_production_deployment_status is not None
-                            else None
+                            else "NOT_DEPLOYED_YET"
                         ),
                     )
                 ).data

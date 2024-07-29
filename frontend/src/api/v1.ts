@@ -128,6 +128,10 @@ export interface paths {
     /** Get single deployment */
     get: operations["projects_service_details_docker_deployments_retrieve"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/": {
+    /** Get deployment HTTP logs */
+    get: operations["projects_service_details_docker_deployments_http_logs_list"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_list"];
@@ -742,6 +746,31 @@ export interface components {
       new_value: components["schemas"]["HealthCheckRequestRequest"] | null;
       field: components["schemas"]["HealthcheckFieldChangeFieldEnum"];
     };
+    HttpLog: {
+      /** Format: uuid */
+      id: string;
+      status: number;
+      /** Format: date-time */
+      time: string;
+      deployment_id: string | null;
+      service_id: string | null;
+      request_id: string | null;
+      request_ip: string;
+      request_path: string;
+      request_query: string | null;
+      /** Format: uri */
+      request_host: string;
+      request_protocol: components["schemas"]["RequestProtocolEnum"];
+      request_method: components["schemas"]["RequestMethodEnum"];
+      /** Format: int64 */
+      request_duration_ns: number;
+      request_headers: {
+        [key: string]: string[];
+      };
+      response_headers: {
+        [key: string]: string[];
+      };
+    };
     /**
      * @description * `ADD` - Add
      * * `DELETE` - Delete
@@ -855,6 +884,11 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["DockerServiceDeployment"][];
     };
+    PaginatedHttpLogList: {
+      next: string | null;
+      previous: string | null;
+      results: components["schemas"]["HttpLog"][];
+    };
     PaginatedProjectList: {
       /** @example 123 */
       count: number;
@@ -929,6 +963,92 @@ export interface components {
     ProjectCreateRequestRequest: {
       slug?: string;
       description?: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
+      /**
+       * @description * `request_host` - request_host
+       * @enum {string}
+       */
+      attr: "request_host";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent: {
+      /**
+       * @description * `request_ip` - request_ip
+       * @enum {string}
+       */
+      attr: "request_ip";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent: {
+      /**
+       * @description * `request_method` - request_method
+       * @enum {string}
+       */
+      attr: "request_method";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
+       * @enum {string}
+       */
+      code: "invalid_choice" | "invalid_list";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent: {
+      /**
+       * @description * `request_path` - request_path
+       * @enum {string}
+       */
+      attr: "request_path";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent: {
+      /**
+       * @description * `status` - status
+       * @enum {string}
+       */
+      attr: "status";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_value` - max_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_value";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent: {
+      /**
+       * @description * `time` - time
+       * @enum {string}
+       */
+      attr: "time";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListError"][];
     };
     ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent: {
       /**
@@ -1397,6 +1517,25 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RequestDeploymentChangesError"][];
     };
+    /**
+     * @description * `GET` - GET
+     * * `POST` - POST
+     * * `PUT` - PUT
+     * * `DELETE` - DELETE
+     * * `PATCH` - PATCH
+     * * `OPTIONS` - OPTIONS
+     * * `HEAD` - HEAD
+     * @enum {string}
+     */
+    RequestMethodEnum: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
+    /**
+     * @description * `HTTP/1.0` - HTTP/1.0
+     * * `HTTP/1.1` - HTTP/1.1
+     * * `HTTP/2.0` - HTTP/2.0
+     * * `HTTP/3.0` - HTTP/3.0
+     * @enum {string}
+     */
+    RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
@@ -1409,9 +1548,10 @@ export interface components {
      * * `UNHEALTHY` - Unhealthy
      * * `SLEEPING` - Sleeping
      * * `NOT_DEPLOYED_YET` - Not deployed yet
+     * * `DEPLOYING` - Deploying
      * @enum {string}
      */
-    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
     SimpleLog: {
       /** Format: uuid */
       id: string;
@@ -2329,6 +2469,65 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment HTTP logs */
+  projects_service_details_docker_deployments_http_logs_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        request_host?: string;
+        request_ip?: string;
+        /**
+         * @description * `GET` - GET
+         * * `POST` - POST
+         * * `PUT` - PUT
+         * * `DELETE` - DELETE
+         * * `PATCH` - PATCH
+         * * `OPTIONS` - OPTIONS
+         * * `HEAD` - HEAD
+         */
+        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
+        request_path?: string;
+        status?: number;
+        time_after?: string;
+        time_before?: string;
+      };
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedHttpLogList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400"];
         };
       };
       401: {

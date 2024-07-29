@@ -1,5 +1,6 @@
 # build output
 dist/
+public/openapi.yaml
 # generated types
 .astro/
 
