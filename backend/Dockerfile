@@ -4,7 +4,8 @@ FROM python:3.11.7
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-RUN pip install uv
+RUN pip install uv==0.1.0
+RUN pip install setuptools==65.5.0
 RUN uv venv /venv
 COPY requirements.txt requirements.txt
 ENV VIRTUAL_ENV=/venv
