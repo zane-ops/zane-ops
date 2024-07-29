@@ -47,7 +47,7 @@ export function getFormErrorsFromResponseData<T extends Input>(
       const key = error.attr;
       if (key) {
         const keys = key.split(".");
-        if (keys.length === 0) {
+        if (keys.length === 1) {
           if (!errors[key]) {
             errors[key] = [];
           }
@@ -59,7 +59,7 @@ export function getFormErrorsFromResponseData<T extends Input>(
               [suffix]: []
             };
           }
-          errors[prefix][suffix] = {
+          errors[prefix] = {
             ...errors[prefix],
             [suffix]: [...(errors[prefix][suffix] ?? []), error.detail]
           };

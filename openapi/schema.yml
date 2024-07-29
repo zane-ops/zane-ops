@@ -2488,21 +2488,17 @@ components:
           description: '* `credentials.password` - credentials.password'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -2520,21 +2516,17 @@ components:
           description: '* `credentials.username` - credentials.username'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -2839,15 +2831,10 @@ components:
       properties:
         username:
           type: string
-          minLength: 1
           maxLength: 100
         password:
           type: string
-          minLength: 1
           maxLength: 100
-      required:
-      - password
-      - username
     DockerDeploymentChange:
       type: object
       properties:
@@ -4976,21 +4963,17 @@ components:
           description: '* `new_value.password` - new_value.password'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -5080,21 +5063,17 @@ components:
           description: '* `new_value.username` - new_value.username'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string

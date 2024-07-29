@@ -166,21 +166,13 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   return (
     <Form.Root
       action={(formData) => {
-        let credentials = undefined;
-        if (
-          formData.get("credentials.username") ||
-          formData.get("credentials.password")
-        ) {
-          credentials = {
-            password: formData.get("credentials.password")!.toString(),
-            username: formData.get("credentials.username")!.toString().trim()
-          };
-        }
-
         mutate({
           slug: formData.get("slug")?.toString().trim() ?? "",
           image: formData.get("image")?.toString() ?? "",
-          credentials
+          credentials: {
+            password: formData.get("credentials.password")?.toString(),
+            username: formData.get("credentials.username")?.toString().trim()
+          }
         });
       }}
       className="flex my-10 flex-grow justify-center items-center"
