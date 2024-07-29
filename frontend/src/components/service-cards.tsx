@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   Container,
   GitBranchIcon,
@@ -99,7 +100,11 @@ export function DockerServiceCard({
         <CardTitle className="flex gap-2 items-center">
           <Container className="flex-none" size={30} />
           <div className="w-[calc(100%-38px)]">
-            <h1 className="text-lg leading-tight">{slug}</h1>
+            <h2 className="text-lg leading-tight">
+              <Link to={`services/docker/${slug}`} className="hover:underline">
+                {slug}
+              </Link>
+            </h2>
             <p className="text-sm font-normal overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
               {image}
             </p>
@@ -200,7 +205,11 @@ export function GitServiceCard({
         <CardTitle className="flex gap-2 items-center">
           <Github className="flex-none" size={30} />
           <div className="w-[calc(100%-38px)]">
-            <h1 className="text-lg leading-tight">{slug}</h1>
+            <h2 className="text-lg leading-tight">
+              <Link to={`services/git/${slug}`} className="hover:underline">
+                {slug}
+              </Link>
+            </h2>
             <p className="text-sm font-medium overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
               {repository}
             </p>
