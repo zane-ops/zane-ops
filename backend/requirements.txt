@@ -72,7 +72,7 @@ requests==2.31.0
 responses==0.25.0
 rpds-py==0.18.0
 service-identity==24.1.0
-setuptools==65.5.0
+setuptools==71.1.0
 shortuuid==1.0.13
 six==1.16.0
 sqlparse==0.4.4
