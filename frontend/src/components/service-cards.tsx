@@ -6,7 +6,6 @@ import {
   LinkIcon,
   Tag
 } from "lucide-react";
-import { DockerIcon } from "~/components/docker-icon";
 import { cn } from "~/lib/utils";
 import {
   Card,
@@ -98,7 +97,7 @@ export function DockerServiceCard({
 
       <CardHeader className="p-0  pb-0  pt-4 px-6">
         <CardTitle className="flex gap-2 items-center">
-          <DockerIcon className="flex-none h-8" />
+          <Container className="flex-none h-8" />
           <div className="w-[calc(100%-38px)]">
             <h1 className="text-lg leading-tight">{slug}</h1>
             <p className="text-sm font-normal overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight">
