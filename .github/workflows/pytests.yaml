@@ -30,6 +30,7 @@ jobs:
         run: |
           cd backend
           pip install uv==0.1.0
+          pip install setuptools==71.1.0
           uv venv
           uv pip install setuptools==71.1.0
           uv pip install -r requirements.txt
