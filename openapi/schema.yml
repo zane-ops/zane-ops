@@ -25,6 +25,113 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
+  /api/_proxy/logs/:
+    get:
+      operationId: _proxy_logs_list
+      summary: Get caddy proxy logs
+      parameters:
+      - in: query
+        name: content
+        schema:
+          type: string
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: level
+        schema:
+          type: string
+          enum:
+          - ERROR
+          - INFO
+        description: |-
+          * `ERROR` - Error
+          * `INFO` - Info
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - _proxy
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_proxyLogsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSimpleLogList'
+          description: ''
   /api/archived-projects/:
     get:
       operationId: getArchivedProjectList
@@ -5566,6 +5673,95 @@ components:
           default: READ_WRITE
       required:
       - container_path
+    _proxyLogsListContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - content
+          type: string
+          description: '* `content` - content'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    _proxyLogsListError:
+      oneOf:
+      - $ref: '#/components/schemas/_proxyLogsListLevelErrorComponent'
+      - $ref: '#/components/schemas/_proxyLogsListContentErrorComponent'
+      - $ref: '#/components/schemas/_proxyLogsListTimeErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          level: '#/components/schemas/_proxyLogsListLevelErrorComponent'
+          content: '#/components/schemas/_proxyLogsListContentErrorComponent'
+          time: '#/components/schemas/_proxyLogsListTimeErrorComponent'
+    _proxyLogsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/_proxyLogsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/_proxyLogsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    _proxyLogsListLevelErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - level
+          type: string
+          description: '* `level` - level'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    _proxyLogsListTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - time
+          type: string
+          description: '* `time` - time'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    _proxyLogsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/_proxyLogsListError'
+      required:
+      - errors
+      - type
   securitySchemes:
     cookieAuth:
       type: apiKey
