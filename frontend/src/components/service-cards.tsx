@@ -22,14 +22,22 @@ import {
   TooltipTrigger
 } from "./ui/tooltip";
 
-type DockerServiceCardProps = {
+type CommonServiceCardProps = {
   slug: string;
-  image: string;
-  url?: string | null;
-  tag: string;
-  updatedAt: string;
+  status:
+    | "HEALTHY"
+    | "UNHEALTHY"
+    | "SLEEPING"
+    | "NOT_DEPLOYED_YET"
+    | "DEPLOYING";
   volumeNumber?: number;
-  status: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET";
+  url?: string | null;
+  updatedAt: string;
+};
+
+type DockerServiceCardProps = CommonServiceCardProps & {
+  image: string;
+  tag: string;
 };
 
 export function DockerServiceCard({
@@ -46,7 +54,7 @@ export function DockerServiceCard({
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <span className="absolute cursor-pointer flex h-4 w-4 -top-2 -right-2">
+            <span className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1">
               {status !== "NOT_DEPLOYED_YET" && (
                 <span
                   className={cn(
@@ -54,7 +62,8 @@ export function DockerServiceCard({
                     {
                       "bg-green-400": status === "HEALTHY",
                       "bg-red-400": status === "UNHEALTHY",
-                      "bg-secondary": status === "SLEEPING"
+                      "bg-yellow-400": status === "SLEEPING",
+                      "bg-secondary/60": status === "DEPLOYING"
                     }
                   )}
                 />
@@ -66,21 +75,21 @@ export function DockerServiceCard({
                   {
                     "bg-green-500": status === "HEALTHY",
                     "bg-red-500": status === "UNHEALTHY",
-                    "bg-secondary": status === "SLEEPING",
-                    "bg-gray-400": status === "NOT_DEPLOYED_YET"
+                    "bg-yellow-500": status === "SLEEPING",
+                    "bg-gray-400": status === "NOT_DEPLOYED_YET",
+                    "bg-secondary": status === "DEPLOYING"
                   }
                 )}
               ></span>
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <div className="capitalize">
-              {status === "HEALTHY" && "✅ "}
-              {status === "SLEEPING" && "💤 "}
-              {status === "UNHEALTHY" && "❌ "}
-              {status === "NOT_DEPLOYED_YET"
-                ? "⏳ Not deployed yet"
-                : status.toLowerCase()}
+            <div>
+              {status === "HEALTHY" && "✅ Healthy"}
+              {status === "SLEEPING" && "🌙 Sleeping"}
+              {status === "UNHEALTHY" && "❌ Unhealthy"}
+              {status === "DEPLOYING" && "⏳ Deploying..."}
+              {status === "NOT_DEPLOYED_YET" && "🚧 Not deployed yet"}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -126,15 +135,10 @@ export function DockerServiceCard({
   );
 }
 
-type GitServiceCardProps = {
-  slug: string;
+type GitServiceCardProps = CommonServiceCardProps & {
   repository: string;
-  url?: string | null;
-  updatedAt: string;
   lastCommitMessage?: string;
   branchName: string;
-  volumeNumber?: number;
-  status: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET";
 };
 
 export function GitServiceCard({
@@ -152,7 +156,7 @@ export function GitServiceCard({
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <span className="absolute cursor-pointer flex h-4 w-4 -top-2 -right-2">
+            <span className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1">
               {status !== "NOT_DEPLOYED_YET" && (
                 <span
                   className={cn(
@@ -160,7 +164,8 @@ export function GitServiceCard({
                     {
                       "bg-green-400": status === "HEALTHY",
                       "bg-red-400": status === "UNHEALTHY",
-                      "bg-secondary": status === "SLEEPING"
+                      "bg-yellow-400": status === "SLEEPING",
+                      "bg-secondary/60": status === "DEPLOYING"
                     }
                   )}
                 />
@@ -172,8 +177,9 @@ export function GitServiceCard({
                   {
                     "bg-green-500": status === "HEALTHY",
                     "bg-red-500": status === "UNHEALTHY",
-                    "bg-secondary": status === "SLEEPING",
-                    "bg-gray-400": status === "NOT_DEPLOYED_YET"
+                    "bg-yellow-500": status === "SLEEPING",
+                    "bg-gray-400": status === "NOT_DEPLOYED_YET",
+                    "bg-secondary": status === "DEPLOYING"
                   }
                 )}
               ></span>
