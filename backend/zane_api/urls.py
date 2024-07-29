@@ -146,4 +146,9 @@ urlpatterns += [
         views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
         name="services.docker.deployment_http_logs",
     ),
+    re_path(
+        r"^_proxy/logs/?$",
+        views.ProxyLogsAPIView.as_view(),
+        name="proxy.logs",
+    ),
 ]
