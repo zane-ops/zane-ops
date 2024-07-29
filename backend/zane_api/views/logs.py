@@ -10,12 +10,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from . import DeploymentLogsPagination, DeploymentLogsFilterSet, EMPTY_CURSOR_RESPONSE
+from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
 from .serializers import (
     DockerContainerLogsResponseSerializer,
     DockerContainerLogsRequestSerializer,
     HTTPServiceLogSerializer,
+    ProxyLogsFilterSet,
 )
 from ..models import (
     SimpleLog,
@@ -161,7 +162,7 @@ class ProxyLogsAPIView(ListAPIView):
     queryset = SimpleLog.objects.filter(source=SimpleLog.LogSource.PROXY)
     pagination_class = DeploymentLogsPagination
     filter_backends = [DjangoFilterBackend]
-    filterset_class = DeploymentLogsFilterSet
+    filterset_class = ProxyLogsFilterSet
 
     @extend_schema(
         summary="Get caddy proxy logs",
