@@ -240,16 +240,14 @@ export interface components {
        */
       attr: "credentials.password";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateDockerServiceCredentialsUsernameErrorComponent: {
@@ -259,16 +257,14 @@ export interface components {
        */
       attr: "credentials.username";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateDockerServiceError: components["schemas"]["CreateDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceSlugErrorComponent"] | components["schemas"]["CreateDockerServiceImageErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsUsernameErrorComponent"] | components["schemas"]["CreateDockerServiceCredentialsPasswordErrorComponent"];
@@ -408,8 +404,8 @@ export interface components {
       field: components["schemas"]["DockerCredentialsFieldChangeFieldEnum"];
     };
     DockerCredentialsRequestRequest: {
-      username: string;
-      password: string;
+      username?: string;
+      password?: string;
     };
     DockerDeploymentChange: {
       id: string;
@@ -1390,16 +1386,14 @@ export interface components {
        */
       attr: "new_value.password";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueStripPrefixErrorComponent: {
@@ -1454,16 +1448,14 @@ export interface components {
        */
       attr: "new_value.username";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueValueErrorComponent: {
@@ -1549,9 +1541,10 @@ export interface components {
      * * `SLEEPING` - Sleeping
      * * `NOT_DEPLOYED_YET` - Not deployed yet
      * * `DEPLOYING` - Deploying
+     * * `CANCELLED` - Cancelled
      * @enum {string}
      */
-    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING" | "CANCELLED";
     SimpleLog: {
       /** Format: uuid */
       id: string;

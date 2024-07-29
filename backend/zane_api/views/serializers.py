@@ -41,8 +41,8 @@ from ..validators import validate_url_path, validate_env_name
 
 
 class DockerCredentialsRequestSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=100)
-    password = serializers.CharField(max_length=100)
+    username = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    password = serializers.CharField(max_length=100, allow_blank=True, required=False)
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
@@ -958,6 +958,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
         ("SLEEPING", _("Sleeping")),
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
         ("DEPLOYING", _("Deploying")),
+        ("CANCELLED", _("Cancelled")),
     )
     status = serializers.ChoiceField(choices=STATUS_CHOICES)
     id = serializers.CharField(required=True)

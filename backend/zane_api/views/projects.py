@@ -304,14 +304,6 @@ class ProjectServiceListView(APIView):
                 detail=f"A project with the slug `{slug}` does not exist"
             )
 
-        latest_production_deployment_subquery = (
-            DockerDeployment.objects.filter(
-                service_id=OuterRef("pk"), is_current_production=True
-            )
-            .order_by("-created_at")
-            .values("status")[:1]
-        )
-
         # Prefetch related fields and use annotate to count volumes
         filters = Q(project=project)
         query = request.query_params.get("query", "")
@@ -329,8 +321,10 @@ class ProjectServiceListView(APIView):
             )
             .annotate(
                 volume_number=Count("volumes"),
-                latest_production_deployment_status=Subquery(
-                    latest_production_deployment_subquery
+                latest_deployment_status=Subquery(
+                    DockerDeployment.objects.filter(service_id=OuterRef("pk"))
+                    .order_by("-created_at")
+                    .values("status")[:1]
                 ),
             )
         )
@@ -348,11 +342,7 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
-                # This will only be set for the initial deployment,
-                # for the rest of the deployments, if a deployment is cancelled,
-                # it will not be added as production, so the state returned to the user
-                # is the state of the last production deployment
-                DockerDeployment.DeploymentStatus.CANCELLED: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.CANCELLED: "CANCELLED",
             }
 
             service_image = service.image
@@ -380,8 +370,8 @@ class ProjectServiceListView(APIView):
                         volume_number=service.volume_number,
                         url=str(url) if url is not None else None,
                         status=(
-                            status_map[service.latest_production_deployment_status]
-                            if service.latest_production_deployment_status is not None
+                            status_map[service.latest_deployment_status]
+                            if service.latest_deployment_status is not None
                             else "NOT_DEPLOYED_YET"
                         ),
                     )
