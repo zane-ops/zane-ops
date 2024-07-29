@@ -958,6 +958,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
         ("SLEEPING", _("Sleeping")),
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
         ("DEPLOYING", _("Deploying")),
+        ("CANCELLED", _("Cancelled")),
     )
     status = serializers.ChoiceField(choices=STATUS_CHOICES)
     id = serializers.CharField(required=True)

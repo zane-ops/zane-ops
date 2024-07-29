@@ -342,7 +342,7 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.CANCELLED: "UNHEALTHY",
+                DockerDeployment.DeploymentStatus.CANCELLED: "CANCELLED",
             }
 
             service_image = service.image

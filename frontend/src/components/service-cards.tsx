@@ -30,7 +30,8 @@ type CommonServiceCardProps = {
     | "UNHEALTHY"
     | "SLEEPING"
     | "NOT_DEPLOYED_YET"
-    | "DEPLOYING";
+    | "DEPLOYING"
+    | "CANCELLED";
   volumeNumber?: number;
   url?: string | null;
   updatedAt: string;
@@ -56,7 +57,7 @@ export function DockerServiceCard({
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <span className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1 z-10">
-              {status !== "NOT_DEPLOYED_YET" && (
+              {status !== "NOT_DEPLOYED_YET" && status !== "CANCELLED" && (
                 <span
                   className={cn(
                     "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
@@ -77,7 +78,8 @@ export function DockerServiceCard({
                     "bg-green-500": status === "HEALTHY",
                     "bg-red-500": status === "UNHEALTHY",
                     "bg-yellow-500": status === "SLEEPING",
-                    "bg-gray-400": status === "NOT_DEPLOYED_YET",
+                    "bg-gray-400":
+                      status === "NOT_DEPLOYED_YET" || status === "CANCELLED",
                     "bg-secondary": status === "DEPLOYING"
                   }
                 )}
@@ -90,6 +92,7 @@ export function DockerServiceCard({
               {status === "SLEEPING" && "🌙 Sleeping"}
               {status === "UNHEALTHY" && "❌ Unhealthy"}
               {status === "DEPLOYING" && "⏳ Deploying..."}
+              {status === "CANCELLED" && "🚫 Cancelled"}
               {status === "NOT_DEPLOYED_YET" && "🚧 Not deployed yet"}
             </div>
           </TooltipContent>
@@ -165,7 +168,7 @@ export function GitServiceCard({
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <span className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1 z-10">
-              {status !== "NOT_DEPLOYED_YET" && (
+              {status !== "NOT_DEPLOYED_YET" && status !== "CANCELLED" && (
                 <span
                   className={cn(
                     "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
@@ -186,7 +189,8 @@ export function GitServiceCard({
                     "bg-green-500": status === "HEALTHY",
                     "bg-red-500": status === "UNHEALTHY",
                     "bg-yellow-500": status === "SLEEPING",
-                    "bg-gray-400": status === "NOT_DEPLOYED_YET",
+                    "bg-gray-400":
+                      status === "NOT_DEPLOYED_YET" || status === "CANCELLED",
                     "bg-secondary": status === "DEPLOYING"
                   }
                 )}
@@ -195,10 +199,12 @@ export function GitServiceCard({
           </TooltipTrigger>
           <TooltipContent>
             <div>
-              {status === "HEALTHY" && "✅ "}
-              {status === "SLEEPING" && "💤 "}
-              {status === "UNHEALTHY" && "❌ "}
-              {status === "NOT_DEPLOYED_YET" ? "⏳ Not deployed yet" : status}
+              {status === "HEALTHY" && "✅ Healthy"}
+              {status === "SLEEPING" && "🌙 Sleeping"}
+              {status === "UNHEALTHY" && "❌ Unhealthy"}
+              {status === "DEPLOYING" && "⏳ Deploying..."}
+              {status === "CANCELLED" && "🚫 Cancelled"}
+              {status === "NOT_DEPLOYED_YET" && "🚧 Not deployed yet"}
             </div>
           </TooltipContent>
         </Tooltip>
