@@ -344,10 +344,14 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.FAILED: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
-                DockerDeployment.DeploymentStatus.QUEUED: "NOT_DEPLOYED_YET",
-                DockerDeployment.DeploymentStatus.PREPARING: "NOT_DEPLOYED_YET",
-                DockerDeployment.DeploymentStatus.STARTING: "NOT_DEPLOYED_YET",
-                DockerDeployment.DeploymentStatus.RESTARTING: "NOT_DEPLOYED_YET",
+                DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
+                # This will only be set for the initial deployment,
+                # for the rest of the deployments, if a deployment is cancelled,
+                # it will not be added as production, so the state returned to the user
+                # is the state of the last production deployment
                 DockerDeployment.DeploymentStatus.CANCELLED: "NOT_DEPLOYED_YET",
             }
 
