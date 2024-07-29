@@ -1,6 +1,7 @@
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
 import * as React from "react";
+import type { EventFor } from "~/lib/types";
 
 import { cn } from "~/lib/utils";
 
@@ -53,4 +54,25 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants };
+export type SubmitButtonProps = Omit<ButtonProps, "disabled" | "asChild"> & {
+  isPending: boolean;
+};
+
+const SubmitButton = React.forwardRef<HTMLButtonElement, SubmitButtonProps>(
+  ({ className, variant, size, isPending, ...props }, ref) => {
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+        aria-disabled={isPending}
+        onClick={(e: EventFor<"button", "onClick">) => {
+          if (isPending) e.preventDefault();
+        }}
+      />
+    );
+  }
+);
+SubmitButton.displayName = "SubmitButton";
+
+export { Button, buttonVariants, SubmitButton };

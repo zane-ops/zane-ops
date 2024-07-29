@@ -18,7 +18,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules/
-dist/
 dist-ssr/
 *.local
 
@@ -34,4 +33,3 @@ dist-ssr/
 
 #ignoring auto generated files 
 ./src/routeTree.gen.ts
-frontend/dist/
