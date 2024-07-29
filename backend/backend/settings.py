@@ -312,6 +312,7 @@ SPECTACULAR_SETTINGS = {
             ("UNHEALTHY", "Unhealthy"),
             ("SLEEPING", "Sleeping"),
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
+            ("DEPLOYING", "Deploying"),
         ),
     },
     "POSTPROCESSING_HOOKS": [

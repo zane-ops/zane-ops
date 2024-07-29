@@ -1548,9 +1548,10 @@ export interface components {
      * * `UNHEALTHY` - Unhealthy
      * * `SLEEPING` - Sleeping
      * * `NOT_DEPLOYED_YET` - Not deployed yet
+     * * `DEPLOYING` - Deploying
      * @enum {string}
      */
-    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
     SimpleLog: {
       /** Format: uuid */
       id: string;

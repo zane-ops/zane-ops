@@ -5250,12 +5250,14 @@ components:
       - UNHEALTHY
       - SLEEPING
       - NOT_DEPLOYED_YET
+      - DEPLOYING
       type: string
       description: |-
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
+        * `DEPLOYING` - Deploying
     SimpleLog:
       type: object
       properties:
