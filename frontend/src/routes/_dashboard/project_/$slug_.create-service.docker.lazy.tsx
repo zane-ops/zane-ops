@@ -1,12 +1,10 @@
 import * as Form from "@radix-ui/react-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import {
   AlertCircle,
   ArrowRight,
   Check,
-  Clock,
-  Clock1Icon,
   ClockArrowUp,
   Container
 } from "lucide-react";
@@ -32,6 +30,7 @@ import {
   CommandList
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
+import { projectKeys } from "~/key-factories";
 import { useSearchDockerHub } from "~/lib/hooks/use-search-docker-hub";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
@@ -328,10 +327,17 @@ function StepServiceCreated({
   serviceSlug,
   onSuccess
 }: StepServiceCreatedProps) {
+  const queryClient = useQueryClient();
   const { isPending, mutate, data } = useMutation({
     onSuccess: (data) => {
       if (data.data) {
         onSuccess(data.data.hash);
+        queryClient.invalidateQueries({
+          predicate(query) {
+            const [prefix] = projectKeys.detail(slug, {});
+            return query.queryKey[0] === prefix && query.queryKey[1] === slug;
+          }
+        });
       }
     },
     mutationFn: async () => {
@@ -375,8 +381,7 @@ function StepServiceCreated({
           <AlertTitle className="text-lg">Success</AlertTitle>
 
           <AlertDescription>
-            Service <span className="capitalize">`{serviceSlug}`</span> Created
-            Successfuly
+            Service `<strong>{serviceSlug}</strong>` Created Successfuly
           </AlertDescription>
         </Alert>
 
@@ -418,8 +423,7 @@ function StepServiceDeployed({
           <AlertTitle className="text-lg">Queued</AlertTitle>
 
           <AlertDescription>
-            Deployment queued for service{" "}
-            <span className="capitalize">`{serviceSlug}`</span>
+            Deployment queued for service&nbsp; `<strong>{serviceSlug}</strong>`
           </AlertDescription>
         </Alert>
 
