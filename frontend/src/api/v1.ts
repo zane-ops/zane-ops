@@ -5,6 +5,10 @@
 
 
 export interface paths {
+  "/api/_proxy/logs/": {
+    /** Get caddy proxy logs */
+    get: operations["_proxy_logs_list"];
+  };
   "/api/archived-projects/": {
     /** List archived projects */
     get: operations["getArchivedProjectList"];
@@ -1699,6 +1703,51 @@ export interface components {
       /** @default READ_WRITE */
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
+    _proxyLogsListContentErrorComponent: {
+      /**
+       * @description * `content` - content
+       * @enum {string}
+       */
+      attr: "content";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    _proxyLogsListError: components["schemas"]["_proxyLogsListLevelErrorComponent"] | components["schemas"]["_proxyLogsListContentErrorComponent"] | components["schemas"]["_proxyLogsListTimeErrorComponent"];
+    _proxyLogsListErrorResponse400: components["schemas"]["_proxyLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    _proxyLogsListLevelErrorComponent: {
+      /**
+       * @description * `level` - level
+       * @enum {string}
+       */
+      attr: "level";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    _proxyLogsListTimeErrorComponent: {
+      /**
+       * @description * `time` - time
+       * @enum {string}
+       */
+      attr: "time";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    _proxyLogsListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["_proxyLogsListError"][];
+    };
   };
   responses: never;
   parameters: never;
@@ -1713,6 +1762,52 @@ export type external = Record<string, never>;
 
 export interface operations {
 
+  /** Get caddy proxy logs */
+  _proxy_logs_list: {
+    parameters: {
+      query?: {
+        content?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /**
+         * @description * `ERROR` - Error
+         * * `INFO` - Info
+         */
+        level?: "ERROR" | "INFO";
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        time_after?: string;
+        time_before?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSimpleLogList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["_proxyLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** List archived projects */
   getArchivedProjectList: {
     parameters: {
