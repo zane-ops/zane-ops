@@ -2,11 +2,11 @@ import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { type RequestInput, apiClient } from "~/api/client";
-import { Button } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, LoaderIcon } from "lucide-react";
 import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
@@ -117,9 +117,19 @@ function Login() {
             </Form.Field>
 
             <Form.Submit asChild>
-              <Button className="w-full p-3 rounded-lg" disabled={isPending}>
-                {isPending ? "Submitting..." : "Submit"}
-              </Button>
+              <SubmitButton
+                className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
+                isPending={isPending}
+              >
+                {isPending ? (
+                  <>
+                    <span>Submitting...</span>
+                    <LoaderIcon className="animate-spin" size={15} />
+                  </>
+                ) : (
+                  "Submit"
+                )}
+              </SubmitButton>
             </Form.Submit>
           </div>
         </Form.Root>

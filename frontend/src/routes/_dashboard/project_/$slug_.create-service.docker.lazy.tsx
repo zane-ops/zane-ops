@@ -6,7 +6,8 @@ import {
   ArrowRight,
   Check,
   ClockArrowUp,
-  Container
+  Container,
+  LoaderIcon
 } from "lucide-react";
 import * as React from "react";
 import { useDebounce } from "use-debounce";
@@ -22,7 +23,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
   CommandInput,
@@ -307,9 +308,16 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         </Form.Field>
 
         <Form.Submit asChild>
-          <Button className="p-3 rounded-lg">
-            {isPending ? "Creating Service..." : " Create New Service"}
-          </Button>
+          <SubmitButton className="p-3 rounded-lg gap-2" isPending={isPending}>
+            {isPending ? (
+              <>
+                <span>Creating Service...</span>
+                <LoaderIcon className="animate-spin" size={15} />
+              </>
+            ) : (
+              " Create New Service"
+            )}
+          </SubmitButton>
         </Form.Submit>
       </div>
     </Form.Root>
@@ -377,7 +385,7 @@ function StepServiceCreated({
         className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
       >
         <Alert variant="success">
-          <Check className="h-5 w-5 text-green-400" />
+          <Check className="h-5 w-5" />
           <AlertTitle className="text-lg">Success</AlertTitle>
 
           <AlertDescription>
@@ -386,9 +394,19 @@ function StepServiceCreated({
         </Alert>
 
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
-          <Button className="p-3 rounded-lg">
-            {isPending ? "Deploying service..." : "Deploy Now"}
-          </Button>
+          <SubmitButton
+            className="p-3 rounded-lg gap-2 flex-1"
+            isPending={isPending}
+          >
+            {isPending ? (
+              <>
+                <span>Deploying service...</span>
+                <LoaderIcon className="animate-spin" size={15} />
+              </>
+            ) : (
+              "Deploy Now"
+            )}
+          </SubmitButton>
 
           <Button asChild className="flex-1" variant="outline">
             <Link

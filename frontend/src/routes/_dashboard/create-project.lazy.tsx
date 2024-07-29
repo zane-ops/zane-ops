@@ -1,7 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, LoaderIcon } from "lucide-react";
 import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 
@@ -15,7 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
@@ -116,9 +116,19 @@ export function CreateProject() {
           </Form.Field>
 
           <Form.Submit asChild>
-            <Button className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg">
-              {isPending ? "Creating Project..." : " Create a new project"}
-            </Button>
+            <SubmitButton
+              className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
+              isPending={isPending}
+            >
+              {isPending ? (
+                <>
+                  <span>Creating Project...</span>
+                  <LoaderIcon className="animate-spin" size={15} />
+                </>
+              ) : (
+                "Create a new project"
+              )}
+            </SubmitButton>
           </Form.Submit>
         </div>
       </Form.Root>
