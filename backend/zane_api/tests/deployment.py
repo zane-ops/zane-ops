@@ -1751,6 +1751,76 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         new_deployment = response.json()
         self.assertEqual("Initial deployment", new_deployment.get("commit_message"))
 
+    def test_deploy_service_set_finished_at_on_success(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment: DockerDeployment = service.deployments.first()
+        self.assertIsNotNone(new_deployment.finished_at)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    def test_deploy_service_set_finished_at_on_error(self, mock_expose: Mock):
+        def expose_raise_error(deployment: DockerDeployment):
+            raise Exception("Fake exception")
+
+        mock_expose.side_effect = expose_raise_error
+
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+            data={"commit_message": "Initial deployment"},
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        mock_expose.assert_called()
+        new_deployment: DockerDeployment = service.deployments.first()
+        self.assertIsNotNone(new_deployment.finished_at)
+
     def test_deploy_service_with_blank_commit_message_uses_default_message(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
@@ -3171,7 +3241,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self,
         mock_expose: Mock,
     ):
-        def expose_raise_error():
+        def expose_raise_error(deployment: DockerDeployment):
             raise Exception("Fake exception")
 
         mock_expose.side_effect = expose_raise_error
