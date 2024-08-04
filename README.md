@@ -10,8 +10,6 @@
 
 ### <div align="center">A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.</div>
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zane-ops/zane-ops/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zane-ops/zane-ops)
-
 ---
 
 ## 📸 Screenshots
@@ -57,6 +55,38 @@
 </p>
 
 > More to come
+
+## 🛣️ ROADMAP 
+
+### beta
+
+- [ ] Docker services frontend 
+  - [ ] Details page 
+  - [ ] Env variables page
+  - [ ] Settings page
+  - [ ] Single deployment page
+  - [ ] Single deployment application logs page
+  - [ ] Single deployment http logs page
+  - [ ] deploy & redeploy deployments
+- [ ] Project frontend
+  - [ ] settings page 
+- [ ] CLI
+  - [ ] install & setup zaneops
+  - [ ] authenticate with token (require token UI+API in ZaneOps)
+  - [ ] Deploy a service using the CLI
+
+### v1 
+
+- [ ] Rewrite from celery to temporal (not sure)
+- [ ] Managing environments (stating, production, and ephemeral envs)
+- [ ] Git services API
+  - [ ] create service from a public repo
+  - [ ] deploy service  
+    - [ ] Building service with nixpacks  
+  - [ ] archive service
+  - [ ] Pull Request environments
+  - [ ] Auto-comments with deployment status on github
+- [ ] Git services frontend (same as docker services)
 
 ## 🚀 Features
 
