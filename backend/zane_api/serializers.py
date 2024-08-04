@@ -172,7 +172,8 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
         fields = [
             "is_current_production",
             "slot",
-            "created_at",
+            "queued_at",
+            "finished_at",
             "redeploy_hash",
             "hash",
             "status",
@@ -181,7 +182,6 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "network_aliases",
             "service_snapshot",
             "changes",
-            "deploy_duration_in_ms",
             "commit_message",
         ]
 

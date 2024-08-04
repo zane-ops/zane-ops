@@ -2803,8 +2803,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
         self.assertNotEqual(first_deployment.slot, second_deployment.slot)
         self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, first_deployment.slot)
         self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, second_deployment.slot)
@@ -2833,8 +2833,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
         self.assertFalse(first_deployment.is_current_production)
         self.assertTrue(second_deployment.is_current_production)
 
@@ -2890,7 +2890,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
@@ -3118,8 +3118,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
         self.assertEqual(first_deployment.slot, second_deployment.slot)
 
     @patch("zane_api.docker_operations.sleep")
@@ -3154,8 +3154,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
 
         old_docker_service = self.fake_docker_client.service_map.get(
             get_swarm_service_name_for_deployment(first_deployment)
@@ -3239,7 +3239,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(first_deployment)
@@ -3300,7 +3300,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(first_deployment)
@@ -3347,7 +3347,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         fake_service_list.get.assert_has_calls(
             [call(get_swarm_service_name_for_deployment(first_deployment))],
@@ -3401,7 +3401,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(3, service.deployments.count())
 
         last_deployment: DockerDeployment = (
-            service.deployments.order_by("created_at")
+            service.deployments.order_by("queued_at")
             .select_related("is_redeploy_of")
             .last()
         )
@@ -3458,7 +3458,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(3, service.deployments.count())
 
         last_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).last()
         self.assertTrue(last_deployment.is_current_production)
         docker_service = self.fake_docker_client.service_map.get(
@@ -3491,7 +3491,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         second_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).last()
         print(f"{second_deployment.service_snapshot=}")
 
@@ -3518,7 +3518,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         latest_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).last()
         self.assertIsNotNone(latest_deployment.service_snapshot)
         self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, latest_deployment.slot)

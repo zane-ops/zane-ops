@@ -197,11 +197,11 @@ class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
         choices=DockerDeployment.DeploymentStatus.choices
     )
-    created_at = django_filters.DateTimeFromToRangeFilter()
+    queued_at = django_filters.DateTimeFromToRangeFilter()
 
     class Meta:
         model = DockerDeployment
-        fields = ["status", "created_at"]
+        fields = ["status", "queued_at"]
 
 
 class DeploymentListPagination(pagination.PageNumberPagination):

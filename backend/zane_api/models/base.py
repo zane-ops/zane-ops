@@ -535,7 +535,8 @@ class Volume(TimestampedModel):
 
 
 class BaseDeployment(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
+    queued_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True)
     url = models.URLField(null=True)
 
     class Meta:
@@ -585,7 +586,6 @@ class DockerDeployment(BaseDeployment):
     )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
-    deploy_duration_in_ms = models.PositiveIntegerField(null=True)
 
     @property
     def task_id(self):
@@ -609,7 +609,7 @@ class DockerDeployment(BaseDeployment):
         return aliases
 
     class Meta:
-        ordering = ("-created_at",)
+        ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["url"]),

@@ -1538,16 +1538,6 @@ paths:
         descendant.
       summary: List all deployments
       parameters:
-      - in: query
-        name: created_at_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: created_at_before
-        schema:
-          type: string
-          format: date-time
       - name: page
         required: false
         in: query
@@ -1566,6 +1556,16 @@ paths:
           type: string
           pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
         required: true
+      - in: query
+        name: queued_at_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: queued_at_before
+        schema:
+          type: string
+          format: date-time
       - in: path
         name: service_slug
         schema:
@@ -3295,10 +3295,14 @@ components:
           type: boolean
         slot:
           $ref: '#/components/schemas/SlotEnum'
-        created_at:
+        queued_at:
           type: string
           format: date-time
           readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
         redeploy_hash:
           type: string
           readOnly: true
@@ -3330,21 +3334,16 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
-        deploy_duration_in_ms:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-          nullable: true
         commit_message:
           type: string
       required:
       - changes
       - commit_message
-      - created_at
-      - deploy_duration_in_ms
+      - finished_at
       - hash
       - is_current_production
       - network_aliases
+      - queued_at
       - redeploy_hash
       - service_snapshot
       - slot
@@ -4504,14 +4503,32 @@ components:
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent:
+    ProjectsServiceDetailsDockerDeploymentsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
+          queued_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
+    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - created_at
+          - queued_at
           type: string
-          description: '* `created_at` - created_at'
+          description: '* `queued_at` - queued_at'
         code:
           enum:
           - invalid
@@ -4523,24 +4540,6 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsListError:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-          created_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
-    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent:
       type: object
       properties:
