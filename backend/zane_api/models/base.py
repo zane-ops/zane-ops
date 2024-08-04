@@ -273,7 +273,7 @@ class DockerRegistryService(BaseService):
                 "service__ports",
                 "service__env_variables",
             )
-            .order_by("-created_at")
+            .order_by("-queued_at")
             .first()
         )
 
@@ -302,7 +302,7 @@ class DockerRegistryService(BaseService):
                 "service__ports",
                 "service__env_variables",
             )
-            .order_by("-created_at")
+            .order_by("-queued_at")
             .first()
         )
 

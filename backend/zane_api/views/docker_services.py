@@ -673,7 +673,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
         return (
             DockerDeployment.objects.filter(service=service)
             .select_related("service", "is_redeploy_of")
-            .order_by("-created_at")
+            .order_by("-queued_at")
         )
 
 

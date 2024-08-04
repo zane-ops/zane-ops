@@ -323,7 +323,7 @@ class ProjectServiceListView(APIView):
                 volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
                     DockerDeployment.objects.filter(service_id=OuterRef("pk"))
-                    .order_by("-created_at")
+                    .order_by("-queued_at")
                     .values("status")[:1]
                 ),
             )

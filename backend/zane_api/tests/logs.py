@@ -1046,7 +1046,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
 
         latest_deployment: DockerDeployment = service.deployments.first()
         initial_deployment: DockerDeployment = (
-            latest_deployment.get_previous_by_created_at()
+            latest_deployment.get_previous_by_queued_at()
         )
 
         # First deployment logs
