@@ -3246,9 +3246,18 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
+        deploy_duration_in_ms:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        commit_message:
+          type: string
       required:
       - changes
+      - commit_message
       - created_at
+      - deploy_duration_in_ms
       - hash
       - is_current_production
       - network_aliases

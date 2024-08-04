@@ -584,6 +584,8 @@ class DockerDeployment(BaseDeployment):
         to=PeriodicTask, null=True, on_delete=models.SET_NULL
     )
     service_snapshot = models.JSONField(null=True)
+    commit_message = models.TextField(default="update service")
+    deploy_duration_in_ms = models.PositiveIntegerField(null=True)
 
     @property
     def task_id(self):
@@ -671,7 +673,6 @@ class DockerDeploymentChange(BaseDeploymentChange):
         PORTS = "ports", _("ports")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
-
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"
     )

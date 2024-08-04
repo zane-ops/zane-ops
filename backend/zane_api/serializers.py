@@ -181,6 +181,8 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "network_aliases",
             "service_snapshot",
             "changes",
+            "deploy_duration_in_ms",
+            "commit_message",
         ]
 
 
