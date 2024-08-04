@@ -79,6 +79,7 @@
 
 - [ ] Rewrite from celery to temporal (not sure)
 - [ ] Managing environments (stating, production, and ephemeral envs)
+- [ ] Support workers (A.K.A sleeping services)
 - [ ] Git services API
   - [ ] create service from a public repo
   - [ ] deploy service  
