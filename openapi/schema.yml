@@ -1528,14 +1528,15 @@ paths:
       summary: List all deployments
       parameters:
       - in: query
-        name: created_at
+        name: created_at_after
         schema:
           type: string
           format: date-time
       - in: query
-        name: hash
+        name: created_at_before
         schema:
           type: string
+          format: date-time
       - name: page
         required: false
         in: query
@@ -4433,13 +4434,11 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
           created_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
-          hash: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
@@ -4449,25 +4448,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - hash
-          type: string
-          description: '* `hash` - hash'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent:
       type: object
       properties:
