@@ -53,11 +53,11 @@ export default defineConfig({
             {
               label: "Development",
               slug: "development/development"
-            },
-            {
-              label: "Architecture",
-              slug: "development/architecture"
             }
+            // {
+            //   label: "Architecture",
+            //   slug: "development/architecture"
+            // }
           ]
         },
         {
