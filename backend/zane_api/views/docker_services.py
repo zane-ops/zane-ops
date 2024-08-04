@@ -457,7 +457,9 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 f" does not exist within the project `{project_slug}`"
             )
 
-        form = DockerServiceDeployServiceSerializer(data=request.data)
+        form = DockerServiceDeployServiceSerializer(
+            data=request.data if request.data is not None else {}
+        )
         if form.is_valid(raise_exception=True):
             commit_message = form.data.get("commit_message")
             new_deployment = DockerDeployment.objects.create(
