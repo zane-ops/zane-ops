@@ -72,8 +72,12 @@
   - [ ] settings page 
 - [ ] CLI
   - [ ] install & setup zaneops
+  - [ ] shutting down & deleting ZaneOps
   - [ ] authenticate with token (require token UI+API in ZaneOps)
   - [ ] Deploy a service using the CLI
+- [ ] Tons of docs
+  - [ ] Installation & setup process using the CLI
+  - [ ] Examples of deploying different kind of apps
 
 ### v1 
 
@@ -91,8 +95,9 @@
 
 ### v2
 
+- [ ] Template support
+  - [ ] Allow also for seeding templates
 - [ ] CRONs support for services
-- [ ] Template List
 - [ ] Multi-server support
 
 ## 🍙 Getting Started
