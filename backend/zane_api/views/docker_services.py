@@ -41,6 +41,7 @@ from .serializers import (
     DeploymentLogsPagination,
     DeploymentLogsFilterSet,
     DeploymentHttpLogsFilterSet,
+    DockerServiceDeployServiceSerializer,
 )
 from ..models import (
     Project,
@@ -429,7 +430,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        request=None,
+        request=DockerServiceDeployServiceSerializer,
         operation_id="applyDeploymentChanges",
         summary="Deploy a docker service",
         description="Apply all pending changes for the service and trigger a new deployment.",
@@ -456,42 +457,48 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 f" does not exist within the project `{project_slug}`"
             )
 
-        new_deployment = DockerDeployment.objects.create(service=service)
-        service.apply_pending_changes(deployment=new_deployment)
-
-        if len(service.urls.all()) > 0:
-            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
-
-        latest_deployment = service.latest_production_deployment
-        if (
-            latest_deployment is not None
-            and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-            and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-            # 👆🏽 technically this can only be true for the initial deployment
-            # for the next deployments, when they fail, they will not be promoted to production
-        ):
-            new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-        else:
-            new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
-        new_deployment.service_snapshot = DockerServiceSerializer(service).data
-        new_deployment.save()
-
-        token = Token.objects.get(user=request.user)
-        # Run celery deployment task
-        transaction.on_commit(
-            lambda: deploy_docker_service_with_changes.apply_async(
-                kwargs=dict(
-                    deployment_hash=new_deployment.hash,
-                    service_id=service.id,
-                    auth_token=token.key,
-                ),
-                task_id=new_deployment.task_id,
+        form = DockerServiceDeployServiceSerializer(data=request.data)
+        if form.is_valid(raise_exception=True):
+            commit_message = form.data.get("commit_message")
+            new_deployment = DockerDeployment.objects.create(
+                service=service,
+                commit_message=commit_message if commit_message else "update service",
             )
-        )
+            service.apply_pending_changes(deployment=new_deployment)
 
-        response = DockerServiceDeploymentSerializer(new_deployment)
-        return Response(response.data, status=status.HTTP_200_OK)
+            if len(service.urls.all()) > 0:
+                new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
+
+            latest_deployment = service.latest_production_deployment
+            if (
+                latest_deployment is not None
+                and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
+                and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
+                # 👆🏽 technically this can only be true for the initial deployment
+                # for the next deployments, when they fail, they will not be promoted to production
+            ):
+                new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
+            else:
+                new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
+
+            new_deployment.service_snapshot = DockerServiceSerializer(service).data
+            new_deployment.save()
+
+            token = Token.objects.get(user=request.user)
+            # Run celery deployment task
+            transaction.on_commit(
+                lambda: deploy_docker_service_with_changes.apply_async(
+                    kwargs=dict(
+                        deployment_hash=new_deployment.hash,
+                        service_id=service.id,
+                        auth_token=token.key,
+                    ),
+                    task_id=new_deployment.task_id,
+                )
+            )
+
+            response = DockerServiceDeploymentSerializer(new_deployment)
+            return Response(response.data, status=status.HTTP_200_OK)
 
 
 class RedeployDockerServiceAPIView(APIView):

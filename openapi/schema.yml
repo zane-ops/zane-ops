@@ -1187,6 +1187,17 @@ paths:
         required: true
       tags:
       - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
       security:
       - cookieAuth: []
       responses:
@@ -2423,13 +2434,81 @@ paths:
           description: ''
 components:
   schemas:
+    ApplyDeploymentChangesCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesError:
+      oneOf:
+      - $ref: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ApplyDeploymentChangesCommitMessageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/ApplyDeploymentChangesCommitMessageErrorComponent'
     ApplyDeploymentChangesErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/ApplyDeploymentChangesValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/ApplyDeploymentChangesValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ApplyDeploymentChangesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplyDeploymentChangesError'
+      required:
+      - errors
+      - type
     ArchiveDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3204,6 +3283,11 @@ components:
           $ref: '#/components/schemas/DockerCredentialsRequestRequest'
       required:
       - image
+    DockerServiceDeployServiceRequest:
+      type: object
+      properties:
+        commit_message:
+          type: string
     DockerServiceDeployment:
       type: object
       properties:

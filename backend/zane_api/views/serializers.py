@@ -180,6 +180,15 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
 
 # ==============================
+#    Docker servide deploy     #
+# ==============================
+
+
+class DockerServiceDeployServiceSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(required=False, allow_blank=True)
+
+
+# ==============================
 #       Docker deployments     #
 # ==============================
 
