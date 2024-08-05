@@ -15,4 +15,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD /bin/bash -c "source /venv/bin/activate && python manage.py migrate && gunicorn --log-level=info -b 0.0.0.0:8000 backend.wsgi:application"
+CMD /bin/bash -c "source /venv/bin/activate && python manage.py migrate && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
