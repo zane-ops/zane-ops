@@ -180,6 +180,15 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
 
 # ==============================
+#    Docker servide deploy     #
+# ==============================
+
+
+class DockerServiceDeployServiceSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(required=False, allow_blank=True)
+
+
+# ==============================
 #       Docker deployments     #
 # ==============================
 
@@ -188,10 +197,11 @@ class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
         choices=DockerDeployment.DeploymentStatus.choices
     )
+    queued_at = django_filters.DateTimeFromToRangeFilter()
 
     class Meta:
         model = DockerDeployment
-        fields = ["status", "created_at", "hash"]
+        fields = ["status", "queued_at"]
 
 
 class DeploymentListPagination(pagination.PageNumberPagination):

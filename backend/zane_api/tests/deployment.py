@@ -1722,6 +1722,190 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(0, updated_service.unapplied_changes.count())
         self.assertEqual(2, updated_service.applied_changes.count())
 
+    def test_deploy_service_with_commit_message(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+            data={"commit_message": "Initial deployment"},
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = response.json()
+        self.assertEqual("Initial deployment", new_deployment.get("commit_message"))
+
+    def test_deploy_service_set_started_at(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment: DockerDeployment = service.deployments.first()
+        self.assertIsNotNone(new_deployment.started_at)
+
+    def test_deploy_service_set_finished_at_on_success(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment: DockerDeployment = service.deployments.first()
+        self.assertIsNotNone(new_deployment.finished_at)
+
+    @patch("zane_api.tasks.expose_docker_service_to_http")
+    def test_deploy_service_set_finished_at_on_error(self, mock_expose: Mock):
+        def expose_raise_error(deployment: DockerDeployment):
+            raise Exception("Fake exception")
+
+        mock_expose.side_effect = expose_raise_error
+
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+            data={"commit_message": "Initial deployment"},
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        mock_expose.assert_called()
+        new_deployment: DockerDeployment = service.deployments.first()
+        self.assertIsNotNone(new_deployment.finished_at)
+
+    def test_deploy_service_with_blank_commit_message_uses_default_message(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+            data={"commit_message": ""},
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = response.json()
+        self.assertEqual("update service", new_deployment.get("commit_message"))
+
+    def test_deploy_service_without_commit_message_create_default_message(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment = response.json()
+        self.assertEqual("update service", new_deployment.get("commit_message"))
+
     def test_apply_volume_changes(
         self,
     ):
@@ -2717,8 +2901,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
         self.assertNotEqual(first_deployment.slot, second_deployment.slot)
         self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, first_deployment.slot)
         self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, second_deployment.slot)
@@ -2747,8 +2931,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
         self.assertFalse(first_deployment.is_current_production)
         self.assertTrue(second_deployment.is_current_production)
 
@@ -2804,7 +2988,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
@@ -3032,8 +3216,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
         self.assertEqual(first_deployment.slot, second_deployment.slot)
 
     @patch("zane_api.docker_operations.sleep")
@@ -3068,8 +3252,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("created_at")[0]
-        second_deployment = service.deployments.order_by("created_at")[1]
+        first_deployment = service.deployments.order_by("queued_at")[0]
+        second_deployment = service.deployments.order_by("queued_at")[1]
 
         old_docker_service = self.fake_docker_client.service_map.get(
             get_swarm_service_name_for_deployment(first_deployment)
@@ -3085,7 +3269,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self,
         mock_expose: Mock,
     ):
-        def expose_raise_error():
+        def expose_raise_error(deployment: DockerDeployment):
             raise Exception("Fake exception")
 
         mock_expose.side_effect = expose_raise_error
@@ -3153,7 +3337,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(first_deployment)
@@ -3214,7 +3398,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(first_deployment)
@@ -3261,7 +3445,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, service.deployments.count())
         first_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).first()
         fake_service_list.get.assert_has_calls(
             [call(get_swarm_service_name_for_deployment(first_deployment))],
@@ -3315,7 +3499,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(3, service.deployments.count())
 
         last_deployment: DockerDeployment = (
-            service.deployments.order_by("created_at")
+            service.deployments.order_by("queued_at")
             .select_related("is_redeploy_of")
             .last()
         )
@@ -3372,7 +3556,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(3, service.deployments.count())
 
         last_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).last()
         self.assertTrue(last_deployment.is_current_production)
         docker_service = self.fake_docker_client.service_map.get(
@@ -3405,7 +3589,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         second_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).last()
         print(f"{second_deployment.service_snapshot=}")
 
@@ -3432,7 +3616,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         latest_deployment: DockerDeployment = service.deployments.order_by(
-            "created_at"
+            "queued_at"
         ).last()
         self.assertIsNotNone(latest_deployment.service_snapshot)
         self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, latest_deployment.slot)

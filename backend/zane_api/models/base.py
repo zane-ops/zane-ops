@@ -273,7 +273,7 @@ class DockerRegistryService(BaseService):
                 "service__ports",
                 "service__env_variables",
             )
-            .order_by("-created_at")
+            .order_by("-queued_at")
             .first()
         )
 
@@ -302,7 +302,7 @@ class DockerRegistryService(BaseService):
                 "service__ports",
                 "service__env_variables",
             )
-            .order_by("-created_at")
+            .order_by("-queued_at")
             .first()
         )
 
@@ -535,7 +535,9 @@ class Volume(TimestampedModel):
 
 
 class BaseDeployment(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
+    queued_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True)
+    finished_at = models.DateTimeField(null=True)
     url = models.URLField(null=True)
 
     class Meta:
@@ -584,6 +586,7 @@ class DockerDeployment(BaseDeployment):
         to=PeriodicTask, null=True, on_delete=models.SET_NULL
     )
     service_snapshot = models.JSONField(null=True)
+    commit_message = models.TextField(default="update service")
 
     @property
     def task_id(self):
@@ -607,7 +610,7 @@ class DockerDeployment(BaseDeployment):
         return aliases
 
     class Meta:
-        ordering = ("-created_at",)
+        ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["url"]),
@@ -671,7 +674,6 @@ class DockerDeploymentChange(BaseDeploymentChange):
         PORTS = "ports", _("ports")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
-
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"
     )

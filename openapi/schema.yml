@@ -1187,6 +1187,17 @@ paths:
         required: true
       tags:
       - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
       security:
       - cookieAuth: []
       responses:
@@ -1527,15 +1538,6 @@ paths:
         descendant.
       summary: List all deployments
       parameters:
-      - in: query
-        name: created_at
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: hash
-        schema:
-          type: string
       - name: page
         required: false
         in: query
@@ -1554,6 +1556,16 @@ paths:
           type: string
           pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
         required: true
+      - in: query
+        name: queued_at_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: queued_at_before
+        schema:
+          type: string
+          format: date-time
       - in: path
         name: service_slug
         schema:
@@ -2422,13 +2434,81 @@ paths:
           description: ''
 components:
   schemas:
+    ApplyDeploymentChangesCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesError:
+      oneOf:
+      - $ref: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ApplyDeploymentChangesCommitMessageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/ApplyDeploymentChangesCommitMessageErrorComponent'
     ApplyDeploymentChangesErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/ApplyDeploymentChangesValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/ApplyDeploymentChangesValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ApplyDeploymentChangesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ApplyDeploymentChangesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplyDeploymentChangesError'
+      required:
+      - errors
+      - type
     ArchiveDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3203,6 +3283,11 @@ components:
           $ref: '#/components/schemas/DockerCredentialsRequestRequest'
       required:
       - image
+    DockerServiceDeployServiceRequest:
+      type: object
+      properties:
+        commit_message:
+          type: string
     DockerServiceDeployment:
       type: object
       properties:
@@ -3210,10 +3295,18 @@ components:
           type: boolean
         slot:
           $ref: '#/components/schemas/SlotEnum'
-        created_at:
+        queued_at:
           type: string
           format: date-time
           readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
         redeploy_hash:
           type: string
           readOnly: true
@@ -3245,15 +3338,20 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
+        commit_message:
+          type: string
       required:
       - changes
-      - created_at
+      - commit_message
+      - finished_at
       - hash
       - is_current_production
       - network_aliases
+      - queued_at
       - redeploy_hash
       - service_snapshot
       - slot
+      - started_at
       - status
       - status_reason
       - url
@@ -4410,36 +4508,15 @@ components:
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - created_at
-          type: string
-          description: '* `created_at` - created_at'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsServiceDetailsDockerDeploymentsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-          created_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent'
-          hash: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent'
+          queued_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
@@ -4449,19 +4526,19 @@ components:
         mapping:
           validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent:
+    ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - hash
+          - queued_at
           type: string
-          description: '* `hash` - hash'
+          description: '* `queued_at` - queued_at'
         code:
           enum:
-          - null_characters_not_allowed
+          - invalid
           type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+          description: '* `invalid` - invalid'
         detail:
           type: string
       required:

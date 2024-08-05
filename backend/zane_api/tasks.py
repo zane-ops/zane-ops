@@ -6,6 +6,7 @@ import docker.errors
 from celery import shared_task, Task
 from django.conf import settings
 from django.db.models import Q
+from django.utils import timezone
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from .docker_operations import (
@@ -70,6 +71,7 @@ def docker_service_deploy_failure(
         if deployment.service.deployments.count() == 1:
             deployment.is_current_production = True
 
+        deployment.finished_at = timezone.now()
         deployment.save()
 
         # delete all monitor tasks that might have been created in the meantime
@@ -116,6 +118,7 @@ def deploy_docker_service_with_changes(
                 )
             if deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
                 deployment.status = DockerDeployment.DeploymentStatus.PREPARING
+                deployment.started_at = timezone.now()
                 deployment.save()
 
             # TODO (#67) : send system logs when the resources are created
@@ -190,6 +193,7 @@ def deploy_docker_service_with_changes(
                 scale_down_and_remove_docker_service_deployment(deployment)
 
             deployment.status_reason = deployment_status_reason
+            deployment.finished_at = timezone.now()
             deployment.save()
     except LockAcquisitionError:
         return "will retry after the current one is finished"
