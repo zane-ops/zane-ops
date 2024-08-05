@@ -41,6 +41,49 @@ services:
       zane:
         aliases:
           - zane.proxy
+  temporal:
+    entrypoint: [ "/bin/bash", "-c", "/etc/temporal/entrypoint.sh" ]
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=zane.db
+      - SERVICES=history,matching,frontend,worker
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    image: temporalio/auto-setup:1.24.2
+    volumes:
+      - ./temporalio/dynamicconfig:/etc/temporal/config/dynamicconfig/
+      - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    ports:
+      - 7233:7233
+  temporal-admin-tools:
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0
+    networks:
+      - zane
+    stdin_open: true
+    tty: true
+  temporal-ui:
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:2.26.2
+    networks:
+      - zane
+    ports:
+      - 8080:8080
 volumes:
   caddy-data:
   caddy-config:

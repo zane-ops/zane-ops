@@ -78,6 +78,11 @@ if settings.DEBUG:
             views.RegisterZaneProxyAPIView.as_view(),
             name="proxy.register_zane",
         ),
+        re_path(
+            "^_test/temporal/?$",
+            views.TestWorkflowAPIView.as_view(),
+            name="temporal.test_workflow",
+        ),
     ]
 
 

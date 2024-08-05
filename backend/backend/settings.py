@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "drf_standardized_errors",
     "django_filters",
+    "adrf",
 ]
 
 MIDDLEWARE = [
@@ -372,3 +373,5 @@ if not TESTING:
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
     )
+
+TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")

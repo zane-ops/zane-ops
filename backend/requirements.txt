@@ -1,5 +1,7 @@
+adrf==0.1.7
 amqp==5.2.0
 asgiref==3.7.2
+async-property==0.2.2
 attrs==23.2.0
 autobahn==23.6.2
 automat==22.10.0
