@@ -536,6 +536,7 @@ class Volume(TimestampedModel):
 
 class BaseDeployment(models.Model):
     queued_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True)
     finished_at = models.DateTimeField(null=True)
     url = models.URLField(null=True)
 

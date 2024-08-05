@@ -173,6 +173,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "is_current_production",
             "slot",
             "queued_at",
+            "started_at",
             "finished_at",
             "redeploy_hash",
             "hash",

@@ -3299,6 +3299,10 @@ components:
           type: string
           format: date-time
           readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
         finished_at:
           type: string
           format: date-time
@@ -3347,6 +3351,7 @@ components:
       - redeploy_hash
       - service_snapshot
       - slot
+      - started_at
       - status
       - status_reason
       - url

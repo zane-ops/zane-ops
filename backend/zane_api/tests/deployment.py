@@ -1751,6 +1751,34 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         new_deployment = response.json()
         self.assertEqual("Initial deployment", new_deployment.get("commit_message"))
 
+    def test_deploy_service_set_started_at(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="caddy:2.8-alpine",
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_deployment: DockerDeployment = service.deployments.first()
+        self.assertIsNotNone(new_deployment.started_at)
+
     def test_deploy_service_set_finished_at_on_success(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)

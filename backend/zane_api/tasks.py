@@ -118,6 +118,7 @@ def deploy_docker_service_with_changes(
                 )
             if deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
                 deployment.status = DockerDeployment.DeploymentStatus.PREPARING
+                deployment.started_at = timezone.now()
                 deployment.save()
 
             # TODO (#67) : send system logs when the resources are created
