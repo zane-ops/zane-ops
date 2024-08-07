@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from temporalio import workflow
 from temporalio.client import Client
+from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from .activities import greet, say_goodbye, get_project
@@ -33,13 +34,24 @@ class HelloWorkflow:
 
 @workflow.defn(name="get-project-workflow")
 class GetProjectWorkflow:
+    def __init__(self) -> None:
+        self._project = None
+
+    @workflow.query
+    def project(self) -> dict | None:
+        return self._project
+
     @workflow.run
-    async def run(self, payload: DeployPayload) -> str:
-        return await workflow.execute_activity(
+    async def run(self, payload: DeployPayload) -> dict:
+        retry_policy = RetryPolicy(maximum_attempts=5)
+        self._project = await workflow.execute_activity(
             get_project,
             payload,
             start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
         )
+
+        return self._project
 
 
 async def main():

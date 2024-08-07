@@ -34,7 +34,6 @@ services:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
-
     command: >
       bash -c "source /venv/bin/activate &&
                uv pip install watchdog &&
@@ -105,6 +104,7 @@ services:
     restart: always
     ports:
       - "8081:8080"
+      - "8082:8080"
     networks:
       - zane
   redis-gui:

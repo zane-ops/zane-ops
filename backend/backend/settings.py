@@ -375,3 +375,4 @@ if not TESTING:
     )
 
 TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
+TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"

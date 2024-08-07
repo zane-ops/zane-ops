@@ -17,5 +17,6 @@ async def say_goodbye(payload: HelloPayload) -> str:
 
 @activity.defn
 async def get_project(payload: DeployPayload) -> dict:
+    print(f"Running `get_project(payload={payload})`")
     project = await Project.objects.aget(slug=payload.slug)
     return ProjectSerializer(project).data

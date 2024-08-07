@@ -14,10 +14,9 @@ async def run_worker():
         namespace="default",
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
-    print(f"Client: {client=}")
     worker = Worker(
         client,
-        task_queue="main-task-queue",
+        task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
         workflows=[HelloWorkflow, GetProjectWorkflow],
         activities=[greet, say_goodbye, get_project],
         debug_mode=True,
