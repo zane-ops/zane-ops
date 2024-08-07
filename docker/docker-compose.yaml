@@ -34,7 +34,6 @@ services:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
-
     command: >
       bash -c "source /venv/bin/activate &&
                uv pip install watchdog &&

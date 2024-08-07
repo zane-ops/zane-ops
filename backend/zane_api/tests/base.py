@@ -1,20 +1,27 @@
 import json
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import List
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.test import AsyncClient
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from docker.types import EndpointSpec
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+from temporalio.testing import WorkflowEnvironment
+from temporalio.worker import Worker
 
+from ..activities import get_project
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project, DockerDeploymentChange, DockerRegistryService
+from ..workflows import GetProjectWorkflow
 
 
 class CustomAPIClient(APIClient):
@@ -88,6 +95,65 @@ class CustomAPIClient(APIClient):
         return response
 
 
+class AsyncCustomAPIClient(AsyncClient):
+    def __init__(self, parent: TestCase, **defaults):
+        super().__init__(enforce_csrf_checks=False, **defaults)
+        self.parent = parent
+
+    async def post(self, path, data=None, content_type=None, follow=False, **extra):
+        if type(data) is not str:
+            data = json.dumps(data)
+
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = await super().post(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    async def put(self, path, data=None, content_type=None, follow=False, **extra):
+        if type(data) is not str:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = await super().put(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    async def patch(self, path, data=None, content_type=None, follow=False, **extra):
+        if type(data) is not str:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = await super().patch(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+    async def delete(self, path, data=None, content_type=None, follow=False, **extra):
+        if type(data) is not str:
+            data = json.dumps(data)
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = await super().delete(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+        return response
+
+
 @override_settings(
     CACHES={
         "default": {
@@ -103,6 +169,7 @@ class CustomAPIClient(APIClient):
 class APITestCase(TestCase):
     def setUp(self):
         self.client = CustomAPIClient(parent=self)
+        self.async_client = AsyncCustomAPIClient(parent=self)
         self.fake_docker_client = FakeDockerClient()
 
         # these functions are always patched
@@ -138,6 +205,38 @@ class AuthAPITestCase(APITestCase):
         user = User.objects.get(username="Fredkiss3")
         Token.objects.get_or_create(user=user)
         return user
+
+    async def asyncLoginUser(self):
+        await self.async_client.alogin(username="Fredkiss3", password="password")
+        user = await User.objects.aget(username="Fredkiss3")
+        await Token.objects.aget_or_create(user=user)
+        return user
+
+    @asynccontextmanager
+    async def asyncSetup(self):
+        env = await WorkflowEnvironment.start_time_skipping()
+        await env.__aenter__()
+
+        mock = patch(
+            "zane_api.temporal.get_temporalio_client", new_callable=AsyncMock
+        ).start()
+        mock_client = mock.return_value
+        mock_client.start_workflow.side_effect = env.client.execute_workflow
+        mock_client.get_workflow_handle.side_effect = env.client.get_workflow_handle
+
+        worker = Worker(
+            env.client,
+            task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+            workflows=[GetProjectWorkflow],
+            activities=[get_project],
+        )
+        await worker.__aenter__()
+        try:
+            yield env, worker
+        finally:
+            patch.stopall()
+            await worker.__aexit__(None, None, None)
+            await env.__aexit__(None, None, None)
 
     def create_and_deploy_redis_docker_service(
         self,

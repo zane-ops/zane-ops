@@ -83,6 +83,11 @@ if settings.DEBUG:
 
 urlpatterns += [
     re_path(
+        "^_test/temporal/?$",
+        views.TestWorkflowAPIView.as_view(),
+        name="temporal.test_workflow",
+    ),
+    re_path(
         "^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
         name="proxy.check_certificates",
