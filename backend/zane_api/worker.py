@@ -8,12 +8,13 @@ from .workflows import HelloWorkflow, GetProjectWorkflow
 
 
 async def run_worker():
-    print(f"running main()...")
+    print(f"Connecting worker to temporal server...🔄")
     client = await Client.connect(
         settings.TEMPORALIO_SERVER_URL,
         namespace="default",
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
+    print(f"worker connected ✅")
     worker = Worker(
         client,
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
@@ -21,4 +22,5 @@ async def run_worker():
         activities=[greet, say_goodbye, get_project],
         debug_mode=True,
     )
+    print(f"running worker...🔄")
     await worker.run()
