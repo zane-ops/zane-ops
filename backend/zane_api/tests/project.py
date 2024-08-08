@@ -112,14 +112,15 @@ class ProjectListViewTests(AuthAPITestCase):
 
 
 class ProjectCreateViewTests(AuthAPITestCase):
-    def test_sucessfully_create_project(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(1, Project.objects.count())
+    async def test_sucessfully_create_project(self):
+        async with self.asyncSetup() as (env, worker):
+            await self.aLoginUser()
+            response = await self.async_client.post(
+                reverse("zane_api:projects.list"),
+                data={"slug": "zane-ops"},
+            )
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+            self.assertEqual(1, await Project.objects.acount())
 
     def test_create_project_with_description(self):
         self.loginUser()
