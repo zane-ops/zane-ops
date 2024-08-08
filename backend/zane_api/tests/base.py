@@ -18,10 +18,9 @@ from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from ..activities import get_project
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project, DockerDeploymentChange, DockerRegistryService
-from ..workflows import GetProjectWorkflow
+from ..temporal import acreate_project_resources, CreateProjectResourcesWorkflow
 
 
 class CustomAPIClient(APIClient):
@@ -206,7 +205,7 @@ class AuthAPITestCase(APITestCase):
         Token.objects.get_or_create(user=user)
         return user
 
-    async def asyncLoginUser(self):
+    async def aLoginUser(self):
         await self.async_client.alogin(username="Fredkiss3", password="password")
         user = await User.objects.aget(username="Fredkiss3")
         await Token.objects.aget_or_create(user=user)
@@ -218,7 +217,7 @@ class AuthAPITestCase(APITestCase):
         await env.__aenter__()
 
         mock = patch(
-            "zane_api.temporal.get_temporalio_client", new_callable=AsyncMock
+            "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
         ).start()
         mock_client = mock.return_value
         mock_client.start_workflow.side_effect = env.client.execute_workflow
@@ -227,8 +226,8 @@ class AuthAPITestCase(APITestCase):
         worker = Worker(
             env.client,
             task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-            workflows=[GetProjectWorkflow],
-            activities=[get_project],
+            workflows=[CreateProjectResourcesWorkflow],
+            activities=[acreate_project_resources],
         )
         await worker.__aenter__()
         try:
