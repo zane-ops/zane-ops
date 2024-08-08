@@ -1,11 +1,13 @@
+import asyncio
+
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
-    from asgiref.sync import sync_to_async
     from docker.models.networks import Network
-    from ..models import Project
+
+from .shared import ProjectDetails
 
 docker_client: docker.DockerClient | None = None
 
@@ -38,24 +40,31 @@ def get_proxy_service():
     return proxy_service
 
 
-def attach_network_to_proxy(network: Network):
-    proxy_service = get_proxy_service()
-    service_spec = proxy_service.attrs["Spec"]
-    current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
-    network_ids = set(net["Target"] for net in current_networks)
-    network_ids.add(network.id)
-    proxy_service.update(networks=list(network_ids))
+class DockerSwarmActivities:
+    def __init__(self):
+        self.client = get_docker_client()
 
+    @activity.defn
+    async def create_project_network(self, payload: ProjectDetails) -> str:
+        print(f"Running `create_project_network({payload=})`")
+        network: Network = await asyncio.to_thread(
+            self.client.networks.create,
+            name=get_network_resource_name(payload.id),
+            scope="swarm",
+            driver="overlay",
+            labels=get_resource_labels(payload.id),
+            attachable=True,
+        )
+        print(f"`create_project_network({payload=})` returned {network.id=}")
+        return network.name
 
-@activity.defn
-@sync_to_async
-def acreate_project_resources(project: Project):
-    client = get_docker_client()
-    network = client.networks.create(
-        name=get_network_resource_name(project.id),
-        scope="swarm",
-        driver="overlay",
-        labels=get_resource_labels(project.id),
-        attachable=True,
-    )
-    attach_network_to_proxy(network)
+    @activity.defn
+    async def attach_network_to_proxy(self, network_id: str):
+        print(f"Running `attach_network_to_proxy({network_id=})`")
+        proxy_service = await asyncio.to_thread(get_proxy_service)
+        service_spec = proxy_service.attrs["Spec"]
+        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
+        network_ids = set(net["Target"] for net in current_networks)
+        network_ids.add(network_id)
+        await asyncio.to_thread(proxy_service.update, networks=list(network_ids))
+        print(f"Finished running `attach_network_to_proxy({network_id=})`")

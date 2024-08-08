@@ -58,7 +58,11 @@ from ..serializers import (
 )
 from ..tasks import (
     delete_docker_resources_for_project,
-    create_docker_resources_for_project,
+)
+from ..temporal import (
+    CreateProjectResourcesWorkflow,
+    ProjectDetails,
+    trigger_workflow,
 )
 
 
@@ -167,8 +171,10 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
                 else:
 
                     await atomic.on_commit(
-                        lambda: create_docker_resources_for_project.apply_async(
-                            (slug,), task_id=new_project.create_task_id
+                        trigger_workflow(
+                            CreateProjectResourcesWorkflow.run,
+                            ProjectDetails(id=new_project.id),
+                            id=new_project.create_task_id,
                         )
                     )
                     response = ProjectSerializer(new_project)

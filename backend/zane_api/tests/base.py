@@ -2,7 +2,7 @@ import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import List
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 import docker.errors
 from django.conf import settings
@@ -20,7 +20,7 @@ from temporalio.worker import Worker
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project, DockerDeploymentChange, DockerRegistryService
-from ..temporal import acreate_project_resources, CreateProjectResourcesWorkflow
+from ..temporal import CreateProjectResourcesWorkflow, DockerSwarmActivities
 
 
 class CustomAPIClient(APIClient):
@@ -34,7 +34,7 @@ class CustomAPIClient(APIClient):
         if type(data) is not str:
             data = json.dumps(data)
 
-        with self.parent.captureOnCommitCallbacks(execute=True) as callbacks:
+        with self.parent.captureOnCommitCallbacks(execute=False):
             response = super().post(
                 path=path,
                 data=data,
@@ -95,7 +95,7 @@ class CustomAPIClient(APIClient):
 
 
 class AsyncCustomAPIClient(AsyncClient):
-    def __init__(self, parent: TestCase, **defaults):
+    def __init__(self, parent: "TestCase", **defaults):
         super().__init__(enforce_csrf_checks=False, **defaults)
         self.parent = parent
 
@@ -181,6 +181,10 @@ class APITestCase(TestCase):
             "zane_api.docker_operations.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "zane_api.temporal.activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         self.addCleanup(patch.stopall)
 
@@ -212,28 +216,26 @@ class AuthAPITestCase(APITestCase):
         return user
 
     @asynccontextmanager
-    async def asyncSetup(self):
+    async def workflowEnvironment(self):
         env = await WorkflowEnvironment.start_time_skipping()
         await env.__aenter__()
 
-        mock = patch(
-            "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
-        ).start()
-        mock_client = mock.return_value
-        mock_client.start_workflow.side_effect = env.client.execute_workflow
-        mock_client.get_workflow_handle.side_effect = env.client.get_workflow_handle
+        activities = DockerSwarmActivities()
 
         worker = Worker(
             env.client,
             task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
             workflows=[CreateProjectResourcesWorkflow],
-            activities=[acreate_project_resources],
+            activities=[
+                activities.create_project_network,
+                activities.attach_network_to_proxy,
+            ],
         )
         await worker.__aenter__()
         try:
-            yield env, worker
+            yield env
         finally:
-            patch.stopall()
+            # patch.stopall()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 

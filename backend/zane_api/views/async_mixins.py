@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable
+from typing import Callable, Coroutine
 
 from adrf.generics import ListAPIView, CreateAPIView  # , ListCreateAPIView
 from asgiref.sync import sync_to_async
@@ -71,8 +71,11 @@ class AsyncAtomic:
         else:
             await sync_to_async(self.atomic.__exit__)(None, None, None)
 
-    async def on_commit(self, func: Callable):
+    async def on_commit(self, func: Callable | Coroutine):
         fn = func
         if asyncio.iscoroutinefunction(func):
-            fn = asyncio.create_task(func())
+            fn = lambda: asyncio.run(func())
+        if asyncio.iscoroutine(func):
+            fn = lambda: asyncio.run(func)
+
         await sync_to_async(transaction.on_commit)(fn)
