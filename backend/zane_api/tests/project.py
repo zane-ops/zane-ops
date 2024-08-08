@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
+from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..docker_operations import (
@@ -17,6 +19,7 @@ from ..models import (
     URL,
     DockerDeploymentChange,
 )
+from ..temporal import CreateProjectResourcesWorkflow, ProjectDetails
 from ..utils import jprint
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -447,17 +450,20 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
 
 class DockerAddNetworkTest(AuthAPITestCase):
-    def test_network_is_created_on_new_project(self):
-        self.loginUser()
-        # Create a new project
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        p: Project | None = Project.objects.filter(slug="zane-ops").first()
-        self.assertIsNotNone(self.fake_docker_client.get_network(p))
+    async def test_network_is_created_on_new_project(self):
+        owner = await self.aLoginUser()
+        project = await Project.objects.acreate(slug="zane-ops", owner=owner)
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            result = await env.client.execute_workflow(
+                CreateProjectResourcesWorkflow.run,
+                ProjectDetails(id=project.id),
+                id=project.create_task_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+            )
+            print(f"{result=}")
+            network = self.fake_docker_client.get_network(project)
+            self.assertIsNotNone(network)
+            self.assertEqual(result, network.id)
 
 
 class DockerRemoveNetworkTest(AuthAPITestCase):

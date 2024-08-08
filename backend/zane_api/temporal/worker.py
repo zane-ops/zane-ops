@@ -3,8 +3,8 @@ from temporalio.client import Client
 from temporalio.service import KeepAliveConfig
 from temporalio.worker import Worker
 
-from .activities import greet, say_goodbye, get_project
-from .workflows import HelloWorkflow, GetProjectWorkflow
+from .activities import DockerSwarmActivities
+from .workflows import CreateProjectResourcesWorkflow
 
 
 async def run_worker():
@@ -15,11 +15,15 @@ async def run_worker():
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
     print(f"worker connected ✅")
+    activities = DockerSwarmActivities()
     worker = Worker(
         client,
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-        workflows=[HelloWorkflow, GetProjectWorkflow],
-        activities=[greet, say_goodbye, get_project],
+        workflows=[CreateProjectResourcesWorkflow],
+        activities=[
+            activities.attach_network_to_proxy,
+            activities.create_project_network,
+        ],
         debug_mode=True,
     )
     print(f"running worker...🔄")
