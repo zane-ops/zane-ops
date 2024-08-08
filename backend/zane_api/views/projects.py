@@ -1,5 +1,6 @@
 import time
 
+from asgiref.sync import async_to_sync
 from django.db import IntegrityError, transaction
 from django.db.models import (
     Q,
@@ -22,11 +23,12 @@ from drf_spectacular.utils import (
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.generics import ListAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .async_mixins import AsyncListAPIView, AsyncCreateAPIView, AsyncAtomic
 from .base import EMPTY_RESPONSE, EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListPagination,
@@ -60,7 +62,7 @@ from ..tasks import (
 )
 
 
-class ProjectsListAPIView(ListCreateAPIView):
+class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
     serializer_class = ProjectSerializer
     pagination_class = ProjectListPagination
     filter_backends = [DjangoFilterBackend]
@@ -69,7 +71,7 @@ class ProjectsListAPIView(ListCreateAPIView):
         Project.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
-    def get_queryset(self) -> QuerySet[Project]:
+    async def get_queryset(self) -> QuerySet[Project]:
         queryset = Project.objects.filter(owner=self.request.user).order_by(
             "-updated_at"
         )
@@ -92,7 +94,7 @@ class ProjectsListAPIView(ListCreateAPIView):
                 Case(
                     When(
                         dockerregistryservice__id__in=[
-                            item["service"] for item in docker_healthy
+                            item["service"] async for item in docker_healthy
                         ],
                         then=1,
                     ),
@@ -105,7 +107,7 @@ class ProjectsListAPIView(ListCreateAPIView):
                     When(
                         Q(
                             dockerregistryservice__id__in=[
-                                item["service"] for item in docker_total
+                                item["service"] async for item in docker_total
                             ]
                         ),
                         then=1,
@@ -119,9 +121,10 @@ class ProjectsListAPIView(ListCreateAPIView):
         return queryset
 
     @extend_schema(operation_id="getProjectList", summary="List all active projects")
-    def get(self, request, *args, **kwargs):
+    @async_to_sync
+    async def get(self, request, *args, **kwargs):
         try:
-            return super().get(request, *args, **kwargs)
+            return await super().get(request, *args, **kwargs)
         except exceptions.NotFound:
             return Response(EMPTY_PAGINATED_RESPONSE)
 
@@ -134,38 +137,42 @@ class ProjectsListAPIView(ListCreateAPIView):
         operation_id="createProject",
         summary="Create a new project",
     )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+    @async_to_sync
+    async def post(self, request, *args, **kwargs):
+        return await super().post(request, *args, **kwargs)
 
-    @transaction.atomic()
-    def create(
+    async def acreate(
         self, request: Request, *args, **kwargs
     ):  # don't need to `self.request` since `request` is available as a parameter.
-        form = ProjectCreateRequestSerializer(data=request.data)
-        if form.is_valid(raise_exception=True):
-            data = form.data
+        async with AsyncAtomic() as atomic:
+            form = ProjectCreateRequestSerializer(data=request.data)
+            if form.is_valid(raise_exception=True):
+                data = form.data
 
-            # To prevent collisions
-            Faker.seed(time.monotonic())
-            fake = Faker()
-            slug = data.get("slug", fake.slug()).lower()
-            try:
-                new_project = Project.objects.create(
-                    slug=slug, owner=request.user, description=data.get("description")
-                )
-            except IntegrityError:
-                raise ResourceConflict(
-                    detail=f"A project with the slug '{slug}' already exist,"
-                    f" please use another one for this project."
-                )
-            else:
-                transaction.on_commit(
-                    lambda: create_docker_resources_for_project.apply_async(
-                        (slug,), task_id=new_project.create_task_id
+                # To prevent collisions
+                Faker.seed(time.monotonic())
+                fake = Faker()
+                slug = data.get("slug", fake.slug()).lower()
+                try:
+                    new_project = await Project.objects.acreate(
+                        slug=slug,
+                        owner=request.user,
+                        description=data.get("description"),
                     )
-                )
-                response = ProjectSerializer(new_project)
-                return Response(response.data, status=status.HTTP_201_CREATED)
+                except IntegrityError:
+                    raise ResourceConflict(
+                        detail=f"A project with the slug '{slug}' already exist,"
+                        f" please use another one for this project."
+                    )
+                else:
+
+                    await atomic.on_commit(
+                        lambda: create_docker_resources_for_project.apply_async(
+                            (slug,), task_id=new_project.create_task_id
+                        )
+                    )
+                    response = ProjectSerializer(new_project)
+                    return Response(response.data, status=status.HTTP_201_CREATED)
 
 
 class ArchivedProjectsListAPIView(ListAPIView):
