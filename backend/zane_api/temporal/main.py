@@ -36,7 +36,7 @@ def trigger_workflow(
         except WorkflowAlreadyStartedError:
             pass
 
-        return await client.get_workflow_handle(id)
+        return client.get_workflow_handle(id)
 
     return _trigger
 
