@@ -12,7 +12,6 @@ with workflow.unsafe.imports_passed_through():
 class CreateProjectResourcesWorkflow:
     @workflow.run
     async def run(self, payload: ProjectDetails) -> str:
-        print(f"Running workflow with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
