@@ -28,7 +28,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .async_mixins import AsyncListAPIView, AsyncCreateAPIView, AsyncAtomic
+from .async_mixins import AsyncListAPIView, AsyncCreateAPIView, AsyncTransaction
 from .base import EMPTY_RESPONSE, EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListPagination,
@@ -148,7 +148,7 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
     async def acreate(
         self, request: Request, *args, **kwargs
     ):  # don't need to `self.request` since `request` is available as a parameter.
-        async with AsyncAtomic() as atomic:
+        async with AsyncTransaction() as transaction:
             form = ProjectCreateRequestSerializer(data=request.data)
             if form.is_valid(raise_exception=True):
                 data = form.data
@@ -170,7 +170,7 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
                     )
                 else:
 
-                    await atomic.on_commit(
+                    await transaction.on_commit(
                         trigger_workflow(
                             CreateProjectResourcesWorkflow.run,
                             ProjectDetails(id=new_project.id),

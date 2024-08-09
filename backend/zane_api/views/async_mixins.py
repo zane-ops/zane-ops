@@ -57,7 +57,7 @@ class AsyncCreateAPIView(CreateAPIView):
         return await sync_to_async(self.acreate)(request, *args, **kwargs)
 
 
-class AsyncAtomic:
+class AsyncTransaction:
     def __init__(self):
         self.atomic = transaction.atomic()
 
