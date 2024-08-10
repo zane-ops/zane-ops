@@ -80,6 +80,7 @@ six==1.16.0
 sqlparse==0.4.4
 tblib==3.0.0
 temporalio==1.6.0
+testcontainers==4.7.2
 tornado==6.4
 twisted==24.3.0
 txaio==23.1.1
