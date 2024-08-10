@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: fredkiss3/zane-caddy-proxy:dev
+    image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
     logging:
       driver: "fluentd"

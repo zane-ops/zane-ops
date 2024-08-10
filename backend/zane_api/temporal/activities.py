@@ -6,7 +6,6 @@ from temporalio.exceptions import ApplicationError
 with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
-    from docker.models.networks import Network
     from ..models import Project
 
 from .shared import ProjectDetails
@@ -42,9 +41,12 @@ def get_proxy_service():
     return proxy_service
 
 
-class DockerSwarmActivities:
+class BaseActivities:
     def __init__(self):
-        self.client = get_docker_client()
+        self.docker_client = get_docker_client()
+
+
+class DockerSwarmActivities(BaseActivities):
 
     @activity.defn
     async def create_project_network(self, payload: ProjectDetails) -> str:
@@ -56,8 +58,7 @@ class DockerSwarmActivities:
                 f"Project with id=`{payload.id}` does not exist.", non_retryable=True
             )
 
-        network: Network = await asyncio.to_thread(
-            self.client.networks.create,
+        network = self.docker_client.networks.create(
             name=get_network_resource_name(project.id),
             scope="swarm",
             driver="overlay",
@@ -65,12 +66,12 @@ class DockerSwarmActivities:
             attachable=True,
         )
         print(f"`create_project_network({payload=})` returned {network.id=}")
-        return network.name
+        return network.id
 
     @activity.defn
     async def attach_network_to_proxy(self, network_id: str):
         print(f"Running `attach_network_to_proxy({network_id=})`")
-        proxy_service = await asyncio.to_thread(get_proxy_service)
+        proxy_service = get_proxy_service()
         service_spec = proxy_service.attrs["Spec"]
         current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
         network_ids = set(net["Target"] for net in current_networks)
