@@ -40,10 +40,6 @@ class Project(TimestampedModel):
     def create_task_id(self):
         return f"create-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
 
-    @property
-    def archive_task_id(self):
-        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
-
     def __str__(self):
         return f"Project({self.slug})"
 

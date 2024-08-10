@@ -54,13 +54,12 @@ from ..serializers import (
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
 )
-from ..tasks import (
-    delete_docker_resources_for_project,
-)
 from ..temporal import (
     CreateProjectResourcesWorkflow,
     ProjectDetails,
     start_workflow,
+    RemoveProjectResourcesWorkflow,
+    ArchivedProjectDetails,
 )
 
 
@@ -278,9 +277,12 @@ class ProjectDetailsView(APIView):
         docker_service_list.delete()
 
         transaction.on_commit(
-            lambda: delete_docker_resources_for_project.apply_async(
-                kwargs=dict(archived_project_id=archived_version.id),
-                task_id=project.archive_task_id,
+            lambda: start_workflow(
+                RemoveProjectResourcesWorkflow.run,
+                ArchivedProjectDetails(
+                    id=archived_version.id, original_id=archived_version.original_id
+                ),
+                id=archived_version.task_id,
             )
         )
         project.delete()

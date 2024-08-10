@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .base import Project, DockerRegistryService
-from ..utils import strip_slash_if_exists
+from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
 
 
 class TimestampArchivedModel(models.Model):
@@ -28,6 +28,10 @@ class ArchivedProject(TimestampArchivedModel):
         related_name="archived_version",
     )
     original_id = models.CharField(max_length=255)
+
+    @property
+    def task_id(self):
+        return f"archive-{self.original_id}-{datetime_to_timestamp_string(self.archived_at)}"
 
     @classmethod
     def create_from_project(cls, project: Project):

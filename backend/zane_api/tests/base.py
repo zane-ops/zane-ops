@@ -20,7 +20,11 @@ from temporalio.worker import Worker
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project, DockerDeploymentChange, DockerRegistryService
-from ..temporal import CreateProjectResourcesWorkflow, DockerSwarmActivities
+from ..temporal import (
+    CreateProjectResourcesWorkflow,
+    DockerSwarmActivities,
+    RemoveProjectResourcesWorkflow,
+)
 
 
 class CustomAPIClient(APIClient):
@@ -217,10 +221,15 @@ class AuthAPITestCase(APITestCase):
         worker = Worker(
             env.client,
             task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-            workflows=[CreateProjectResourcesWorkflow],
+            workflows=[CreateProjectResourcesWorkflow, RemoveProjectResourcesWorkflow],
             activities=[
-                activities.create_project_network,
                 activities.attach_network_to_proxy,
+                activities.create_project_network,
+                activities.unexpose_docker_service_from_http,
+                activities.detach_network_from_proxy,
+                activities.remove_project_network,
+                activities.cleanup_docker_service_resources,
+                activities.get_archived_project_services,
             ],
         )
         await worker.__aenter__()
