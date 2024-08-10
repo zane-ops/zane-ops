@@ -168,7 +168,41 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    ApplyDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ApplyDeploymentChangesCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ApplyDeploymentChangesError: components["schemas"]["ApplyDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["ApplyDeploymentChangesCommitMessageErrorComponent"];
+    ApplyDeploymentChangesErrorResponse400: components["schemas"]["ApplyDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ApplyDeploymentChangesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ApplyDeploymentChangesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ApplyDeploymentChangesError"][];
+    };
     ArchiveDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchivedProject: {
@@ -509,11 +543,18 @@ export interface components {
       image: string;
       credentials?: components["schemas"]["DockerCredentialsRequestRequest"];
     };
+    DockerServiceDeployServiceRequest: {
+      commit_message?: string;
+    };
     DockerServiceDeployment: {
       is_current_production: boolean;
       slot: components["schemas"]["SlotEnum"];
       /** Format: date-time */
-      created_at: string;
+      queued_at: string;
+      /** Format: date-time */
+      started_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
       redeploy_hash: string | null;
       hash: string;
       status: components["schemas"]["DockerServiceDeploymentStatusEnum"];
@@ -523,6 +564,7 @@ export interface components {
       network_aliases: readonly string[];
       service_snapshot: components["schemas"]["DockerService"] | null;
       changes: readonly components["schemas"]["DockerDeploymentChange"][];
+      commit_message: string;
     };
     /**
      * @description * `QUEUED` - Queued
@@ -1050,32 +1092,19 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListError"][];
     };
-    ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent: {
+    ProjectsServiceDetailsDockerDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent: {
       /**
-       * @description * `created_at` - created_at
+       * @description * `queued_at` - queued_at
        * @enum {string}
        */
-      attr: "created_at";
+      attr: "queued_at";
       /**
        * @description * `invalid` - invalid
        * @enum {string}
        */
       code: "invalid";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListCreatedAtErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent"];
-    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsListHashErrorComponent: {
-      /**
-       * @description * `hash` - hash
-       * @enum {string}
-       */
-      attr: "hash";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent: {
@@ -2326,6 +2355,13 @@ export interface operations {
         service_slug: string;
       };
     };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DockerServiceDeployServiceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceDeployServiceRequest"];
+        "multipart/form-data": components["schemas"]["DockerServiceDeployServiceRequest"];
+      };
+    };
     responses: {
       200: {
         content: {
@@ -2486,12 +2522,12 @@ export interface operations {
   projects_service_details_docker_deployments_list: {
     parameters: {
       query?: {
-        created_at?: string;
-        hash?: string;
         /** @description A page number within the paginated result set. */
         page?: number;
         /** @description Number of results to return per page. */
         per_page?: number;
+        queued_at_after?: string;
+        queued_at_before?: string;
         /**
          * @description * `QUEUED` - Queued
          * * `CANCELLED` - Cancelled

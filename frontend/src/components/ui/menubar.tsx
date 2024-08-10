@@ -215,7 +215,7 @@ const MenubarShortcut = ({
 MenubarShortcut.displayname = "MenubarShortcut";
 
 type MenubarContentItemProps = {
-  icon: React.ElementType;
+  icon?: React.ElementType;
   text: string;
   className?: string;
   onClick?: () => void;
