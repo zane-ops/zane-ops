@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
+from temporalio.client import WorkflowFailureError
 from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
@@ -499,16 +500,32 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
             self.assertIsNone(self.fake_docker_client.get_network(project))
             self.assertEqual(0, len(self.fake_docker_client.get_networks()))
 
-    def test_with_nonexistent_network(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+    async def test_with_nonexistent_network(self):
+        owner = await self.aLoginUser()
+        project = await Project.objects.acreate(slug="zane-ops", owner=owner)
 
-        response = self.client.delete(
-            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
-
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        self.assertIsNone(self.fake_docker_client.get_network(p))
+        archived_project: ArchivedProject = await ArchivedProject.objects.filter(
+            original_id=project.id
+        ).afirst()
+        self.assertIsNotNone(archived_project)
+
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            with self.assertRaises(WorkflowFailureError):
+                await env.client.execute_workflow(
+                    RemoveProjectResourcesWorkflow.run,
+                    ArchivedProjectDetails(
+                        id=archived_project.id,
+                        original_id=archived_project.original_id,
+                    ),
+                    id=archived_project.task_id,
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                )
+            self.assertIsNone(self.fake_docker_client.get_network(project))
+            self.assertEqual(0, len(self.fake_docker_client.get_networks()))
 
 
 class ProjectStatusViewTests(AuthAPITestCase):
