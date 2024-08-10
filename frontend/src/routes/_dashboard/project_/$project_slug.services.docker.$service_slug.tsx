@@ -176,30 +176,43 @@ function ServiceDetails() {
                   <ChevronsUpDown className="w-4" />
                 </MenubarTrigger>
                 <MenubarContent className="border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border md:min-w-6 md:w-auto">
-                  <div className="flex items-center">
-                    <div className="relative rounded-full bg-green-400 w-2 h-2"></div>
-                    <MenubarContentItem text="Ready" />
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="relative rounded-full bg-red-400 w-2 h-2"></div>
-                    <MenubarContentItem text="Error" />
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="relative rounded-full bg-blue-400 w-2 h-2"></div>
-                    <MenubarContentItem text="Building" />
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="relative rounded-full bg-gray-400 w-2 h-2"></div>
+                  <Status color="gray">
                     <MenubarContentItem text="Queued" />
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="relative rounded-full bg-gray-400 w-2 h-2"></div>
+                  </Status>
+                  <Status color="gray">
                     <MenubarContentItem text="Canceled" />
-                  </div>
+                  </Status>
+                  <Status color="red">
+                    <MenubarContentItem text="Failed" />
+                  </Status>
+
+                  <Status color="gray">
+                    <MenubarContentItem text="Preparing" />
+                  </Status>
+
+                  <Status color="blue">
+                    <MenubarContentItem text="Starting" />
+                  </Status>
+
+                  <Status color="blue">
+                    <MenubarContentItem text="Restarting" />
+                  </Status>
+
+                  <Status color="green">
+                    <MenubarContentItem text="Healthy" />
+                  </Status>
+
+                  <Status color="red">
+                    <MenubarContentItem text="Unhealthy" />
+                  </Status>
+
+                  <Status color="gray">
+                    <MenubarContentItem text="Removed" />
+                  </Status>
+
+                  <Status color="orange">
+                    <MenubarContentItem text="Sleeping" />
+                  </Status>
                 </MenubarContent>
               </MenubarMenu>
             </Menubar>
@@ -222,5 +235,34 @@ function ServiceDetails() {
         <TabsContent value="settings"></TabsContent>
       </Tabs>
     </>
+  );
+}
+
+type TrackerColor = "red" | "green" | "orange" | "gray" | "blue";
+
+interface StatusProps {
+  color: TrackerColor;
+  children: React.ReactNode;
+  isPing?: boolean;
+  className?: string;
+}
+
+function Status({ children, color, className }: StatusProps) {
+  return (
+    <div className="flex items-center">
+      <div
+        className={cn(
+          "relative rounded-full bg-green-400 w-2 h-2",
+          {
+            "bg-green-600 ": color === "green",
+            "bg-red-400": color === "red",
+            "bg-orange-400": color === "orange",
+            "bg-gray-400": color === "gray"
+          },
+          className
+        )}
+      ></div>
+      {children}
+    </div>
   );
 }
