@@ -410,6 +410,7 @@ class FakeDockerClient:
                         },
                     },
                     "DesiredState": "running",
+                    "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
                 }
             ]
 
