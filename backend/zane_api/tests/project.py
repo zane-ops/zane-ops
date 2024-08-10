@@ -450,7 +450,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
 
 class DockerAddNetworkTest(AuthAPITestCase):
-    async def test_network_is_created_on_new_project(self):
+    async def test_network_creation_workflow(self):
         owner = await self.aLoginUser()
         project = await Project.objects.acreate(slug="zane-ops", owner=owner)
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
