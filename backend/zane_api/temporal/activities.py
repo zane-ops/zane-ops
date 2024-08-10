@@ -1,11 +1,13 @@
 import asyncio
 
 from temporalio import activity, workflow
+from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from docker.models.networks import Network
+    from ..models import Project
 
 from .shared import ProjectDetails
 
@@ -47,12 +49,19 @@ class DockerSwarmActivities:
     @activity.defn
     async def create_project_network(self, payload: ProjectDetails) -> str:
         print(f"Running `create_project_network({payload=})`")
+        try:
+            project = await Project.objects.aget(id=payload.id)
+        except Project.DoesNotExist:
+            raise ApplicationError(
+                f"Project with id=`{payload.id}` does not exist.", non_retryable=True
+            )
+
         network: Network = await asyncio.to_thread(
             self.client.networks.create,
-            name=get_network_resource_name(payload.id),
+            name=get_network_resource_name(project.id),
             scope="swarm",
             driver="overlay",
-            labels=get_resource_labels(payload.id),
+            labels=get_resource_labels(project.id),
             attachable=True,
         )
         print(f"`create_project_network({payload=})` returned {network.id=}")
