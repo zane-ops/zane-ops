@@ -10,15 +10,20 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import asyncio
 import os
 import sys
 from datetime import timedelta
 from pathlib import Path
 
+import uvloop
 from dotenv_vault import load_dotenv
 
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
+
+loop = uvloop.new_event_loop()
+asyncio.set_event_loop(loop)
 
 try:
     load_dotenv(".env", override=True)
