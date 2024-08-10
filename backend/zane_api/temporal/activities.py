@@ -17,7 +17,6 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from ..utils import strip_slash_if_exists
 
-
 from .shared import (
     ProjectDetails,
     ArchivedProjectDetails,
@@ -246,12 +245,12 @@ class DockerSwarmActivities:
         self, project_details: ArchivedProjectDetails
     ) -> Optional[str]:
         try:
-            network_associated_to_project = self.docker_client.networks.get(
+            network_associated_to_project: Network = self.docker_client.networks.get(
                 get_network_resource_name(project_id=project_details.original_id)
             )
         except docker.errors.NotFound:
             raise ApplicationError(
-                f"Network for {get_network_resource_name(project_id=project_details.original_id)}"
+                f"Network `{get_network_resource_name(project_id=project_details.original_id)}`"
                 f" for project `{project_details.original_id}` does not exist.",
                 non_retryable=True,
             )
@@ -265,23 +264,24 @@ class DockerSwarmActivities:
             network_ids.remove(network_associated_to_project.id)
             proxy_service.update(networks=list(network_ids))
 
-        def wait_for_service_to_update():
+        async def wait_for_service_to_update():
             proxy = get_proxy_service()
-            for event in self.docker_client.events(
-                decode=True, filters={"service": proxy.id}
-            ):
-                print(f"⏩ received docker event: {event=}")
-                if (
-                    event["Type"] == "service"
-                    and event.get("Action") == "update"
-                    and event.get("Actor", {})
-                    .get("Attributes", {})
-                    .get("updatestate.new")
-                    == "completed"
-                ):
-                    break
+            is_network_found = True
+            while is_network_found:
+                tasks = proxy.tasks(filters={"desired-state": "running"})
+                network_names = []
+                for task in tasks:
+                    network_names += [
+                        net["Network"]["Spec"]["Name"]
+                        for net in task["NetworksAttachments"]
+                    ]
 
-        await asyncio.to_thread(wait_for_service_to_update)
+                is_network_found = network_associated_to_project.name in network_names
+                if is_network_found:
+                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    continue
+
+        await wait_for_service_to_update()
         return network_associated_to_project.id
 
     @activity.defn
@@ -292,7 +292,7 @@ class DockerSwarmActivities:
             )
         except docker.errors.NotFound:
             raise ApplicationError(
-                f"Network for {get_network_resource_name(project_id=project_details.original_id)}"
+                f"Network `{get_network_resource_name(project_id=project_details.original_id)}`"
                 f" for project `{project_details.original_id}` does not exist.",
                 non_retryable=True,
             )
