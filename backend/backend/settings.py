@@ -91,7 +91,6 @@ SESSION_EXTEND_PERIOD = 7
 # Application definition
 
 INSTALLED_APPS = [
-    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
