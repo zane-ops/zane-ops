@@ -1,6 +1,5 @@
 import time
 
-from asgiref.sync import async_to_sync
 from django.db import IntegrityError, transaction
 from django.db.models import (
     Q,
@@ -23,12 +22,11 @@ from drf_spectacular.utils import (
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .async_mixins import AsyncListAPIView, AsyncCreateAPIView, AsyncTransaction
 from .base import EMPTY_RESPONSE, EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListPagination,
@@ -62,11 +60,11 @@ from ..tasks import (
 from ..temporal import (
     CreateProjectResourcesWorkflow,
     ProjectDetails,
-    trigger_workflow,
+    start_workflow,
 )
 
 
-class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
+class ProjectsListAPIView(ListCreateAPIView):
     serializer_class = ProjectSerializer
     pagination_class = ProjectListPagination
     filter_backends = [DjangoFilterBackend]
@@ -75,7 +73,7 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
         Project.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
-    async def get_queryset(self) -> QuerySet[Project]:
+    def get_queryset(self) -> QuerySet[Project]:
         queryset = Project.objects.filter(owner=self.request.user).order_by(
             "-updated_at"
         )
@@ -98,7 +96,7 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
                 Case(
                     When(
                         dockerregistryservice__id__in=[
-                            item["service"] async for item in docker_healthy
+                            item["service"] for item in docker_healthy
                         ],
                         then=1,
                     ),
@@ -111,7 +109,7 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
                     When(
                         Q(
                             dockerregistryservice__id__in=[
-                                item["service"] async for item in docker_total
+                                item["service"] for item in docker_total
                             ]
                         ),
                         then=1,
@@ -125,10 +123,9 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
         return queryset
 
     @extend_schema(operation_id="getProjectList", summary="List all active projects")
-    @async_to_sync
-    async def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         try:
-            return await super().get(request, *args, **kwargs)
+            return super().get(request, *args, **kwargs)
         except exceptions.NotFound:
             return Response(EMPTY_PAGINATED_RESPONSE)
 
@@ -141,44 +138,43 @@ class ProjectsListAPIView(AsyncListAPIView, AsyncCreateAPIView):
         operation_id="createProject",
         summary="Create a new project",
     )
-    @async_to_sync
-    async def post(self, request, *args, **kwargs):
-        return await super().post(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
-    async def acreate(
+    @transaction.atomic()
+    def create(
         self, request: Request, *args, **kwargs
     ):  # don't need to `self.request` since `request` is available as a parameter.
-        async with AsyncTransaction() as transaction:
-            form = ProjectCreateRequestSerializer(data=request.data)
-            if form.is_valid(raise_exception=True):
-                data = form.data
+        form = ProjectCreateRequestSerializer(data=request.data)
+        if form.is_valid(raise_exception=True):
+            data = form.data
 
-                # To prevent collisions
-                Faker.seed(time.monotonic())
-                fake = Faker()
-                slug = data.get("slug", fake.slug()).lower()
-                try:
-                    new_project = await Project.objects.acreate(
-                        slug=slug,
-                        owner=request.user,
-                        description=data.get("description"),
-                    )
-                except IntegrityError:
-                    raise ResourceConflict(
-                        detail=f"A project with the slug '{slug}' already exist,"
-                        f" please use another one for this project."
-                    )
-                else:
+            # To prevent collisions
+            Faker.seed(time.monotonic())
+            fake = Faker()
+            slug = data.get("slug", fake.slug()).lower()
+            try:
+                new_project = Project.objects.create(
+                    slug=slug,
+                    owner=request.user,
+                    description=data.get("description"),
+                )
+            except IntegrityError:
+                raise ResourceConflict(
+                    detail=f"A project with the slug '{slug}' already exist,"
+                    f" please use another one for this project."
+                )
+            else:
 
-                    await transaction.on_commit(
-                        trigger_workflow(
-                            CreateProjectResourcesWorkflow.run,
-                            ProjectDetails(id=new_project.id),
-                            id=new_project.create_task_id,
-                        )
+                transaction.on_commit(
+                    lambda: start_workflow(
+                        CreateProjectResourcesWorkflow.run,
+                        ProjectDetails(id=new_project.id),
+                        id=new_project.create_task_id,
                     )
-                    response = ProjectSerializer(new_project)
-                    return Response(response.data, status=status.HTTP_201_CREATED)
+                )
+                response = ProjectSerializer(new_project)
+                return Response(response.data, status=status.HTTP_201_CREATED)
 
 
 class ArchivedProjectsListAPIView(ListAPIView):
