@@ -1,9 +1,18 @@
 import dataclasses
-from dataclasses import dataclass, field, fields
-from typing import Literal, Any, Optional, List, Dict
+from dataclasses import dataclass, fields
+from typing import Literal, Any, Optional
 
 from django.db.models import Q
 
+from ..dtos import (
+    DockerServiceSnapshot,
+    VolumeDto,
+    EnvVariableDto,
+    PortConfigurationDto,
+    URLDto,
+    HealthCheckDto,
+    DockerCredentialsDto,
+)
 from ..models import DockerRegistryService, BaseDeploymentChange, DockerDeploymentChange
 from ..serializers import DockerServiceSerializer
 
@@ -230,127 +239,6 @@ class DeploymentChangeDto:
             new_value=change.new_value,
             old_value=change.old_value,
             item_id=change.item_id,
-        )
-
-
-@dataclass
-class VolumeDto:
-    container_path: str
-    mode: Literal["READ_ONLY", "READ_WRITE"]
-    name: str = None
-    host_path: Optional[str] = None
-    id: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
-
-
-@dataclass
-class URLDto:
-    domain: str
-    base_path: str
-    strip_prefix: bool
-    id: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
-
-
-@dataclass
-class EnvVariableDto:
-    key: str
-    value: str
-    id: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
-
-
-@dataclass
-class PortConfigurationDto:
-    forwarded: int
-    host: Optional[int] = None
-    id: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
-
-
-@dataclass
-class HealthCheckDto:
-    type: str
-    value: str
-    timeout_seconds: int
-    interval_seconds: int
-    id: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
-
-
-@dataclass
-class DockerCredentialsDto:
-    username: str
-    password: str
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, str]):
-        return cls(**data)
-
-
-@dataclass
-class DockerServiceSnapshot:
-    image: str
-    command: Optional[str] = None
-    healthcheck: Optional[HealthCheckDto] = None
-    credentials: Optional[DockerCredentialsDto] = None
-    volumes: List[VolumeDto] = field(default_factory=list)
-    ports: List[PortConfigurationDto] = field(default_factory=list)
-    env_variables: List[EnvVariableDto] = field(default_factory=list)
-    urls: List[URLDto] = field(default_factory=list)
-
-    @property
-    def http_ports(self):
-        return list(
-            filter(
-                lambda p: p.host is None or p.host in [80, 443],
-                self.ports,
-            )
-        )
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
-        volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
-        urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
-        ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
-        env_variables = [
-            EnvVariableDto.from_dict(item) for item in data.get("env_variables", [])
-        ]
-        healthcheck = (
-            HealthCheckDto.from_dict(data["healthcheck"])
-            if data.get("healthcheck") is not None
-            else None
-        )
-        credentials = (
-            DockerCredentialsDto.from_dict(data["credentials"])
-            if data.get("credentials") is not None
-            else None
-        )
-
-        return cls(
-            image=data["image"],
-            urls=urls,
-            volumes=volumes,
-            command=data.get("command"),
-            ports=ports,
-            env_variables=env_variables,
-            healthcheck=healthcheck,
-            credentials=credentials,
         )
 
 
