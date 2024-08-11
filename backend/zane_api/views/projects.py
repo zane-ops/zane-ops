@@ -282,7 +282,7 @@ class ProjectDetailsView(APIView):
                 ArchivedProjectDetails(
                     id=archived_version.id, original_id=archived_version.original_id
                 ),
-                id=archived_version.task_id,
+                id=archived_version.workflow_id,
             )
         )
         project.delete()

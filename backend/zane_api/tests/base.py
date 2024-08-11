@@ -1,8 +1,8 @@
 import json
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
-from typing import List
-from unittest.mock import MagicMock, patch
+from typing import List, Callable
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
 from django.conf import settings
@@ -21,9 +21,7 @@ from temporalio.worker import Worker
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import Project, DockerDeploymentChange, DockerRegistryService
 from ..temporal import (
-    CreateProjectResourcesWorkflow,
-    DockerSwarmActivities,
-    RemoveProjectResourcesWorkflow,
+    get_workflows_and_activities,
 )
 
 
@@ -95,7 +93,7 @@ class CustomAPIClient(APIClient):
 
 
 class AsyncCustomAPIClient(AsyncClient):
-    def __init__(self, parent: "TestCase", **defaults):
+    def __init__(self, parent: "AuthAPITestCase", **defaults):
         super().__init__(enforce_csrf_checks=False, **defaults)
         self.parent = parent
 
@@ -115,14 +113,16 @@ class AsyncCustomAPIClient(AsyncClient):
     async def put(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-        response = await super().put(
-            path=path,
-            data=data,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
-        return response
+
+        async with self.parent.captureCommitCallbacks(execute=True):
+            response = await super().put(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
+            return response
 
     async def patch(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
@@ -198,6 +198,7 @@ class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
+        self.commit_callbacks: List[Callable] = []
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
@@ -215,30 +216,48 @@ class AuthAPITestCase(APITestCase):
     async def workflowEnvironment(self):
         env = await WorkflowEnvironment.start_time_skipping()
         await env.__aenter__()
-
-        activities = DockerSwarmActivities()
-
         worker = Worker(
             env.client,
             task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-            workflows=[CreateProjectResourcesWorkflow, RemoveProjectResourcesWorkflow],
-            activities=[
-                activities.attach_network_to_proxy,
-                activities.create_project_network,
-                activities.unexpose_docker_service_from_http,
-                activities.detach_network_from_proxy,
-                activities.remove_project_network,
-                activities.cleanup_docker_service_resources,
-                activities.get_archived_project_services,
-            ],
+            **get_workflows_and_activities(),
         )
         await worker.__aenter__()
+
+        @contextmanager
+        def no_op_atomic(*args, **kwargs):
+            print("noop `transaction.atomic()`")
+            yield  # Do nothing, just proceed with the block
+
+        def collect_commit_callbacks(func: Callable):
+            """Function that replaces django.db.transaction.on_commit to run immediately."""
+            print(f"Collecting commit callback {func=}")
+            self.commit_callbacks.append(func)
+
+        mock_get_client = patch(
+            "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
+        ).start()
+        mock_client = mock_get_client.return_value
+        mock_client.start_workflow.side_effect = env.client.execute_workflow
+
+        # patch("django.db.transaction.atomic", no_op_atomic).start()
+        patch(
+            "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
+        ).start()
         try:
             yield env
         finally:
-            # patch.stopall()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
+
+    @asynccontextmanager
+    async def captureCommitCallbacks(self, execute=False):
+        self.commit_callbacks = []
+        yield
+        for callback in self.commit_callbacks:
+            print(f"{callback=}")
+            if execute:
+                callback()
+            pass
 
     def create_and_deploy_redis_docker_service(
         self,
@@ -291,16 +310,76 @@ class AuthAPITestCase(APITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return project, service
 
-    def create_and_deploy_caddy_docker_service(
+    async def acreate_and_deploy_redis_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ) -> tuple[Project, DockerRegistryService]:
+        owner = await self.aLoginUser()
+        project, _ = await Project.objects.aget_or_create(slug="zaneops", owner=owner)
+
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = await DockerRegistryService.objects.aget(slug="redis")
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "valkey-cli validate",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        await DockerDeploymentChange.objects.abulk_create(other_changes)
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return project, service
+
+    async def acreate_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
         other_changes: list[DockerDeploymentChange] = None,
     ):
-        owner = self.loginUser()
-        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="caddy", project=project)
+        owner = await self.aLoginUser()
+        project, _ = await Project.objects.aget_or_create(slug="zaneops", owner=owner)
+
+        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = await DockerRegistryService.objects.aget(slug="caddy")
+
         service.network_alias = f"{service.slug}-{service.unprefixed_id}"
-        service.save()
+        await service.asave()
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -320,14 +399,8 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        DockerDeploymentChange.objects.bulk_create(
+        await DockerDeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.PORTS,
                     type=DockerDeploymentChange.ChangeType.ADD,
@@ -338,7 +411,7 @@ class AuthAPITestCase(APITestCase):
             + other_changes
         )
 
-        response = self.client.put(
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
@@ -481,10 +554,12 @@ class FakeDockerClient:
             return [self.service_map["proxy_service"]]
         return [service for service in self.service_map.values()]
 
-    def events(self, decode: bool, filters: dict):
+    @staticmethod
+    def events(decode: bool, filters: dict):
         return []
 
-    def containers_get(self, container_id: str):
+    @staticmethod
+    def containers_get(container_id: str):
         return FakeDockerClient.FakeContainer()
 
     def containers_run(self, command: str, *args, **kwargs):

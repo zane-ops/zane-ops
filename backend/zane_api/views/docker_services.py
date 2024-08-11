@@ -1,8 +1,9 @@
 import time
 from typing import Any
 
+import django.db.transaction as transaction
 from django.conf import settings
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError
 from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -43,6 +44,7 @@ from .serializers import (
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
 )
+from ..dtos import DockerServiceSnapshot
 from ..models import (
     Project,
     DockerRegistryService,
@@ -69,6 +71,7 @@ from ..tasks import (
     delete_resources_for_docker_service,
     deploy_docker_service_with_changes,
 )
+from ..temporal import start_workflow, DeployDockerServiceWorkflow, DeployServicePayload
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -487,15 +490,24 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.save()
 
             token = Token.objects.get(user=request.user)
+            payload = DeployServicePayload(
+                hash=new_deployment.hash,
+                slot=new_deployment.slot,
+                auth_token=token.key,
+                unprefixed_hash=new_deployment.unprefixed_hash,
+                url=new_deployment.url,
+                service=DockerServiceSnapshot.from_dict(
+                    new_deployment.service_snapshot
+                ),
+            )
+            workflow_id = new_deployment.workflow_id
+
             # Run celery deployment task
             transaction.on_commit(
-                lambda: deploy_docker_service_with_changes.apply_async(
-                    kwargs=dict(
-                        deployment_hash=new_deployment.hash,
-                        service_id=service.id,
-                        auth_token=token.key,
-                    ),
-                    task_id=new_deployment.task_id,
+                lambda: start_workflow(
+                    DeployDockerServiceWorkflow.run,
+                    payload,
+                    id=workflow_id,
                 )
             )
 
@@ -588,7 +600,7 @@ class RedeployDockerServiceAPIView(APIView):
                     service_id=service.id,
                     auth_token=token.key,
                 ),
-                task_id=new_deployment.task_id,
+                task_id=new_deployment.workflow_id,
             )
         )
 

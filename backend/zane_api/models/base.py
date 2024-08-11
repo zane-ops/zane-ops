@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Union
+from typing import Union, Optional
 
 from django.conf import settings
 from django.core.validators import MinLengthValidator
@@ -271,6 +271,21 @@ class DockerRegistryService(BaseService):
             )
             .order_by("-queued_at")
             .first()
+        )
+
+    @property
+    async def alatest_production_deployment(self) -> Optional["DockerDeployment"]:
+        return await (
+            self.deployments.filter(is_current_production=True)
+            .select_related("service", "service__project")
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
+            )
+            .order_by("-queued_at")
+            .afirst()
         )
 
     @property
@@ -585,7 +600,7 @@ class DockerDeployment(BaseDeployment):
     commit_message = models.TextField(default="update service")
 
     @property
-    def task_id(self):
+    def workflow_id(self):
         return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
 
     @property

@@ -22,7 +22,7 @@ async def start_workflow(
     task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
     execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     retry_policy=RetryPolicy(
-        maximum_attempts=2,
+        maximum_attempts=1,
     ),
 ) -> WorkflowHandle:
     print("start_workflow()")

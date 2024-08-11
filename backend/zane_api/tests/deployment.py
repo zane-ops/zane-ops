@@ -7,10 +7,10 @@ from django.db.models import Q
 from django.urls import reverse
 from django_celery_beat.models import PeriodicTask
 from rest_framework import status
+from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..docker_operations import (
-    get_swarm_service_name_for_deployment,
     get_volume_resource_name,
     create_docker_volume,
 )
@@ -26,6 +26,9 @@ from ..models import (
     DockerEnvVariable,
 )
 from ..serializers import DockerServiceSerializer
+from ..temporal import (
+    get_swarm_service_name_for_deployment,
+)
 from ..views.helpers import URLDto
 
 
@@ -2372,41 +2375,34 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
 
 class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
-    def test_deploy_simple_service(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "app",
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        new_deployment = service.latest_production_deployment
-        self.assertIsNotNone(new_deployment)
-        self.assertTrue(
-            get_swarm_service_name_for_deployment(new_deployment)
-            in self.fake_docker_client.service_map
-        )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
-        )
-        self.assertTrue(new_deployment.is_current_production)
+    async def test_deploy_simple_service(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            new_deployment: DockerDeployment = (
+                await service.alatest_production_deployment
+            )
+            self.assertIsNotNone(new_deployment)
+            print(self.fake_docker_client.service_map.keys())
+            print(
+                get_swarm_service_name_for_deployment(
+                    hash=new_deployment.hash,
+                    service_id=new_deployment.service.id,
+                    project_id=new_deployment.service.project.id,
+                )
+            )
+            self.assertTrue(
+                get_swarm_service_name_for_deployment(
+                    hash=new_deployment.hash,
+                    service_id=new_deployment.service.id,
+                    project_id=new_deployment.service.project.id,
+                )
+                in self.fake_docker_client.service_map
+            )
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
+            )
+            self.assertTrue(new_deployment.is_current_production)
 
     def test_deploy_service_with_env(self):
         owner = self.loginUser()

@@ -86,7 +86,7 @@ def docker_service_deploy_failure(
                     service_id=service.id,
                     auth_token=kwargs["auth_token"],
                 ),
-                task_id=next_deployment.task_id,
+                task_id=next_deployment.workflow_id,
             )
 
 
@@ -220,7 +220,7 @@ def deploy_docker_service_with_changes(
                     service_id=service.id,
                     auth_token=auth_token,
                 ),
-                task_id=next_deployment.task_id,
+                task_id=next_deployment.workflow_id,
             )
 
 

@@ -21,6 +21,7 @@ with workflow.unsafe.imports_passed_through():
     from docker.types import EndpointSpec, NetworkAttachmentConfig, RestartPolicy
     from django.conf import settings
     from django.utils import timezone
+    import time
     from ..utils import (
         strip_slash_if_exists,
         find_item_in_list,
@@ -82,11 +83,11 @@ def get_caddy_id_for_url(url: URLDto):
 
 
 def get_swarm_service_name_for_deployment(
-    id: str,
+    hash: str,
     project_id: str,
     service_id: str,
 ):
-    return f"srv-{project_id}-{service_id}-{id}"
+    return f"srv-{project_id}-{service_id}-{hash}"
 
 
 def get_volume_resource_name(volume: VolumeDto):
@@ -282,7 +283,7 @@ class DockerSwarmActivities:
             try:
                 swarm_service = self.docker_client.services.get(
                     get_swarm_service_name_for_deployment(
-                        id=deployment.id,
+                        hash=deployment.id,
                         service_id=deployment.service_id,
                         project_id=deployment.project_id,
                     )
@@ -407,7 +408,7 @@ class DockerSwarmActivities:
                 await docker_deployment.asave()
         except DockerDeployment.DoesNotExist:
             raise ApplicationError(
-                "Cannot execute a deploy a non existent deployment.",
+                "Cannot execute a deploy on a non existent deployment.",
                 non_retryable=True,
             )
 
@@ -415,10 +416,16 @@ class DockerSwarmActivities:
     async def save_deployment_success(self, deployment_status: DeploymentStatusResult):
         try:
             docker_deployment: DockerDeployment = (
-                await DockerDeployment.objects.select_related("service").afirst(
-                    hash=deployment_status.hash
-                )
+                await DockerDeployment.objects.filter(hash=deployment_status.hash)
+                .select_related("service")
+                .afirst()
             )
+
+            if docker_deployment is None:
+                raise DockerDeployment.DoesNotExist(
+                    f"Docker deployment with hash='{deployment_status.hash}' does not exist."
+                )
+
             docker_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
             docker_deployment.status_reason = deployment_status.reason
             docker_deployment.is_current_production = True
@@ -446,13 +453,13 @@ class DockerSwarmActivities:
                 )
 
     @activity.defn
-    async def scale_down_service_deployment(self, deployment: DeployServicePayload):
+    async def scale_down_service_deployment(self, deployment: DeploymentDetails):
         try:
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
-                    id=deployment.hash,
-                    project_id=deployment.service.project_id,
-                    service_id=deployment.service.id,
+                    hash=deployment.id,
+                    project_id=deployment.project_id,
+                    service_id=deployment.service_id,
                 )
             )
         except docker.errors.NotFound:
@@ -478,7 +485,7 @@ class DockerSwarmActivities:
             await wait_for_service_to_be_down()
 
     @activity.defn
-    async def create_resources_for_docker_service_deployment(
+    async def create_swarm_service_for_docker_deployment(
         self, deployment: DeployServicePayload
     ):
         service = deployment.service
@@ -486,7 +493,7 @@ class DockerSwarmActivities:
         try:
             self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
-                    id=deployment.hash,
+                    hash=deployment.hash,
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 )
@@ -565,7 +572,7 @@ class DockerSwarmActivities:
                 image=service.image,
                 command=service.command,
                 name=get_swarm_service_name_for_deployment(
-                    id=deployment.hash,
+                    hash=deployment.hash,
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 ),
@@ -627,7 +634,7 @@ class DockerSwarmActivities:
                         json=get_caddy_request_for_deployment_url(
                             url=deployment.url,
                             service_name=get_swarm_service_name_for_deployment(
-                                id=deployment.hash,
+                                hash=deployment.hash,
                                 project_id=deployment.service.project_id,
                                 service_id=deployment.service.id,
                             ),
@@ -655,13 +662,13 @@ class DockerSwarmActivities:
 
         swarm_service = self.docker_client.services.get(
             get_swarm_service_name_for_deployment(
-                id=docker_deployment.hash,
+                hash=docker_deployment.hash,
                 project_id=docker_deployment.service.project.id,
                 service_id=docker_deployment.service.id,
             )
         )
 
-        start_time = workflow.time()
+        start_time = time.monotonic()
         healthcheck = docker_deployment.service.healthcheck
 
         healthcheck_timeout = (
@@ -674,17 +681,11 @@ class DockerSwarmActivities:
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             "The service failed to meet the healthcheck requirements when starting the service.",
         )
-        while (workflow.time() - start_time) < healthcheck_timeout:
+        while (time.monotonic() - start_time) < healthcheck_timeout:
             healthcheck_attempts += 1
-            healthcheck_time_left = healthcheck_timeout - (workflow.time() - start_time)
-            if healthcheck_time_left < 1:
-                # do not override status reason
-                if deployment_status_reason is None:
-                    raise TimeoutError(
-                        "Failed to run the healthcheck because there is no time left,"
-                        + " please make sure the healthcheck timeout is large enough"
-                    )
-                break
+            healthcheck_time_left = healthcheck_timeout - (
+                time.monotonic() - start_time
+            )
 
             # TODO (#67) : send system logs when the state changes
             print(
@@ -810,7 +811,7 @@ class DockerSwarmActivities:
                             break
 
                 healthcheck_time_left = healthcheck_timeout - (
-                    workflow.time() - start_time
+                    time.monotonic() - start_time
                 )
                 if (
                     deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
