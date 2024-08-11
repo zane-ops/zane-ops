@@ -145,12 +145,14 @@ class DockerServiceSerializer(ModelSerializer):
             "image",
             "command",
             "healthcheck",
+            "project_id",
             "credentials",
             "urls",
             "volumes",
             "ports",
             "env_variables",
             "network_aliases",
+            "network_alias",
             "unapplied_changes",
         ]
 
