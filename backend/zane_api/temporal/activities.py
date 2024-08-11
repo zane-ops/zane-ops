@@ -1,6 +1,8 @@
 import asyncio
+import json
 from typing import List, Optional
 
+from rest_framework import status
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
 
@@ -11,18 +13,30 @@ with workflow.unsafe.imports_passed_through():
         Project,
         ArchivedProject,
         ArchivedDockerService,
+        DockerDeployment,
+        HealthCheck,
     )
     from docker.models.networks import Network
     import requests
+    from docker.types import EndpointSpec, NetworkAttachmentConfig, RestartPolicy
     from django.conf import settings
-    from ..utils import strip_slash_if_exists
+    from django.utils import timezone
+    from ..utils import (
+        strip_slash_if_exists,
+        find_item_in_list,
+        format_seconds,
+        DockerSwarmTask,
+        DockerSwarmTaskState,
+    )
 
+from ..dtos import URLDto, VolumeDto, PortConfigurationDto
 from .shared import (
     ProjectDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
     DeploymentDetails,
-    URLDto,
+    DeployServicePayload,
+    DeploymentStatusResult,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -67,8 +81,78 @@ def get_caddy_id_for_url(url: URLDto):
     return f"{url.domain}-{normalized_path}"
 
 
-def get_swarm_service_name_for_deployment(deployment: DeploymentDetails):
-    return f"srv-{deployment.project_id}-{deployment.service_id}-{deployment.id}"
+def get_swarm_service_name_for_deployment(
+    id: str,
+    project_id: str,
+    service_id: str,
+):
+    return f"srv-{project_id}-{service_id}-{id}"
+
+
+def get_volume_resource_name(volume: VolumeDto):
+    return f"vol-{volume.id}"
+
+
+def get_caddy_request_for_deployment_url(
+    url: str, service_name: str, forwarded_http_port: int
+):
+    return {
+        "@id": url,
+        "match": [{"host": [url]}],
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [
+                    {
+                        "handle": [
+                            {
+                                "handle_response": [
+                                    {
+                                        "match": {"status_code": [2]},
+                                        "routes": [
+                                            {
+                                                "handle": [
+                                                    {
+                                                        "handler": "headers",
+                                                        "request": {},
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                    }
+                                ],
+                                "handler": "reverse_proxy",
+                                "headers": {
+                                    "request": {
+                                        "set": {
+                                            "X-Forwarded-Method": [
+                                                "{http.request.method}"
+                                            ],
+                                            "X-Forwarded-Uri": ["{http.request.uri}"],
+                                        }
+                                    }
+                                },
+                                "rewrite": {
+                                    "method": "GET",
+                                    "uri": "/api/auth/me/with-token",
+                                },
+                                "upstreams": [
+                                    {"dial": settings.ZANE_API_SERVICE_INTERNAL_DOMAIN}
+                                ],
+                            },
+                            {
+                                "flush_interval": -1,
+                                "handler": "reverse_proxy",
+                                "upstreams": [
+                                    {"dial": f"{service_name}:{forwarded_http_port}"}
+                                ],
+                            },
+                        ]
+                    }
+                ],
+            }
+        ],
+    }
 
 
 class DockerSwarmActivities:
@@ -197,7 +281,11 @@ class DockerSwarmActivities:
         for deployment in service_details.deployments:
             try:
                 swarm_service = self.docker_client.services.get(
-                    get_swarm_service_name_for_deployment(deployment)
+                    get_swarm_service_name_for_deployment(
+                        id=deployment.id,
+                        service_id=deployment.service_id,
+                        project_id=deployment.project_id,
+                    )
                 )
             except docker.errors.NotFound:
                 # we will assume the service has already been deleted
@@ -298,3 +386,514 @@ class DockerSwarmActivities:
             )
 
         network_associated_to_project.remove()
+
+    @activity.defn
+    async def cleanup_deployment_after_failure(self, deployment: DeployServicePayload):
+        # TODO
+        try:
+            raise NotImplementedError("Not implemented yet")
+        except Exception:
+            raise ApplicationError("Not implemented yet")
+
+    @activity.defn
+    async def prepare_deployment(self, deployment: DeployServicePayload):
+        try:
+            docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
+                hash=deployment.hash
+            )
+            if docker_deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
+                docker_deployment.status = DockerDeployment.DeploymentStatus.PREPARING
+                docker_deployment.started_at = timezone.now()
+                await docker_deployment.asave()
+        except DockerDeployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot execute a deploy a non existent deployment.",
+                non_retryable=True,
+            )
+
+    @activity.defn
+    async def save_deployment_success(self, deployment_status: DeploymentStatusResult):
+        try:
+            docker_deployment: DockerDeployment = (
+                await DockerDeployment.objects.select_related("service").afirst(
+                    hash=deployment_status.hash
+                )
+            )
+            docker_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
+            docker_deployment.status_reason = deployment_status.reason
+            docker_deployment.is_current_production = True
+            docker_deployment.finished_at = timezone.now()
+            await docker_deployment.asave()
+        except DockerDeployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot save a non existent deployment.",
+                non_retryable=True,
+            )
+
+    @activity.defn
+    async def create_docker_volumes_for_service(self, deployment: DeployServicePayload):
+        service = deployment.service
+        for volume in filter(
+            lambda v: v.host_path is not None, service.volumes
+        ):  # type: VolumeDto
+            try:
+                self.docker_client.volumes.get(get_volume_resource_name(volume))
+            except docker.errors.NotFound:
+                self.docker_client.volumes.create(
+                    name=get_volume_resource_name(volume),
+                    driver="local",
+                    labels=get_resource_labels(service.project_id, parent=service.id),
+                )
+
+    @activity.defn
+    async def scale_down_service_deployment(self, deployment: DeployServicePayload):
+        try:
+            swarm_service = self.docker_client.services.get(
+                get_swarm_service_name_for_deployment(
+                    id=deployment.hash,
+                    project_id=deployment.service.project_id,
+                    service_id=deployment.service.id,
+                )
+            )
+        except docker.errors.NotFound:
+            raise ApplicationError(
+                "Cannot scale down an nonexistent deployment.",
+                non_retryable=True,
+            )
+        else:
+            swarm_service.scale(0)
+
+            async def wait_for_service_to_be_down():
+                print(f"waiting for service `{swarm_service.name=}` to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service `{swarm_service.name=}` is not down yet, "
+                        + f"retrying in `{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}` seconds..."
+                    )
+                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                print(f"service `{swarm_service.name=}` is down, YAY !! 🎉")
+
+            await wait_for_service_to_be_down()
+
+    @activity.defn
+    async def create_resources_for_docker_service_deployment(
+        self, deployment: DeployServicePayload
+    ):
+        service = deployment.service
+
+        try:
+            self.docker_client.services.get(
+                get_swarm_service_name_for_deployment(
+                    id=deployment.hash,
+                    project_id=deployment.service.project_id,
+                    service_id=deployment.service.id,
+                )
+            )
+        except docker.errors.NotFound:
+            self.docker_client.images.pull(
+                repository=service.image,
+                auth_config=service.credentials,
+            )
+
+            # env variables
+            envs: list[str] = [
+                f"{env.key}={env.value}" for env in service.env_variables
+            ]
+            # zane-specific-envs
+            envs.extend(
+                [
+                    f"ZANE=1",
+                    f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
+                    f"ZANE_DEPLOYMENT_HASH={deployment.unprefixed_hash}",
+                    f"ZANE_DEPLOYMENT_TYPE=docker",
+                    f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
+                    f"ZANE_SERVICE_ID={service.id}",
+                    f"ZANE_SERVICE_NAME={service.slug}",
+                    f"ZANE_PROJECT_ID={service.project_id}",
+                    f"""ZANE_DEPLOYMENT_URL={deployment.url or '""'}""",
+                ]
+            )
+
+            # Volumes
+            mounts: list[str] = []
+            docker_volume_list = self.docker_client.volumes.list(
+                filters={
+                    "label": [
+                        f"{key}={value}"
+                        for key, value in get_resource_labels(
+                            service.project_id, parent=service.id
+                        ).items()
+                    ]
+                }
+            )
+            access_mode_map = {
+                "READ_WRITE": "rw",
+                "READ_ONLY": "ro",
+            }
+
+            for volume in service.docker_volumes:
+                # Only include volumes that are not to be deleted
+                docker_volume = find_item_in_list(
+                    lambda v: v.name == get_volume_resource_name(volume),
+                    docker_volume_list,
+                )
+                if docker_volume is not None:
+                    mounts.append(
+                        f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                    )
+            for volume in service.host_volumes:
+                mounts.append(
+                    f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                )
+
+            # ports
+            exposed_ports: dict[int, int] = {}
+            endpoint_spec: EndpointSpec | None = None
+
+            # We don't expose HTTP ports with docker because they will be handled by caddy directly
+            for port in filter(
+                lambda p: p.host is not None, service.ports
+            ):  # type: PortConfigurationDto
+                exposed_ports[port.host] = port.forwarded
+
+            if len(exposed_ports) > 0:
+                endpoint_spec = EndpointSpec(ports=exposed_ports)
+
+            self.docker_client.services.create(
+                image=service.image,
+                command=service.command,
+                name=get_swarm_service_name_for_deployment(
+                    id=deployment.hash,
+                    project_id=deployment.service.project_id,
+                    service_id=deployment.service.id,
+                ),
+                mounts=mounts,
+                endpoint_spec=endpoint_spec,
+                env=envs,
+                labels=get_resource_labels(
+                    service.project_id,
+                    deployment_hash=deployment.hash,
+                    service=deployment.service.id,
+                ),
+                networks=[
+                    NetworkAttachmentConfig(
+                        target=get_network_resource_name(service.project_id),
+                        aliases=[alias for alias in deployment.network_aliases],
+                    ),
+                ],
+                restart_policy=RestartPolicy(
+                    condition="on-failure",
+                    max_attempts=3,
+                    delay=5,
+                ),
+                log_driver="fluentd",
+                log_driver_options={
+                    "fluentd-address": settings.ZANE_FLUENTD_HOST,
+                    "tag": json.dumps(
+                        {
+                            "service_id": deployment.service.id,
+                            "deployment_id": deployment.hash,
+                        }
+                    ),
+                    "mode": "non-blocking",
+                    "fluentd-async": "true",
+                    "fluentd-max-retries": "10",
+                    "fluentd-sub-second-precision": "true",
+                },
+            )
+
+    @activity.defn
+    async def expose_docker_service_deployment_to_http(
+        self,
+        deployment: DeployServicePayload,
+    ):
+        # add URL conf for deployment
+        service = deployment.service
+        if len(service.http_ports) > 0:
+            http_port = service.http_ports[0]
+
+            if deployment.url is not None:
+                response = requests.get(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}", timeout=5
+                )
+
+                # if the domain doesn't exist we create the config for the domain
+                if response.status_code == status.HTTP_404_NOT_FOUND:
+                    requests.put(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
+                        headers={"content-type": "application/json"},
+                        json=get_caddy_request_for_deployment_url(
+                            url=deployment.url,
+                            service_name=get_swarm_service_name_for_deployment(
+                                id=deployment.hash,
+                                project_id=deployment.service.project_id,
+                                service_id=deployment.service.id,
+                            ),
+                            forwarded_http_port=http_port.forwarded,
+                        ),
+                        timeout=5,
+                    )
+
+    @activity.defn
+    async def check_docker_deployment_status(
+        self,
+        deployment: DeployServicePayload,
+    ) -> tuple[DockerDeployment.DeploymentStatus, str]:
+        docker_deployment: DockerDeployment = (
+            await DockerDeployment.objects.filter(hash=deployment.hash)
+            .select_related("service", "service__project", "service__healthcheck")
+            .afirst()
+        )
+
+        if docker_deployment is None:
+            raise ApplicationError(
+                "Cannot check a status of a non existent deployment.",
+                non_retryable=True,
+            )
+
+        swarm_service = self.docker_client.services.get(
+            get_swarm_service_name_for_deployment(
+                id=docker_deployment.hash,
+                project_id=docker_deployment.service.project.id,
+                service_id=docker_deployment.service.id,
+            )
+        )
+
+        start_time = workflow.time()
+        healthcheck = docker_deployment.service.healthcheck
+
+        healthcheck_timeout = (
+            healthcheck.timeout_seconds
+            if healthcheck is not None
+            else settings.DEFAULT_HEALTHCHECK_TIMEOUT
+        )
+        healthcheck_attempts = 0
+        deployment_status, deployment_status_reason = (
+            DockerDeployment.DeploymentStatus.UNHEALTHY,
+            "The service failed to meet the healthcheck requirements when starting the service.",
+        )
+        while (workflow.time() - start_time) < healthcheck_timeout:
+            healthcheck_attempts += 1
+            healthcheck_time_left = healthcheck_timeout - (workflow.time() - start_time)
+            if healthcheck_time_left < 1:
+                # do not override status reason
+                if deployment_status_reason is None:
+                    raise TimeoutError(
+                        "Failed to run the healthcheck because there is no time left,"
+                        + " please make sure the healthcheck timeout is large enough"
+                    )
+                break
+
+            # TODO (#67) : send system logs when the state changes
+            print(
+                f"Healtcheck for {docker_deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+                f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
+            )
+
+            task_list = swarm_service.tasks(
+                filters={"label": f"deployment_hash={docker_deployment.hash}"}
+            )
+            if len(task_list) == 0:
+                if docker_deployment.status in [
+                    DockerDeployment.DeploymentStatus.HEALTHY,
+                    DockerDeployment.DeploymentStatus.STARTING,
+                    DockerDeployment.DeploymentStatus.RESTARTING,
+                ]:
+                    return (
+                        DockerDeployment.DeploymentStatus.UNHEALTHY,
+                        "An Unknown error occurred, did you manually scale down the service ?",
+                    )
+            else:
+                most_recent_swarm_task = DockerSwarmTask.from_dict(
+                    max(
+                        task_list,
+                        key=lambda task: task["Version"]["Index"],
+                    )
+                )
+
+                starting_status = DockerDeployment.DeploymentStatus.STARTING
+                # We set the status to restarting, because we get more than one task for this service when we restart it
+                if len(task_list) > 1:
+                    starting_status = DockerDeployment.DeploymentStatus.RESTARTING
+
+                state_matrix = {
+                    DockerSwarmTaskState.NEW: starting_status,
+                    DockerSwarmTaskState.PENDING: starting_status,
+                    DockerSwarmTaskState.ASSIGNED: starting_status,
+                    DockerSwarmTaskState.ACCEPTED: starting_status,
+                    DockerSwarmTaskState.READY: starting_status,
+                    DockerSwarmTaskState.PREPARING: starting_status,
+                    DockerSwarmTaskState.STARTING: starting_status,
+                    DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
+                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.REJECTED: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.ORPHANED: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.REMOVED,
+                }
+
+                exited_without_error = 0
+                deployment_status = state_matrix[most_recent_swarm_task.state]
+                deployment_status_reason = (
+                    most_recent_swarm_task.Status.Err
+                    if most_recent_swarm_task.Status.Err is not None
+                    else most_recent_swarm_task.Status.Message
+                )
+
+                if most_recent_swarm_task.state == DockerSwarmTaskState.SHUTDOWN:
+                    status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+                    if (
+                        status_code is not None and status_code != exited_without_error
+                    ) or most_recent_swarm_task.Status.Err is not None:
+                        deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+
+                if most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING:
+                    if healthcheck is not None:
+                        try:
+                            print(
+                                f"Running custom healthcheck {healthcheck.type=} - {healthcheck.value=}"
+                            )
+                            if healthcheck.type == HealthCheck.HealthCheckType.COMMAND:
+                                container = self.docker_client.containers.get(
+                                    most_recent_swarm_task.container_id
+                                )
+                                exit_code, output = container.exec_run(
+                                    cmd=healthcheck.value,
+                                    stdout=True,
+                                    stderr=True,
+                                    stdin=False,
+                                )
+
+                                if exit_code == 0:
+                                    deployment_status = (
+                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                    )
+                                else:
+                                    deployment_status = (
+                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                    )
+                                deployment_status_reason = output.decode("utf-8")
+                            else:
+                                scheme = (
+                                    "https"
+                                    if settings.ENVIRONMENT == settings.PRODUCTION_ENV
+                                    else "http"
+                                )
+                                full_url = f"{scheme}://{docker_deployment.url + healthcheck.value}"
+                                response = requests.get(
+                                    full_url,
+                                    headers={
+                                        "Authorization": f"Token {deployment.auth_token}"
+                                    },
+                                    timeout=min(healthcheck_time_left, 5),
+                                )
+                                if response.status_code == status.HTTP_200_OK:
+                                    deployment_status = (
+                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                    )
+                                else:
+                                    deployment_status = (
+                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                    )
+                                deployment_status_reason = response.content.decode(
+                                    "utf-8"
+                                )
+
+                        except TimeoutError as e:
+                            deployment_status = (
+                                DockerDeployment.DeploymentStatus.UNHEALTHY
+                            )
+                            deployment_status_reason = str(e)
+                            break
+
+                healthcheck_time_left = healthcheck_timeout - (
+                    workflow.time() - start_time
+                )
+                if (
+                    deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                    and healthcheck_time_left
+                    > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
+                ):
+                    print(
+                        f"Healtcheck for deployment {docker_deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
+                        + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
+                    )
+                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    continue
+
+                print(
+                    f"Healtcheck for {docker_deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+                    f"| finished with {deployment_status=} ✅"
+                )
+                return deployment_status, deployment_status_reason
+            await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+        return deployment_status, deployment_status_reason
+
+    #
+    # @activity.defn
+    # async def expose_docker_service_to_http(self, deployment: DockerDeployment) -> None:
+    #     service = deployment.service
+    #     previous_deployment: DockerDeployment | None = (
+    #         deployment.get_previous_by_created_at(service=deployment.service)
+    #     )
+    #     http_port: PortConfiguration = service.ports.filter(host__isnull=True).first()
+    #     if http_port is None:
+    #         raise Exception(
+    #             f"Cannot expose service `{service.slug}` without a HTTP port exposed."
+    #         )
+    #
+    #     for url in service.urls.all():
+    #         response = requests.get(
+    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}", timeout=5
+    #         )
+    #
+    #         # if the domain doesn't exist we create the config for the domain
+    #         if response.status_code == status.HTTP_404_NOT_FOUND:
+    #             requests.put(
+    #                 f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
+    #                 headers={"content-type": "application/json"},
+    #                 json=get_caddy_request_for_domain(url.domain),
+    #                 timeout=5,
+    #             )
+    #
+    #         # now we create or modify the config for the URL
+    #         response = requests.get(
+    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+    #         )
+    #         routes = list(
+    #             filter(
+    #                 lambda route: route["@id"] != get_caddy_id_for_url(url),
+    #                 response.json(),
+    #             )
+    #         )
+    #         routes.append(
+    #             get_caddy_request_for_url(
+    #                 url,
+    #                 service,
+    #                 http_port,
+    #                 current_deployment_hash=deployment.hash,
+    #                 current_deployment_slot=deployment.slot,
+    #                 service_id=deployment.service.id,
+    #                 previous_deployment_hash=(
+    #                     previous_deployment.hash
+    #                     if previous_deployment is not None
+    #                     else None
+    #                 ),
+    #                 previous_deployment_slot=(
+    #                     previous_deployment.slot
+    #                     if previous_deployment is not None
+    #                     else None
+    #                 ),
+    #             )
+    #         )
+    #         routes = sort_proxy_routes(routes)
+    #
+    #         requests.patch(
+    #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+    #             headers={"content-type": "application/json"},
+    #             json=routes,
+    #             timeout=5,
+    #         )

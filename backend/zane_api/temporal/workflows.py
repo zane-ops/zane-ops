@@ -5,7 +5,7 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from .activities import DockerSwarmActivities
-    from .shared import ProjectDetails, ArchivedProjectDetails
+    from .shared import ProjectDetails, ArchivedProjectDetails, DeployServicePayload
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -84,6 +84,23 @@ class RemoveProjectResourcesWorkflow:
         await workflow.execute_activity_method(
             DockerSwarmActivities.remove_project_network,
             payload,
-            start_to_close_timeout=timedelta(seconds=30),
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
+        )
+
+
+@workflow.defn(name="deploy-service-workflow")
+class DeployServiceWorkflow:
+    @workflow.run
+    async def run(self, payload: DeployServicePayload):
+        workflow.logger.info(f"Running workflow DeployServiceWorkflow with {payload=}")
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.prepare_deployment,
+            payload,
+            start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
