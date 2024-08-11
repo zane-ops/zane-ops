@@ -20,6 +20,7 @@ async def start_workflow(
     args: Any,
     id: str,
     task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     retry_policy=RetryPolicy(
         maximum_attempts=2,
     ),
@@ -33,6 +34,7 @@ async def start_workflow(
             id=id,
             task_queue=task_queue,
             retry_policy=retry_policy,
+            execution_timeout=execution_timeout,
         )
     except WorkflowAlreadyStartedError:
         pass

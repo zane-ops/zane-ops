@@ -377,5 +377,8 @@ if not TESTING:
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
     )
 
+# temporalio config
+
+TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = 30 * 60
 TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
 TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"
