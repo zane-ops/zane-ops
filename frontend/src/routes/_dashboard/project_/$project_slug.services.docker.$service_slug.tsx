@@ -230,7 +230,9 @@ function ServiceDetails() {
             <ServiceStatusRemoved />
           </div>
           <div className="flex justify-center items-center my-5">
-            <Button className="w-1/3">Load More</Button>
+            <Button variant="outline" className="w-1/3">
+              Load More
+            </Button>
           </div>
           {/**
      * <div className="flex justify-center items-center">
@@ -284,7 +286,7 @@ function Status({ children, color, className }: StatusProps) {
 function ServiceStatusPreparing() {
   return (
     <div>
-      <h4 className=" text-gray-400 text-sm">New</h4>
+      <h4 className=" text-gray-400 my-3 text-sm">New</h4>
       <div className="flex border border-blue-400 p-3 rounded-md bg-blue-300 bg-opacity-25 justify-between items-center">
         <div>
           <h3 className="flex items-center gap-1">
@@ -304,7 +306,9 @@ function ServiceStatusPreparing() {
         </div>
 
         <div className="flex items-center">
-          <Button>View logs</Button>
+          <div className="border px-2 text-sm py-2 rounded-md border-blue-400">
+            View logs
+          </div>
           <EllipsisVertical />
         </div>
       </div>
@@ -315,7 +319,7 @@ function ServiceStatusPreparing() {
 function ServiceStatusCurrent() {
   return (
     <div>
-      <h4 className=" text-gray-400 text-sm">Current</h4>
+      <h4 className=" text-gray-400 my-3 text-sm">Current</h4>
       <div className="flex border border-green-400 p-3 rounded-md bg-green-300 bg-opacity-25 justify-between items-center">
         <div>
           <h3>Healthy</h3>
@@ -333,7 +337,9 @@ function ServiceStatusCurrent() {
         </div>
 
         <div className="flex items-center">
-          <Button>View logs</Button>
+          <div className="border px-2 text-sm py-2 rounded-md border-green-400">
+            View logs
+          </div>
           <EllipsisVertical />
         </div>
       </div>
@@ -361,7 +367,9 @@ function ServiceStatusFailed() {
         </div>
 
         <div className="flex items-center">
-          <Button>View logs</Button>
+          <div className="border px-2 text-sm py-2 rounded-md border-red-400">
+            View logs
+          </div>
           <EllipsisVertical />
         </div>
       </div>
@@ -389,7 +397,9 @@ function ServiceStatusRemoved() {
         </div>
 
         <div className="flex items-center">
-          <Button>View logs</Button>
+          <div className="border px-2 text-sm py-2 rounded-md border-gray-400">
+            View logs
+          </div>
           <EllipsisVertical />
         </div>
       </div>
