@@ -7,7 +7,6 @@ from django.db.models import Q
 from django.urls import reverse
 from django_celery_beat.models import PeriodicTask
 from rest_framework import status
-from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..docker_operations import (
@@ -2376,33 +2375,22 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
 class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     async def test_deploy_simple_service(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            owner = await self.aLoginUser()
-            p, service = await self.acreate_and_deploy_redis_docker_service()
-            new_deployment: DockerDeployment = (
-                await service.alatest_production_deployment
+        owner = await self.aLoginUser()
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        self.assertTrue(
+            get_swarm_service_name_for_deployment(
+                hash=new_deployment.hash,
+                service_id=new_deployment.service.id,
+                project_id=new_deployment.service.project.id,
             )
-            self.assertIsNotNone(new_deployment)
-            print(self.fake_docker_client.service_map.keys())
-            print(
-                get_swarm_service_name_for_deployment(
-                    hash=new_deployment.hash,
-                    service_id=new_deployment.service.id,
-                    project_id=new_deployment.service.project.id,
-                )
-            )
-            self.assertTrue(
-                get_swarm_service_name_for_deployment(
-                    hash=new_deployment.hash,
-                    service_id=new_deployment.service.id,
-                    project_id=new_deployment.service.project.id,
-                )
-                in self.fake_docker_client.service_map
-            )
-            self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
-            )
-            self.assertTrue(new_deployment.is_current_production)
+            in self.fake_docker_client.service_map
+        )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
+        )
+        self.assertTrue(new_deployment.is_current_production)
 
     def test_deploy_service_with_env(self):
         owner = self.loginUser()

@@ -1,4 +1,6 @@
+import asyncio
 import json
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from typing import List, Callable
@@ -100,21 +102,21 @@ class AsyncCustomAPIClient(AsyncClient):
     async def post(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-
-        response = await super().post(
-            path=path,
-            data=data,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+        async with self.parent.acaptureCommitCallbacks(execute=True):
+            response = await super().post(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
     async def put(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
 
-        async with self.parent.captureCommitCallbacks(execute=True):
+        async with self.parent.acaptureCommitCallbacks(execute=True):
             response = await super().put(
                 path=path,
                 data=data,
@@ -122,30 +124,33 @@ class AsyncCustomAPIClient(AsyncClient):
                     content_type if content_type is not None else "application/json"
                 ),
             )
-            return response
+        return response
 
     async def patch(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-        response = await super().patch(
-            path=path,
-            data=data,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+
+        async with self.parent.acaptureCommitCallbacks(execute=True):
+            response = await super().patch(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
     async def delete(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-        response = await super().delete(
-            path=path,
-            data=data,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+        async with self.parent.acaptureCommitCallbacks(execute=True):
+            response = await super().delete(
+                path=path,
+                data=data,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
 
@@ -229,35 +234,39 @@ class AuthAPITestCase(APITestCase):
             yield  # Do nothing, just proceed with the block
 
         def collect_commit_callbacks(func: Callable):
-            """Function that replaces django.db.transaction.on_commit to run immediately."""
-            print(f"Collecting commit callback {func=}")
             self.commit_callbacks.append(func)
 
-        mock_get_client = patch(
+        patch_temporal_client = patch(
             "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
-        ).start()
+        )
+        mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
         mock_client.start_workflow.side_effect = env.client.execute_workflow
 
-        # patch("django.db.transaction.atomic", no_op_atomic).start()
-        patch(
+        patch_transaction_on_commit = patch(
             "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
-        ).start()
+        )
+        patch_transaction_on_commit.start()
         try:
             yield env
         finally:
+            patch_temporal_client.stop()
+            patch_transaction_on_commit.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
-    async def captureCommitCallbacks(self, execute=False):
+    async def acaptureCommitCallbacks(self, execute=False):
         self.commit_callbacks = []
-        yield
-        for callback in self.commit_callbacks:
-            print(f"{callback=}")
-            if execute:
-                callback()
-            pass
+        async with self.workflowEnvironment():
+            yield
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor() as pool:
+                for callback in self.commit_callbacks:
+                    if execute:
+                        # Run callback in another thread because it is decorated with `@async_to_sync()`
+                        await loop.run_in_executor(pool, callback)
+            self.commit_callbacks = []
 
     def create_and_deploy_redis_docker_service(
         self,

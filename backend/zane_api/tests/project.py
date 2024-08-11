@@ -21,8 +21,6 @@ from ..models import (
     DockerDeploymentChange,
 )
 from ..temporal import (
-    CreateProjectResourcesWorkflow,
-    ProjectDetails,
     RemoveProjectResourcesWorkflow,
     ArchivedProjectDetails,
 )
@@ -458,18 +456,15 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 class DockerAddNetworkTest(AuthAPITestCase):
     async def test_network_creation_workflow(self):
         owner = await self.aLoginUser()
-        project = await Project.objects.acreate(slug="zane-ops", owner=owner)
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            result = await env.client.execute_workflow(
-                CreateProjectResourcesWorkflow.run,
-                ProjectDetails(id=project.id),
-                id=project.create_task_id,
-                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-            )
-            print(f"{result=}")
-            network = self.fake_docker_client.get_network(project)
-            self.assertIsNotNone(network)
-            self.assertEqual(result, network.id)
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project = await Project.objects.filter(slug="zane-ops").afirst()
+        self.assertIsNotNone(project)
+        network = self.fake_docker_client.get_network(project)
+        self.assertIsNotNone(network)
 
 
 class DockerRemoveNetworkTest(AuthAPITestCase):
