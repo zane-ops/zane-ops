@@ -1,15 +1,21 @@
 import { Popover } from "@radix-ui/react-popover";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { addDays, format } from "date-fns";
 import {
   CalendarIcon,
   ChevronsUpDown,
+  Clock,
   Container,
+  EllipsisVertical,
   KeyRound,
   Rocket,
   Settings,
+  Shell,
   Trash,
   TriangleAlert
 } from "lucide-react";
+import * as React from "react";
+import type { DateRange } from "react-day-picker";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MetaTitle } from "~/components/meta-title";
 import { StatusBadge } from "~/components/status-badge";
@@ -23,12 +29,6 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
-import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import * as React from "react";
-import type { DateRange } from "react-day-picker";
-import { addDays, format } from "date-fns";
-import { cn } from "~/lib/utils";
 import {
   Menubar,
   MenubarContent,
@@ -36,6 +36,9 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
+import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { cn } from "~/lib/utils";
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
 )({
@@ -218,6 +221,17 @@ function ServiceDetails() {
             </Menubar>
           </div>
 
+          <div className="flex flex-col gap-4 mt-6">
+            <ServiceStatusPreparing />
+            <ServiceStatusCurrent />
+            <h4 className="text-gray-400 text-sm">Previous</h4>
+            <ServiceStatusFailed />
+            <ServiceStatusRemoved />
+            <ServiceStatusRemoved />
+          </div>
+          <div className="flex justify-center items-center my-5">
+            <Button className="w-1/3">Load More</Button>
+          </div>
           {/**
      * <div className="flex justify-center items-center">
             <div className=" flex gap-1 flex-col items-center mt-40">
@@ -263,6 +277,122 @@ function Status({ children, color, className }: StatusProps) {
         )}
       ></div>
       {children}
+    </div>
+  );
+}
+
+function ServiceStatusPreparing() {
+  return (
+    <div>
+      <h4 className=" text-gray-400 text-sm">New</h4>
+      <div className="flex border border-blue-400 p-3 rounded-md bg-blue-300 bg-opacity-25 justify-between items-center">
+        <div>
+          <h3 className="flex items-center gap-1">
+            Preparing <Shell size={15} />
+          </h3>
+          <p className="text-sm text-gray-400">just now</p>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <h1>Update docker image</h1>
+          <p className="flex text-gray-400 text-sm items-center gap-1">
+            <Clock size={15} />
+            <span className="flex items-center gap-2">
+              10s | <Container size={15} /> nginxdemo/hello:1.0
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center">
+          <Button>View logs</Button>
+          <EllipsisVertical />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceStatusCurrent() {
+  return (
+    <div>
+      <h4 className=" text-gray-400 text-sm">Current</h4>
+      <div className="flex border border-green-400 p-3 rounded-md bg-green-300 bg-opacity-25 justify-between items-center">
+        <div>
+          <h3>Healthy</h3>
+          <p className="text-sm text-gray-400">just now</p>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <h1>Update docker image</h1>
+          <p className="flex text-gray-400 text-sm items-center gap-1">
+            <Clock size={15} />
+            <span className="flex items-center gap-2">
+              10s | <Container size={15} /> nginxdemo/hello:1.0
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center">
+          <Button>View logs</Button>
+          <EllipsisVertical />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceStatusFailed() {
+  return (
+    <div>
+      <div className="flex border border-red-400 p-3 rounded-md bg-red-300 bg-opacity-25 justify-between items-center">
+        <div>
+          <h3>Failed</h3>
+          <p className="text-sm text-gray-400">just now</p>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <h1>Update docker image</h1>
+          <p className="flex text-gray-400 text-sm items-center gap-1">
+            <Clock size={15} />
+            <span className="flex items-center gap-2">
+              10s | <Container size={15} /> nginxdemo/hello:1.0
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center">
+          <Button>View logs</Button>
+          <EllipsisVertical />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceStatusRemoved() {
+  return (
+    <div>
+      <div className="flex border border-gray-400 p-3 rounded-md bg-gray-300 bg-opacity-25 justify-between items-center">
+        <div>
+          <h3>Removed</h3>
+          <p className="text-sm text-gray-400">just now</p>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <h1>Update docker image</h1>
+          <p className="flex text-gray-400 text-sm items-center gap-1">
+            <Clock size={15} />
+            <span className="flex items-center gap-2">
+              10s | <Container size={15} /> nginxdemo/hello:1.0
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center">
+          <Button>View logs</Button>
+          <EllipsisVertical />
+        </div>
+      </div>
     </div>
   );
 }
