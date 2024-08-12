@@ -8,7 +8,7 @@ from . import DeploymentStatusResult
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
     from .activities import DockerSwarmActivities
-    from .shared import ProjectDetails, ArchivedProjectDetails, DeployServicePayload
+    from .shared import ProjectDetails, ArchivedProjectDetails, DeploymentDetails
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -99,7 +99,7 @@ class RemoveProjectResourcesWorkflow:
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     @workflow.run
-    async def run(self, payload: DeployServicePayload):
+    async def run(self, payload: DeploymentDetails):
         print(f"Running workflow `DeployDockerServiceWorkflow` with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=1, maximum_interval=timedelta(seconds=30)
@@ -113,12 +113,15 @@ class DeployDockerServiceWorkflow:
             retry_policy=retry_policy,
         )
 
-        # await workflow.execute_activity_method(
-        #     DockerSwarmActivities.create_docker_volumes_for_service,
-        #     payload,
-        #     start_to_close_timeout=timedelta(seconds=30),
-        #     retry_policy=retry_policy,
-        # )
+        service = payload.service
+        if len(service.docker_volumes) > 0:
+            print(f"Running activity `create_docker_volumes_for_service({payload=})`")
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.create_docker_volumes_for_service,
+                payload,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
 
         print(
             f"Running activity `create_swarm_service_for_docker_deployment({payload=})`"

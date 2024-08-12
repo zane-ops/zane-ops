@@ -21,9 +21,17 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
-from ..models import Project, DockerDeploymentChange, DockerRegistryService
+from ..models import (
+    Project,
+    DockerDeploymentChange,
+    DockerRegistryService,
+    DockerDeployment,
+    Volume,
+)
 from ..temporal import (
     get_workflows_and_activities,
+    get_swarm_service_name_for_deployment,
+    get_volume_resource_name,
 )
 
 
@@ -362,6 +370,7 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        await service.arefresh_from_db()
         return project, service
 
     async def acreate_and_deploy_caddy_docker_service(
@@ -425,7 +434,7 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        service.refresh_from_db()
+        await service.arefresh_from_db()
         return project, service
 
 
@@ -507,6 +516,9 @@ class FakeDockerClient:
             if replicas == 0:
                 self.swarm_tasks = []
 
+        def get_attached_volume(self, volume: Volume):
+            return self.attached_volumes.get(get_volume_resource_name(volume.id))
+
     class FakeContainer:
         @staticmethod
         def exec_run(cmd: str, *args, **kwargs):
@@ -552,6 +564,15 @@ class FakeDockerClient:
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
+
+    def get_deployment_service(self, deployment: DockerDeployment):
+        return self.service_map.get(
+            get_swarm_service_name_for_deployment(
+                hash=deployment.hash,
+                service_id=deployment.service_id,
+                project_id=deployment.service.project.id,
+            )
+        )
 
     def services_list(self, **kwargs):
         if kwargs.get("filter") == {"label": "zane.role=proxy"}:
