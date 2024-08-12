@@ -15,6 +15,9 @@ with workflow.unsafe.imports_passed_through():
         ArchivedDockerService,
         DockerDeployment,
         HealthCheck,
+        PortConfiguration,
+        URL,
+        DockerRegistryService,
     )
     from docker.models.networks import Network
     import requests
@@ -22,6 +25,7 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from django.utils import timezone
     import time
+    from django.db.models import Q
     from ..utils import (
         strip_slash_if_exists,
         find_item_in_list,
@@ -30,13 +34,13 @@ with workflow.unsafe.imports_passed_through():
         DockerSwarmTaskState,
     )
 
-from ..dtos import URLDto, VolumeDto, PortConfigurationDto
+from ..dtos import URLDto
 from .shared import (
     ProjectDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
+    ArchivedDeploymentDetails,
     DeploymentDetails,
-    DeployServicePayload,
     DeploymentStatusResult,
 )
 
@@ -71,6 +75,29 @@ def get_proxy_service():
     return proxy_service
 
 
+def sort_proxy_routes(routes: list[dict[str, list[dict[str, list[str]]]]]):
+    """
+    This function implement the same ordering as caddy to pass to the caddy proxy API
+    reference: https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
+    This code is adapated from caddy source code : https://github.com/caddyserver/caddy/blob/ddb1d2c2b11b860f1e91b43d830d283d1e1363b2/caddyconfig/httpcaddyfile/directives.go#L495-L513
+    """
+
+    def path_specificity(route: dict[str, list[dict[str, list[str]]]]):
+        path = route["match"][0]["path"][0]
+        # Removing trailing '*' for comparison and determining the "real" length
+        normalized_path = path.rstrip("*")
+        path_length = len(normalized_path)
+
+        # Using a tuple for comparison: first by the normalized length (longest first),
+        # then by whether the original path ends with '*' (no wildcard is more specific),
+        # and finally by the original path length in case of identical paths except for the wildcard
+        return -path_length, path.endswith("*"), -len(path)
+
+    # Sort the paths based on the specified criteria
+    sorted_paths = sorted(routes, key=path_specificity)
+    return sorted_paths
+
+
 def get_caddy_id_for_url(url: URLDto):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
@@ -82,6 +109,19 @@ def get_caddy_id_for_url(url: URLDto):
     return f"{url.domain}-{normalized_path}"
 
 
+def get_caddy_request_for_domain(domain: str):
+    return {
+        "@id": domain,
+        "match": [{"host": [domain]}],
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [],
+            }
+        ],
+    }
+
+
 def get_swarm_service_name_for_deployment(
     hash: str,
     project_id: str,
@@ -90,8 +130,8 @@ def get_swarm_service_name_for_deployment(
     return f"srv-{project_id}-{service_id}-{hash}"
 
 
-def get_volume_resource_name(volume: VolumeDto):
-    return f"vol-{volume.id}"
+def get_volume_resource_name(volume_id: str):
+    return f"vol-{volume_id}"
 
 
 def get_caddy_request_for_deployment_url(
@@ -150,6 +190,106 @@ def get_caddy_request_for_deployment_url(
                             },
                         ]
                     }
+                ],
+            }
+        ],
+    }
+
+
+def get_caddy_request_for_url(
+    url: URL,
+    service: DockerRegistryService,
+    http_port: PortConfiguration,
+    current_deployment_hash: str = None,
+    current_deployment_slot: str = None,
+    service_id: str = None,
+    previous_deployment_hash: str = None,
+    previous_deployment_slot: str = None,
+):
+    blue_hash = None
+    green_hash = None
+
+    if current_deployment_slot == "BLUE":
+        blue_hash = current_deployment_hash
+    elif current_deployment_slot == "GREEN":
+        green_hash = current_deployment_hash
+
+    if previous_deployment_slot == "BLUE":
+        blue_hash = previous_deployment_hash
+    elif previous_deployment_slot == "GREEN":
+        green_hash = previous_deployment_hash
+
+    proxy_handlers = [
+        {
+            "handler": "log_append",
+            "key": "zane_service_id",
+            "value": service_id,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_blue_hash",
+            "value": blue_hash,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_green_hash",
+            "value": green_hash,
+        },
+        {
+            "handler": "log_append",
+            "key": "zane_deployment_upstream",
+            "value": "{http.reverse_proxy.upstream.hostport}",
+        },
+    ]
+
+    if url.strip_prefix:
+        proxy_handlers.append(
+            {
+                "handler": "rewrite",
+                "strip_path_prefix": strip_slash_if_exists(
+                    url.base_path, strip_end=True, strip_start=False
+                ),
+            }
+        )
+
+    thirty_seconds_in_nano_seconds = 30_000_000_000
+    proxy_handlers.append(
+        {
+            "flush_interval": -1,
+            "handler": "reverse_proxy",
+            "health_checks": {
+                "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
+            },
+            "load_balancing": {
+                "retries": 3,
+                "selection_policy": {"policy": "first"},
+            },
+            "upstreams": [
+                {
+                    "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                },
+                {
+                    "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                },
+            ],
+        }
+    )
+    return {
+        "@id": get_caddy_id_for_url(url),
+        "handle": [
+            {
+                "handler": "subroute",
+                "routes": [{"handle": proxy_handlers}],
+            }
+        ],
+        "match": [
+            {
+                "path": [
+                    (
+                        "/*"
+                        if url.base_path == "/"
+                        else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
+                    )
                 ],
             }
         ],
@@ -221,7 +361,7 @@ class DockerSwarmActivities:
                     ],
                     deployment_urls=service.deployment_urls,
                     deployments=[
-                        DeploymentDetails(
+                        ArchivedDeploymentDetails(
                             id=deployment_hash,
                             project_id=service.project.original_id,
                             service_id=service.original_id,
@@ -231,45 +371,6 @@ class DockerSwarmActivities:
                 )
             )
         return archived_services
-
-    @activity.defn
-    async def unexpose_docker_service_from_http(
-        self, service_details: ArchivedServiceDetails
-    ):
-        for url in service_details.urls:
-            # get all the routes of the domain
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
-                timeout=5,
-            )
-
-            if response.status_code != 404:
-                current_routes: list[dict[str, dict]] = response.json()
-                routes = list(
-                    filter(
-                        lambda route: route.get("@id") != get_caddy_id_for_url(url),
-                        current_routes,
-                    )
-                )
-
-                # delete the domain config when there are no routes for the domain anymore
-                if len(routes) == 0:
-                    requests.delete(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
-                        timeout=5,
-                    )
-                else:
-                    # in the other case, we just delete the caddy config
-                    requests.delete(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
-                        timeout=5,
-                    )
-
-        for url in service_details.deployment_urls:
-            requests.delete(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}",
-                timeout=5,
-            )
 
     @activity.defn
     async def cleanup_docker_service_resources(
@@ -385,7 +486,7 @@ class DockerSwarmActivities:
         network_associated_to_project.remove()
 
     @activity.defn
-    async def cleanup_deployment_after_failure(self, deployment: DeployServicePayload):
+    async def cleanup_deployment_after_failure(self, deployment: DeploymentDetails):
         # TODO
         try:
             raise NotImplementedError("Not implemented yet")
@@ -393,7 +494,7 @@ class DockerSwarmActivities:
             raise ApplicationError("Not implemented yet")
 
     @activity.defn
-    async def prepare_deployment(self, deployment: DeployServicePayload):
+    async def prepare_deployment(self, deployment: DeploymentDetails):
         try:
             docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
                 hash=deployment.hash
@@ -434,22 +535,22 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
-    async def create_docker_volumes_for_service(self, deployment: DeployServicePayload):
+    async def create_docker_volumes_for_service(self, deployment: DeploymentDetails):
         service = deployment.service
-        for volume in filter(
-            lambda v: v.host_path is not None, service.volumes
-        ):  # type: VolumeDto
+        for volume in service.docker_volumes:
             try:
-                self.docker_client.volumes.get(get_volume_resource_name(volume))
+                self.docker_client.volumes.get(get_volume_resource_name(volume.id))
             except docker.errors.NotFound:
                 self.docker_client.volumes.create(
-                    name=get_volume_resource_name(volume),
+                    name=get_volume_resource_name(volume.id),
                     driver="local",
                     labels=get_resource_labels(service.project_id, parent=service.id),
                 )
 
     @activity.defn
-    async def scale_down_service_deployment(self, deployment: DeploymentDetails):
+    async def scale_down_service_deployment(
+        self, deployment: ArchivedDeploymentDetails
+    ):
         try:
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
@@ -482,7 +583,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(
-        self, deployment: DeployServicePayload
+        self, deployment: DeploymentDetails
     ):
         service = deployment.service
 
@@ -539,7 +640,7 @@ class DockerSwarmActivities:
             for volume in service.docker_volumes:
                 # Only include volumes that are not to be deleted
                 docker_volume = find_item_in_list(
-                    lambda v: v.name == get_volume_resource_name(volume),
+                    lambda v: v.name == get_volume_resource_name(volume.id),
                     docker_volume_list,
                 )
                 if docker_volume is not None:
@@ -556,9 +657,7 @@ class DockerSwarmActivities:
             endpoint_spec: EndpointSpec | None = None
 
             # We don't expose HTTP ports with docker because they will be handled by caddy directly
-            for port in filter(
-                lambda p: p.host is not None, service.ports
-            ):  # type: PortConfigurationDto
+            for port in service.non_http_ports:
                 exposed_ports[port.host] = port.forwarded
 
             if len(exposed_ports) > 0:
@@ -608,41 +707,9 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
-    async def expose_docker_service_deployment_to_http(
-        self,
-        deployment: DeployServicePayload,
-    ):
-        # add URL conf for deployment
-        service = deployment.service
-        if len(service.http_ports) > 0:
-            http_port = service.http_ports[0]
-
-            if deployment.url is not None:
-                response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}", timeout=5
-                )
-
-                # if the domain doesn't exist we create the config for the domain
-                if response.status_code == status.HTTP_404_NOT_FOUND:
-                    requests.put(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
-                        headers={"content-type": "application/json"},
-                        json=get_caddy_request_for_deployment_url(
-                            url=deployment.url,
-                            service_name=get_swarm_service_name_for_deployment(
-                                hash=deployment.hash,
-                                project_id=deployment.service.project_id,
-                                service_id=deployment.service.id,
-                            ),
-                            forwarded_http_port=http_port.forwarded,
-                        ),
-                        timeout=5,
-                    )
-
-    @activity.defn
     async def check_docker_deployment_status(
         self,
-        deployment: DeployServicePayload,
+        deployment: DeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         docker_deployment: DockerDeployment = (
             await DockerDeployment.objects.filter(hash=deployment.hash)
@@ -828,6 +895,147 @@ class DockerSwarmActivities:
                 return deployment_status, deployment_status_reason
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
         return deployment_status, deployment_status_reason
+
+    @activity.defn
+    async def expose_docker_service_deployment_to_http(
+        self,
+        deployment: DeploymentDetails,
+    ):
+        # add URL conf for deployment
+        service = deployment.service
+        if len(service.http_ports) > 0:
+            http_port = service.http_ports[0]
+
+            if deployment.url is not None:
+                response = requests.get(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}", timeout=5
+                )
+
+                # if the domain doesn't exist we create the config for the domain
+                if response.status_code == status.HTTP_404_NOT_FOUND:
+                    requests.put(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
+                        headers={"content-type": "application/json"},
+                        json=get_caddy_request_for_deployment_url(
+                            url=deployment.url,
+                            service_name=get_swarm_service_name_for_deployment(
+                                hash=deployment.hash,
+                                project_id=deployment.service.project_id,
+                                service_id=deployment.service.id,
+                            ),
+                            forwarded_http_port=http_port.forwarded,
+                        ),
+                        timeout=5,
+                    )
+
+    @activity.defn
+    async def expose_docker_service_to_http(
+        self,
+        deployment: DeploymentDetails,
+    ):
+        service = deployment.service
+        http_port = service.http_ports[0]
+
+        previous_deployment: DockerDeployment | None = await (
+            DockerDeployment.objects.filter(
+                Q(service=deployment.service)
+                & Q(queued_at__lt=deployment.queued_at_as_datetime)
+            )
+            .order_by("-queued_at")
+            .afirst()
+        )
+
+        for url in service.urls:
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}", timeout=5
+            )
+
+            # if the domain doesn't exist we create the config for the domain
+            if response.status_code == status.HTTP_404_NOT_FOUND:
+                requests.put(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
+                    headers={"content-type": "application/json"},
+                    json=get_caddy_request_for_domain(url.domain),
+                    timeout=5,
+                )
+
+            # now we create or modify the config for the URL
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes"
+            )
+            routes = list(
+                filter(
+                    lambda route: route["@id"] != get_caddy_id_for_url(url),
+                    response.json(),
+                )
+            )
+            routes.append(
+                get_caddy_request_for_url(
+                    url,
+                    service,
+                    http_port,
+                    current_deployment_hash=deployment.hash,
+                    current_deployment_slot=deployment.slot,
+                    service_id=deployment.service.id,
+                    previous_deployment_hash=(
+                        previous_deployment.hash
+                        if previous_deployment is not None
+                        else None
+                    ),
+                    previous_deployment_slot=(
+                        previous_deployment.slot
+                        if previous_deployment is not None
+                        else None
+                    ),
+                )
+            )
+            routes = sort_proxy_routes(routes)
+
+            requests.patch(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+                headers={"content-type": "application/json"},
+                json=routes,
+                timeout=5,
+            )
+
+    @activity.defn
+    async def unexpose_docker_service_from_http(
+        self, service_details: ArchivedServiceDetails
+    ):
+        for url in service_details.urls:
+            # get all the routes of the domain
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+                timeout=5,
+            )
+
+            if response.status_code != 404:
+                current_routes: list[dict[str, dict]] = response.json()
+                routes = list(
+                    filter(
+                        lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                        current_routes,
+                    )
+                )
+
+                # delete the domain config when there are no routes for the domain anymore
+                if len(routes) == 0:
+                    requests.delete(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                        timeout=5,
+                    )
+                else:
+                    # in the other case, we just delete the caddy config
+                    requests.delete(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
+                        timeout=5,
+                    )
+
+        for url in service_details.deployment_urls:
+            requests.delete(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}",
+                timeout=5,
+            )
 
     #
     # @activity.defn
