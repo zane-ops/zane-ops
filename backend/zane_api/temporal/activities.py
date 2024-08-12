@@ -164,7 +164,6 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_project_network(self, payload: ProjectDetails) -> str:
-        print(f"Running `create_project_network({payload=})`")
         try:
             project = await Project.objects.aget(id=payload.id)
         except Project.DoesNotExist:
@@ -179,19 +178,16 @@ class DockerSwarmActivities:
             labels=get_resource_labels(project.id),
             attachable=True,
         )
-        print(f"`create_project_network({payload=})` returned {network.id=}")
         return network.id
 
     @activity.defn
     async def attach_network_to_proxy(self, network_id: str):
-        print(f"Running `attach_network_to_proxy({network_id=})`")
         proxy_service = get_proxy_service()
         service_spec = proxy_service.attrs["Spec"]
         current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
         network_ids = set(net["Target"] for net in current_networks)
         network_ids.add(network_id)
         await asyncio.to_thread(proxy_service.update, networks=list(network_ids))
-        print(f"Finished running `attach_network_to_proxy({network_id=})`")
 
     @activity.defn
     async def get_archived_project_services(

@@ -25,7 +25,7 @@ async def start_workflow(
         maximum_attempts=1,
     ),
 ) -> WorkflowHandle:
-    print("start_workflow()")
+    print(f"start_workflow({workflow=})")
     client = await get_temporalio_client()
     try:
         await client.start_workflow(

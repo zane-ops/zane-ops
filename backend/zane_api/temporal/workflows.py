@@ -15,11 +15,12 @@ with workflow.unsafe.imports_passed_through():
 class CreateProjectResourcesWorkflow:
     @workflow.run
     async def run(self, payload: ProjectDetails) -> str:
-        print(f"Running workflow CreateProjectResourcesWorkflow with {payload=}")
+        print(f"Running workflow `CreateProjectResourcesWorkflow` with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
+        print(f"Running activity `create_project_network({payload=})`")
         network_id = await workflow.execute_activity_method(
             DockerSwarmActivities.create_project_network,
             payload,
@@ -27,6 +28,7 @@ class CreateProjectResourcesWorkflow:
             retry_policy=retry_policy,
         )
 
+        print(f"Running activity `attach_network_to_proxy({network_id=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.attach_network_to_proxy,
             network_id,
@@ -41,7 +43,7 @@ class CreateProjectResourcesWorkflow:
 class RemoveProjectResourcesWorkflow:
     @workflow.run
     async def run(self, payload: ArchivedProjectDetails):
-        print(f"Running workflow RemoveProjectResourcesWorkflow with {payload=}")
+        print(f"Running workflow `RemoveProjectResourcesWorkflow` with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
@@ -77,6 +79,7 @@ class RemoveProjectResourcesWorkflow:
         #     ]
         # )
 
+        print(f"Running activity `detach_network_from_proxy({payload=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.detach_network_from_proxy,
             payload,
@@ -84,6 +87,7 @@ class RemoveProjectResourcesWorkflow:
             retry_policy=retry_policy,
         )
 
+        print(f"Running activity `remove_project_network({payload=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.remove_project_network,
             payload,
