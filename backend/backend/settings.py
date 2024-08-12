@@ -351,6 +351,7 @@ CELERY_RESULT_EXPIRES = timedelta(hours=1)
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://127.0.0.1:2019"
 )
+CADDY_PROXY_MAIN_SERVER = "zane-server"
 ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
