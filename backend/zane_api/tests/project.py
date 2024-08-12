@@ -1,8 +1,6 @@
-from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
 from temporalio.client import WorkflowFailureError
-from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..docker_operations import (
@@ -19,10 +17,6 @@ from ..models import (
     PortConfiguration,
     URL,
     DockerDeploymentChange,
-)
-from ..temporal import (
-    RemoveProjectResourcesWorkflow,
-    ArchivedProjectDetails,
 )
 from ..utils import jprint
 from ..views import EMPTY_PAGINATED_RESPONSE
@@ -455,7 +449,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
 class DockerAddNetworkTest(AuthAPITestCase):
     async def test_network_creation_workflow(self):
-        owner = await self.aLoginUser()
+        await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zane-ops"},
@@ -481,46 +475,23 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
             original_id=project.id
         ).afirst()
         self.assertIsNotNone(archived_project)
-
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            await env.client.execute_workflow(
-                RemoveProjectResourcesWorkflow.run,
-                ArchivedProjectDetails(
-                    id=archived_project.id,
-                    original_id=archived_project.original_id,
-                ),
-                id=archived_project.task_id,
-                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-            )
-            self.assertIsNone(self.fake_docker_client.get_network(project))
-            self.assertEqual(0, len(self.fake_docker_client.get_networks()))
+        self.assertIsNone(self.fake_docker_client.get_network(project))
+        self.assertEqual(0, len(self.fake_docker_client.get_networks()))
 
     async def test_with_nonexistent_network(self):
         owner = await self.aLoginUser()
         project = await Project.objects.acreate(slug="zane-ops", owner=owner)
+        with self.assertRaises(WorkflowFailureError):
+            await self.async_client.delete(
+                reverse("zane_api:projects.details", kwargs={"slug": project.slug})
+            )
 
-        response = await self.async_client.delete(
-            reverse("zane_api:projects.details", kwargs={"slug": project.slug})
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         archived_project: ArchivedProject = await ArchivedProject.objects.filter(
             original_id=project.id
         ).afirst()
         self.assertIsNotNone(archived_project)
-
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            with self.assertRaises(WorkflowFailureError):
-                await env.client.execute_workflow(
-                    RemoveProjectResourcesWorkflow.run,
-                    ArchivedProjectDetails(
-                        id=archived_project.id,
-                        original_id=archived_project.original_id,
-                    ),
-                    id=archived_project.task_id,
-                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-                )
-            self.assertIsNone(self.fake_docker_client.get_network(project))
-            self.assertEqual(0, len(self.fake_docker_client.get_networks()))
+        self.assertIsNone(self.fake_docker_client.get_network(project))
+        self.assertEqual(0, len(self.fake_docker_client.get_networks()))
 
 
 class ProjectStatusViewTests(AuthAPITestCase):
