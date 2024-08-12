@@ -2630,60 +2630,18 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         mock_expose_service.assert_called_once()
         mock_expose_deployment.assert_called_once()
 
-    def test_deploy_service_set_started_at(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "app",
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        new_deployment: DockerDeployment = service.deployments.first()
+    async def test_deploy_service_set_started_at(self):
+        await self.aLoginUser()
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.started_at)
 
-    def test_deploy_service_set_finished_at_on_success(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "app",
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        new_deployment: DockerDeployment = service.deployments.first()
+    async def test_deploy_service_set_finished_at_on_success(self):
+        await self.aLoginUser()
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.finished_at)
 
     @patch("zane_api.tasks.expose_docker_service_to_http")
