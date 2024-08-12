@@ -30,7 +30,7 @@ class ArchivedProject(TimestampArchivedModel):
     original_id = models.CharField(max_length=255)
 
     @property
-    def task_id(self):
+    def workflow_id(self):
         return f"archive-{self.original_id}-{datetime_to_timestamp_string(self.archived_at)}"
 
     @classmethod
