@@ -17,6 +17,12 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5434:5432
+      proxy:
+        image: ghcr.io/zane-ops/proxy:canary
+        ports:
+          - "2020:2020"
+        env:
+          CADDY_ADMIN: 0.0.0.0:2020
     
     steps:
       - uses: actions/checkout@v2
