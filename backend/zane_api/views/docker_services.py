@@ -71,7 +71,7 @@ from ..tasks import (
     delete_resources_for_docker_service,
     deploy_docker_service_with_changes,
 )
-from ..temporal import start_workflow, DeployDockerServiceWorkflow, DeployServicePayload
+from ..temporal import start_workflow, DeployDockerServiceWorkflow, DeploymentDetails
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -490,10 +490,11 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.save()
 
             token = Token.objects.get(user=request.user)
-            payload = DeployServicePayload(
+            payload = DeploymentDetails(
                 hash=new_deployment.hash,
                 slot=new_deployment.slot,
                 auth_token=token.key,
+                queued_at=new_deployment.queued_at.isoformat(),
                 unprefixed_hash=new_deployment.unprefixed_hash,
                 url=new_deployment.url,
                 service=DockerServiceSnapshot.from_dict(

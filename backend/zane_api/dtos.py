@@ -98,6 +98,15 @@ class DockerServiceSnapshot:
         )
 
     @property
+    def non_http_ports(self) -> List[PortConfigurationDto]:
+        return list(
+            filter(
+                lambda p: p.host is not None and p.host not in [80, 443],
+                self.ports,
+            )
+        )
+
+    @property
     def host_volumes(self) -> List[VolumeDto]:
         return list(filter(lambda v: v.host_path is not None, self.volumes))
 

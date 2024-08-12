@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Optional
 
 from temporalio import workflow
@@ -21,13 +22,18 @@ class ArchivedProjectDetails:
 
 
 @dataclass
-class DeployServicePayload:
+class DeploymentDetails:
     hash: str
     slot: str
     auth_token: str
     unprefixed_hash: str
+    queued_at: str
     service: DockerServiceSnapshot
     url: Optional[str] = None
+
+    @property
+    def queued_at_as_datetime(self):
+        return datetime.fromisoformat(self.queued_at)
 
     @property
     def network_aliases(self):
@@ -47,7 +53,7 @@ class DeploymentStatusResult:
 
 
 @dataclass
-class DeploymentDetails:
+class ArchivedDeploymentDetails:
     id: str
     project_id: str
     service_id: str
@@ -57,4 +63,4 @@ class DeploymentDetails:
 class ArchivedServiceDetails:
     urls: List[URLDto]
     deployment_urls: List[str]
-    deployments: List[DeploymentDetails]
+    deployments: List[ArchivedDeploymentDetails]
