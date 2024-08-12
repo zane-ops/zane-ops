@@ -2375,7 +2375,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
 class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     async def test_deploy_simple_service(self):
-        owner = await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service()
         new_deployment: DockerDeployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)

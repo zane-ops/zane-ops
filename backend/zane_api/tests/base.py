@@ -1,7 +1,7 @@
 import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import List, Callable
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -227,11 +227,6 @@ class AuthAPITestCase(APITestCase):
             **get_workflows_and_activities(),
         )
         await worker.__aenter__()
-
-        @contextmanager
-        def no_op_atomic(*args, **kwargs):
-            print("noop `transaction.atomic()`")
-            yield  # Do nothing, just proceed with the block
 
         def collect_commit_callbacks(func: Callable):
             self.commit_callbacks.append(func)
