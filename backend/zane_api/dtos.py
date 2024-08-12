@@ -98,6 +98,11 @@ class DockerServiceSnapshot:
         )
 
     @property
+    def http_port(self) -> PortConfigurationDto | None:
+        ports = self.http_ports
+        return ports[0] if len(ports) > 0 else None
+
+    @property
     def non_http_ports(self) -> List[PortConfigurationDto]:
         return list(
             filter(
