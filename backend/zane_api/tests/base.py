@@ -445,6 +445,70 @@ class AuthAPITestCase(APITestCase):
         await service.arefresh_from_db()
         return project, service
 
+    def create_and_deploy_caddy_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ):
+        owner = self.loginUser()
+        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+
+        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug="caddy")
+
+        service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+        service.save()
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+            + other_changes
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
+        return project, service
+
 
 class FakeDockerClient:
     @dataclass
@@ -576,7 +640,7 @@ class FakeDockerClient:
     def get_deployment_service(self, deployment: DockerDeployment):
         return self.service_map.get(
             get_swarm_service_name_for_deployment(
-                hash=deployment.hash,
+                deployment_hash=deployment.hash,
                 service_id=deployment.service_id,
                 project_id=deployment.service.project.id,
             )
