@@ -49,7 +49,7 @@ docker network rm $(docker network ls -q --filter label=zane-managed=true) 2>/de
 echo "Resetting caddy config..."
 curl "http://127.0.0.1:2019/load" \
 	-H "Content-Type: application/json" \
-	-d @docker/proxy/default-caddy-config.json
+	-d @docker/proxy/default-caddy-config-dev.json
 curl -X POST "http://127.0.0.1:8000/api/_proxy/register-zane-to-proxy"
 
 echo "Recreating the superuser..."
