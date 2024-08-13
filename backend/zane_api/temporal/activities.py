@@ -886,9 +886,7 @@ class DockerSwarmActivities:
                             deployment_status_reason = str(e)
                             break
 
-                healthcheck_time_left = healthcheck_timeout - (
-                    time.monotonic() - start_time
-                )
+                healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
                     deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
                     and healthcheck_time_left
