@@ -16,6 +16,7 @@ with workflow.unsafe.imports_passed_through():
         DockerDeployment,
         HealthCheck,
         URL,
+        DockerDeploymentChange,
     )
     from docker.models.networks import Network
     import requests
@@ -32,12 +33,17 @@ with workflow.unsafe.imports_passed_through():
         DockerSwarmTaskState,
     )
 
-from ..dtos import URLDto, PortConfigurationDto, DockerServiceSnapshot
+from ..dtos import (
+    URLDto,
+    PortConfigurationDto,
+    DockerServiceSnapshot,
+    DeploymentChangeDto,
+)
 from .shared import (
     ProjectDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
-    ArchivedDeploymentDetails,
+    SimpleDeploymentDetails,
     DeploymentDetails,
     DeploymentHealthcheckResult,
 )
@@ -68,11 +74,11 @@ def get_volume_resource_name(volume_id: str):
 
 
 def get_swarm_service_name_for_deployment(
-    hash: str,
+    deployment_hash: str,
     project_id: str,
     service_id: str,
 ):
-    return f"srv-{project_id}-{service_id}-{hash}"
+    return f"srv-{project_id}-{service_id}-{deployment_hash}"
 
 
 def get_proxy_service():
@@ -363,8 +369,8 @@ class DockerSwarmActivities:
                     ],
                     deployment_urls=service.deployment_urls,
                     deployments=[
-                        ArchivedDeploymentDetails(
-                            id=deployment_hash,
+                        SimpleDeploymentDetails(
+                            hash=deployment_hash,
                             project_id=service.project.original_id,
                             service_id=service.original_id,
                         )
@@ -382,7 +388,7 @@ class DockerSwarmActivities:
             try:
                 swarm_service = self.docker_client.services.get(
                     get_swarm_service_name_for_deployment(
-                        hash=deployment.id,
+                        deployment_hash=deployment.id,
                         service_id=deployment.service_id,
                         project_id=deployment.project_id,
                     )
@@ -488,14 +494,6 @@ class DockerSwarmActivities:
         network_associated_to_project.remove()
 
     @activity.defn
-    async def cleanup_deployment_after_failure(self, deployment: DeploymentDetails):
-        # TODO
-        try:
-            raise NotImplementedError("Not implemented yet")
-        except Exception:
-            raise ApplicationError("Not implemented yet")
-
-    @activity.defn
     async def prepare_deployment(self, deployment: DeploymentDetails):
         try:
             docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
@@ -512,7 +510,9 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
-    async def save_deployment(self, healthcheck_result: DeploymentHealthcheckResult):
+    async def finish_and_save_deployment(
+        self, healthcheck_result: DeploymentHealthcheckResult
+    ) -> Optional[SimpleDeploymentDetails]:
         try:
             docker_deployment: DockerDeployment = (
                 await DockerDeployment.objects.filter(
@@ -543,11 +543,39 @@ class DockerSwarmActivities:
 
             docker_deployment.finished_at = timezone.now()
             await docker_deployment.asave()
+
+            if docker_deployment.is_current_production:
+                await docker_deployment.service.deployments.filter(
+                    ~Q(hash=healthcheck_result.deployment_hash)
+                ).aupdate(is_current_production=False)
+
+            previous_deployment: DockerDeployment | None = await (
+                DockerDeployment.objects.filter(
+                    Q(service_id=docker_deployment.service.id)
+                    & Q(queued_at__lt=docker_deployment.queued_at)
+                    & ~Q(hash=docker_deployment.hash)
+                )
+                .order_by("-queued_at")
+                .afirst()
+            )
+
+            if previous_deployment is not None:
+                return SimpleDeploymentDetails(
+                    hash=previous_deployment.hash,
+                    service_id=previous_deployment.service_id,
+                    project_id=docker_deployment.service.project_id,
+                )
         except DockerDeployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
             )
+
+    @activity.defn
+    async def cleanup_previous_deployment(self, deployment: SimpleDeploymentDetails):
+        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
+            status=DockerDeployment.DeploymentStatus.REMOVED
+        )
 
     @activity.defn
     async def create_docker_volumes_for_service(self, deployment: DeploymentDetails):
@@ -563,13 +591,11 @@ class DockerSwarmActivities:
                 )
 
     @activity.defn
-    async def scale_down_service_deployment(
-        self, deployment: ArchivedDeploymentDetails
-    ):
+    async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
         try:
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
-                    hash=deployment.id,
+                    deployment_hash=deployment.hash,
                     project_id=deployment.project_id,
                     service_id=deployment.service_id,
                 )
@@ -605,7 +631,7 @@ class DockerSwarmActivities:
         try:
             self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
-                    hash=deployment.hash,
+                    deployment_hash=deployment.hash,
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 )
@@ -682,7 +708,7 @@ class DockerSwarmActivities:
                 image=service.image,
                 command=service.command,
                 name=get_swarm_service_name_for_deployment(
-                    hash=deployment.hash,
+                    deployment_hash=deployment.hash,
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 ),
@@ -740,7 +766,7 @@ class DockerSwarmActivities:
 
         swarm_service = self.docker_client.services.get(
             get_swarm_service_name_for_deployment(
-                hash=docker_deployment.hash,
+                deployment_hash=docker_deployment.hash,
                 project_id=docker_deployment.service.project.id,
                 service_id=docker_deployment.service.id,
             )
@@ -929,7 +955,7 @@ class DockerSwarmActivities:
                         json=get_caddy_request_for_deployment_url(
                             url=deployment.url,
                             service_name=get_swarm_service_name_for_deployment(
-                                hash=deployment.hash,
+                                deployment_hash=deployment.hash,
                                 project_id=deployment.service.project_id,
                                 service_id=deployment.service.id,
                             ),
@@ -949,6 +975,7 @@ class DockerSwarmActivities:
                 DockerDeployment.objects.filter(
                     Q(service_id=deployment.service.id)
                     & Q(queued_at__lt=deployment.queued_at_as_datetime)
+                    & ~Q(hash=deployment.hash)
                 )
                 .order_by("-queued_at")
                 .afirst()
@@ -1007,6 +1034,57 @@ class DockerSwarmActivities:
                     json=routes,
                     timeout=5,
                 )
+
+    @activity.defn
+    async def scale_down_and_remove_docker_service_deployment(
+        self, deployment: SimpleDeploymentDetails
+    ):
+        try:
+            swarm_service = self.docker_client.services.get(
+                get_swarm_service_name_for_deployment(
+                    deployment_hash=deployment.hash,
+                    project_id=deployment.project_id,
+                    service_id=deployment.service_id,
+                )
+            )
+        except docker.errors.NotFound:
+            raise ApplicationError(
+                "Cannot scale down a nonexistent deployment", non_retryable=True
+            )
+        else:
+            swarm_service.scale(0)
+
+            async def wait_for_service_to_be_down():
+                print(f"waiting for service {swarm_service.name=} to be down...")
+                task_list = swarm_service.tasks()
+                while len(task_list) > 0:
+                    print(
+                        f"service {swarm_service.name=} is not down yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+                    )
+                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = swarm_service.tasks()
+                print(f"service {swarm_service.name=} is down, YAY !! 🎉")
+
+            await wait_for_service_to_be_down()
+            swarm_service.remove()
+
+    @activity.defn
+    async def remove_old_docker_volumes(self, deployment: DeploymentDetails):
+        for volume_change in filter(
+            lambda change: change.field == DockerDeploymentChange.ChangeField.VOLUMES
+            and change.type == DockerDeploymentChange.ChangeType.DELETE,
+            deployment.changes,
+        ):  # type: DeploymentChangeDto
+            try:
+                volume = self.docker_client.volumes.get(
+                    get_volume_resource_name(volume_change.item_id)
+                )
+            except docker.errors.NotFound:
+                # the volume has already been deleted, do nothing
+                pass
+            else:
+                volume.remove(force=True)
 
     @activity.defn
     async def unexpose_docker_service_from_http(

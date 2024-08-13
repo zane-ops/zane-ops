@@ -180,12 +180,41 @@ class DeployDockerServiceWorkflow:
             reason=deployment_status_reason,
         )
         print(f"Running activity `save_deployment({result=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.save_deployment,
+        previous_deployment = await workflow.execute_activity_method(
+            DockerSwarmActivities.finish_and_save_deployment,
             result,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
+
+        if previous_deployment is not None:
+            print(
+                f"Running activity `scale_down_and_remove_docker_service_deployment({previous_deployment=})`"
+            )
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
+                previous_deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+
+            print(f"Running activity `remove_old_docker_volumes({deployment=})`")
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.remove_old_docker_volumes,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+
+            print(
+                f"Running activity `cleanup_previous_deployment({previous_deployment=})`"
+            )
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.cleanup_previous_deployment,
+                previous_deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=retry_policy,
+            )
 
 
 def get_workflows_and_activities():
@@ -211,6 +240,9 @@ def get_workflows_and_activities():
             activities.run_deployment_healthcheck,
             activities.expose_docker_service_deployment_to_http,
             activities.expose_docker_service_to_http,
-            activities.save_deployment,
+            activities.finish_and_save_deployment,
+            activities.cleanup_previous_deployment,
+            activities.scale_down_and_remove_docker_service_deployment,
+            activities.remove_old_docker_volumes,
         ],
     )
