@@ -1,6 +1,7 @@
 import re
 from unittest.mock import patch, Mock, MagicMock, call
 
+import requests
 import responses
 from django.conf import settings
 from django.db.models import Q
@@ -23,6 +24,7 @@ from ..models import (
 from ..serializers import DockerServiceSerializer
 from ..temporal import (
     get_swarm_service_name_for_deployment,
+    get_caddy_uri_for_url,
 )
 from ..views.helpers import URLDto
 
@@ -2540,68 +2542,23 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNone(docker_service.endpoint)
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch("zane_api.tasks.expose_docker_service_deployment_to_http")
     async def test_deploy_service_with_http_port_exposes_the_service(
-        self, mock_expose_service: Mock, mock_expose_deployment: Mock
+        self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="adminer:latest",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 8080},
-                    service=service,
-                ),
-            ]
-        )
+        await self.aLoginUser()
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "app",
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        new_deployment = service.latest_production_deployment
+        new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
-        mock_expose_service.assert_called()
-        mock_expose_deployment.assert_called()
+        service_url: URL = await service.urls.afirst()
+        response = requests.get(get_caddy_uri_for_url(service_url))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    @patch("zane_api.tasks.expose_docker_service_deployment_to_http")
-    def test_deploy_service_with_urls(
-        self, mock_expose_service: Mock, mock_expose_deployment: Mock
+    async def test_deploy_service_with_urls(
+        self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="adminer:latest",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 8080},
-                    service=service,
-                ),
+        p, service = await self.acreate_and_deploy_caddy_docker_service(
+            other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.URLS,
                     type=DockerDeploymentChange.ChangeType.ADD,
@@ -2610,25 +2567,17 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         "base_path": "/",
                         "strip_prefix": True,
                     },
-                    service=service,
                 ),
             ]
         )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "app",
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        new_deployment = service.latest_production_deployment
+        new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
-        mock_expose_service.assert_called_once()
-        mock_expose_deployment.assert_called_once()
+        service_url: URL = await service.urls.filter(
+            domain="web-server.fred.kiss"
+        ).afirst()
+        response = requests.get(get_caddy_uri_for_url(service_url))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_deploy_service_set_started_at(self):
         await self.aLoginUser()
@@ -2644,47 +2593,64 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.finished_at)
 
-    @patch("zane_api.tasks.expose_docker_service_to_http")
-    def test_deploy_service_set_finished_at_on_error(self, mock_expose: Mock):
-        def expose_raise_error(deployment: DockerDeployment):
-            raise Exception("Fake exception")
+    @patch("zane_api.temporal.activities.monotonic")
+    async def test_deploy_service_set_finished_at_on_fail(
+        self,
+        mock_monotonic: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 31]
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
+        new_deployment: DockerDeployment = await service.deployments.afirst()
+        self.assertIsNotNone(new_deployment.finished_at)
 
-        mock_expose.side_effect = expose_raise_error
-
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
-                    service=service,
-                ),
-            ]
+    @patch("zane_api.temporal.activities.monotonic")
+    async def test_deploy_service_set_deployment_failed_when_healthcheck_fails(
+        self,
+        mock_monotonic: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 31]
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
+        new_deployment: DockerDeployment = await service.deployments.afirst()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
         )
 
-        response = self.client.put(
+    @patch("zane_api.temporal.activities.monotonic")
+    async def test_deploy_service_set_deployment_to_production_when_healthcheck_fails_if_unique(
+        self,
+        mock_monotonic: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 31]
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
+        new_deployment: DockerDeployment = await service.deployments.afirst()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
+        )
+        self.assertTrue(new_deployment.is_current_production)
+
+    @patch("zane_api.temporal.activities.monotonic")
+    async def test_deploy_service_do_not_set_deployment_to_production_when_healthcheck_fails(
+        self,
+        mock_monotonic: Mock,
+    ):
+        mock_monotonic.side_effect = [0, 31]
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
+        mock_monotonic.side_effect = [0, 31]
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
-            data={"commit_message": "Initial deployment"},
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        mock_expose.assert_called()
-        new_deployment: DockerDeployment = service.deployments.first()
-        self.assertIsNotNone(new_deployment.finished_at)
+        new_deployment: DockerDeployment = await service.deployments.afirst()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
+        )
+        self.assertFalse(new_deployment.is_current_production)
 
 
 class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):

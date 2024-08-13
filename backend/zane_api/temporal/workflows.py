@@ -3,12 +3,13 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from . import DeploymentStatusResult
+from . import DeploymentHealthcheckResult
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
     from .activities import DockerSwarmActivities
     from .shared import ProjectDetails, ArchivedProjectDetails, DeploymentDetails
+    from django.conf import settings
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -99,63 +100,92 @@ class RemoveProjectResourcesWorkflow:
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     @workflow.run
-    async def run(self, payload: DeploymentDetails):
-        print(f"Running workflow `DeployDockerServiceWorkflow` with {payload=}")
+    async def run(self, deployment: DeploymentDetails):
+        print(f"Running workflow `DeployDockerServiceWorkflow` with {deployment=}")
         retry_policy = RetryPolicy(
-            maximum_attempts=1, maximum_interval=timedelta(seconds=30)
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        print(f"Running activity `prepare_deployment({payload=})`")
+        print(f"Running activity `prepare_deployment({deployment=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.prepare_deployment,
-            payload,
+            deployment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
 
-        service = payload.service
+        service = deployment.service
         if len(service.docker_volumes) > 0:
-            print(f"Running activity `create_docker_volumes_for_service({payload=})`")
+            print(
+                f"Running activity `create_docker_volumes_for_service({deployment=})`"
+            )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.create_docker_volumes_for_service,
-                payload,
+                deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
             )
 
         print(
-            f"Running activity `create_swarm_service_for_docker_deployment({payload=})`"
+            f"Running activity `create_swarm_service_for_docker_deployment({deployment=})`"
         )
         await workflow.execute_activity_method(
             DockerSwarmActivities.create_swarm_service_for_docker_deployment,
-            payload,
+            deployment,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=retry_policy,
         )
 
-        print(f"Running activity `check_docker_deployment_status({payload=})`")
-        deployment_status, deployment_status_reason = (
+        if deployment.service.http_port is not None:
+            print(
+                f"Running activity `expose_docker_service_deployment_to_http({deployment=})`"
+            )
             await workflow.execute_activity_method(
-                DockerSwarmActivities.check_docker_deployment_status,
-                payload,
+                DockerSwarmActivities.expose_docker_service_deployment_to_http,
+                deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
+            )
+
+        print(f"Running activity `run_deployment_healthcheck({deployment=})`")
+        healthcheck_timeout = (
+            deployment.service.healthcheck.timeout_seconds
+            if deployment.service.healthcheck is not None
+            else settings.DEFAULT_HEALTHCHECK_TIMEOUT
+        )
+        deployment_status, deployment_status_reason = (
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.run_deployment_healthcheck,
+                deployment,
+                retry_policy=retry_policy,
+                start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
             )
         )
 
         if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
-            result = DeploymentStatusResult(
-                hash=payload.hash,
-                status=deployment_status,
-                reason=deployment_status_reason,
-            )
-            print(f"Running activity `save_deployment_success({result=})`")
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.save_deployment_success,
-                result,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
-            )
+            if deployment.service.http_port is not None:
+                print(
+                    f"Running activity `expose_docker_service_to_http({deployment=})`"
+                )
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.expose_docker_service_to_http,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+
+        result = DeploymentHealthcheckResult(
+            deployment_hash=deployment.hash,
+            status=deployment_status,
+            reason=deployment_status_reason,
+        )
+        print(f"Running activity `save_deployment({result=})`")
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.save_deployment,
+            result,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )
 
 
 def get_workflows_and_activities():
@@ -178,8 +208,9 @@ def get_workflows_and_activities():
             activities.scale_down_service_deployment,
             activities.create_docker_volumes_for_service,
             activities.create_swarm_service_for_docker_deployment,
-            activities.check_docker_deployment_status,
+            activities.run_deployment_healthcheck,
             activities.expose_docker_service_deployment_to_http,
-            activities.save_deployment_success,
+            activities.expose_docker_service_to_http,
+            activities.save_deployment,
         ],
     )

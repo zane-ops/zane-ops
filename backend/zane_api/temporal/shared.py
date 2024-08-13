@@ -46,8 +46,8 @@ class DeploymentDetails:
 
 
 @dataclass
-class DeploymentStatusResult:
-    hash: str
+class DeploymentHealthcheckResult:
+    deployment_hash: str
     status: str
     reason: Optional[str] = None
 
