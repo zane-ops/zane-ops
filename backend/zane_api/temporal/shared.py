@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
@@ -7,7 +7,7 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
 
-from ..dtos import URLDto, DockerServiceSnapshot
+from ..dtos import URLDto, DockerServiceSnapshot, DeploymentChangeDto
 
 
 @dataclass
@@ -30,6 +30,7 @@ class DeploymentDetails:
     queued_at: str
     service: DockerServiceSnapshot
     url: Optional[str] = None
+    changes: List[DeploymentChangeDto] = field(default_factory=list)
 
     @property
     def queued_at_as_datetime(self):
@@ -53,8 +54,8 @@ class DeploymentHealthcheckResult:
 
 
 @dataclass
-class ArchivedDeploymentDetails:
-    id: str
+class SimpleDeploymentDetails:
+    hash: str
     project_id: str
     service_id: str
 
@@ -63,4 +64,4 @@ class ArchivedDeploymentDetails:
 class ArchivedServiceDetails:
     urls: List[URLDto]
     deployment_urls: List[str]
-    deployments: List[ArchivedDeploymentDetails]
+    deployments: List[SimpleDeploymentDetails]

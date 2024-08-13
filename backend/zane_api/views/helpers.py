@@ -1,6 +1,5 @@
 import dataclasses
-from dataclasses import dataclass, fields
-from typing import Literal, Any, Optional
+from dataclasses import fields
 
 from django.db.models import Q
 
@@ -12,8 +11,9 @@ from ..dtos import (
     URLDto,
     HealthCheckDto,
     DockerCredentialsDto,
+    DeploymentChangeDto,
 )
-from ..models import DockerRegistryService, BaseDeploymentChange, DockerDeploymentChange
+from ..models import DockerRegistryService, DockerDeploymentChange
 from ..serializers import DockerServiceSerializer
 
 
@@ -23,7 +23,15 @@ def compute_all_deployment_changes(
     deployment_changes = []
     deployment_changes.extend(
         map(
-            lambda ch: DeploymentChangeDto.from_db_deployment_change(ch),
+            lambda ch: DeploymentChangeDto.from_dict(
+                dict(
+                    type=ch.type,
+                    field=ch.field,
+                    new_value=ch.new_value,
+                    old_value=ch.old_value,
+                    item_id=ch.item_id,
+                )
+            ),
             service.unapplied_changes.all(),
         )
     )
@@ -85,7 +93,15 @@ def compute_docker_service_snapshot_without_changes(
     service: DockerRegistryService, change_id: str
 ):
     deployment_changes = map(
-        lambda ch: DeploymentChangeDto.from_db_deployment_change(ch),
+        lambda ch: DeploymentChangeDto.from_dict(
+            dict(
+                type=ch.type,
+                field=ch.field,
+                new_value=ch.new_value,
+                old_value=ch.old_value,
+                item_id=ch.item_id,
+            )
+        ),
         service.unapplied_changes.filter(~Q(id=change_id)),
     )
 
@@ -217,29 +233,6 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             )
                         )
     return changes
-
-
-@dataclass
-class DeploymentChangeDto:
-    type: Literal["ADD", "UPDATE", "DELETE"]
-    field: str
-    item_id: Optional[str] = None
-    old_value: Optional[Any] = None
-    new_value: Optional[Any] = None
-
-    @classmethod
-    def from_dict(cls, data: dict):
-        return cls(**data)
-
-    @classmethod
-    def from_db_deployment_change(cls, change: BaseDeploymentChange):
-        return cls(
-            type=change.type,
-            field=change.field,
-            new_value=change.new_value,
-            old_value=change.old_value,
-            item_id=change.item_id,
-        )
 
 
 class ZaneServices:

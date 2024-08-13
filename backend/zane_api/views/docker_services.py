@@ -44,7 +44,7 @@ from .serializers import (
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
 )
-from ..dtos import DockerServiceSnapshot
+from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -500,6 +500,18 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 service=DockerServiceSnapshot.from_dict(
                     new_deployment.service_snapshot
                 ),
+                changes=[
+                    DeploymentChangeDto.from_dict(
+                        dict(
+                            type=change.type,
+                            field=change.field,
+                            new_value=change.new_value,
+                            old_value=change.old_value,
+                            item_id=change.item_id,
+                        )
+                    )
+                    for change in new_deployment.changes.all()
+                ],
             )
             workflow_id = new_deployment.workflow_id
 

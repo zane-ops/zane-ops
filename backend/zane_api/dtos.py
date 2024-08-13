@@ -153,3 +153,16 @@ class DockerServiceSnapshot:
             slug=data["slug"],
             network_alias=data["network_alias"],
         )
+
+
+@dataclass
+class DeploymentChangeDto:
+    type: Literal["ADD", "UPDATE", "DELETE"]
+    field: str
+    item_id: Optional[str] = None
+    old_value: Optional[Any] = None
+    new_value: Optional[Any] = None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
