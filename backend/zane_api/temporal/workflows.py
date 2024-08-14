@@ -3,7 +3,7 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from . import DeploymentHealthcheckResult
+from . import DeploymentHealthcheckResult, SimpleDeploymentDetails
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
@@ -114,6 +114,14 @@ class DeployDockerServiceWorkflow:
             retry_policy=retry_policy,
         )
 
+        print(f"Running activity `get_previous_production_deployment({deployment=})`")
+        previous_production_deployment = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_previous_production_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )
+
         service = deployment.service
         if len(service.docker_volumes) > 0:
             print(
@@ -122,6 +130,19 @@ class DeployDockerServiceWorkflow:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.create_docker_volumes_for_service,
                 deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+
+        if (
+            len(service.volumes) > 0 or len(service.non_http_ports) > 0
+        ) and previous_production_deployment is not None:
+            print(
+                f"Running activity `scale_down_service_deployment({previous_production_deployment=})`"
+            )
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.scale_down_service_deployment,
+                previous_production_deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
             )
@@ -180,7 +201,7 @@ class DeployDockerServiceWorkflow:
             reason=deployment_status_reason,
         )
         print(f"Running activity `save_deployment({healthcheck_result=})`")
-        previous_production_deployment = await workflow.execute_activity_method(
+        await workflow.execute_activity_method(
             DockerSwarmActivities.finish_and_save_deployment,
             healthcheck_result,
             start_to_close_timeout=timedelta(seconds=5),
@@ -218,6 +239,31 @@ class DeployDockerServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=retry_policy,
             )
+        elif healthcheck_result.status != DockerDeployment.DeploymentStatus.HEALTHY:
+            current_deployment = SimpleDeploymentDetails(
+                hash=deployment.hash,
+                project_id=deployment.service.project_id,
+                service_id=deployment.service.id,
+            )
+            print(
+                f"Running activity `scale_down_and_remove_docker_service_deployment({current_deployment=})`"
+            )
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
+                current_deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
+            if previous_production_deployment is not None:
+                print(
+                    f"Running activity `scale_back_service_deployment({previous_production_deployment=})`"
+                )
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.scale_back_service_deployment,
+                    previous_production_deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
 
         print(f"Running activity `get_previous_queued_deployment({deployment=})`")
         previous_queued_deployment = await workflow.execute_activity_method(
@@ -259,5 +305,7 @@ def get_workflows_and_activities():
             activities.scale_down_and_remove_docker_service_deployment,
             activities.remove_old_docker_volumes,
             activities.get_previous_queued_deployment,
+            activities.get_previous_production_deployment,
+            activities.scale_back_service_deployment,
         ],
     )

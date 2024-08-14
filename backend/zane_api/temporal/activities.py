@@ -522,13 +522,6 @@ class DockerSwarmActivities:
                 .afirst()
             )
 
-            latest_production_deployment: DockerDeployment | None = (
-                await current_deployment.service.alatest_production_deployment
-            )
-            if latest_production_deployment:
-                print(f"{latest_production_deployment.hash=}")
-                print(f"{current_deployment.hash=}")
-
             if current_deployment is None:
                 raise DockerDeployment.DoesNotExist(
                     f"Docker deployment with hash='{healthcheck_result.deployment_hash}' does not exist."
@@ -560,13 +553,26 @@ class DockerSwarmActivities:
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
             )
-        else:
-            if latest_production_deployment is not None:
-                return SimpleDeploymentDetails(
-                    hash=latest_production_deployment.hash,
-                    service_id=latest_production_deployment.service_id,
-                    project_id=current_deployment.service.project_id,
-                )
+
+    @activity.defn
+    async def get_previous_production_deployment(self, deployment: DeploymentDetails):
+        latest_production_deployment: DockerDeployment | None = await (
+            DockerDeployment.objects.filter(
+                Q(service_id=deployment.service.id)
+                & Q(is_current_production=True)
+                & ~Q(hash=deployment.hash)
+            )
+            .order_by("-queued_at")
+            .afirst()
+        )
+
+        if latest_production_deployment:
+            return SimpleDeploymentDetails(
+                hash=latest_production_deployment.hash,
+                service_id=latest_production_deployment.service_id,
+                project_id=deployment.service.project_id,
+            )
+        return None
 
     @activity.defn
     async def get_previous_queued_deployment(self, deployment: DeploymentDetails):
@@ -653,6 +659,36 @@ class DockerSwarmActivities:
                 print(f"service `{swarm_service.name=}` is down, YAY !! 🎉")
 
             await wait_for_service_to_be_down()
+
+            # Change the status to be accurate
+            await DockerDeployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service_id
+            ).aupdate(status=DockerDeployment.DeploymentStatus.SLEEPING)
+
+    @activity.defn
+    async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
+        try:
+            swarm_service = self.docker_client.services.get(
+                get_swarm_service_name_for_deployment(
+                    deployment_hash=deployment.hash,
+                    project_id=deployment.project_id,
+                    service_id=deployment.service_id,
+                )
+            )
+        except docker.errors.NotFound:
+            raise ApplicationError(
+                "Cannot scale up an nonexistent deployment.",
+                non_retryable=True,
+            )
+        else:
+            swarm_service.scale(1)
+
+            # Change back the status to be accurate
+            await DockerDeployment.objects.filter(
+                Q(hash=deployment.hash)
+                & Q(service_id=deployment.service_id)
+                & Q(status=DockerDeployment.DeploymentStatus.SLEEPING)
+            ).aupdate(status=DockerDeployment.DeploymentStatus.STARTING)
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(

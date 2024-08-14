@@ -3060,6 +3060,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             .select_related("service")
             .afirst()
         )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.STARTING, first_deployment.status
+        )
         fake_service_list.get.assert_has_calls(
             [
                 call(
