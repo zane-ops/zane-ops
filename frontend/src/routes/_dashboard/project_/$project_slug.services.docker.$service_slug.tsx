@@ -8,10 +8,9 @@ import {
   Container,
   EllipsisVertical,
   KeyRound,
+  Loader,
   Rocket,
   Settings,
-  Shell,
-  Trash,
   TriangleAlert
 } from "lucide-react";
 import * as React from "react";
@@ -286,27 +285,29 @@ function Status({ children, color, className }: StatusProps) {
 function ServiceStatusPreparing() {
   return (
     <div>
-      <h4 className=" text-gray-400 my-3 text-sm">New</h4>
-      <div className="flex border border-blue-400 p-3 rounded-md bg-blue-300 bg-opacity-25 justify-between items-center">
-        <div>
-          <h3 className="flex items-center gap-1">
-            Preparing <Shell size={15} />
-          </h3>
-          <p className="text-sm text-gray-400">just now</p>
-        </div>
+      <h4 className=" text-gray-400 mb-3 text-sm">New</h4>
+      <div className="flex border border-blue-600 p-3 rounded-md bg-blue-600 bg-opacity-10 justify-between items-center">
+        <div className="flex w-[45%] justify-between">
+          <div>
+            <h3 className="flex items-center gap-1">
+              Preparing <Loader className="animate-spin" size={15} />
+            </h3>
+            <p className="text-sm text-gray-400">just now</p>
+          </div>
 
-        <div className="flex flex-col items-center">
-          <h1>Update docker image</h1>
-          <p className="flex text-gray-400 text-sm items-center gap-1">
-            <Clock size={15} />
-            <span className="flex items-center gap-2">
-              10s | <Container size={15} /> nginxdemo/hello:1.0
-            </span>
-          </p>
+          <div>
+            <h1>Update docker image</h1>
+            <p className="flex text-gray-400 text-sm items-center gap-1">
+              <Clock size={15} />
+              <span className="flex items-center gap-2">
+                10s | <Container size={15} /> nginxdemo/hello:1.0
+              </span>
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center">
-          <div className="border px-2 text-sm py-2 rounded-md border-blue-400">
+          <div className="border px-4 py-2 text-sm  rounded-md border-blue-600">
             View logs
           </div>
           <EllipsisVertical />
@@ -319,25 +320,27 @@ function ServiceStatusPreparing() {
 function ServiceStatusCurrent() {
   return (
     <div>
-      <h4 className=" text-gray-400 my-3 text-sm">Current</h4>
-      <div className="flex border border-green-400 p-3 rounded-md bg-green-300 bg-opacity-25 justify-between items-center">
-        <div>
-          <h3>Healthy</h3>
-          <p className="text-sm text-gray-400">just now</p>
-        </div>
+      <h4 className=" text-gray-400 mb-3 text-sm">Current</h4>
+      <div className="flex border border-green-600 p-3 rounded-md bg-green-600 bg-opacity-10 justify-between items-center">
+        <div className="flex w-[45%] justify-between">
+          <div>
+            <h3>Healthy</h3>
+            <p className="text-sm text-gray-400">just now</p>
+          </div>
 
-        <div className="flex flex-col items-center">
-          <h1>Update docker image</h1>
-          <p className="flex text-gray-400 text-sm items-center gap-1">
-            <Clock size={15} />
-            <span className="flex items-center gap-2">
-              10s | <Container size={15} /> nginxdemo/hello:1.0
-            </span>
-          </p>
+          <div>
+            <h1>Update docker image</h1>
+            <p className="flex text-gray-400 text-sm items-center gap-1">
+              <Clock size={15} />
+              <span className="flex items-center gap-2">
+                10s | <Container size={15} /> nginxdemo/hello:1.0
+              </span>
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center">
-          <div className="border px-2 text-sm py-2 rounded-md border-green-400">
+          <div className="border px-4 py-2 text-sm rounded-md border-green-600">
             View logs
           </div>
           <EllipsisVertical />
@@ -350,24 +353,25 @@ function ServiceStatusCurrent() {
 function ServiceStatusFailed() {
   return (
     <div>
-      <div className="flex border border-red-400 p-3 rounded-md bg-red-300 bg-opacity-25 justify-between items-center">
-        <div>
-          <h3>Failed</h3>
-          <p className="text-sm text-gray-400">just now</p>
-        </div>
+      <div className="flex border border-red-600 p-3 rounded-md bg-red-600 bg-opacity-10 justify-between items-center">
+        <div className="flex w-[45%] justify-between">
+          <div>
+            <h3>Failed</h3>
+            <p className="text-sm text-gray-400">just now</p>
+          </div>
 
-        <div className="flex flex-col items-center">
-          <h1>Update docker image</h1>
-          <p className="flex text-gray-400 text-sm items-center gap-1">
-            <Clock size={15} />
-            <span className="flex items-center gap-2">
-              10s | <Container size={15} /> nginxdemo/hello:1.0
-            </span>
-          </p>
+          <div>
+            <h1>Update docker image</h1>
+            <p className="flex text-gray-400 text-sm items-center gap-1">
+              <Clock size={15} />
+              <span className="flex items-center gap-2">
+                10s | <Container size={15} /> nginxdemo/hello:1.0
+              </span>
+            </p>
+          </div>
         </div>
-
         <div className="flex items-center">
-          <div className="border px-2 text-sm py-2 rounded-md border-red-400">
+          <div className="border px-4 py-2 text-sm  rounded-md border-red-600">
             View logs
           </div>
           <EllipsisVertical />
@@ -380,24 +384,26 @@ function ServiceStatusFailed() {
 function ServiceStatusRemoved() {
   return (
     <div>
-      <div className="flex border border-gray-400 p-3 rounded-md bg-gray-300 bg-opacity-25 justify-between items-center">
-        <div>
-          <h3>Removed</h3>
-          <p className="text-sm text-gray-400">just now</p>
-        </div>
+      <div className="flex border border-gray-600 p-3 rounded-md bg-gray-600 bg-opacity-10 justify-between items-center">
+        <div className="flex justify-between w-[45%]">
+          <div>
+            <h3>Removed</h3>
+            <p className="text-sm text-gray-400">just now</p>
+          </div>
 
-        <div className="flex flex-col items-center">
-          <h1>Update docker image</h1>
-          <p className="flex text-gray-400 text-sm items-center gap-1">
-            <Clock size={15} />
-            <span className="flex items-center gap-2">
-              10s | <Container size={15} /> nginxdemo/hello:1.0
-            </span>
-          </p>
+          <div>
+            <h1>Update docker image</h1>
+            <p className="flex text-gray-400 text-sm items-center gap-1">
+              <Clock size={15} />
+              <span className="flex items-center gap-2">
+                10s | <Container size={15} /> nginxdemo/hello:1.0
+              </span>
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center">
-          <div className="border px-2 text-sm py-2 rounded-md border-gray-400">
+          <div className="border px-4 py-2 text-sm  rounded-md border-gray-600">
             View logs
           </div>
           <EllipsisVertical />
