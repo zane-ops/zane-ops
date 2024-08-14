@@ -601,7 +601,7 @@ class DockerDeployment(BaseDeployment):
 
     @property
     def workflow_id(self):
-        return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
+        return f"deploy-{self.service.id}-{self.service.project_id}"
 
     @property
     def monitor_task_name(self):
