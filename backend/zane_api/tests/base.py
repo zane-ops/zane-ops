@@ -642,7 +642,7 @@ class FakeDockerClient:
             get_swarm_service_name_for_deployment(
                 deployment_hash=deployment.hash,
                 service_id=deployment.service_id,
-                project_id=deployment.service.project.id,
+                project_id=deployment.service.project_id,
             )
         )
 
