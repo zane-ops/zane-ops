@@ -497,7 +497,7 @@ class DockerSwarmActivities:
     async def prepare_deployment(self, deployment: DeploymentDetails):
         try:
             docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
-                hash=deployment.hash
+                hash=deployment.hash, service_id=deployment.service.id
             )
             if docker_deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
                 docker_deployment.status = DockerDeployment.DeploymentStatus.PREPARING
@@ -514,7 +514,7 @@ class DockerSwarmActivities:
         self, healthcheck_result: DeploymentHealthcheckResult
     ) -> Optional[SimpleDeploymentDetails]:
         try:
-            docker_deployment: DockerDeployment = (
+            current_deployment: DockerDeployment = (
                 await DockerDeployment.objects.filter(
                     hash=healthcheck_result.deployment_hash
                 )
@@ -522,60 +522,92 @@ class DockerSwarmActivities:
                 .afirst()
             )
 
-            if docker_deployment is None:
+            latest_production_deployment: DockerDeployment | None = (
+                await current_deployment.service.alatest_production_deployment
+            )
+            if latest_production_deployment:
+                print(f"{latest_production_deployment.hash=}")
+                print(f"{current_deployment.hash=}")
+
+            if current_deployment is None:
                 raise DockerDeployment.DoesNotExist(
                     f"Docker deployment with hash='{healthcheck_result.deployment_hash}' does not exist."
                 )
 
-            docker_deployment.status_reason = healthcheck_result.reason
+            current_deployment.status_reason = healthcheck_result.reason
             if (
                 healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
-                or await docker_deployment.service.deployments.acount() == 1
+                or await current_deployment.service.deployments.acount() == 1
             ):
-                docker_deployment.is_current_production = True
+                current_deployment.is_current_production = True
 
-            docker_deployment.status = (
+            current_deployment.status = (
                 DockerDeployment.DeploymentStatus.HEALTHY
                 if healthcheck_result.status
                 == DockerDeployment.DeploymentStatus.HEALTHY
                 else DockerDeployment.DeploymentStatus.FAILED
             )
 
-            docker_deployment.finished_at = timezone.now()
-            await docker_deployment.asave()
+            current_deployment.finished_at = timezone.now()
+            await current_deployment.asave()
 
-            if docker_deployment.is_current_production:
-                await docker_deployment.service.deployments.filter(
+            if current_deployment.is_current_production:
+                await current_deployment.service.deployments.filter(
                     ~Q(hash=healthcheck_result.deployment_hash)
                 ).aupdate(is_current_production=False)
-
-            previous_deployment: DockerDeployment | None = await (
-                DockerDeployment.objects.filter(
-                    Q(service_id=docker_deployment.service.id)
-                    & Q(queued_at__lt=docker_deployment.queued_at)
-                    & ~Q(hash=docker_deployment.hash)
-                )
-                .order_by("-queued_at")
-                .afirst()
-            )
-
-            if previous_deployment is not None:
-                return SimpleDeploymentDetails(
-                    hash=previous_deployment.hash,
-                    service_id=previous_deployment.service_id,
-                    project_id=docker_deployment.service.project_id,
-                )
         except DockerDeployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
             )
+        else:
+            if latest_production_deployment is not None:
+                return SimpleDeploymentDetails(
+                    hash=latest_production_deployment.hash,
+                    service_id=latest_production_deployment.service_id,
+                    project_id=current_deployment.service.project_id,
+                )
 
     @activity.defn
-    async def cleanup_previous_deployment(self, deployment: SimpleDeploymentDetails):
-        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
-            status=DockerDeployment.DeploymentStatus.REMOVED
-        )
+    async def get_previous_queued_deployment(self, deployment: DeploymentDetails):
+        next_deployment = await DockerDeployment.objects.filter(
+            Q(service_id=deployment.service.id)
+            & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
+        ).afirst()
+
+        if next_deployment is not None:
+            return DeploymentDetails(
+                hash=next_deployment.hash,
+                slot=next_deployment.slot,
+                auth_token=deployment.auth_token,
+                queued_at=next_deployment.queued_at.isoformat(),
+                unprefixed_hash=next_deployment.unprefixed_hash,
+                url=next_deployment.url,
+                service=DockerServiceSnapshot.from_dict(
+                    next_deployment.service_snapshot
+                ),
+                changes=[
+                    DeploymentChangeDto.from_dict(
+                        dict(
+                            type=change.type,
+                            field=change.field,
+                            new_value=change.new_value,
+                            old_value=change.old_value,
+                            item_id=change.item_id,
+                        )
+                    )
+                    async for change in next_deployment.changes.all()
+                ],
+            )
+        return None
+
+    @activity.defn
+    async def cleanup_previous_production_deployment(
+        self, deployment: SimpleDeploymentDetails
+    ):
+        await DockerDeployment.objects.filter(
+            hash=deployment.hash, service_id=deployment.service_id
+        ).aupdate(status=DockerDeployment.DeploymentStatus.REMOVED)
 
     @activity.defn
     async def create_docker_volumes_for_service(self, deployment: DeploymentDetails):
@@ -753,7 +785,9 @@ class DockerSwarmActivities:
         deployment: DeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         docker_deployment: DockerDeployment = (
-            await DockerDeployment.objects.filter(hash=deployment.hash)
+            await DockerDeployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            )
             .select_related("service", "service__project", "service__healthcheck")
             .afirst()
         )

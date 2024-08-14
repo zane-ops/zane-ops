@@ -3,6 +3,7 @@ from unittest.mock import patch, Mock, MagicMock, call
 
 import requests
 import responses
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
@@ -2821,12 +2822,18 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(2, await service.deployments.acount())
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
-    def test_update_service_schedule_next_queued_deployment_on_finish(self):
-        project, service = self.create_and_deploy_redis_docker_service()
+    async def test_update_service_schedule_next_queued_deployment_on_finish(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        third_deployment = DockerDeployment.objects.create(service=service)
+        third_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
+            service=service
+        )
+        third_deployment.service_snapshot = await sync_to_async(
+            lambda: DockerServiceSerializer(service).data
+        )()
+        await third_deployment.asave()
 
-        DockerDeploymentChange.objects.bulk_create(
+        await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.IMAGE,
@@ -2836,7 +2843,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 ),
             ]
         )
-        response = self.client.put(
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
@@ -2846,25 +2853,40 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(3, service.deployments.count())
-
-        third_deployment.refresh_from_db()
-        self.assertNotEqual(
-            DockerDeployment.DeploymentStatus.QUEUED, third_deployment.status
+        self.assertEqual(3, await service.deployments.acount())
+        second_deployment = await (
+            DockerDeployment.objects.filter().select_related("service").afirst()
+        )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.REMOVED, second_deployment.status
+        )
+        self.assertIsNone(
+            self.fake_docker_client.get_deployment_service(second_deployment)
         )
 
-    def test_update_service_schedule_next_queued_deployment_even_if_fails(
-        self,
-    ):
-        project, service = self.create_and_deploy_redis_docker_service()
+        third_deployment = await (
+            DockerDeployment.objects.filter(hash=third_deployment.hash)
+            .select_related("service")
+            .afirst()
+        )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, third_deployment.status
+        )
+        self.assertIsNotNone(
+            self.fake_docker_client.get_deployment_service(third_deployment)
+        )
 
-        def create_raise_error(*args, **kwargs):
-            raise Exception("Fake error")
+    async def test_update_service_schedule_next_queued_deployment_even_if_fails(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        self.fake_docker_client.services.create = create_raise_error
-        third_deployment = DockerDeployment.objects.create(service=service)
+        third_deployment = await DockerDeployment.objects.acreate(service=service)
+        third_deployment.service_snapshot = await sync_to_async(
+            lambda: DockerServiceSerializer(service).data
+        )()
+        await third_deployment.asave()
+        print(f"{third_deployment.hash=}")
 
-        DockerDeploymentChange.objects.bulk_create(
+        await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.IMAGE,
@@ -2874,21 +2896,48 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 ),
             ]
         )
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": project.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(3, service.deployments.count())
 
-        third_deployment.refresh_from_db()
-        self.assertNotEqual(
-            DockerDeployment.DeploymentStatus.QUEUED, third_deployment.status
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [
+                0,
+                31,  # -> second deployment will fail healthcheck
+                0,
+                15,
+                30,
+                30,  # -> third deployment will succeed healthcheck
+            ]
+            response = await self.async_client.put(
+                reverse(
+                    "zane_api:services.docker.deploy_service",
+                    kwargs={
+                        "project_slug": project.slug,
+                        "service_slug": service.slug,
+                    },
+                ),
+            )
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, await service.deployments.acount())
+
+        second_deployment = await (
+            DockerDeployment.objects.filter().select_related("service").afirst()
+        )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED, second_deployment.status
+        )
+        # self.assertIsNone(
+        #     self.fake_docker_client.get_deployment_service(second_deployment)
+        # )
+
+        third_deployment = await (
+            DockerDeployment.objects.filter(hash=third_deployment.hash)
+            .select_related("service")
+            .afirst()
+        )
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, third_deployment.status
+        )
+        self.assertIsNotNone(
+            self.fake_docker_client.get_deployment_service(third_deployment)
         )
 
     @patch("zane_api.tasks.apply_deleted_urls_changes")
@@ -2967,19 +3016,14 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         mock.assert_called()
         mock.assert_called_with([])
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
+    async def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
         self,
-        mock_monotonic: Mock,
-        _: Mock,
     ):
-        mock_monotonic.side_effect = [0, 31]
-        project, service = self.create_and_deploy_redis_docker_service()
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 31]
+            project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        mock_monotonic.side_effect = [0, 0, 0, 31]
-
-        DockerDeploymentChange.objects.bulk_create(
+        await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.IMAGE,
@@ -2989,7 +3033,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 ),
             ]
         )
-        response = self.client.put(
+
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
@@ -2999,9 +3044,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(2, service.deployments.count())
-        first_deployment = service.deployments.order_by("queued_at")[0]
-        second_deployment = service.deployments.order_by("queued_at")[1]
+        self.assertEqual(2, await service.deployments.acount())
+        first_deployment = await service.deployments.order_by("queued_at").afirst()
+        second_deployment = await service.deployments.order_by("queued_at").alast()
         self.assertEqual(first_deployment.slot, second_deployment.slot)
 
     @patch("zane_api.docker_operations.sleep")

@@ -101,7 +101,7 @@ class RemoveProjectResourcesWorkflow:
 class DeployDockerServiceWorkflow:
     @workflow.run
     async def run(self, deployment: DeploymentDetails):
-        print(f"Running workflow `DeployDockerServiceWorkflow` with {deployment=}")
+        print(f"\nRunning workflow `DeployDockerServiceWorkflow` with {deployment=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
@@ -174,26 +174,29 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-        result = DeploymentHealthcheckResult(
+        healthcheck_result = DeploymentHealthcheckResult(
             deployment_hash=deployment.hash,
             status=deployment_status,
             reason=deployment_status_reason,
         )
-        print(f"Running activity `save_deployment({result=})`")
-        previous_deployment = await workflow.execute_activity_method(
+        print(f"Running activity `save_deployment({healthcheck_result=})`")
+        previous_production_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.finish_and_save_deployment,
-            result,
+            healthcheck_result,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
 
-        if previous_deployment is not None:
+        if (
+            previous_production_deployment is not None
+            and healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
+        ):
             print(
-                f"Running activity `scale_down_and_remove_docker_service_deployment({previous_deployment=})`"
+                f"Running activity `scale_down_and_remove_docker_service_deployment({previous_production_deployment=})`"
             )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
-                previous_deployment,
+                previous_production_deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
             )
@@ -207,14 +210,25 @@ class DeployDockerServiceWorkflow:
             )
 
             print(
-                f"Running activity `cleanup_previous_deployment({previous_deployment=})`"
+                f"Running activity `cleanup_previous_deployment({previous_production_deployment=})`"
             )
             await workflow.execute_activity_method(
-                DockerSwarmActivities.cleanup_previous_deployment,
-                previous_deployment,
+                DockerSwarmActivities.cleanup_previous_production_deployment,
+                previous_production_deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=retry_policy,
             )
+
+        print(f"Running activity `get_previous_queued_deployment({deployment=})`")
+        previous_queued_deployment = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_previous_queued_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )
+        if previous_queued_deployment is not None:
+            print(f"{previous_queued_deployment=}")
+            await workflow.continue_as_new(previous_queued_deployment)
 
 
 def get_workflows_and_activities():
@@ -241,8 +255,9 @@ def get_workflows_and_activities():
             activities.expose_docker_service_deployment_to_http,
             activities.expose_docker_service_to_http,
             activities.finish_and_save_deployment,
-            activities.cleanup_previous_deployment,
+            activities.cleanup_previous_production_deployment,
             activities.scale_down_and_remove_docker_service_deployment,
             activities.remove_old_docker_volumes,
+            activities.get_previous_queued_deployment,
         ],
     )
