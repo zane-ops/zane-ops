@@ -27,7 +27,6 @@ from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_caddy_uri_for_url,
 )
-from ..views.helpers import URLDto
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -3100,26 +3099,31 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(0, periodic_task_associated_to_deployment.count())
 
-    @patch("zane_api.tasks.apply_deleted_urls_changes")
-    def test_update_url_delete_old_url_from_caddy(self, mock: Mock):
-        p, service = self.create_and_deploy_caddy_docker_service()
+    async def test_update_url_delete_old_url_from_caddy(self):
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
 
-        url: URL = service.urls.first()
+        old_url: URL = await service.urls.afirst()
 
-        change = DockerDeploymentChange.objects.create(
+        change = await DockerDeploymentChange.objects.acreate(
             field=DockerDeploymentChange.ChangeField.URLS,
             type=DockerDeploymentChange.ChangeType.UPDATE,
-            item_id=url.id,
+            item_id=old_url.id,
             new_value={
                 "domain": "proxy.fredkiss.dev",
                 "base_path": "/config",
                 "strip_prefix": False,
+                "id": old_url.id,
             },
-            old_value=DockerServiceSerializer(service).data.get("urls")[0],
+            old_value=dict(
+                domain=old_url.domain,
+                base_path=old_url.base_path,
+                strip_prefix=old_url.strip_prefix,
+                id=old_url.id,
+            ),
             service=service,
         )
 
-        response = self.client.put(
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
@@ -3129,12 +3133,17 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        mock.assert_called()
-        mock.assert_called_with([URLDto.from_dict(change.old_value)])
 
-    @patch("zane_api.tasks.apply_deleted_urls_changes")
-    def test_update_url_do_not_delete_old_url_if_still_used(self, mock: Mock):
-        p, service = self.create_and_deploy_caddy_docker_service(
+        new_url: URL = await service.urls.afirst()
+
+        response = requests.get(get_caddy_uri_for_url(new_url))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = requests.get(get_caddy_uri_for_url(old_url))
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    async def test_update_url_do_not_delete_old_url_if_still_used(self):
+        p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.URLS,
@@ -3148,22 +3157,27 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ]
         )
 
-        url: URL = service.urls.first()
+        old_url: URL = await service.urls.afirst()
 
-        DockerDeploymentChange.objects.create(
+        await DockerDeploymentChange.objects.acreate(
             field=DockerDeploymentChange.ChangeField.URLS,
             type=DockerDeploymentChange.ChangeType.UPDATE,
-            item_id=url.id,
+            item_id=old_url.id,
             new_value={
                 "domain": "proxy.fredkiss.dev",
                 "base_path": "/",
                 "strip_prefix": True,
             },
-            old_value=DockerServiceSerializer(service).data.get("urls")[0],
+            old_value=dict(
+                domain=old_url.domain,
+                base_path=old_url.base_path,
+                strip_prefix=old_url.strip_prefix,
+                id=old_url.id,
+            ),
             service=service,
         )
 
-        response = self.client.put(
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
@@ -3173,8 +3187,14 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        mock.assert_called()
-        mock.assert_called_with([])
+
+        new_url: URL = await service.urls.afirst()
+
+        response = requests.get(get_caddy_uri_for_url(new_url))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = requests.get(get_caddy_uri_for_url(old_url))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_dont_do_zero_downtime_when_updating_with_volumes(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()

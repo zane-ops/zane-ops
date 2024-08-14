@@ -1157,6 +1157,23 @@ class DockerSwarmActivities:
                 volume.remove(force=True)
 
     @activity.defn
+    async def remove_old_urls(self, deployment: DeploymentDetails):
+        for volume_change in filter(
+            lambda change: change.field == DockerDeploymentChange.ChangeField.VOLUMES
+            and change.type == DockerDeploymentChange.ChangeType.DELETE,
+            deployment.changes,
+        ):  # type: DeploymentChangeDto
+            try:
+                volume = self.docker_client.volumes.get(
+                    get_volume_resource_name(volume_change.item_id)
+                )
+            except docker.errors.NotFound:
+                # the volume has already been deleted, do nothing
+                pass
+            else:
+                volume.remove(force=True)
+
+    @activity.defn
     async def unexpose_docker_service_from_http(
         self, service_details: ArchivedServiceDetails
     ):
