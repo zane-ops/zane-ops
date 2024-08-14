@@ -286,11 +286,12 @@ function ServiceStatusPreparing() {
   return (
     <div>
       <h4 className=" text-gray-400 mb-3 text-sm">New</h4>
-      <div className="flex border border-blue-600 p-3 rounded-md bg-blue-600 bg-opacity-10 justify-between items-center">
-        <div className="flex w-[45%] justify-between">
+      <div className="flex border border-blue-600 px-3 py-4 rounded-md bg-blue-600 bg-opacity-10 justify-between items-center">
+        <div className="flex w-[30%] justify-between">
           <div>
             <h3 className="flex items-center gap-1">
-              Preparing <Loader className="animate-spin" size={15} />
+              <span className="text-blue-500">Preparing</span>
+              <Loader className="animate-spin" size={15} />
             </h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
@@ -300,7 +301,7 @@ function ServiceStatusPreparing() {
             <p className="flex text-gray-400 text-sm items-center gap-1">
               <Clock size={15} />
               <span className="flex items-center gap-2">
-                10s | <Container size={15} /> nginxdemo/hello:1.0
+                10s - <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
@@ -321,10 +322,10 @@ function ServiceStatusCurrent() {
   return (
     <div>
       <h4 className=" text-gray-400 mb-3 text-sm">Current</h4>
-      <div className="flex border border-green-600 p-3 rounded-md bg-green-600 bg-opacity-10 justify-between items-center">
-        <div className="flex w-[45%] justify-between">
+      <div className="flex border border-green-600 px-3 py-4 rounded-md bg-green-600 bg-opacity-10 justify-between items-center">
+        <div className="flex w-[30%] justify-between">
           <div>
-            <h3>Healthy</h3>
+            <h3 className="text-green-500">Healthy</h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
 
@@ -333,7 +334,7 @@ function ServiceStatusCurrent() {
             <p className="flex text-gray-400 text-sm items-center gap-1">
               <Clock size={15} />
               <span className="flex items-center gap-2">
-                10s | <Container size={15} /> nginxdemo/hello:1.0
+                10s - <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
@@ -353,10 +354,10 @@ function ServiceStatusCurrent() {
 function ServiceStatusFailed() {
   return (
     <div>
-      <div className="flex border border-red-600 p-3 rounded-md bg-red-600 bg-opacity-10 justify-between items-center">
-        <div className="flex w-[45%] justify-between">
+      <div className="flex border border-red-600 px-3 py-4 rounded-md bg-red-600 bg-opacity-10 justify-between items-center">
+        <div className="flex w-[30%] justify-between">
           <div>
-            <h3>Failed</h3>
+            <h3 className="text-red-500">Failed</h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
 
@@ -365,7 +366,7 @@ function ServiceStatusFailed() {
             <p className="flex text-gray-400 text-sm items-center gap-1">
               <Clock size={15} />
               <span className="flex items-center gap-2">
-                10s | <Container size={15} /> nginxdemo/hello:1.0
+                10s - <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
@@ -382,12 +383,18 @@ function ServiceStatusFailed() {
 }
 
 function ServiceStatusRemoved() {
+  const [isHovered, setIsHovered] = React.useState(false);
+
   return (
     <div>
-      <div className="flex border border-gray-600 p-3 rounded-md bg-gray-600 bg-opacity-10 justify-between items-center">
-        <div className="flex justify-between w-[45%]">
+      <div
+        className="flex cursor-pointer border border-gray-600 px-3 py-4 rounded-md bg-gray-600 bg-opacity-10 justify-between items-center"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="flex justify-between w-[30%]">
           <div>
-            <h3>Removed</h3>
+            <h3 className="text-gray-400">Removed</h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
 
@@ -396,16 +403,18 @@ function ServiceStatusRemoved() {
             <p className="flex text-gray-400 text-sm items-center gap-1">
               <Clock size={15} />
               <span className="flex items-center gap-2">
-                10s | <Container size={15} /> nginxdemo/hello:1.0
+                10s - <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center">
-          <div className="border px-4 py-2 text-sm  rounded-md border-gray-600">
-            View logs
-          </div>
+          {isHovered && (
+            <div className="border px-4 py-2 text-sm  rounded-md border-gray-600">
+              View logs
+            </div>
+          )}
           <EllipsisVertical />
         </div>
       </div>
