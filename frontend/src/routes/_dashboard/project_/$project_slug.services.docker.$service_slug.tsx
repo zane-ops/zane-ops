@@ -11,6 +11,7 @@ import {
   Loader,
   Rocket,
   Settings,
+  Timer,
   TriangleAlert
 } from "lucide-react";
 import * as React from "react";
@@ -290,7 +291,7 @@ function ServiceStatusPreparing() {
         <div className="flex w-[30%] justify-between">
           <div>
             <h3 className="flex items-center gap-1">
-              <span className="text-blue-500">Preparing</span>
+              <span className="text-blue-500 text-lg">Preparing</span>
               <Loader className="animate-spin" size={15} />
             </h3>
             <p className="text-sm text-gray-400">just now</p>
@@ -298,10 +299,10 @@ function ServiceStatusPreparing() {
 
           <div>
             <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center gap-1">
-              <Clock size={15} />
-              <span className="flex items-center gap-2">
-                10s - <Container size={15} /> nginxdemo/hello:1.0
+            <p className="flex text-gray-400 text-sm items-center">
+              <Timer size={15} /> 10s
+              <span className="flex mx-2 items-center">
+                <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
@@ -325,16 +326,16 @@ function ServiceStatusCurrent() {
       <div className="flex border border-green-600 px-3 py-4 rounded-md bg-green-600 bg-opacity-10 justify-between items-center">
         <div className="flex w-[30%] justify-between">
           <div>
-            <h3 className="text-green-500">Healthy</h3>
+            <h3 className="text-green-500 text-lg">Healthy</h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
 
           <div>
             <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center gap-1">
-              <Clock size={15} />
-              <span className="flex items-center gap-2">
-                10s - <Container size={15} /> nginxdemo/hello:1.0
+            <p className="flex text-gray-400 text-sm items-center">
+              <Timer size={15} /> 10s
+              <span className="flex items-center mx-2">
+                <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
@@ -357,16 +358,16 @@ function ServiceStatusFailed() {
       <div className="flex border border-red-600 px-3 py-4 rounded-md bg-red-600 bg-opacity-10 justify-between items-center">
         <div className="flex w-[30%] justify-between">
           <div>
-            <h3 className="text-red-500">Failed</h3>
+            <h3 className="text-red-500 text-lg">Failed</h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
 
           <div>
             <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center gap-1">
-              <Clock size={15} />
-              <span className="flex items-center gap-2">
-                10s - <Container size={15} /> nginxdemo/hello:1.0
+            <p className="flex text-gray-400 text-sm items-center ">
+              <Timer size={15} /> 10s
+              <span className="flex items-center mx-2">
+                <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
@@ -394,16 +395,16 @@ function ServiceStatusRemoved() {
       >
         <div className="flex justify-between w-[30%]">
           <div>
-            <h3 className="text-gray-400">Removed</h3>
+            <h3 className="text-gray-400 text-lg">Removed</h3>
             <p className="text-sm text-gray-400">just now</p>
           </div>
 
           <div>
             <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center gap-1">
-              <Clock size={15} />
-              <span className="flex items-center gap-2">
-                10s - <Container size={15} /> nginxdemo/hello:1.0
+            <p className="flex text-gray-400 text-sm items-center">
+              <Timer size={15} /> 10s
+              <span className="flex items-center mx-2">
+                <Container size={15} /> nginxdemo/hello:1.0
               </span>
             </p>
           </div>
