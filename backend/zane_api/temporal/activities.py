@@ -118,6 +118,10 @@ def get_caddy_uri_for_url(url: URLDto | URL):
     return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
 
 
+def get_caddy_id_for_domain(domain: str):
+    return f"{domain}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}"
+
+
 def get_caddy_id_for_url(url: URLDto | URL):
     normalized_path = strip_slash_if_exists(
         url.base_path, strip_end=True, strip_start=True
@@ -131,7 +135,7 @@ def get_caddy_id_for_url(url: URLDto | URL):
 
 def get_caddy_request_for_domain(domain: str):
     return {
-        "@id": f"{domain}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+        "@id": get_caddy_id_for_domain(domain),
         "match": [{"host": [domain]}],
         "handle": [
             {
@@ -1053,7 +1057,7 @@ class DockerSwarmActivities:
 
             for url in service.urls:
                 response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
                     timeout=5,
                 )
 
@@ -1068,7 +1072,7 @@ class DockerSwarmActivities:
 
                 # now we create or modify the config for the URL
                 response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}/handle/0/routes"
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes"
                 )
                 routes = list(
                     filter(
@@ -1099,7 +1103,7 @@ class DockerSwarmActivities:
                 routes = sort_proxy_routes(routes)
 
                 requests.patch(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}/handle/0/routes",
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
                     headers={"content-type": "application/json"},
                     json=routes,
                     timeout=5,
@@ -1158,20 +1162,70 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def remove_old_urls(self, deployment: DeploymentDetails):
-        for volume_change in filter(
-            lambda change: change.field == DockerDeploymentChange.ChangeField.VOLUMES
-            and change.type == DockerDeploymentChange.ChangeType.DELETE,
-            deployment.changes,
-        ):  # type: DeploymentChangeDto
-            try:
-                volume = self.docker_client.volumes.get(
-                    get_volume_resource_name(volume_change.item_id)
+        # We need to remove both deleted URLs and urls that are not valid anymore
+        urls_to_delete = list(
+            map(
+                lambda change: URLDto.from_dict(change.old_value),
+                filter(
+                    lambda change: change.field
+                    == DockerDeploymentChange.ChangeField.URLS
+                    and change.old_value is not None
+                    and (
+                        change.type == DockerDeploymentChange.ChangeType.DELETE
+                        or change.type == DockerDeploymentChange.ChangeType.UPDATE
+                    ),
+                    deployment.changes,
+                ),
+            )
+        )
+
+        # This is a fix that check that the URL hasn't been re-added again
+        # Because since we add new URLs before deleting old urls
+        # it might delete the newly added URL
+        # So, we check the urls to delete against the urls of the service
+        # And if that URL still is attached to the service, we don't delete it
+        domains = {_url.domain for _url in urls_to_delete}
+        paths = {_url.base_path for _url in urls_to_delete}
+        existing_urls = filter(
+            lambda u: u.domain in domains and u.base_path in paths,
+            deployment.service.urls,
+        )
+        for url in existing_urls:
+            existing_url = find_item_in_list(
+                lambda item: item.domain == url.domain
+                and item.base_path == url.base_path,
+                urls_to_delete,
+            )
+            if existing_url is not None:
+                urls_to_delete.remove(existing_url)
+
+        for url in urls_to_delete:  # type: URLDto
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}/handle/0/routes",
+                timeout=5,
+            )
+
+            if response.status_code != 404:
+                current_routes: list[dict[str, dict]] = response.json()
+                routes = list(
+                    filter(
+                        lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                        current_routes,
+                    )
                 )
-            except docker.errors.NotFound:
-                # the volume has already been deleted, do nothing
-                pass
-            else:
-                volume.remove(force=True)
+
+                # delete the domain when there are no routes for the domain anymore
+                if len(routes) == 0:
+                    requests.delete(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
+                        timeout=5,
+                    )
+                else:
+                    # in the other case, we just delete the caddy config
+                    requests.delete(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
+                        timeout=5,
+                    )
 
     @activity.defn
     async def unexpose_docker_service_from_http(
@@ -1180,7 +1234,7 @@ class DockerSwarmActivities:
         for url in service_details.urls:
             # get all the routes of the domain
             response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}/handle/0/routes",
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
                 timeout=5,
             )
 
@@ -1196,7 +1250,7 @@ class DockerSwarmActivities:
                 # delete the domain config when there are no routes for the domain anymore
                 if len(routes) == 0:
                     requests.delete(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url.domain}",
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
                         timeout=5,
                     )
                 else:

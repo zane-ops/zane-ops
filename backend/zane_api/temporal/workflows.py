@@ -230,13 +230,13 @@ class DeployDockerServiceWorkflow:
                 retry_policy=retry_policy,
             )
 
-            # print(f"Running activity `remove_old_urls({deployment=})`")
-            # await workflow.execute_activity_method(
-            #     DockerSwarmActivities.remove_old_urls,
-            #     deployment,
-            #     start_to_close_timeout=timedelta(seconds=30),
-            #     retry_policy=retry_policy,
-            # )
+            print(f"Running activity `remove_old_urls({deployment=})`")
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.remove_old_urls,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
 
             print(
                 f"Running activity `cleanup_previous_deployment({previous_production_deployment=})`"
