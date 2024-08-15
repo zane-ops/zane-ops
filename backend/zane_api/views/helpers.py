@@ -191,7 +191,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             ),
                         )
                     )
-            case _:
+            case "volumes" | "urls" | "env_variables" | "ports":
                 current_items: dict[
                     str, VolumeDto | URLDto | EnvVariableDto | PortConfigurationDto
                 ] = {item.id: item for item in current_value}

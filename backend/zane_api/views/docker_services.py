@@ -69,7 +69,6 @@ from ..serializers import (
 )
 from ..tasks import (
     delete_resources_for_docker_service,
-    deploy_docker_service_with_changes,
 )
 from ..temporal import start_workflow, DeployDockerServiceWorkflow, DeploymentDetails
 
@@ -606,14 +605,35 @@ class RedeployDockerServiceAPIView(APIView):
 
         token = Token.objects.get(user=request.user)
         # Run celery deployment task
+        payload = DeploymentDetails(
+            hash=new_deployment.hash,
+            slot=new_deployment.slot,
+            auth_token=token.key,
+            queued_at=new_deployment.queued_at.isoformat(),
+            unprefixed_hash=new_deployment.unprefixed_hash,
+            url=new_deployment.url,
+            service=DockerServiceSnapshot.from_dict(new_deployment.service_snapshot),
+            changes=[
+                DeploymentChangeDto.from_dict(
+                    dict(
+                        type=change.type,
+                        field=change.field,
+                        new_value=change.new_value,
+                        old_value=change.old_value,
+                        item_id=change.item_id,
+                    )
+                )
+                for change in new_deployment.changes.all()
+            ],
+        )
+        workflow_id = new_deployment.workflow_id
+
+        # Run celery deployment task
         transaction.on_commit(
-            lambda: deploy_docker_service_with_changes.apply_async(
-                kwargs=dict(
-                    deployment_hash=new_deployment.hash,
-                    service_id=service.id,
-                    auth_token=token.key,
-                ),
-                task_id=new_deployment.workflow_id,
+            lambda: start_workflow(
+                DeployDockerServiceWorkflow.run,
+                payload,
+                id=workflow_id,
             )
         )
 
