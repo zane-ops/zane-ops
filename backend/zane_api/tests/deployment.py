@@ -2626,24 +2626,23 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertTrue(new_deployment.is_current_production)
 
-    @patch("zane_api.temporal.activities.monotonic")
     async def test_deploy_service_do_not_set_deployment_to_production_when_healthcheck_fails(
         self,
-        mock_monotonic: Mock,
     ):
-        mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        mock_monotonic.side_effect = [0, 31]
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 30]
+            response = await self.async_client.put(
+                reverse(
+                    "zane_api:services.docker.deploy_service",
+                    kwargs={
+                        "project_slug": p.slug,
+                        "service_slug": service.slug,
+                    },
+                ),
+            )
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+
         new_deployment: DockerDeployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
