@@ -3104,7 +3104,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         old_url: URL = await service.urls.afirst()
 
-        change = await DockerDeploymentChange.objects.acreate(
+        await DockerDeploymentChange.objects.acreate(
             field=DockerDeploymentChange.ChangeField.URLS,
             type=DockerDeploymentChange.ChangeType.UPDATE,
             item_id=old_url.id,
