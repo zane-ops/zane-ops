@@ -10,6 +10,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        log_preparing: "border px-4 py-2 text-sm  rounded-md border-blue-600",
+        log_healthy: "border px-4 py-2 text-sm  rounded-md border-green-600",
+        log_failed: "border px-4 py-2 text-sm  rounded-md border-red-600",
+        log_removed: "border px-4 py-2 text-sm  rounded-md border-gray-600",
+
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
@@ -46,7 +51,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size }), className)}
         ref={ref}
         {...props}
       />

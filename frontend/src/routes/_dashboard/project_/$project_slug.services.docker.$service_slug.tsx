@@ -39,6 +39,11 @@ import {
 import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
+import {
+  capitalizeText,
+  formattedDate,
+  mergeTimeAgoFormatterAndFormattedDate
+} from "~/utils";
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
 )({
@@ -222,18 +227,43 @@ function ServiceDetails() {
           </div>
 
           <div className="flex flex-col gap-4 mt-6">
-            <ServiceStatusPreparing />
-            <ServiceStatusCurrent />
-            <h4 className="text-gray-400 text-sm">Previous</h4>
-            <ServiceStatusFailed />
-            <ServiceStatusRemoved />
-            <ServiceStatusRemoved />
+            <h2 className="text-gray-400 text-sm">New</h2>
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="PREPARING"
+              image="nginx:dmeo"
+              started_at={new Date("2024-08-14T23:35:30.183Z")}
+              queued_at={new Date()}
+            />
+
+            <h2 className="text-gray-400 text-sm">Current</h2>
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="HEALTHY"
+              image="nginx:dmeo"
+              finished_at={new Date()}
+              started_at={new Date()}
+              queued_at={new Date()}
+            />
+
+            <h2 className="text-gray-400 text-sm">Previous</h2>
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="QUEUED"
+              image="nginx:dmeo"
+              queued_at={new Date()}
+            />
           </div>
+
           <div className="flex justify-center items-center my-5">
             <Button variant="outline" className="w-1/3">
               Load More
             </Button>
           </div>
+
           {/**
      * <div className="flex justify-center items-center">
             <div className=" flex gap-1 flex-col items-center mt-40">
@@ -255,13 +285,14 @@ function ServiceDetails() {
 }
 
 type TrackerColor = "red" | "green" | "orange" | "gray" | "blue";
+type StatusText = "Preparing" | "Failed" | "Removed" | "Healthy";
 
-interface StatusProps {
+type StatusProps = {
   color: TrackerColor;
   children: React.ReactNode;
   isPing?: boolean;
   className?: string;
-}
+};
 
 function Status({ children, color, className }: StatusProps) {
   return (
@@ -283,141 +314,144 @@ function Status({ children, color, className }: StatusProps) {
   );
 }
 
-function ServiceStatusPreparing() {
+type DeploymentCardProps = {
+  status:
+    | "QUEUED"
+    | "PREPARING"
+    | "STARTING"
+    | "RESTARTING"
+    | "HEALTHY"
+    | "UNHEALTHY"
+    | "SLEEPING"
+    | "FAILED"
+    | "REMOVED"
+    | "CANCELLED";
+  started_at?: Date;
+  finished_at?: Date;
+  queued_at: Date;
+  commit_message: string;
+  image: string;
+  hash: string;
+};
+
+function DeploymentCard({
+  status,
+  started_at,
+  finished_at,
+  queued_at,
+  commit_message,
+  image,
+  hash
+}: DeploymentCardProps) {
+  const now = new Date();
+  const [timeElapsed, setTimeElapsed] = React.useState(
+    started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
+  );
+
+  React.useEffect(() => {
+    if (started_at && !finished_at) {
+      const timer = setInterval(() => {
+        setTimeElapsed((prev) => prev + 1);
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [started_at, finished_at]);
+
   return (
-    <div>
-      <h4 className=" text-gray-400 mb-3 text-sm">New</h4>
-      <div className="flex border border-blue-600 px-3 py-4 rounded-md bg-blue-600 bg-opacity-10 justify-between items-center">
-        <div className="flex w-[30%] justify-between">
-          <div>
-            <h3 className="flex items-center gap-1">
-              <span className="text-blue-500 text-lg">Preparing</span>
+    <div
+      className={cn(
+        "flex border group  px-3 py-4 rounded-md  bg-opacity-10 justify-between items-center",
+        {
+          "border-blue-600 bg-blue-600":
+            status === "STARTING" ||
+            status === "RESTARTING" ||
+            status === "PREPARING",
+          "border-green-600 bg-green-600": status === "HEALTHY",
+          "border-red-600 bg-red-600":
+            status === "UNHEALTHY" || status === "FAILED",
+          "border-gray-600 bg-gray-600":
+            status === "REMOVED" ||
+            status === "CANCELLED" ||
+            status === "QUEUED",
+          "border-orange-600 bg-orange-600": status === "SLEEPING"
+        }
+      )}
+    >
+      <div className="flex ">
+        <div className="w-[160px]">
+          <h3 className="flex items-center gap-1 capitalize">
+            <span
+              className={cn("text-lg", {
+                "text-blue-500":
+                  status === "STARTING" ||
+                  status === "RESTARTING" ||
+                  status === "PREPARING",
+                "text-green-500": status === "HEALTHY",
+                "text-red-500": status === "UNHEALTHY" || status === "FAILED",
+                "text-gray-500":
+                  status === "REMOVED" ||
+                  status === "CANCELLED" ||
+                  status === "QUEUED",
+                "text-orange-500": status === "SLEEPING"
+              })}
+            >
+              {capitalizeText(status)}
+            </span>
+            {status === "PREPARING" && (
               <Loader className="animate-spin" size={15} />
-            </h3>
-            <p className="text-sm text-gray-400">just now</p>
-          </div>
-
-          <div>
-            <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center">
-              <Timer size={15} /> 10s
-              <span className="flex mx-2 items-center">
-                <Container size={15} /> nginxdemo/hello:1.0
-              </span>
-            </p>
-          </div>
+            )}
+          </h3>
+          <p className="text-sm text-gray-400 text-nowrap">
+            {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
+          </p>
         </div>
 
-        <div className="flex items-center">
-          <div className="border px-4 py-2 text-sm  rounded-md border-blue-600">
-            View logs
-          </div>
-          <EllipsisVertical />
-        </div>
-      </div>
-    </div>
-  );
-}
+        <div className="flex flex-col items-start">
+          <h3>{commit_message}</h3>
+          <div className="flex text-gray-400 gap-3 text-sm w-full items-center">
+            <div className="gap-0.5 inline-flex items-center">
+              <Timer size={15} />
 
-function ServiceStatusCurrent() {
-  return (
-    <div>
-      <h4 className=" text-gray-400 mb-3 text-sm">Current</h4>
-      <div className="flex border border-green-600 px-3 py-4 rounded-md bg-green-600 bg-opacity-10 justify-between items-center">
-        <div className="flex w-[30%] justify-between">
-          <div>
-            <h3 className="text-green-500 text-lg">Healthy</h3>
-            <p className="text-sm text-gray-400">just now</p>
-          </div>
+              {!started_at && !finished_at && <span>-</span>}
 
-          <div>
-            <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center">
-              <Timer size={15} /> 10s
-              <span className="flex items-center mx-2">
-                <Container size={15} /> nginxdemo/hello:1.0
-              </span>
-            </p>
-          </div>
-        </div>
+              {started_at && finished_at && (
+                <span>
+                  {(finished_at.getTime() - started_at.getTime()) / 1000}s
+                </span>
+              )}
 
-        <div className="flex items-center">
-          <div className="border px-4 py-2 text-sm rounded-md border-green-600">
-            View logs
-          </div>
-          <EllipsisVertical />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ServiceStatusFailed() {
-  return (
-    <div>
-      <div className="flex border border-red-600 px-3 py-4 rounded-md bg-red-600 bg-opacity-10 justify-between items-center">
-        <div className="flex w-[30%] justify-between">
-          <div>
-            <h3 className="text-red-500 text-lg">Failed</h3>
-            <p className="text-sm text-gray-400">just now</p>
-          </div>
-
-          <div>
-            <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center ">
-              <Timer size={15} /> 10s
-              <span className="flex items-center mx-2">
-                <Container size={15} /> nginxdemo/hello:1.0
-              </span>
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center">
-          <div className="border px-4 py-2 text-sm  rounded-md border-red-600">
-            View logs
-          </div>
-          <EllipsisVertical />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ServiceStatusRemoved() {
-  const [isHovered, setIsHovered] = React.useState(false);
-
-  return (
-    <div>
-      <div
-        className="flex cursor-pointer border border-gray-600 px-3 py-4 rounded-md bg-gray-600 bg-opacity-10 justify-between items-center"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <div className="flex justify-between w-[30%]">
-          <div>
-            <h3 className="text-gray-400 text-lg">Removed</h3>
-            <p className="text-sm text-gray-400">just now</p>
-          </div>
-
-          <div>
-            <h1>Update docker image</h1>
-            <p className="flex text-gray-400 text-sm items-center">
-              <Timer size={15} /> 10s
-              <span className="flex items-center mx-2">
-                <Container size={15} /> nginxdemo/hello:1.0
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center">
-          {isHovered && (
-            <div className="border px-4 py-2 text-sm  rounded-md border-gray-600">
-              View logs
+              {started_at && !finished_at && <span>{timeElapsed}s</span>}
             </div>
-          )}
-          <EllipsisVertical />
+            <div className="gap-1 inline-flex items-center">
+              <Container size={15} />
+              <span>{image}</span>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="flex items-center">
+        <Button
+          asChild
+          variant="ghost"
+          className={cn("border hover:bg-inherit", {
+            "border-blue-600":
+              status === "STARTING" ||
+              status === "RESTARTING" ||
+              status === "PREPARING",
+            "border-green-600": status === "HEALTHY",
+            "border-red-600": status === "UNHEALTHY" || status === "FAILED",
+            "border-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
+              status === "REMOVED" ||
+              status === "CANCELLED" ||
+              status === "QUEUED",
+            "border-orange-600": status === "SLEEPING"
+          })}
+        >
+          <Link to={`deployments/${hash}/logs`}>View logs</Link>
+        </Button>
+        <EllipsisVertical />
       </div>
     </div>
   );
