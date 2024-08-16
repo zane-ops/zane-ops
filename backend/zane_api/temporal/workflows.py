@@ -286,15 +286,19 @@ class DeployDockerServiceWorkflow:
                 )
 
         print(f"Running activity `get_previous_queued_deployment({deployment=})`")
-        previous_queued_deployment = await workflow.execute_activity_method(
+        next_queued_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_queued_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
-        if previous_queued_deployment is not None:
-            print(f"{previous_queued_deployment=}")
-            await workflow.continue_as_new(previous_queued_deployment)
+        if next_queued_deployment is not None:
+            print(f"{next_queued_deployment=}")
+            await workflow.continue_as_new(next_queued_deployment)
+        return dict(
+            healthcheck_result=healthcheck_result,
+            next_queued_deployment=next_queued_deployment,
+        )
 
 
 def get_workflows_and_activities():
