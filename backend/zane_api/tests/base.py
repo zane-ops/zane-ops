@@ -202,6 +202,10 @@ class APITestCase(TestCase):
             "zane_api.temporal.activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "zane_api.temporal.schedules.activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         self.addCleanup(patch.stopall)
         self.addCleanup(_settings.disable)

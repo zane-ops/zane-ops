@@ -58,6 +58,7 @@ class SimpleDeploymentDetails:
     hash: str
     project_id: str
     service_id: str
+    url: Optional[str] = None
 
 
 @dataclass

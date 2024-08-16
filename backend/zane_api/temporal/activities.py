@@ -8,9 +8,9 @@ from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
 
 from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
-from .schedules import MonitorDockerDeploymentWorkflow
 
 with workflow.unsafe.imports_passed_through():
+    from .schedules import MonitorDockerDeploymentWorkflow
     import docker
     import docker.errors
     from ..models import (
@@ -58,9 +58,6 @@ docker_client: docker.DockerClient | None = None
 
 
 def get_docker_client():
-    """
-    Get docker client
-    """
     global docker_client
     if docker_client is None:
         docker_client = docker.from_env()
@@ -315,8 +312,6 @@ def get_caddy_request_for_url(
 
 
 class DockerSwarmActivities:
-    DEFAULT_TIMEOUT_FOR_DOCKER_EVENTS = 30  # seconds
-
     def __init__(self):
         self.docker_client = get_docker_client()
 
@@ -1334,6 +1329,7 @@ class DockerSwarmActivities:
                     hash=deployment.hash,
                     service_id=deployment.service.id,
                     project_id=deployment.service.project_id,
+                    url=deployment.url,
                 ),
                 auth_token=deployment.auth_token,
                 healthcheck=(

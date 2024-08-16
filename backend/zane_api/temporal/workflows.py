@@ -3,7 +3,6 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from .schedules import MonitorDockerDeploymentWorkflow
 from .shared import DeploymentHealthcheckResult, SimpleDeploymentDetails
 
 with workflow.unsafe.imports_passed_through():
@@ -11,6 +10,10 @@ with workflow.unsafe.imports_passed_through():
     from .activities import DockerSwarmActivities
     from .shared import ProjectDetails, ArchivedProjectDetails, DeploymentDetails
     from django.conf import settings
+    from .schedules import (
+        MonitorDockerDeploymentWorkflow,
+        MonitorDockerDeploymentActivities,
+    )
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -295,7 +298,8 @@ class DeployDockerServiceWorkflow:
 
 
 def get_workflows_and_activities():
-    activities = DockerSwarmActivities()
+    swarm_activities = DockerSwarmActivities()
+    monitor_activities = MonitorDockerDeploymentActivities()
     return dict(
         workflows=[
             CreateProjectResourcesWorkflow,
@@ -304,28 +308,30 @@ def get_workflows_and_activities():
             MonitorDockerDeploymentWorkflow,
         ],
         activities=[
-            activities.attach_network_to_proxy,
-            activities.create_project_network,
-            activities.unexpose_docker_service_from_http,
-            activities.detach_network_from_proxy,
-            activities.remove_project_network,
-            activities.cleanup_docker_service_resources,
-            activities.get_archived_project_services,
-            activities.prepare_deployment,
-            activities.scale_down_service_deployment,
-            activities.create_docker_volumes_for_service,
-            activities.create_swarm_service_for_docker_deployment,
-            activities.run_deployment_healthcheck,
-            activities.expose_docker_service_deployment_to_http,
-            activities.expose_docker_service_to_http,
-            activities.finish_and_save_deployment,
-            activities.cleanup_previous_production_deployment,
-            activities.scale_down_and_remove_docker_service_deployment,
-            activities.remove_old_docker_volumes,
-            activities.remove_old_urls,
-            activities.get_previous_queued_deployment,
-            activities.get_previous_production_deployment,
-            activities.scale_back_service_deployment,
-            activities.create_deployment_healthcheck_schedule,
+            swarm_activities.attach_network_to_proxy,
+            swarm_activities.create_project_network,
+            swarm_activities.unexpose_docker_service_from_http,
+            swarm_activities.detach_network_from_proxy,
+            swarm_activities.remove_project_network,
+            swarm_activities.cleanup_docker_service_resources,
+            swarm_activities.get_archived_project_services,
+            swarm_activities.prepare_deployment,
+            swarm_activities.scale_down_service_deployment,
+            swarm_activities.create_docker_volumes_for_service,
+            swarm_activities.create_swarm_service_for_docker_deployment,
+            swarm_activities.run_deployment_healthcheck,
+            swarm_activities.expose_docker_service_deployment_to_http,
+            swarm_activities.expose_docker_service_to_http,
+            swarm_activities.finish_and_save_deployment,
+            swarm_activities.cleanup_previous_production_deployment,
+            swarm_activities.scale_down_and_remove_docker_service_deployment,
+            swarm_activities.remove_old_docker_volumes,
+            swarm_activities.remove_old_urls,
+            swarm_activities.get_previous_queued_deployment,
+            swarm_activities.get_previous_production_deployment,
+            swarm_activities.scale_back_service_deployment,
+            swarm_activities.create_deployment_healthcheck_schedule,
+            monitor_activities.save_deployment_status,
+            monitor_activities.run_deployment_monitor_healthcheck,
         ],
     )
