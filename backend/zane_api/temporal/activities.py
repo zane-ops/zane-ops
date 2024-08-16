@@ -1099,7 +1099,7 @@ class DockerSwarmActivities:
 
             for url in service.urls:
                 response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
                     timeout=5,
                 )
 
