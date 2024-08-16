@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
+from django_celery_beat.models import CrontabSchedule
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 
@@ -245,19 +245,6 @@ class DockerRegistryService(BaseService):
     def archive_task_id(self):
         return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
-    def delete_resources(self):
-        super().delete_resources()
-        all_deployments = self.deployments.all()
-        all_monitor_tasks = PeriodicTask.objects.filter(
-            dockerdeployment__in=all_deployments
-        )
-
-        interval_ids = []
-        for task in all_monitor_tasks.all():
-            interval_ids.append(task.interval_id)
-        IntervalSchedule.objects.filter(id__in=interval_ids).delete()
-        all_monitor_tasks.delete()
-
     @property
     def latest_production_deployment(self) -> Union["DockerDeployment", None]:
         return (
@@ -277,7 +264,7 @@ class DockerRegistryService(BaseService):
     async def alatest_production_deployment(self) -> Optional["DockerDeployment"]:
         return await (
             self.deployments.filter(is_current_production=True)
-            .select_related("service", "service__project")
+            .select_related("service", "service__project", "service__healthcheck")
             .prefetch_related(
                 "service__volumes",
                 "service__urls",
@@ -593,9 +580,6 @@ class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
     )
-    monitor_task = models.ForeignKey(
-        to=PeriodicTask, null=True, on_delete=models.SET_NULL
-    )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
 
@@ -604,8 +588,8 @@ class DockerDeployment(BaseDeployment):
         return f"deploy-{self.service.id}-{self.service.project_id}"
 
     @property
-    def monitor_task_name(self):
-        return f"monitor_deployment_{self.hash}"
+    def monitor_schedule_id(self):
+        return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
 
     @property
     def unprefixed_hash(self):
