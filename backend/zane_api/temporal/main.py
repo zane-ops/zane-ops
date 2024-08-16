@@ -47,14 +47,24 @@ async def create_schedule(
     )
 
 
-async def pause_schedule(id: str):
+async def pause_schedule(id: str, note: str = None):
     print(f"pause_schedule({id=}")
     client = await get_temporalio_client()
     handle = client.get_schedule_handle(
         f"schedule-{id}",
     )
 
-    await handle.pause()
+    await handle.pause(note=note)
+
+
+async def unpause_schedule(id: str, note: str = None):
+    print(f"pause_schedule({id=}")
+    client = await get_temporalio_client()
+    handle = client.get_schedule_handle(
+        f"schedule-{id}",
+    )
+
+    await handle.unpause(note=note)
 
 
 async def delete_schedule(id: str):

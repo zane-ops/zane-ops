@@ -7,7 +7,7 @@ from rest_framework import status
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
 
-from .main import create_schedule
+from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 from .schedules import MonitorDockerDeploymentWorkflow
 
 with workflow.unsafe.imports_passed_through():
@@ -621,9 +621,21 @@ class DockerSwarmActivities:
     async def cleanup_previous_production_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
-        await DockerDeployment.objects.filter(
-            hash=deployment.hash, service_id=deployment.service_id
-        ).aupdate(status=DockerDeployment.DeploymentStatus.REMOVED)
+        docker_deployment: DockerDeployment | None = (
+            await DockerDeployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service_id
+            )
+            .select_related("service")
+            .afirst()
+        )
+
+        if docker_deployment is not None:
+            docker_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
+            await docker_deployment.asave()
+
+            await delete_schedule(
+                id=docker_deployment.monitor_schedule_id,
+            )
 
     @activity.defn
     async def create_docker_volumes_for_service(self, deployment: DeploymentDetails):
@@ -671,9 +683,21 @@ class DockerSwarmActivities:
             await wait_for_service_to_be_down()
 
             # Change the status to be accurate
-            await DockerDeployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service_id
-            ).aupdate(status=DockerDeployment.DeploymentStatus.SLEEPING)
+            docker_deployment: DockerDeployment | None = (
+                await DockerDeployment.objects.filter(
+                    hash=deployment.hash, service_id=deployment.service_id
+                )
+                .select_related("service")
+                .afirst()
+            )
+
+            if docker_deployment is not None:
+                docker_deployment.status = DockerDeployment.DeploymentStatus.SLEEPING
+                await docker_deployment.asave()
+                await pause_schedule(
+                    id=docker_deployment.monitor_schedule_id,
+                    note="Paused to prevent zero-downtime deployment",
+                )
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
@@ -694,11 +718,23 @@ class DockerSwarmActivities:
             swarm_service.scale(1)
 
             # Change back the status to be accurate
-            await DockerDeployment.objects.filter(
-                Q(hash=deployment.hash)
-                & Q(service_id=deployment.service_id)
-                & Q(status=DockerDeployment.DeploymentStatus.SLEEPING)
-            ).aupdate(status=DockerDeployment.DeploymentStatus.STARTING)
+            docker_deployment: DockerDeployment | None = (
+                await DockerDeployment.objects.filter(
+                    Q(hash=deployment.hash)
+                    & Q(service_id=deployment.service_id)
+                    & Q(status=DockerDeployment.DeploymentStatus.SLEEPING)
+                )
+                .select_related("service")
+                .afirst()
+            )
+
+            if docker_deployment is not None:
+                docker_deployment.status = DockerDeployment.DeploymentStatus.STARTING
+                await docker_deployment.asave()
+                await unpause_schedule(
+                    id=docker_deployment.monitor_schedule_id,
+                    note="Unpaused due to failed healthcheck",
+                )
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(

@@ -3304,6 +3304,47 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(2, fake_service.scale.call_count)
         fake_service.scale.assert_called_with(0)
 
+    async def test_update_service_remove_previous_monitor_task(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="valkey/valkey:7.3-alpine",
+                    service=service,
+                ),
+            ]
+        )
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, await service.deployments.acount())
+        first_deployment = (
+            await service.deployments.order_by("queued_at")
+            .select_related("service")
+            .afirst()
+        )
+        second_deployment = (
+            await service.deployments.order_by("queued_at")
+            .select_related("service")
+            .alast()
+        )
+        self.assertIsNone(
+            self.get_workflow_schedule_by_id(first_deployment.monitor_schedule_id)
+        )
+        self.assertIsNotNone(
+            self.get_workflow_schedule_by_id(second_deployment.monitor_schedule_id)
+        )
+
 
 class DockerServiceRedeploymentViewTests(AuthAPITestCase):
     async def test_redeploy_create_deployment_with_computed_changes(self):

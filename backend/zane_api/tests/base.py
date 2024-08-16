@@ -221,6 +221,7 @@ class WorkflowScheduleHandle:
     id: str
     interval: timedelta
     is_running: bool = True
+    note: Optional[str] = None
 
 
 class AuthAPITestCase(APITestCase):
@@ -271,12 +272,21 @@ class AuthAPITestCase(APITestCase):
                 WorkflowScheduleHandle(id, interval=interval)
             )
 
-        async def pause_schedule(id: str):
+        async def pause_schedule(id: str, note: str = None):
             schedule_handle = find_item_in_list(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
                 schedule_handle.is_running = False
+                schedule_handle.note = note
+
+        async def unpause_schedule(id: str, note: str = None):
+            schedule_handle = find_item_in_list(
+                lambda handle: handle.id == id, self.workflow_schedules
+            )
+            if schedule_handle is not None:
+                schedule_handle.is_running = True
+                schedule_handle.note = note
 
         async def delete_schedule(id: str):
             schedule_handle = find_item_in_list(
@@ -288,15 +298,20 @@ class AuthAPITestCase(APITestCase):
         patch_temporal_create_schedule = patch(
             "zane_api.temporal.activities.create_schedule", side_effect=create_schedule
         )
-        # patch_temporal_pause_schedule = patch(
-        #     "zane_api.temporal.activities.pause_schedule", side_effect=pause_schedule
-        # )
-        # patch_temporal_delete_schedule = patch(
-        #     "zane_api.temporal.activities.delete_schedule", side_effect=delete_schedule
-        # )
+        patch_temporal_pause_schedule = patch(
+            "zane_api.temporal.activities.pause_schedule", side_effect=pause_schedule
+        )
+        patch_temporal_unpause_schedule = patch(
+            "zane_api.temporal.activities.unpause_schedule",
+            side_effect=unpause_schedule,
+        )
+        patch_temporal_delete_schedule = patch(
+            "zane_api.temporal.activities.delete_schedule", side_effect=delete_schedule
+        )
         patch_temporal_create_schedule.start()
-        # patch_temporal_pause_schedule.start()
-        # patch_temporal_delete_schedule.start()
+        patch_temporal_pause_schedule.start()
+        patch_temporal_unpause_schedule.start()
+        patch_temporal_delete_schedule.start()
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
         mock_client.start_workflow.side_effect = env.client.execute_workflow
@@ -313,8 +328,9 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_client.stop()
             patch_transaction_on_commit.stop()
             patch_temporal_create_schedule.stop()
-            # patch_temporal_pause_schedule.stop()
-            # patch_temporal_delete_schedule.stop()
+            patch_temporal_pause_schedule.stop()
+            patch_temporal_unpause_schedule.stop()
+            patch_temporal_delete_schedule.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
