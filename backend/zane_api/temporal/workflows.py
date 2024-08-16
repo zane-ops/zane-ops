@@ -3,7 +3,8 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from . import DeploymentHealthcheckResult, SimpleDeploymentDetails
+from .schedules import MonitorDockerDeploymentWorkflow
+from .shared import DeploymentHealthcheckResult, SimpleDeploymentDetails
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
@@ -44,7 +45,7 @@ class CreateProjectResourcesWorkflow:
 class RemoveProjectResourcesWorkflow:
     @workflow.run
     async def run(self, payload: ArchivedProjectDetails):
-        print(f"Running workflow `RemoveProjectResourcesWorkflow` with {payload=}")
+        print(f"\nRunning workflow `RemoveProjectResourcesWorkflow` with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
@@ -208,46 +209,54 @@ class DeployDockerServiceWorkflow:
             retry_policy=retry_policy,
         )
 
-        if (
-            previous_production_deployment is not None
-            and healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
-        ):
+        if healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY:
+            if previous_production_deployment is not None:
+                print(
+                    f"Running activity `scale_down_and_remove_docker_service_deployment({previous_production_deployment=})`"
+                )
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
+                    previous_production_deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+
+                print(f"Running activity `remove_old_docker_volumes({deployment=})`")
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.remove_old_docker_volumes,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+
+                print(f"Running activity `remove_old_urls({deployment=})`")
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.remove_old_urls,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+
+                print(
+                    f"Running activity `cleanup_previous_deployment({previous_production_deployment=})`"
+                )
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.cleanup_previous_production_deployment,
+                    previous_production_deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=retry_policy,
+                )
+
             print(
-                f"Running activity `scale_down_and_remove_docker_service_deployment({previous_production_deployment=})`"
+                f"Running activity `create_deployment_healthcheck_schedule({deployment=})`"
             )
             await workflow.execute_activity_method(
-                DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
-                previous_production_deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
-            )
-
-            print(f"Running activity `remove_old_docker_volumes({deployment=})`")
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.remove_old_docker_volumes,
+                DockerSwarmActivities.create_deployment_healthcheck_schedule,
                 deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
-            )
-
-            print(f"Running activity `remove_old_urls({deployment=})`")
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.remove_old_urls,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
-            )
-
-            print(
-                f"Running activity `cleanup_previous_deployment({previous_production_deployment=})`"
-            )
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.cleanup_previous_production_deployment,
-                previous_production_deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=retry_policy,
             )
-        elif healthcheck_result.status != DockerDeployment.DeploymentStatus.HEALTHY:
+        else:
             current_deployment = SimpleDeploymentDetails(
                 hash=deployment.hash,
                 project_id=deployment.service.project_id,
@@ -292,6 +301,7 @@ def get_workflows_and_activities():
             CreateProjectResourcesWorkflow,
             RemoveProjectResourcesWorkflow,
             DeployDockerServiceWorkflow,
+            MonitorDockerDeploymentWorkflow,
         ],
         activities=[
             activities.attach_network_to_proxy,
@@ -316,5 +326,6 @@ def get_workflows_and_activities():
             activities.get_previous_queued_deployment,
             activities.get_previous_production_deployment,
             activities.scale_back_service_deployment,
+            activities.create_deployment_healthcheck_schedule,
         ],
     )

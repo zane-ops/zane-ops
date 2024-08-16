@@ -292,124 +292,52 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
 
 class DockerServiceHealthCheckViewTests(AuthAPITestCase):
-    def test_create_scheduled_task_when_deploying_a_service(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
+    async def test_create_scheduled_task_when_deploying_a_service(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
+        initial_deployment: DockerDeployment = (
+            await service.alatest_production_deployment
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        initial_deployment: DockerDeployment = service.latest_production_deployment
         self.assertIsNotNone(initial_deployment)
-        self.assertIsNotNone(initial_deployment.monitor_task)
+        self.assertIsNotNone(
+            self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
+        )
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_create_service_do_not_create_monitor_task_when_deployment_fails(
-        self, mock_monotonic: Mock, _: Mock
+    async def test_create_service_do_not_create_monitor_task_when_deployment_fails(
+        self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 31]
+            p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        mock_monotonic.side_effect = [0, 31]
-
-        fake_service = MagicMock()
-        fake_service.tasks.return_value = []
-        self.fake_docker_client.services.get = lambda _id: fake_service
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        latest_deployment = service.deployments.first()
+        latest_deployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
-        self.assertIsNone(latest_deployment.monitor_task)
-
-    def test_create_scheduled_task_with_healthcheck_same_interval(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field="healthcheck",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "type": "COMMAND",
-                        "value": "redis-cli PING",
-                        "timeout_seconds": 30,
-                        "interval_seconds": 15,
-                    },
-                    service=service,
-                ),
-            ]
+        self.assertIsNone(
+            self.get_workflow_schedule_by_id(latest_deployment.monitor_schedule_id)
         )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
+    async def test_create_scheduled_task_with_healthcheck_same_interval(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service(
+            with_healthcheck=True
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        initial_deployment = service.latest_production_deployment
+        initial_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
             DockerDeployment.DeploymentStatus.HEALTHY,
             initial_deployment.status,
         )
-        self.assertIsNotNone(initial_deployment.monitor_task)
-        self.assertEqual(15, initial_deployment.monitor_task.interval.every)
+        schedule_handle = self.get_workflow_schedule_by_id(
+            initial_deployment.monitor_schedule_id
+        )
+        self.assertIsNotNone(schedule_handle)
+        self.assertEqual(
+            initial_deployment.service.healthcheck.interval_seconds,
+            schedule_handle.interval.seconds,
+        )
 
     @responses.activate
     def test_create_service_with_healtheck_path_success(self):

@@ -7,7 +7,7 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
 
-from ..dtos import URLDto, DockerServiceSnapshot, DeploymentChangeDto
+from ..dtos import URLDto, DockerServiceSnapshot, DeploymentChangeDto, HealthCheckDto
 
 
 @dataclass
@@ -58,6 +58,13 @@ class SimpleDeploymentDetails:
     hash: str
     project_id: str
     service_id: str
+
+
+@dataclass
+class HealthcheckDeploymentDetails:
+    deployment: SimpleDeploymentDetails
+    auth_token: str
+    healthcheck: Optional[HealthCheckDto] = None
 
 
 @dataclass

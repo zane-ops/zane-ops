@@ -1,10 +1,14 @@
 import asyncio
 import json
+from datetime import timedelta
 from typing import List, Optional
 
 from rest_framework import status
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
+
+from .main import create_schedule
+from .schedules import MonitorDockerDeploymentWorkflow
 
 with workflow.unsafe.imports_passed_through():
     import docker
@@ -38,6 +42,7 @@ from ..dtos import (
     PortConfigurationDto,
     DockerServiceSnapshot,
     DeploymentChangeDto,
+    HealthCheckDto,
 )
 from .shared import (
     ProjectDetails,
@@ -46,6 +51,7 @@ from .shared import (
     SimpleDeploymentDetails,
     DeploymentDetails,
     DeploymentHealthcheckResult,
+    HealthcheckDeploymentDetails,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -1122,9 +1128,8 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
-            raise ApplicationError(
-                "Cannot scale down a nonexistent deployment", non_retryable=True
-            )
+            # Do nothing, The service has already been deleted
+            return
         else:
             swarm_service.scale(0)
 
@@ -1264,4 +1269,61 @@ class DockerSwarmActivities:
             requests.delete(
                 f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}",
                 timeout=5,
+            )
+
+    @activity.defn
+    async def create_deployment_healthcheck_schedule(
+        self, deployment: DeploymentDetails
+    ):
+        try:
+            docker_deployment: DockerDeployment = (
+                await DockerDeployment.objects.filter(hash=deployment.hash)
+                .select_related("service", "service__healthcheck")
+                .afirst()
+            )
+
+            if docker_deployment is None:
+                raise DockerDeployment.DoesNotExist(
+                    f"Docker deployment with hash='{deployment.hash}' does not exist."
+                )
+        except DockerDeployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot save a non existent deployment.",
+                non_retryable=True,
+            )
+        else:
+            healthcheck: Optional[HealthCheck] = docker_deployment.service.healthcheck
+            healthcheck_details = HealthcheckDeploymentDetails(
+                deployment=SimpleDeploymentDetails(
+                    hash=deployment.hash,
+                    service_id=deployment.service.id,
+                    project_id=deployment.service.project_id,
+                ),
+                auth_token=deployment.auth_token,
+                healthcheck=(
+                    HealthCheckDto.from_dict(
+                        dict(
+                            type=healthcheck.type,
+                            value=healthcheck.value,
+                            timeout_seconds=healthcheck.timeout_seconds,
+                            interval_seconds=healthcheck.interval_seconds,
+                            id=healthcheck.id,
+                        )
+                    )
+                    if healthcheck is not None
+                    else None
+                ),
+            )
+
+            interval_seconds = (
+                healthcheck_details.healthcheck.interval_seconds
+                if healthcheck_details.healthcheck is not None
+                else settings.DEFAULT_HEALTHCHECK_INTERVAL
+            )
+
+            await create_schedule(
+                workflow=MonitorDockerDeploymentWorkflow.run,
+                args=healthcheck_details,
+                id=docker_deployment.monitor_schedule_id,
+                interval=timedelta(seconds=interval_seconds),
             )

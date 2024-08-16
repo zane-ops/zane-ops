@@ -3,7 +3,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import List, Callable
+from datetime import timedelta
+from typing import List, Callable, Optional
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
@@ -33,7 +34,7 @@ from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import random_word
+from ..utils import random_word, find_item_in_list
 
 
 class CustomAPIClient(APIClient):
@@ -215,11 +216,25 @@ class APITestCase(TestCase):
         self.assertEqual(subset, extracted_subset, msg)
 
 
+@dataclass
+class WorkflowScheduleHandle:
+    id: str
+    interval: timedelta
+    is_running: bool = True
+
+
 class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
         self.commit_callbacks: List[Callable] = []
+        self.workflow_env: Optional[WorkflowEnvironment] = None
+        self.workflow_schedules: List[WorkflowScheduleHandle] = []
+
+    def get_workflow_schedule_by_id(self, id: str):
+        return find_item_in_list(
+            lambda handle: handle.id == id, self.workflow_schedules
+        )
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
@@ -250,6 +265,38 @@ class AuthAPITestCase(APITestCase):
         patch_temporal_client = patch(
             "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
         )
+
+        async def create_schedule(id: str, interval: timedelta, *args, **kwargs):
+            self.workflow_schedules.append(
+                WorkflowScheduleHandle(id, interval=interval)
+            )
+
+        async def pause_schedule(id: str):
+            schedule_handle = find_item_in_list(
+                lambda handle: handle.id == id, self.workflow_schedules
+            )
+            if schedule_handle is not None:
+                schedule_handle.is_running = False
+
+        async def delete_schedule(id: str):
+            schedule_handle = find_item_in_list(
+                lambda handle: handle.id == id, self.workflow_schedules
+            )
+            if schedule_handle is not None:
+                self.workflow_schedules.remove(schedule_handle)
+
+        patch_temporal_create_schedule = patch(
+            "zane_api.temporal.activities.create_schedule", side_effect=create_schedule
+        )
+        # patch_temporal_pause_schedule = patch(
+        #     "zane_api.temporal.activities.pause_schedule", side_effect=pause_schedule
+        # )
+        # patch_temporal_delete_schedule = patch(
+        #     "zane_api.temporal.activities.delete_schedule", side_effect=delete_schedule
+        # )
+        patch_temporal_create_schedule.start()
+        # patch_temporal_pause_schedule.start()
+        # patch_temporal_delete_schedule.start()
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
         mock_client.start_workflow.side_effect = env.client.execute_workflow
@@ -258,18 +305,32 @@ class AuthAPITestCase(APITestCase):
             "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
         )
         patch_transaction_on_commit.start()
+        self.workflow_env = env
         try:
             yield env
         finally:
+            self.workflow_env = None
             patch_temporal_client.stop()
             patch_transaction_on_commit.stop()
+            patch_temporal_create_schedule.stop()
+            # patch_temporal_pause_schedule.stop()
+            # patch_temporal_delete_schedule.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
     async def acaptureCommitCallbacks(self, execute=False):
         self.commit_callbacks = []
-        async with self.workflowEnvironment():
+        if self.workflow_env is None:
+            async with self.workflowEnvironment():
+                yield
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as pool:
+                    for callback in self.commit_callbacks:
+                        if execute:
+                            # Run callback in another thread because it is decorated with `@async_to_sync()`
+                            await loop.run_in_executor(pool, callback)
+        else:
             yield
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as pool:
@@ -277,7 +338,7 @@ class AuthAPITestCase(APITestCase):
                     if execute:
                         # Run callback in another thread because it is decorated with `@async_to_sync()`
                         await loop.run_in_executor(pool, callback)
-            self.commit_callbacks = []
+        self.commit_callbacks = []
 
     def create_and_deploy_redis_docker_service(
         self,
@@ -358,7 +419,7 @@ class AuthAPITestCase(APITestCase):
                         "type": "COMMAND",
                         "value": "valkey-cli validate",
                         "timeout_seconds": 30,
-                        "interval_seconds": 30,
+                        "interval_seconds": 15,
                     },
                     service=service,
                 ),
