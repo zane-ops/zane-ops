@@ -214,7 +214,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border border-border rounded-full",
                       {
                         "bg-gray-400": selectedValues.includes("QUEUED"),
-                        "bg-none": !selectedValues.includes("QUEUED")
+                        "bg-background": !selectedValues.includes("QUEUED")
                       }
                     )}
                   />
@@ -224,7 +224,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
                       {
                         "bg-gray-400": selectedValues.includes("CANCELLED"),
-                        "bg-none": !selectedValues.includes("CANCELLED")
+                        "bg-background": !selectedValues.includes("CANCELLED")
                       }
                     )}
                   />
@@ -234,7 +234,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none relative -left-2 h-3 border border-border rounded-full",
                       {
                         "bg-red-400": selectedValues.includes("FAILED"),
-                        "bg-none": !selectedValues.includes("FAILED")
+                        "bg-background": !selectedValues.includes("FAILED")
                       }
                     )}
                   />
@@ -244,7 +244,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 relative -left-3 border border-border rounded-full",
                       {
                         "bg-blue-400": selectedValues.includes("PREPARING"),
-                        "bg-none": !selectedValues.includes("PREPARING")
+                        "bg-background": !selectedValues.includes("PREPARING")
                       }
                     )}
                   />
@@ -254,7 +254,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 relative -left-4 border border-border rounded-full",
                       {
                         "bg-green-400": selectedValues.includes("HEALTHY"),
-                        "bg-none": !selectedValues.includes("HEALTHY")
+                        "bg-background": !selectedValues.includes("HEALTHY")
                       }
                     )}
                   />
@@ -264,7 +264,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border relative -left-5 border-border rounded-full",
                       {
                         "bg-red-400": selectedValues.includes("UNHEALTHY"),
-                        "bg-none": !selectedValues.includes("UNHEALTHY")
+                        "bg-background": !selectedValues.includes("UNHEALTHY")
                       }
                     )}
                   />
@@ -274,7 +274,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border relative -left-6 border-border rounded-full",
                       {
                         "bg-blue-400": selectedValues.includes("STARTING"),
-                        "bg-none": !selectedValues.includes("STARTING")
+                        "bg-background": !selectedValues.includes("STARTING")
                       }
                     )}
                   />
@@ -284,7 +284,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border relative -left-7 border-border rounded-full",
                       {
                         "bg-blue-400": selectedValues.includes("RESTARTING"),
-                        "bg-none": !selectedValues.includes("RESTARTING")
+                        "bg-background": !selectedValues.includes("RESTARTING")
                       }
                     )}
                   />
@@ -294,7 +294,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border relative -left-8 border-border rounded-full",
                       {
                         "bg-gray-400": selectedValues.includes("REMOVED"),
-                        "bg-none": !selectedValues.includes("REMOVED")
+                        "bg-background": !selectedValues.includes("REMOVED")
                       }
                     )}
                   />
@@ -304,7 +304,7 @@ export const MultiSelect = React.forwardRef<
                       "w-3 flex-none h-3 border relative -left-9 border-border rounded-full",
                       {
                         "bg-orange-400": selectedValues.includes("SLEEPING"),
-                        "bg-none": !selectedValues.includes("SLEEPING")
+                        "bg-background": !selectedValues.includes("SLEEPING")
                       }
                     )}
                   />
