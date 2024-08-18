@@ -396,21 +396,21 @@ class DockerSwarmActivities:
         self, service_details: ArchivedServiceDetails
     ):
         for deployment in service_details.deployments:
+            service_name = get_swarm_service_name_for_deployment(
+                deployment_hash=deployment.hash,
+                service_id=deployment.service_id,
+                project_id=deployment.project_id,
+            )
             try:
-                swarm_service = self.docker_client.services.get(
-                    get_swarm_service_name_for_deployment(
-                        deployment_hash=deployment.hash,
-                        service_id=deployment.service_id,
-                        project_id=deployment.project_id,
-                    )
-                )
+                swarm_service = self.docker_client.services.get(service_name)
             except docker.errors.NotFound:
+                print(f"service `{service_name}` not found")
                 # we will assume the service has already been deleted
                 pass
             else:
                 swarm_service.scale(0)
 
-                async def wait_for_service_to_be_down():
+                async def wait_for_service_deployment_to_be_down():
                     nonlocal swarm_service
                     print(f"waiting for service {swarm_service.name=} to be down...")
                     task_list = swarm_service.tasks()
@@ -424,31 +424,30 @@ class DockerSwarmActivities:
                         continue
                     print(f"service {swarm_service.name=} is down, YAY !! 🎉")
 
-                await wait_for_service_to_be_down()
+                await wait_for_service_deployment_to_be_down()
 
-                print("deleting volume list...")
-                docker_volume_list = self.docker_client.volumes.list(
-                    filters={
-                        "label": [
-                            f"{key}={value}"
-                            for key, value in get_resource_labels(
-                                deployment.project_id,
-                                parent=deployment.service_id,
-                            ).items()
-                        ]
-                    }
-                )
-
-                for volume in docker_volume_list:
-                    volume.remove(force=True)
-                print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
                 swarm_service.remove()
                 print(f"Removed service. YAY !! 🎉")
-
                 try:
                     await delete_schedule(deployment.monitor_schedule_id)
                 except RPCError:
                     pass
+        print("deleting volume list...")
+        docker_volume_list = self.docker_client.volumes.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service_details.project_id,
+                        parent=service_details.original_id,
+                    ).items()
+                ]
+            }
+        )
+
+        for volume in docker_volume_list:
+            volume.remove(force=True)
+        print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
         await SimpleLog.objects.filter(service_id=service_details.original_id).adelete()
 
     @activity.defn
@@ -776,7 +775,11 @@ class DockerSwarmActivities:
         except docker.errors.NotFound:
             self.docker_client.images.pull(
                 repository=service.image,
-                auth_config=service.credentials,
+                auth_config=(
+                    service.credentials.to_dict()
+                    if service.credentials is not None
+                    else None
+                ),
             )
 
             # env variables
