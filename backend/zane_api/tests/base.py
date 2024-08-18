@@ -421,7 +421,9 @@ class AuthAPITestCase(APITestCase):
             reverse("zane_api:projects.list"),
             data={"slug": "zaneops"},
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
 
         project = await Project.objects.aget(slug="zaneops", owner=owner)
 
@@ -478,7 +480,9 @@ class AuthAPITestCase(APITestCase):
             reverse("zane_api:projects.list"),
             data={"slug": "zaneops"},
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
 
         project = await Project.objects.aget(slug="zaneops", owner=owner)
 

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.urls import reverse
 from rest_framework import status
 from temporalio.client import WorkflowFailureError
@@ -500,53 +502,48 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(0, project_in_response.get("total_services"))
 
-    def test_with_succesful_deploy(self):
-        project, service = self.create_and_deploy_redis_docker_service()
+    async def test_with_succesful_deploy(self):
+        await self.acreate_and_deploy_redis_docker_service()
 
-        response = self.client.get(reverse("zane_api:projects.list"))
+        response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_in_response = response.json().get("results", [])[0]
         self.assertEqual(1, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
-    def test_with_multiple_services(self):
-        self.create_and_deploy_redis_docker_service()
+    async def test_with_multiple_services(self):
+        await self.acreate_and_deploy_redis_docker_service()
 
-        def create_raise_error(*args, **kwargs):
-            raise Exception("Fake error")
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 31]
+            await self.acreate_and_deploy_caddy_docker_service()
 
-        self.fake_docker_client.services.create = create_raise_error
-        self.create_and_deploy_caddy_docker_service()
-
-        response = self.client.get(reverse("zane_api:projects.list"))
+        response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_in_response = response.json().get("results", [])[0]
         self.assertEqual(2, project_in_response.get("total_services"))
         self.assertEqual(1, project_in_response.get("healthy_services"))
 
-    def test_with_failed_deployment(self):
-        def create_raise_error(*args, **kwargs):
-            raise Exception("Fake error")
+    async def test_with_failed_deployment(self):
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 31]
+            await self.acreate_and_deploy_redis_docker_service()
 
-        self.fake_docker_client.services.create = create_raise_error
-
-        project, service = self.create_and_deploy_redis_docker_service()
-
-        response = self.client.get(reverse("zane_api:projects.list"))
+        response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_in_response = response.json().get("results", [])[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
-    def test_with_unhealthy_deployment(self):
-        project, service = self.create_and_deploy_redis_docker_service()
+    async def test_with_unhealthy_deployment(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
 
         # make the deployment unhealthy
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: DockerDeployment = await service.deployments.afirst()
         deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
-        deployment.save()
+        await deployment.asave()
 
-        response = self.client.get(reverse("zane_api:projects.list"))
+        response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_in_response = response.json().get("results", [])[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
