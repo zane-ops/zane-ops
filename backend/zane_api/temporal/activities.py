@@ -22,6 +22,7 @@ with workflow.unsafe.imports_passed_through():
         HealthCheck,
         URL,
         DockerDeploymentChange,
+        SimpleLog,
     )
     from docker.models.networks import Network
     import requests
@@ -448,6 +449,7 @@ class DockerSwarmActivities:
                     await delete_schedule(deployment.monitor_schedule_id)
                 except RPCError:
                     pass
+        await SimpleLog.objects.filter(service_id=service_details.original_id).adelete()
 
     @activity.defn
     async def detach_network_from_proxy(

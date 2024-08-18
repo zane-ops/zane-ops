@@ -345,11 +345,11 @@ class SimpleLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
 
-    def test_delete_logs_after_archiving_a_service(self):
-        p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+    async def test_delete_logs_after_archiving_a_service(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = await service.deployments.afirst()
 
-        SimpleLog.objects.bulk_create(
+        await SimpleLog.objects.abulk_create(
             [
                 SimpleLog(
                     time=time,
@@ -363,19 +363,21 @@ class SimpleLogViewTests(AuthAPITestCase):
             ]
         )
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        deleted_service = DockerRegistryService.objects.filter(
+        deleted_service = await DockerRegistryService.objects.filter(
             slug=service.slug
-        ).first()
+        ).afirst()
         self.assertIsNone(deleted_service)
 
-        logs_for_service = SimpleLog.objects.filter(service_id=service.id).count()
+        logs_for_service = await SimpleLog.objects.filter(
+            service_id=service.id
+        ).acount()
         self.assertEqual(0, logs_for_service)
 
 
