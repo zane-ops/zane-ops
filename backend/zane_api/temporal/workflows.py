@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 from temporalio import workflow
@@ -57,36 +58,39 @@ class RemoveProjectResourcesWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        # services = await workflow.execute_activity_method(
-        #     DockerSwarmActivities.get_archived_project_services,
-        #     payload,
-        #     start_to_close_timeout=timedelta(seconds=5),
-        #     retry_policy=retry_policy,
-        # )
-        #
-        # await asyncio.gather(
-        #     *[
-        #         workflow.execute_activity_method(
-        #             DockerSwarmActivities.unexpose_docker_service_from_http,
-        #             service,
-        #             start_to_close_timeout=timedelta(seconds=10),
-        #             retry_policy=retry_policy,
-        #         )
-        #         for service in services
-        #     ]
-        # )
-        #
-        # await asyncio.gather(
-        #     *[
-        #         workflow.execute_activity_method(
-        #             DockerSwarmActivities.cleanup_docker_service_resources,
-        #             service,
-        #             start_to_close_timeout=timedelta(seconds=30),
-        #             retry_policy=retry_policy,
-        #         )
-        #         for service in services
-        #     ]
-        # )
+        print(f"Running activity `get_archived_project_services({payload=})`")
+        services = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_archived_project_services,
+            payload,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )
+
+        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.unexpose_docker_service_from_http,
+                    service,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+                for service in services
+            ]
+        )
+
+        print(f"Running activities `cleanup_docker_service_resources({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.cleanup_docker_service_resources,
+                    service,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+                for service in services
+            ]
+        )
 
         print(f"Running activity `detach_network_from_proxy({payload=})`")
         await workflow.execute_activity_method(

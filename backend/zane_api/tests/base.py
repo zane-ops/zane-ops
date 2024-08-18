@@ -417,7 +417,13 @@ class AuthAPITestCase(APITestCase):
         other_changes: list[DockerDeploymentChange] = None,
     ) -> tuple[Project, DockerRegistryService]:
         owner = await self.aLoginUser()
-        project, _ = await Project.objects.aget_or_create(slug="zaneops", owner=owner)
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = await Project.objects.aget(slug="zaneops", owner=owner)
 
         create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
         response = await self.async_client.post(
@@ -468,7 +474,13 @@ class AuthAPITestCase(APITestCase):
         other_changes: list[DockerDeploymentChange] = None,
     ):
         owner = await self.aLoginUser()
-        project, _ = await Project.objects.aget_or_create(slug="zaneops", owner=owner)
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = await Project.objects.aget(slug="zaneops", owner=owner)
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = await self.async_client.post(

@@ -3,9 +3,6 @@ from rest_framework import status
 from temporalio.client import WorkflowFailureError
 
 from .base import AuthAPITestCase
-from ..docker_operations import (
-    get_swarm_service_name_for_deployment,
-)
 from ..models import (
     Project,
     ArchivedProject,
@@ -18,7 +15,6 @@ from ..models import (
     URL,
     DockerDeploymentChange,
 )
-from ..utils import jprint
 from ..views import EMPTY_PAGINATED_RESPONSE
 
 
@@ -344,8 +340,8 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(1, len(archived_projects))
         self.assertIsNone(archived_projects.first().active_version)
 
-    def test_archive_all_services_when_archiving_a_projects(self):
-        project, service = self.create_and_deploy_caddy_docker_service(
+    async def test_archive_all_services_when_archiving_a_projects(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.VOLUMES,
@@ -384,63 +380,60 @@ class ProjectArchiveViewTests(AuthAPITestCase):
             ]
         )
 
-        first_deployment: DockerDeployment = service.deployments.first()
-        response = self.client.delete(
+        first_deployment: DockerDeployment = await service.deployments.afirst()
+        response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         # Service is deleted
-        deleted_service = DockerRegistryService.objects.filter(
+        deleted_service = await DockerRegistryService.objects.filter(
             slug=service.slug
-        ).first()
+        ).afirst()
         self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = (
+        archived_service: ArchivedDockerService = await (
             ArchivedDockerService.objects.filter(original_id=service.id)
             .prefetch_related("volumes")
             .prefetch_related("env_variables")
             .prefetch_related("ports")
             .prefetch_related("urls")
-        ).first()
+        ).afirst()
         self.assertIsNotNone(archived_service)
 
         # Deployments are cleaned up
-        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
-        self.assertEqual(0, deployments.count())
+        self.assertEqual(
+            0,
+            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+        )
 
         # Volumes are cleaned up
-        deleted_volume = Volume.objects.filter(name="gitea").first()
+        deleted_volume = await Volume.objects.filter(name="gitea").afirst()
         self.assertIsNone(deleted_volume)
-        self.assertEqual(1, archived_service.volumes.count())
+        self.assertEqual(1, await archived_service.volumes.acount())
 
         # env variables are cleaned up
         deleted_envs = DockerEnvVariable.objects.filter(service__slug=service.slug)
-        self.assertEqual(0, deleted_envs.count())
-        self.assertEqual(2, archived_service.env_variables.count())
+        self.assertEqual(0, await deleted_envs.acount())
+        self.assertEqual(2, await archived_service.env_variables.acount())
 
         # ports are cleaned up
         deleted_ports = PortConfiguration.objects.filter(
             dockerregistryservice__slug=service.slug
         )
-        self.assertEqual(0, deleted_ports.count())
-        self.assertEqual(1, archived_service.ports.count())
+        self.assertEqual(0, await deleted_ports.acount())
+        self.assertEqual(1, await archived_service.ports.acount())
 
         # urls are cleaned up
         deleted_urls = URL.objects.filter(domain="gitea.zane.local", base_path="/")
-        self.assertEqual(0, deleted_urls.count())
-        self.assertEqual(1, archived_service.urls.count())
+        self.assertEqual(0, await deleted_urls.acount())
+        self.assertEqual(1, await archived_service.urls.acount())
 
         # --- Docker Resources ---
         # service is removed
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                first_deployment.hash,
-            )
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            first_deployment
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
 
         # volumes are unmounted
@@ -579,7 +572,6 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         response = self.client.get(
             reverse("zane_api:projects.service_list", kwargs={"slug": p.slug})
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(type(response.json()) is list)
         self.assertEqual(2, len(response.json()))
@@ -603,6 +595,5 @@ class ProjectResourcesViewTests(AuthAPITestCase):
             reverse("zane_api:projects.service_list", kwargs={"slug": p.slug}),
             QUERY_STRING="query=redis",
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()))
