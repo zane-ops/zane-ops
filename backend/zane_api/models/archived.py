@@ -152,7 +152,7 @@ class ArchivedDockerService(ArchivedBaseService):
 
     @property
     def workflow_id(self):
-        return f"archive-{self.id}"
+        return f"archive-{self.original_id}-{datetime_to_timestamp_string(self.archived_at)}"
 
     @classmethod
     def create_from_service(
