@@ -71,6 +71,9 @@ class DockerCredentialsDto:
     def from_dict(cls, data: Dict[str, str]):
         return cls(**data)
 
+    def to_dict(self):
+        return dict(username=self.username, password=self.password)
+
 
 @dataclass
 class DockerServiceSnapshot:

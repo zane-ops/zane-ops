@@ -862,7 +862,9 @@ class FakeDockerClient:
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
             username, password = auth_config["username"], auth_config["password"]
-            if username != "fredkiss3" or password != "s3cret":
+            if (username != "fredkiss3" or password != "s3cret") and (
+                username != "" or password != ""
+            ):
                 raise docker.errors.APIError("Invalid credentials")
 
             if image == self.NONEXISTANT_PRIVATE_IMAGE:

@@ -129,7 +129,10 @@ class CreateDockerServiceAPIView(APIView):
                         )
                     ]
 
-                    if docker_credentials is not None:
+                    if docker_credentials is not None and (
+                        len(docker_credentials.get("username", "")) > 0
+                        or len(docker_credentials.get("password", "")) > 0
+                    ):
                         initial_changes.append(
                             DockerDeploymentChange(
                                 field=DockerDeploymentChange.ChangeField.CREDENTIALS,
@@ -650,7 +653,6 @@ class GetDockerServiceAPIView(APIView):
     serializer_class = DockerServiceSerializer
 
     @extend_schema(
-        request=DockerServiceCreateRequestSerializer,
         operation_id="getDockerService",
         summary="Get single service",
         description="See all the details of a service.",

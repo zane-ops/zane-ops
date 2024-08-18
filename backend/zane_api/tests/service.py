@@ -67,7 +67,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
@@ -83,6 +82,35 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
         self.assertTrue(self.fake_docker_client.is_logged_in)
+
+    def test_create_service_with_empty_credentials_do_not_save_the_credentials(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="gh-clone", owner=owner)
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": "dcr.fredkiss.dev/gh-next:latest",
+            "credentials": {
+                "username": "",
+                "password": "",
+            },
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
+        self.assertIsNotNone(created_service)
+        credentials_changes = created_service.unapplied_changes.filter(
+            field=DockerDeploymentChange.ChangeField.CREDENTIALS
+        ).first()
+        self.assertIsNone(credentials_changes)
 
     def test_create_service_slug_is_created_if_not_specified(self):
         owner = self.loginUser()
