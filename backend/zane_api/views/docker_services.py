@@ -20,8 +20,12 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
-from . import EMPTY_PAGINATED_RESPONSE, EMPTY_CURSOR_RESPONSE
-from .base import EMPTY_RESPONSE, ResourceConflict
+from .base import (
+    EMPTY_RESPONSE,
+    ResourceConflict,
+    EMPTY_PAGINATED_RESPONSE,
+    EMPTY_CURSOR_RESPONSE,
+)
 from .helpers import (
     compute_docker_service_snapshot_without_changes,
     compute_docker_changes_from_snapshots,
@@ -44,7 +48,7 @@ from .serializers import (
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
 )
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
+from ..dtos import DockerServiceSnapshot, DeploymentChangeDto, URLDto, VolumeDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -67,10 +71,14 @@ from ..serializers import (
     SimpleLogSerializer,
     HttpLogSerializer,
 )
-from ..tasks import (
-    delete_resources_for_docker_service,
+from ..temporal import (
+    start_workflow,
+    DeployDockerServiceWorkflow,
+    DeploymentDetails,
+    ArchivedServiceDetails,
+    ArchiveDockerServiceWorkflow,
+    SimpleDeploymentDetails,
 )
-from ..temporal import start_workflow, DeployDockerServiceWorkflow, DeploymentDetails
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -514,7 +522,6 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             )
             workflow_id = new_deployment.workflow_id
 
-            # Run celery deployment task
             transaction.on_commit(
                 lambda: start_workflow(
                     DeployDockerServiceWorkflow.run,
@@ -604,7 +611,6 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.save()
 
         token = Token.objects.get(user=request.user)
-        # Run celery deployment task
         payload = DeploymentDetails(
             hash=new_deployment.hash,
             slot=new_deployment.slot,
@@ -628,7 +634,6 @@ class RedeployDockerServiceAPIView(APIView):
         )
         workflow_id = new_deployment.workflow_id
 
-        # Run celery deployment task
         transaction.on_commit(
             lambda: start_workflow(
                 DeployDockerServiceWorkflow.run,
@@ -913,12 +918,43 @@ class ArchiveDockerServiceAPIView(APIView):
                 service, archived_project
             )
 
-            archive_task_id = service.archive_task_id
+            payload = ArchivedServiceDetails(
+                original_id=archived_service.original_id,
+                urls=[
+                    URLDto(
+                        domain=url.domain,
+                        base_path=url.base_path,
+                        strip_prefix=url.strip_prefix,
+                    )
+                    for url in archived_service.urls.all()
+                ],
+                volumes=[
+                    VolumeDto(
+                        container_path=volume.container_path,
+                        mode=volume.mode,
+                        name=volume.name,
+                        host_path=volume.host_path,
+                        id=volume.original_id,
+                    )
+                    for volume in archived_service.volumes.all()
+                ],
+                project_id=archived_project.original_id,
+                deployment_urls=archived_service.deployment_urls,
+                deployments=[
+                    SimpleDeploymentDetails(
+                        hash=deployment_hash,
+                        project_id=archived_service.project.original_id,
+                        service_id=archived_service.original_id,
+                    )
+                    for deployment_hash in archived_service.deployment_hashes
+                ],
+            )
 
             transaction.on_commit(
-                lambda: delete_resources_for_docker_service.apply_async(
-                    kwargs=dict(archived_service_id=archived_service.id),
-                    task_id=archive_task_id,
+                lambda: start_workflow(
+                    ArchiveDockerServiceWorkflow.run,
+                    payload,
+                    id=archived_service.workflow_id,
                 )
             )
 

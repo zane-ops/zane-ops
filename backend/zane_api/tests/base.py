@@ -47,15 +47,15 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-
-        response = super().post(
-            path=path,
-            data=data,
-            format=format,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().post(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
     def put(
@@ -63,14 +63,16 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-        response = super().put(
-            path=path,
-            data=data,
-            format=format,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().put(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
     def patch(
@@ -78,14 +80,15 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-        response = super().patch(
-            path=path,
-            data=data,
-            format=format,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().patch(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
     def delete(
@@ -93,14 +96,15 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-        response = super().delete(
-            path=path,
-            data=data,
-            format=format,
-            content_type=(
-                content_type if content_type is not None else "application/json"
-            ),
-        )
+        with self.parent.captureOnCommitCallbacks(execute=True):
+            response = super().delete(
+                path=path,
+                data=data,
+                format=format,
+                content_type=(
+                    content_type if content_type is not None else "application/json"
+                ),
+            )
         return response
 
 

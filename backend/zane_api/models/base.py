@@ -242,10 +242,6 @@ class DockerRegistryService(BaseService):
         )
 
     @property
-    def archive_task_id(self):
-        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
-
-    @property
     def latest_production_deployment(self) -> Union["DockerDeployment", None]:
         return (
             self.deployments.filter(is_current_production=True)

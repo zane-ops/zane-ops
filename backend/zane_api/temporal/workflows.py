@@ -3,7 +3,11 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from .shared import DeploymentHealthcheckResult, SimpleDeploymentDetails
+from .shared import (
+    DeploymentHealthcheckResult,
+    SimpleDeploymentDetails,
+    ArchivedServiceDetails,
+)
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
@@ -301,11 +305,38 @@ class DeployDockerServiceWorkflow:
         )
 
 
+@workflow.defn(name="archive-docker-service-workflow")
+class ArchiveDockerServiceWorkflow:
+    @workflow.run
+    async def run(self, service: ArchivedServiceDetails):
+        print(f"\nRunning workflow `ArchiveDockerServiceWorkflow` with {service=}")
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+        print(f"Running activity `unexpose_docker_service_from_http({service=})`")
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.unexpose_docker_service_from_http,
+            service,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
+        )
+
+        print(f"Running activity `cleanup_docker_service_resources({service=})`")
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.cleanup_docker_service_resources,
+            service,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=retry_policy,
+        )
+
+
 def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
     return dict(
         workflows=[
+            ArchiveDockerServiceWorkflow,
             CreateProjectResourcesWorkflow,
             RemoveProjectResourcesWorkflow,
             DeployDockerServiceWorkflow,

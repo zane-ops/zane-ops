@@ -7,7 +7,13 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
 
-from ..dtos import URLDto, DockerServiceSnapshot, DeploymentChangeDto, HealthCheckDto
+from ..dtos import (
+    URLDto,
+    DockerServiceSnapshot,
+    DeploymentChangeDto,
+    HealthCheckDto,
+    VolumeDto,
+)
 
 
 @dataclass
@@ -60,16 +66,23 @@ class SimpleDeploymentDetails:
     service_id: str
     url: Optional[str] = None
 
+    @property
+    def monitor_schedule_id(self):
+        return f"monitor-{self.hash}-{self.service_id}-{self.project_id}"
+
+
+@dataclass
+class ArchivedServiceDetails:
+    original_id: str
+    project_id: str
+    deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
+    deployment_urls: List[str] = field(default_factory=list)
+    urls: List[URLDto] = field(default_factory=list)
+    volumes: List[VolumeDto] = field(default_factory=list)
+
 
 @dataclass
 class HealthcheckDeploymentDetails:
     deployment: SimpleDeploymentDetails
     auth_token: str
     healthcheck: Optional[HealthCheckDto] = None
-
-
-@dataclass
-class ArchivedServiceDetails:
-    urls: List[URLDto]
-    deployment_urls: List[str]
-    deployments: List[SimpleDeploymentDetails]

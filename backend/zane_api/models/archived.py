@@ -150,6 +150,10 @@ class ArchivedDockerService(ArchivedBaseService):
     deployment_urls = models.JSONField(null=False, default=list)
     deployment_hashes = models.JSONField(null=False, default=list)
 
+    @property
+    def workflow_id(self):
+        return f"archive-{self.id}"
+
     @classmethod
     def create_from_service(
         cls, service: DockerRegistryService, parent: ArchivedProject

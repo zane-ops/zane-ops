@@ -2,18 +2,15 @@ import json
 import re
 from unittest.mock import patch, MagicMock
 
+import requests
 import responses
 from django.conf import settings
 from django.urls import reverse
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
-from ..docker_operations import (
-    get_swarm_service_name_for_deployment,
-)
 from ..dtos import HealthCheckDto
 from ..models import (
     Project,
@@ -26,11 +23,13 @@ from ..models import (
     Volume,
     DockerDeploymentChange,
     HealthCheck,
+    ArchivedURL,
 )
 from ..temporal import (
     MonitorDockerDeploymentWorkflow,
     HealthcheckDeploymentDetails,
     SimpleDeploymentDetails,
+    get_caddy_id_for_domain,
 )
 
 
@@ -529,11 +528,11 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
 
 class DockerServiceArchiveViewTest(AuthAPITestCase):
-    def test_archive_simple_service(self):
-        project, service = self.create_and_deploy_redis_docker_service()
-        first_deployment = service.deployments.first()
+    async def test_archive_simple_service(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+        first_deployment = await service.deployments.select_related("service").afirst()
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -541,30 +540,37 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = DockerRegistryService.objects.filter(
+        deleted_service = await DockerRegistryService.objects.filter(
             slug=service.slug
-        ).first()
+        ).afirst()
         self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug=service.slug
-        ).first()
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()
+        )
         self.assertIsNotNone(archived_service)
 
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_swarm_service_name_for_deployment(first_deployment)
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            first_deployment
         )
         self.assertIsNone(deleted_docker_service)
 
-        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
+        deployments = [
+            deployment
+            async for deployment in DockerDeployment.objects.filter(
+                service__slug=service.slug
+            ).all()
+        ]
         self.assertEqual(0, len(deployments))
 
-    def test_archive_non_deployed_service_deletes_the_service(self):
-        owner = self.loginUser()
-        project = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=project)
+    async def test_archive_non_deployed_service_deletes_the_service(self):
+        owner = await self.aLoginUser()
+        project = await Project.objects.acreate(slug="zaneops", owner=owner)
+        service = await DockerRegistryService.objects.acreate(
+            slug="app", project=project
+        )
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -572,18 +578,18 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = DockerRegistryService.objects.filter(
+        deleted_service = await DockerRegistryService.objects.filter(
             slug=service.slug
-        ).first()
+        ).afirst()
         self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug=service.slug
-        ).first()
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()
+        )
         self.assertIsNone(archived_service)
 
-    def test_archive_service_with_volume(self):
-        project, service = self.create_and_deploy_redis_docker_service(
+    async def test_archive_service_with_volume(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.VOLUMES,
@@ -596,9 +602,10 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 )
             ]
         )
-        deployment = service.deployments.first()
+        self.assertEqual(1, len(self.fake_docker_client.volume_map))
+        deployment = await service.deployments.afirst()
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -606,29 +613,24 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_volumes = Volume.objects.filter(name="redis-data")
-        self.assertEqual(0, len(deleted_volumes))
+        deleted_volume = await Volume.objects.filter(name="redis-data").afirst()
+        self.assertIsNone(deleted_volume)
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("volumes")
-        ).first()
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("volumes")
+            .afirst()
+        )
         self.assertEqual(1, len(archived_service.volumes.all()))
 
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
-    def test_archive_service_with_env_and_command(self):
-        project, service = self.create_and_deploy_redis_docker_service(
+    async def test_archive_service_with_env_and_command(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
@@ -645,41 +647,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 ),
             ]
         )
-        deployment = service.deployments.first()
+        deployment = await service.deployments.afirst()
 
-        response = self.client.delete(
-            reverse(
-                "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
-            ),
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-
-        self.assertEqual(
-            0, DockerEnvVariable.objects.filter(service__slug=service.slug).count()
-        )
-
-        archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("env_variables")
-        ).first()
-        self.assertEqual(1, archived_service.env_variables.count())
-
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
-        )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
-        self.assertIsNone(deleted_docker_service)
-
-    def test_archive_service_with_port(self):
-        project, service = self.create_and_deploy_caddy_docker_service()
-
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -689,30 +659,54 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            PortConfiguration.objects.filter(
-                dockerregistryservice__slug=service.slug
-            ).count(),
+            await DockerEnvVariable.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("ports")
-        ).first()
-        self.assertEqual(1, archived_service.ports.count())
-
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("env_variables")
+            .afirst()
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
+        self.assertEqual(1, await archived_service.env_variables.acount())
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
         self.assertIsNone(deleted_docker_service)
 
-    def test_archive_service_with_urls(self):
-        project, service = self.create_and_deploy_caddy_docker_service(
+    async def test_archive_service_with_port(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service()
+        deployment = await service.deployments.afirst()
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0,
+            await PortConfiguration.objects.filter(
+                dockerregistryservice__slug=service.slug
+            ).acount(),
+        )
+
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("ports")
+            .afirst()
+        )
+        self.assertEqual(1, await archived_service.ports.acount())
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+
+    async def test_archive_service_with_urls(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.URLS,
@@ -725,8 +719,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 )
             ]
         )
+        deployment: DockerDeployment = await service.deployments.afirst()
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -736,31 +731,39 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            URL.objects.filter(domain="thullo.fredkiss.dev", base_path="/api").count(),
+            await URL.objects.filter(
+                domain="thullo.fredkiss.dev", base_path="/api"
+            ).acount(),
         )
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("urls")
-        ).first()
-        self.assertEqual(1, len(archived_service.urls.all()))
-
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("urls")
+            .afirst()
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
+        self.assertEqual(1, len(archived_service.urls.all()))
+        url: ArchivedURL = await archived_service.urls.afirst()
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
+            timeout=5,
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+            timeout=5,
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
         self.assertIsNone(deleted_docker_service)
 
-    def test_archive_service_non_existing(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+    async def test_archive_service_non_existing(self):
+        owner = await self.aLoginUser()
+        p = await Project.objects.acreate(slug="kiss-cam", owner=owner)
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
@@ -768,20 +771,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-    def test_archive_service_for_non_existing_project(self):
-        owner = self.loginUser()
-        response = self.client.delete(
-            reverse(
-                "zane_api:services.docker.archive",
-                kwargs={"project_slug": "zane-ops", "service_slug": "cache-db"},
-            )
-        )
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+    async def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+        initial_deployment = await service.deployments.afirst()
 
-    def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
-        project, service = self.create_and_deploy_redis_docker_service()
-
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -789,10 +783,14 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
-        self.assertEqual(0, deployments.count())
-        self.assertEqual(0, PeriodicTask.objects.count())
-        self.assertEqual(0, IntervalSchedule.objects.count())
+        self.assertEqual(
+            0,
+            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+        )
+        self.assertIsNone(
+            self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
+        )
+        self.assertEqual(0, len(self.workflow_schedules))
 
 
 class DockerServiceMonitorTests(AuthAPITestCase):

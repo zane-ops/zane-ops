@@ -29,7 +29,7 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from django.utils import timezone
     from time import monotonic
-    from django.db.models import Q
+    from django.db.models import Q, QuerySet
     from ..utils import (
         strip_slash_if_exists,
         find_item_in_list,
@@ -348,14 +348,16 @@ class DockerSwarmActivities:
         self, project_details: ArchivedProjectDetails
     ) -> List[ArchivedServiceDetails]:
         try:
-            archived_project = await ArchivedProject.objects.aget(pk=project_details.id)
+            archived_project: ArchivedProject = await ArchivedProject.objects.aget(
+                pk=project_details.id
+            )
         except ArchivedProject.DoesNotExist:
             raise ApplicationError(
                 f"ArchivedProject with id=`{project_details.id}` does not exist.",
                 non_retryable=True,
             )
 
-        archived_docker_services = (
+        archived_docker_services: QuerySet[ArchivedDockerService] = (
             ArchivedDockerService.objects.filter(project=archived_project)
             .select_related("project")
             .prefetch_related("volumes", "urls")
@@ -365,6 +367,7 @@ class DockerSwarmActivities:
         async for service in archived_docker_services:
             archived_services.append(
                 ArchivedServiceDetails(
+                    original_id=service.original_id,
                     urls=[
                         URLDto(
                             domain=url.domain,
@@ -373,6 +376,7 @@ class DockerSwarmActivities:
                         )
                         for url in service.urls.all()
                     ],
+                    project_id=archived_project.original_id,
                     deployment_urls=service.deployment_urls,
                     deployments=[
                         SimpleDeploymentDetails(
@@ -394,7 +398,7 @@ class DockerSwarmActivities:
             try:
                 swarm_service = self.docker_client.services.get(
                     get_swarm_service_name_for_deployment(
-                        deployment_hash=deployment.id,
+                        deployment_hash=deployment.hash,
                         service_id=deployment.service_id,
                         project_id=deployment.project_id,
                     )
@@ -439,6 +443,11 @@ class DockerSwarmActivities:
                 print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
                 swarm_service.remove()
                 print(f"Removed service. YAY !! 🎉")
+
+                try:
+                    await delete_schedule(deployment.monitor_schedule_id)
+                except RPCError:
+                    pass
 
     @activity.defn
     async def detach_network_from_proxy(
@@ -1291,7 +1300,7 @@ class DockerSwarmActivities:
                 timeout=5,
             )
 
-            if response.status_code != 404:
+            if response.status_code != status.HTTP_404_NOT_FOUND:
                 current_routes: list[dict[str, dict]] = response.json()
                 routes = list(
                     filter(
@@ -1315,7 +1324,7 @@ class DockerSwarmActivities:
 
         for url in service_details.deployment_urls:
             requests.delete(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}",
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
                 timeout=5,
             )
 
