@@ -3,8 +3,6 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { addDays, format } from "date-fns";
 import {
   CalendarIcon,
-  ChevronsUpDown,
-  Clock,
   Container,
   EllipsisVertical,
   KeyRound,
@@ -29,21 +27,26 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarContentItem,
-  MenubarMenu,
-  MenubarTrigger
-} from "~/components/ui/menubar";
+
+import { MultiSelect } from "~/components/ui/mutiple-select";
 import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
-import {
-  capitalizeText,
-  formattedDate,
-  mergeTimeAgoFormatterAndFormattedDate
-} from "~/utils";
+import { capitalizeText, mergeTimeAgoFormatterAndFormattedDate } from "~/utils";
+
+const statuses = [
+  { value: "QUEUED", label: "QUEUED", color: "gray" },
+  { value: "CANCELLED", label: "CANCELLED", color: "gray" },
+  { value: "FAILED", label: "FAILED", color: "red" },
+  { value: "PREPARING", label: "PREPARING", color: "blue" },
+  { value: "HEALTHY", label: "HEALTHY", color: "green" },
+  { value: "UNHEALTHY", label: "UNHEALTHY", color: "red" },
+  { value: "STARTING", label: "STARTING", color: "blue" },
+  { value: "RESTARTING", label: "RESTARTING", color: "blue" },
+  { value: "REMOVED", label: "REMOVED", color: "gray" },
+  { value: "SLEEPING", label: "SLEEPING", color: "orange" }
+];
+
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
 )({
@@ -57,6 +60,12 @@ function ServiceDetails() {
     from: new Date(2022, 0, 20),
     to: addDays(new Date(2022, 0, 20), 20)
   });
+
+  const [selectedFrameworks, setSelectedFrameworks] = React.useState<string[]>([
+    "react",
+    "angular"
+  ]);
+
   return (
     <>
       <MetaTitle title={`${service_slug}`} />
@@ -177,53 +186,17 @@ function ServiceDetails() {
                 />
               </PopoverContent>
             </Popover>
-            <Menubar className="border border-border md:w-fit w-full">
-              <MenubarMenu>
-                <MenubarTrigger className="flex md:w-fit w-full ring-secondary md:justify-center justify-between text-sm items-center gap-1">
-                  Status
-                  <ChevronsUpDown className="w-4" />
-                </MenubarTrigger>
-                <MenubarContent className="border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border md:min-w-6 md:w-auto">
-                  <Status color="gray">
-                    <MenubarContentItem text="Queued" />
-                  </Status>
-                  <Status color="gray">
-                    <MenubarContentItem text="Canceled" />
-                  </Status>
-                  <Status color="red">
-                    <MenubarContentItem text="Failed" />
-                  </Status>
-
-                  <Status color="gray">
-                    <MenubarContentItem text="Preparing" />
-                  </Status>
-
-                  <Status color="blue">
-                    <MenubarContentItem text="Starting" />
-                  </Status>
-
-                  <Status color="blue">
-                    <MenubarContentItem text="Restarting" />
-                  </Status>
-
-                  <Status color="green">
-                    <MenubarContentItem text="Healthy" />
-                  </Status>
-
-                  <Status color="red">
-                    <MenubarContentItem text="Unhealthy" />
-                  </Status>
-
-                  <Status color="gray">
-                    <MenubarContentItem text="Removed" />
-                  </Status>
-
-                  <Status color="orange">
-                    <MenubarContentItem text="Sleeping" />
-                  </Status>
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
+            <div className="w-fit">
+              <MultiSelect
+                options={statuses}
+                onValueChange={setSelectedFrameworks}
+                defaultValue={selectedFrameworks}
+                placeholder="Status"
+                variant="inverted"
+                animation={2}
+                maxCount={3}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-4 mt-6">
@@ -285,7 +258,6 @@ function ServiceDetails() {
 }
 
 type TrackerColor = "red" | "green" | "orange" | "gray" | "blue";
-type StatusText = "Preparing" | "Failed" | "Removed" | "Healthy";
 
 type StatusProps = {
   color: TrackerColor;
@@ -455,4 +427,45 @@ function DeploymentCard({
       </div>
     </div>
   );
+}
+
+{
+  /**
+  <Status color="gray">
+                    <MenubarContentItem text="Queued" />
+                  </Status>
+                  <Status color="gray">
+                    <MenubarContentItem text="Canceled" />
+                  </Status>
+                  <Status color="red">
+                    <MenubarContentItem text="Failed" />
+                  </Status>
+
+                  <Status color="gray">
+                    <MenubarContentItem text="Preparing" />
+                  </Status>
+
+                  <Status color="blue">
+                    <MenubarContentItem text="Starting" />
+                  </Status>
+
+                  <Status color="blue">
+                    <MenubarContentItem text="Restarting" />
+                  </Status>
+
+                  <Status color="green">
+                    <MenubarContentItem text="Healthy" />
+                  </Status>
+
+                  <Status color="red">
+                    <MenubarContentItem text="Unhealthy" />
+                  </Status>
+
+                  <Status color="gray">
+                    <MenubarContentItem text="Removed" />
+                  </Status>
+
+                  <Status color="orange">
+                    <MenubarContentItem text="Sleeping" />
+                  </Status> */
 }
