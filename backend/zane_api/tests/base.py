@@ -484,7 +484,7 @@ class AuthAPITestCase(APITestCase):
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
         )
 
-        project = await Project.objects.aget(slug="zaneops", owner=owner)
+        project: Project = await Project.objects.aget(slug="zaneops", owner=owner)
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = await self.async_client.post(
@@ -494,7 +494,9 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = await DockerRegistryService.objects.aget(slug="caddy")
+        service: DockerRegistryService = await DockerRegistryService.objects.aget(
+            slug="caddy"
+        )
 
         service.network_alias = f"{service.slug}-{service.unprefixed_id}"
         await service.asave()

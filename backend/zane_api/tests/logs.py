@@ -1033,10 +1033,10 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         self.assertEqual(HttpLog.RequestProtocols.HTTP_2, log.request_protocol)
         self.assertIsNotNone(log.request_id)
 
-    def test_correctly_split_logs_per_deployment(self):
-        p, service = self.create_and_deploy_caddy_docker_service()
+    async def test_correctly_split_logs_per_deployment(self):
+        p, service = await self.acreate_and_deploy_caddy_docker_service()
         # Make a second deployment
-        self.client.put(
+        await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
@@ -1046,10 +1046,8 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
             )
         )
 
-        latest_deployment: DockerDeployment = service.deployments.first()
-        initial_deployment: DockerDeployment = (
-            latest_deployment.get_previous_by_queued_at()
-        )
+        latest_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: DockerDeployment = await service.deployments.alast()
 
         # First deployment logs
         first_deploy_proxy_logs = [
@@ -1118,12 +1116,12 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
             for log in self.sample_log_entries[4:]
         ]
 
-        response = self.client.post(
+        response = await self.async_client.post(
             reverse("zane_api:logs.tail"),
             data=first_deploy_proxy_logs + second_deploy_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
+        self.assertEqual(len(self.sample_log_entries), await HttpLog.objects.acount())
 
-        self.assertEqual(4, initial_deployment.http_logs.count())
-        self.assertEqual(2, latest_deployment.http_logs.count())
+        self.assertEqual(4, await initial_deployment.http_logs.acount())
+        self.assertEqual(2, await latest_deployment.http_logs.acount())
