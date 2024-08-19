@@ -15,10 +15,6 @@ from .helpers import (
     compute_all_deployment_changes,
 )
 from .. import serializers
-from ..docker_operations import (
-    check_if_docker_image_exists,
-    check_if_port_is_available_on_host,
-)
 from ..models import (
     URL,
     DockerDeployment,
@@ -31,6 +27,7 @@ from ..models import (
     SimpleLog,
     HttpLog,
 )
+from ..temporal import check_if_docker_image_exists, check_if_port_is_available_on_host
 from ..utils import EnhancedJSONEncoder
 from ..validators import validate_url_path, validate_env_name
 

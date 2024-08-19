@@ -6,7 +6,6 @@ from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import CrontabSchedule
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 
@@ -847,48 +846,3 @@ class HttpLog(Log):
             models.Index(fields=["time"]),
         ]
         ordering = ("time",)
-
-
-class CRON(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255)
-    schedule = models.ForeignKey(to=CrontabSchedule, on_delete=models.RESTRICT)
-    archived = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.name
-
-
-class HttpCRON(CRON):
-    class RequestMethod(models.TextChoices):
-        GET = "GET", _("GET")
-        POST = "POST", _("POST")
-        PUT = "PUT", _("PUT")
-        DELETE = "DELETE", _("DELETE")
-        PATCH = "PATCH", _("PATCH")
-        OPTIONS = "OPTIONS", _("OPTIONS")
-        HEAD = "HEAD", _("HEAD")
-
-    url = models.URLField(max_length=2000)
-    headers = models.JSONField()
-    body = models.JSONField()
-    method = models.CharField(
-        max_length=7,
-        choices=RequestMethod.choices,
-    )
-
-    def __str__(self):
-        return f"HTTP CRON {self.name}"
-
-
-class ServiceCommandCRON(CRON):
-    command = models.TextField()
-    dockerService = models.ForeignKey(
-        to=DockerRegistryService, null=True, on_delete=models.CASCADE
-    )
-    gitService = models.ForeignKey(
-        to=GitRepositoryService, null=True, on_delete=models.CASCADE
-    )
-
-    def __str__(self):
-        return f"HTTP CRON {self.name}"

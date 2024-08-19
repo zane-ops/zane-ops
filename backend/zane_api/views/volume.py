@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..docker_operations import get_docker_volume_size
 from ..models import Volume
+from ..temporal import get_docker_volume_size
 
 
 class VolumeGetSizeResponseSerializer(serializers.Serializer):
@@ -29,6 +29,6 @@ class VolumeGetSizeView(APIView):
                 detail=f"A volume with the id `{volume_id}` does not exist"
             )
         else:
-            size = get_docker_volume_size(volume)
+            size = get_docker_volume_size(volume.id)
             response = VolumeGetSizeResponseSerializer({"size": size})
             return Response(response.data)

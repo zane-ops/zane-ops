@@ -2,22 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from . import AuthAPITestCase
-from ..docker_operations import (
-    create_docker_volume,
-)
-from ..models import Project, Volume, DockerRegistryService
-
-
-class DockerVolumeTests(AuthAPITestCase):
-    def test_create_volume_successful(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zane-ops", owner=owner)
-        service = DockerRegistryService.objects.create(project=p)
-        volume = Volume.objects.create(
-            name="postgres DB Data",
-        )
-        create_docker_volume(volume, service)
-        self.assertEqual(1, len(self.fake_docker_client.volume_map))
+from ..models import Project, Volume
 
 
 class VolumeGetSizeViewTests(AuthAPITestCase):
