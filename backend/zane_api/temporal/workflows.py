@@ -85,7 +85,7 @@ class RemoveProjectResourcesWorkflow:
                 workflow.execute_activity_method(
                     DockerSwarmActivities.cleanup_docker_service_resources,
                     service,
-                    start_to_close_timeout=timedelta(seconds=30),
+                    start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=retry_policy,
                 )
                 for service in services
@@ -155,7 +155,7 @@ class DeployDockerServiceWorkflow:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_service_deployment,
                 previous_production_deployment,
-                start_to_close_timeout=timedelta(seconds=30),
+                start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
 
@@ -228,7 +228,7 @@ class DeployDockerServiceWorkflow:
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
                     previous_production_deployment,
-                    start_to_close_timeout=timedelta(seconds=30),
+                    start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=retry_policy,
                 )
 
@@ -279,7 +279,7 @@ class DeployDockerServiceWorkflow:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
                 current_deployment,
-                start_to_close_timeout=timedelta(seconds=30),
+                start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
             if previous_production_deployment is not None:
@@ -330,7 +330,7 @@ class ArchiveDockerServiceWorkflow:
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_docker_service_resources,
             service,
-            start_to_close_timeout=timedelta(seconds=30),
+            start_to_close_timeout=timedelta(seconds=60),
             retry_policy=retry_policy,
         )
 
