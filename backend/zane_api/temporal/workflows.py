@@ -212,7 +212,7 @@ class DeployDockerServiceWorkflow:
             status=deployment_status,
             reason=deployment_status_reason,
         )
-        print(f"Running activity `save_deployment({healthcheck_result=})`")
+        print(f"Running activity `finish_and_save_deployment({healthcheck_result=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.finish_and_save_deployment,
             healthcheck_result,

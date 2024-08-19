@@ -675,10 +675,9 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
-            raise ApplicationError(
-                "Cannot scale down an nonexistent deployment.",
-                non_retryable=True,
-            )
+            # do nothing
+            # The service for that deployment was removed probably
+            return
         else:
             swarm_service.scale(0)
 
@@ -699,7 +698,7 @@ class DockerSwarmActivities:
             # Change the status to be accurate
             docker_deployment: DockerDeployment | None = (
                 await DockerDeployment.objects.filter(
-                    hash=deployment.hash, service_id=deployment.service_id
+                    Q(hash=deployment.hash) & Q(service_id=deployment.service_id)
                 )
                 .select_related("service")
                 .afirst()
@@ -728,10 +727,9 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
-            raise ApplicationError(
-                "Cannot scale up an nonexistent deployment.",
-                non_retryable=True,
-            )
+            # do nothing
+            # The service for that deployment was removed probably
+            return
         else:
             swarm_service.scale(1)
 
@@ -982,6 +980,7 @@ class DockerSwarmActivities:
 
                 exited_without_error = 0
                 deployment_status = state_matrix[most_recent_swarm_task.state]
+
                 deployment_status_reason = (
                     most_recent_swarm_task.Status.Err
                     if most_recent_swarm_task.Status.Err is not None
