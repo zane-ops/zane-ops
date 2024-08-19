@@ -533,6 +533,37 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    def test_validate_volume_can_use_the_same_host_path_as_another_service_if_both_read_only(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        DockerRegistryService.objects.create(slug="app", project=p)
+        Volume.objects.create(
+            host_path="/etc/localtime",
+            container_path="/etc/locatime",
+            mode=Volume.VolumeMode.READ_ONLY,
+        )
+
+        changes_payload = {
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "zane-localtime",
+                "container_path": "/etc/logs/zane",
+                "host_path": "/etc/localtime",
+                "mode": Volume.VolumeMode.READ_ONLY,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
     def test_validate_volume_can_use_the_same_host_path_if_same_service(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)

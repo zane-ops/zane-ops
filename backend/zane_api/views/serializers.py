@@ -170,8 +170,8 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "image": [
-                        f"Either the image `{image}` does not exist or the credentials are invalid for this image."
-                        f" Have you forgotten to include the credentials ?"
+                        f"Either the image `{image}` doesn't exist, or the provided credentials are invalid."
+                        f" Did you forget to include the credentials?"
                     ]
                 }
             )
@@ -530,19 +530,26 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if host path is not already used by another service
         if new_value.get("host_path") is not None:
-            already_existing_volumes: Volume | None = Volume.objects.filter(
+            already_existing_volumes: QuerySet[dict] = Volume.objects.filter(
                 Q(host_path__isnull=False)
                 & Q(host_path=new_value.get("host_path"))
                 & ~Q(dockerregistryservice__id=service.id)
-            ).first()
-            if already_existing_volumes is not None:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": {
-                            "host_path": f"Another service is already mounted to the host path `{already_existing_volumes.host_path}`."
+            ).values("mode")
+            if len(already_existing_volumes) > 0:
+                mode_set = {volume["mode"] for volume in already_existing_volumes}
+                if (
+                    new_value.get("mode") != Volume.VolumeMode.READ_ONLY
+                    or Volume.VolumeMode.READ_WRITE in mode_set
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "new_value": {
+                                "host_path": f"Another service is already using the host path"
+                                f" `{new_value.get('host_path')}`."
+                                f" To share the same host path between two services, both must be mounted in READ_ONLY mode."
+                            }
                         }
-                    }
-                )
+                    )
         if change_type == "UPDATE" and current_volume is not None:
             if (
                 new_value.get("host_path") is None
