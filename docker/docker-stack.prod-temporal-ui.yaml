@@ -1,0 +1,12 @@
+services:
+  temporal-ui:
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:2.26.2
+    networks:
+      zane:
+        aliases:
+          - zane.temporal-ui
