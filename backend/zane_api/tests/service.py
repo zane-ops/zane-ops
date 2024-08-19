@@ -1,17 +1,17 @@
 import json
 import re
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, MagicMock
 
+import requests
 import responses
+from django.conf import settings
 from django.urls import reverse
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from rest_framework import status
 from rest_framework.authtoken.models import Token
+from temporalio.testing import WorkflowEnvironment
 
-from .base import AuthAPITestCase, FakeDockerClient
-from ..docker_operations import (
-    get_swarm_service_name_for_deployment,
-)
+from .base import AuthAPITestCase
+from ..dtos import HealthCheckDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -22,8 +22,15 @@ from ..models import (
     DockerEnvVariable,
     Volume,
     DockerDeploymentChange,
+    HealthCheck,
+    ArchivedURL,
 )
-from ..tasks import monitor_docker_service_deployment
+from ..temporal import (
+    MonitorDockerDeploymentWorkflow,
+    HealthcheckDeploymentDetails,
+    SimpleDeploymentDetails,
+    get_caddy_id_for_domain,
+)
 
 
 class DockerServiceCreateViewTest(AuthAPITestCase):
@@ -60,7 +67,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             "credentials": {
                 "username": "fredkiss3",
                 "password": "s3cret",
-                "registry_url": "https://dcr.fredkiss.dev/",
             },
         }
 
@@ -76,6 +82,35 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
         self.assertTrue(self.fake_docker_client.is_logged_in)
+
+    def test_create_service_with_empty_credentials_do_not_save_the_credentials(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="gh-clone", owner=owner)
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": "dcr.fredkiss.dev/gh-next:latest",
+            "credentials": {
+                "username": "",
+                "password": "",
+            },
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="main-app"
+        ).first()
+        self.assertIsNotNone(created_service)
+        credentials_changes = created_service.unapplied_changes.filter(
+            field=DockerDeploymentChange.ChangeField.CREDENTIALS
+        ).first()
+        self.assertIsNone(credentials_changes)
 
     def test_create_service_slug_is_created_if_not_specified(self):
         owner = self.loginUser()
@@ -292,400 +327,150 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
 
 class DockerServiceHealthCheckViewTests(AuthAPITestCase):
-    def test_create_scheduled_task_when_deploying_a_service(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
+    async def test_create_scheduled_task_when_deploying_a_service(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
+        initial_deployment: DockerDeployment = (
+            await service.alatest_production_deployment
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        initial_deployment: DockerDeployment = service.latest_production_deployment
         self.assertIsNotNone(initial_deployment)
-        self.assertIsNotNone(initial_deployment.monitor_task)
+        self.assertIsNotNone(
+            self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
+        )
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_create_service_do_not_create_monitor_task_when_deployment_fails(
-        self, mock_monotonic: Mock, _: Mock
+    async def test_create_service_do_not_create_monitor_task_when_deployment_fails(
+        self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 31]
+            p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        mock_monotonic.side_effect = [0, 31]
-
-        fake_service = MagicMock()
-        fake_service.tasks.return_value = []
-        self.fake_docker_client.services.get = lambda _id: fake_service
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        latest_deployment = service.deployments.first()
+        latest_deployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
-        self.assertIsNone(latest_deployment.monitor_task)
-
-    def test_create_scheduled_task_with_healthcheck_same_interval(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field="healthcheck",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "type": "COMMAND",
-                        "value": "redis-cli PING",
-                        "timeout_seconds": 30,
-                        "interval_seconds": 15,
-                    },
-                    service=service,
-                ),
-            ]
+        self.assertIsNone(
+            self.get_workflow_schedule_by_id(latest_deployment.monitor_schedule_id)
         )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
+    async def test_create_scheduled_task_with_healthcheck_same_interval(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service(
+            with_healthcheck=True
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        initial_deployment = service.latest_production_deployment
+        initial_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
             DockerDeployment.DeploymentStatus.HEALTHY,
             initial_deployment.status,
         )
-        self.assertIsNotNone(initial_deployment.monitor_task)
-        self.assertEqual(15, initial_deployment.monitor_task.interval.every)
-
-    @responses.activate
-    def test_create_service_with_healtheck_path_success(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field="healthcheck",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "type": "PATH",
-                        "value": "/",
-                    },
-                    service=service,
-                ),
-            ]
+        schedule_handle = self.get_workflow_schedule_by_id(
+            initial_deployment.monitor_schedule_id
+        )
+        self.assertIsNotNone(schedule_handle)
+        self.assertEqual(
+            initial_deployment.service.healthcheck.interval_seconds,
+            schedule_handle.interval.seconds,
         )
 
+    @responses.activate
+    async def test_create_service_with_healtheck_path_success(self):
+        deployment_url_pattern = re.compile(
+            rf"^(?!{re.escape(settings.CADDY_PROXY_ADMIN_HOST)}).*{re.escape(settings.ROOT_DOMAIN)}"
+        )
         responses.add(
             responses.GET,
-            url=re.compile("^(https?)*"),
+            url=re.compile(deployment_url_pattern),
             status=status.HTTP_200_OK,
         )
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": "app",
-                },
-            ),
+        p, service = await self.acreate_and_deploy_caddy_docker_service(
+            with_healthcheck=True
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.latest_production_deployment
+        latest_deployment = await service.alatest_production_deployment
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
 
     @responses.activate
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_create_service_with_healtheck_path_error(
-        self,
-        mock_monotonic: Mock,
-        _: Mock,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"type": "PATH", "value": "/", "timeout_seconds": 30},
-                    service=service,
-                ),
-            ]
+    async def test_create_service_with_healtheck_path_error(self):
+        deployment_url_pattern = re.compile(
+            rf"^(?!{re.escape(settings.CADDY_PROXY_ADMIN_HOST)}).*{re.escape(settings.ROOT_DOMAIN)}"
         )
-
         responses.add(
             responses.GET,
-            url=re.compile("^(https?)*"),
+            url=re.compile(deployment_url_pattern),
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-        mock_monotonic.side_effect = [0, 0, 0, 31]
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment: DockerDeployment = service.deployments.first()
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 0, 0, 31]
+            p, service = await self.acreate_and_deploy_caddy_docker_service(
+                with_healthcheck=True
+            )
+
+        latest_deployment: DockerDeployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
 
-    def test_create_service_with_healtheck_cmd_success(
-        self,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="redis:alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "type": "COMMAND",
-                        "value": "redis-cli PING",
-                        "timeout_seconds": 30,
-                        "interval_seconds": 5,
-                    },
-                    service=service,
-                ),
-            ]
+    async def test_create_service_with_healtheck_cmd_success(self):
+        _, service = await self.acreate_and_deploy_redis_docker_service(
+            with_healthcheck=True
         )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment: DockerDeployment = service.deployments.first()
+        latest_deployment: DockerDeployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_create_service_with_healtheck_cmd_error(
-        self,
-        mock_monotonic: Mock,
-        _: Mock,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="image",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="redis:alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "type": "COMMAND",
-                        "value": FakeDockerClient.FAILING_CMD,
-                        "timeout_seconds": 30,
-                        "interval_seconds": 5,
-                    },
-                    service=service,
-                ),
-            ]
-        )
+    async def test_create_service_with_healtheck_cmd_error(self):
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 0, 0, 31]
+            _, service = await self.acreate_and_deploy_redis_docker_service(
+                other_changes=[
+                    DockerDeploymentChange(
+                        field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        new_value={
+                            "type": "COMMAND",
+                            "value": self.fake_docker_client.FAILING_CMD,
+                            "timeout_seconds": 30,
+                            "interval_seconds": 15,
+                        },
+                    ),
+                ]
+            )
 
-        mock_monotonic.side_effect = [0, 0, 0, 31]
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        latest_deployment = service.deployments.first()
+        latest_deployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
 
-    def test_create_service_without_healthcheck_succeed_when_service_is_working_correctly_by_default(
+    async def test_create_service_without_healthcheck_succeed_when_service_is_working_correctly_by_default(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.latest_production_deployment
+        _, service = await self.acreate_and_deploy_redis_docker_service()
+        latest_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(latest_deployment)
         self.assertEqual(
             DockerDeployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_create_service_without_healthcheck_deployment_is_set_to_failed_when_docker_fails_to_start(
+    async def test_create_service_without_healthcheck_deployment_is_set_to_failed_when_docker_fails_to_start(
         self,
-        mock_monotonic: Mock,
-        _: Mock,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
-
-        mock_monotonic.side_effect = [0, 0, 0, 31]
-
         class MockService:
+            def __init__(self, name: str):
+                self.name = name
+
             @staticmethod
             def tasks(*args, **kwargs):
                 return []
@@ -696,63 +481,30 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             def remove(self):
                 pass
 
-        self.fake_docker_client.services.get = lambda _id: MockService()
+        self.fake_docker_client.services.get = lambda _id: MockService(_id)
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 0, 0, 31]
+            p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        latest_deployment: DockerDeployment = service.deployments.first()
+        latest_deployment: DockerDeployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
 
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_create_service_scale_down_service_to_zero_when_deployment_fails(
+    async def test_create_service_scale_down_service_to_zero_when_deployment_fails(
         self,
-        mock_monotonic: Mock,
-        _: Mock,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
-                ),
-            ]
-        )
-
-        mock_monotonic.side_effect = [0, 31]
-
         fake_service = MagicMock()
         fake_service.tasks.return_value = []
         self.fake_docker_client.services.get = lambda _id: fake_service
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.deployments.first()
+        with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
+            mock_monotonic.side_effect = [0, 31]
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        latest_deployment = await service.deployments.afirst()
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED,
             latest_deployment.status,
@@ -804,11 +556,11 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
 
 class DockerServiceArchiveViewTest(AuthAPITestCase):
-    def test_archive_simple_service(self):
-        project, service = self.create_and_deploy_redis_docker_service()
-        first_deployment = service.deployments.first()
+    async def test_archive_simple_service(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+        first_deployment = await service.deployments.select_related("service").afirst()
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -816,30 +568,37 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = DockerRegistryService.objects.filter(
+        deleted_service = await DockerRegistryService.objects.filter(
             slug=service.slug
-        ).first()
+        ).afirst()
         self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug=service.slug
-        ).first()
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()
+        )
         self.assertIsNotNone(archived_service)
 
-        deleted_docker_service = self.fake_docker_client.service_map.get(
-            get_swarm_service_name_for_deployment(first_deployment)
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            first_deployment
         )
         self.assertIsNone(deleted_docker_service)
 
-        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
+        deployments = [
+            deployment
+            async for deployment in DockerDeployment.objects.filter(
+                service__slug=service.slug
+            ).all()
+        ]
         self.assertEqual(0, len(deployments))
 
-    def test_archive_non_deployed_service_deletes_the_service(self):
-        owner = self.loginUser()
-        project = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=project)
+    async def test_archive_non_deployed_service_deletes_the_service(self):
+        owner = await self.aLoginUser()
+        project = await Project.objects.acreate(slug="zaneops", owner=owner)
+        service = await DockerRegistryService.objects.acreate(
+            slug="app", project=project
+        )
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -847,18 +606,18 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = DockerRegistryService.objects.filter(
+        deleted_service = await DockerRegistryService.objects.filter(
             slug=service.slug
-        ).first()
+        ).afirst()
         self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
-            slug=service.slug
-        ).first()
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()
+        )
         self.assertIsNone(archived_service)
 
-    def test_archive_service_with_volume(self):
-        project, service = self.create_and_deploy_redis_docker_service(
+    async def test_archive_service_with_volume(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.VOLUMES,
@@ -871,9 +630,10 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 )
             ]
         )
-        deployment = service.deployments.first()
+        self.assertEqual(1, len(self.fake_docker_client.volume_map))
+        deployment = await service.deployments.afirst()
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -881,29 +641,24 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_volumes = Volume.objects.filter(name="redis-data")
-        self.assertEqual(0, len(deleted_volumes))
+        deleted_volume = await Volume.objects.filter(name="redis-data").afirst()
+        self.assertIsNone(deleted_volume)
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("volumes")
-        ).first()
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("volumes")
+            .afirst()
+        )
         self.assertEqual(1, len(archived_service.volumes.all()))
 
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
         self.assertIsNone(deleted_docker_service)
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
-    def test_archive_service_with_env_and_command(self):
-        project, service = self.create_and_deploy_redis_docker_service(
+    async def test_archive_service_with_env_and_command(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
@@ -920,41 +675,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 ),
             ]
         )
-        deployment = service.deployments.first()
+        deployment = await service.deployments.afirst()
 
-        response = self.client.delete(
-            reverse(
-                "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
-            ),
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-
-        self.assertEqual(
-            0, DockerEnvVariable.objects.filter(service__slug=service.slug).count()
-        )
-
-        archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("env_variables")
-        ).first()
-        self.assertEqual(1, archived_service.env_variables.count())
-
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
-        )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
-        self.assertIsNone(deleted_docker_service)
-
-    def test_archive_service_with_port(self):
-        project, service = self.create_and_deploy_caddy_docker_service()
-
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -964,30 +687,54 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            PortConfiguration.objects.filter(
-                dockerregistryservice__slug=service.slug
-            ).count(),
+            await DockerEnvVariable.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("ports")
-        ).first()
-        self.assertEqual(1, archived_service.ports.count())
-
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("env_variables")
+            .afirst()
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
+        self.assertEqual(1, await archived_service.env_variables.acount())
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
         self.assertIsNone(deleted_docker_service)
 
-    def test_archive_service_with_urls(self):
-        project, service = self.create_and_deploy_caddy_docker_service(
+    async def test_archive_service_with_port(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service()
+        deployment = await service.deployments.afirst()
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0,
+            await PortConfiguration.objects.filter(
+                dockerregistryservice__slug=service.slug
+            ).acount(),
+        )
+
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("ports")
+            .afirst()
+        )
+        self.assertEqual(1, await archived_service.ports.acount())
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+
+    async def test_archive_service_with_urls(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.URLS,
@@ -1000,8 +747,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 )
             ]
         )
+        deployment: DockerDeployment = await service.deployments.afirst()
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -1011,31 +759,39 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            URL.objects.filter(domain="thullo.fredkiss.dev", base_path="/api").count(),
+            await URL.objects.filter(
+                domain="thullo.fredkiss.dev", base_path="/api"
+            ).acount(),
         )
 
         archived_service: ArchivedDockerService = (
-            ArchivedDockerService.objects.filter(
-                original_id=service.id
-            ).prefetch_related("urls")
-        ).first()
-        self.assertEqual(1, len(archived_service.urls.all()))
-
-        service_name = get_swarm_service_name_for_deployment(
-            (
-                archived_service.project.original_id,
-                archived_service.original_id,
-                archived_service.deployment_hashes[0],
-            )
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("urls")
+            .afirst()
         )
-        deleted_docker_service = self.fake_docker_client.service_map.get(service_name)
+        self.assertEqual(1, len(archived_service.urls.all()))
+        url: ArchivedURL = await archived_service.urls.afirst()
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
+            timeout=5,
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+            timeout=5,
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
         self.assertIsNone(deleted_docker_service)
 
-    def test_archive_service_non_existing(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+    async def test_archive_service_non_existing(self):
+        owner = await self.aLoginUser()
+        p = await Project.objects.acreate(slug="kiss-cam", owner=owner)
 
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
@@ -1043,20 +799,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-    def test_archive_service_for_non_existing_project(self):
-        owner = self.loginUser()
-        response = self.client.delete(
-            reverse(
-                "zane_api:services.docker.archive",
-                kwargs={"project_slug": "zane-ops", "service_slug": "cache-db"},
-            )
-        )
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+    async def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+        initial_deployment = await service.deployments.afirst()
 
-    def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
-        project, service = self.create_and_deploy_redis_docker_service()
-
-        response = self.client.delete(
+        response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": project.slug, "service_slug": service.slug},
@@ -1064,383 +811,414 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deployments = DockerDeployment.objects.filter(service__slug=service.slug)
-        self.assertEqual(0, deployments.count())
-        self.assertEqual(0, PeriodicTask.objects.count())
-        self.assertEqual(0, IntervalSchedule.objects.count())
+        self.assertEqual(
+            0,
+            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+        )
+        self.assertIsNone(
+            self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
+        )
+        self.assertEqual(0, len(self.workflow_schedules))
 
 
 class DockerServiceMonitorTests(AuthAPITestCase):
-    def test_normal_deployment_flow(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
+    async def test_normal_deployment_flow(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
+
+            token = await Token.objects.aget(user=owner)
+            healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
+            healthcheck_details = HealthcheckDeploymentDetails(
+                deployment=SimpleDeploymentDetails(
+                    hash=latest_deployment.hash,
+                    service_id=latest_deployment.service.id,
+                    project_id=latest_deployment.service.project_id,
                 ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.latest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-        token = Token.objects.get(user=owner)
-        monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = service.latest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-
-    def test_restart_is_set_after_multiple_tasks_deployments(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
+                auth_token=token.key,
+                healthcheck=(
+                    HealthCheckDto.from_dict(
+                        dict(
+                            type=healthcheck.type,
+                            value=healthcheck.value,
+                            timeout_seconds=healthcheck.timeout_seconds,
+                            interval_seconds=healthcheck.interval_seconds,
+                            id=healthcheck.id,
+                        )
+                    )
+                    if healthcheck is not None
+                    else None
                 ),
-            ]
-        )
+            )
+            await env.client.execute_workflow(
+                workflow=MonitorDockerDeploymentWorkflow.run,
+                arg=healthcheck_details,
+                id=latest_deployment.monitor_schedule_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.latest_production_deployment
+    async def test_restart_is_set_after_multiple_tasks_deployments(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
 
-        class FakeService:
-            @staticmethod
-            def tasks(*args, **kwargs):
-                return [
-                    {
-                        "ID": "8qx04v72iovlv7xzjvsj2ngdkg",
-                        "Version": {"Index": 15078},
-                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                            "State": "shutdown",
-                            "Message": "started",
-                            "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ExitCode": 127,
+            class FakeService:
+                @staticmethod
+                def tasks(*args, **kwargs):
+                    return [
+                        {
+                            "ID": "8qx04v72iovlv7xzjvsj2ngdkg",
+                            "Version": {"Index": 15078},
+                            "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                            "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                                "State": "shutdown",
+                                "Message": "started",
+                                "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ExitCode": 127,
+                                },
                             },
+                            "DesiredState": "shutdown",
                         },
-                        "DesiredState": "shutdown",
-                    },
-                    {
-                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                        "Version": {"Index": 15079},
-                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                            "State": "starting",
-                            "Message": "started",
-                            # "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ExitCode": 0,
+                        {
+                            "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                            "Version": {"Index": 15079},
+                            "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                            "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                                "State": "starting",
+                                "Message": "started",
+                                # "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ExitCode": 0,
+                                },
                             },
+                            "DesiredState": "starting",
                         },
-                        "DesiredState": "starting",
-                    },
-                ]
+                    ]
 
-        self.fake_docker_client.services.get = lambda _id: FakeService()
+            self.fake_docker_client.services.get = lambda _id: FakeService()
 
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-        token = Token.objects.get(user=owner)
-        monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = service.latest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.RESTARTING,
-            latest_deployment.status,
-        )
-
-    def test_succesful_restart_deploymen_flow(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
+            token = await Token.objects.aget(user=owner)
+            healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
+            healthcheck_details = HealthcheckDeploymentDetails(
+                deployment=SimpleDeploymentDetails(
+                    hash=latest_deployment.hash,
+                    service_id=latest_deployment.service.id,
+                    project_id=latest_deployment.service.project_id,
                 ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.latest_production_deployment
-
-        class FakeService:
-            @staticmethod
-            def tasks(*args, **kwargs):
-                return [
-                    {
-                        "ID": "8qx04v72iovlv7xzjvsj2ngdkg",
-                        "Version": {"Index": 15078},
-                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                            "State": "shutdown",
-                            "Message": "started",
-                            "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ExitCode": 127,
-                            },
-                        },
-                        "DesiredState": "shutdown",
-                    },
-                    {
-                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                        "Version": {"Index": 15079},
-                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                            "State": "running",
-                            "Message": "started",
-                            # "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ExitCode": 0,
-                            },
-                        },
-                        "DesiredState": "running",
-                    },
-                ]
-
-        self.fake_docker_client.services.get = lambda _id: FakeService()
-
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-        token = Token.objects.get(user=owner)
-        monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = service.latest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-
-    @patch("zane_api.docker_operations.sleep")
-    @patch("zane_api.docker_operations.monotonic")
-    def test_unsuccesful_restart_deployment_flow(self, mock_monotonic: Mock, _: Mock):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
+                auth_token=token.key,
+                healthcheck=(
+                    HealthCheckDto.from_dict(
+                        dict(
+                            type=healthcheck.type,
+                            value=healthcheck.value,
+                            timeout_seconds=healthcheck.timeout_seconds,
+                            interval_seconds=healthcheck.interval_seconds,
+                            id=healthcheck.id,
+                        )
+                    )
+                    if healthcheck is not None
+                    else None
                 ),
-            ]
-        )
+            )
+            await env.client.execute_workflow(
+                workflow=MonitorDockerDeploymentWorkflow.run,
+                arg=healthcheck_details,
+                id=latest_deployment.monitor_schedule_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.RESTARTING,
+                latest_deployment.status,
+            )
 
-        mock_monotonic.side_effect = [0, 0, 0, 31]
+    async def test_succesful_restart_deployment_flow(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        latest_deployment = service.deployments.first()
-
-        class FakeService:
-            @staticmethod
-            def tasks(*args, **kwargs):
-                return [
-                    {
-                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                        "Version": {"Index": 15078},
-                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                            "State": "failed",
-                            "Message": "started",
-                            "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ContainerID": "a6e983977676b708ed0201c91c4fa3c6fbc4c1d43f7520327db8efc5ba8b76f0",
-                                "PID": 0,
-                                "ExitCode": 127,
+            class FakeService:
+                @staticmethod
+                def tasks(*args, **kwargs):
+                    return [
+                        {
+                            "ID": "8qx04v72iovlv7xzjvsj2ngdkg",
+                            "Version": {"Index": 15078},
+                            "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                            "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                                "State": "shutdown",
+                                "Message": "started",
+                                "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ExitCode": 127,
+                                },
                             },
-                            "PortStatus": {},
+                            "DesiredState": "shutdown",
                         },
-                        "DesiredState": "shutdown",
-                    },
-                    {
-                        "ID": "jumpidf77nnc9u24dn2t0t8gk",
-                        "Version": {"Index": 15070},
-                        "CreatedAt": "2024-04-25T20:11:21.303508844Z",
-                        "UpdatedAt": "2024-04-25T20:11:32.93669947Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:32.642315167Z",
-                            "State": "failed",
-                            "Message": "started",
-                            "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ContainerID": "407c4b40d621b127a1cac498d066587522f4ddcca1ec01992dbf94f49c6092fc",
-                                "PID": 0,
-                                "ExitCode": 127,
+                        {
+                            "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                            "Version": {"Index": 15079},
+                            "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                            "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                                "State": "running",
+                                "Message": "started",
+                                # "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ExitCode": 0,
+                                },
                             },
-                            "PortStatus": {},
+                            "DesiredState": "running",
                         },
-                        "DesiredState": "shutdown",
-                    },
-                    {
-                        "ID": "wqnwod7cacovpscsp3n6vsgmc",
-                        "Version": {"Index": 15091},
-                        "CreatedAt": "2024-04-25T20:11:52.686304192Z",
-                        "UpdatedAt": "2024-04-25T20:12:02.693438335Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:12:02.415795453Z",
-                            "State": "failed",
-                            "Message": "started",
-                            "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ContainerID": "edd2aa5d80747f860b1cee700a1028e7000970f05a8fe9784fa0f81c460459ac",
-                                "PID": 0,
-                                "ExitCode": 127,
-                            },
-                            "PortStatus": {},
-                        },
-                        "DesiredState": "shutdown",
-                    },
-                    {
-                        "ID": "wwkdns3g7fsyq37hwe5cj7spl",
-                        "Version": {"Index": 15086},
-                        "CreatedAt": "2024-04-25T20:11:42.863807131Z",
-                        "UpdatedAt": "2024-04-25T20:11:52.887691861Z",
-                        "Status": {
-                            "Timestamp": "2024-04-25T20:11:52.620438735Z",
-                            "State": "failed",
-                            "Message": "started",
-                            "Err": "task: non-zero exit (127)",
-                            "ContainerStatus": {
-                                "ContainerID": "f45b1785bca08314c9b6af63bdf8080aa79d60a427315d9fe96ba8928d1d1d54",
-                                "PID": 0,
-                                "ExitCode": 127,
-                            },
-                            "PortStatus": {},
-                        },
-                        "DesiredState": "shutdown",
-                    },
-                ]
+                    ]
 
-        self.fake_docker_client.services.get = lambda _id: FakeService()
+            self.fake_docker_client.services.get = lambda _id: FakeService()
 
-        mock_monotonic.side_effect = [0, 0, 0, 31]
-
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-        token = Token.objects.get(user=owner)
-        monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = service.latest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.UNHEALTHY,
-            latest_deployment.status,
-        )
-
-    def test_service_fail_outside_of_zane_control(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
-                    service=service,
+            token = await Token.objects.aget(user=owner)
+            healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
+            healthcheck_details = HealthcheckDeploymentDetails(
+                deployment=SimpleDeploymentDetails(
+                    hash=latest_deployment.hash,
+                    service_id=latest_deployment.service.id,
+                    project_id=latest_deployment.service.project_id,
                 ),
-            ]
-        )
+                auth_token=token.key,
+                healthcheck=(
+                    HealthCheckDto.from_dict(
+                        dict(
+                            type=healthcheck.type,
+                            value=healthcheck.value,
+                            timeout_seconds=healthcheck.timeout_seconds,
+                            interval_seconds=healthcheck.interval_seconds,
+                            id=healthcheck.id,
+                        )
+                    )
+                    if healthcheck is not None
+                    else None
+                ),
+            )
+            await env.client.execute_workflow(
+                workflow=MonitorDockerDeploymentWorkflow.run,
+                arg=healthcheck_details,
+                id=latest_deployment.monitor_schedule_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment = service.latest_production_deployment
+    async def test_unsuccesful_restart_deployment_flow(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
 
-        class FakeService:
-            @staticmethod
-            def tasks(*args, **kwargs):
-                return []
+            class FakeService:
+                @staticmethod
+                def tasks(*args, **kwargs):
+                    return [
+                        {
+                            "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                            "Version": {"Index": 15078},
+                            "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                            "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                                "State": "failed",
+                                "Message": "started",
+                                "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ContainerID": "a6e983977676b708ed0201c91c4fa3c6fbc4c1d43f7520327db8efc5ba8b76f0",
+                                    "PID": 0,
+                                    "ExitCode": 127,
+                                },
+                                "PortStatus": {},
+                            },
+                            "DesiredState": "shutdown",
+                        },
+                        {
+                            "ID": "jumpidf77nnc9u24dn2t0t8gk",
+                            "Version": {"Index": 15070},
+                            "CreatedAt": "2024-04-25T20:11:21.303508844Z",
+                            "UpdatedAt": "2024-04-25T20:11:32.93669947Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:32.642315167Z",
+                                "State": "failed",
+                                "Message": "started",
+                                "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ContainerID": "407c4b40d621b127a1cac498d066587522f4ddcca1ec01992dbf94f49c6092fc",
+                                    "PID": 0,
+                                    "ExitCode": 127,
+                                },
+                                "PortStatus": {},
+                            },
+                            "DesiredState": "shutdown",
+                        },
+                        {
+                            "ID": "wqnwod7cacovpscsp3n6vsgmc",
+                            "Version": {"Index": 15091},
+                            "CreatedAt": "2024-04-25T20:11:52.686304192Z",
+                            "UpdatedAt": "2024-04-25T20:12:02.693438335Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:12:02.415795453Z",
+                                "State": "failed",
+                                "Message": "started",
+                                "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ContainerID": "edd2aa5d80747f860b1cee700a1028e7000970f05a8fe9784fa0f81c460459ac",
+                                    "PID": 0,
+                                    "ExitCode": 127,
+                                },
+                                "PortStatus": {},
+                            },
+                            "DesiredState": "shutdown",
+                        },
+                        {
+                            "ID": "wwkdns3g7fsyq37hwe5cj7spl",
+                            "Version": {"Index": 15086},
+                            "CreatedAt": "2024-04-25T20:11:42.863807131Z",
+                            "UpdatedAt": "2024-04-25T20:11:52.887691861Z",
+                            "Status": {
+                                "Timestamp": "2024-04-25T20:11:52.620438735Z",
+                                "State": "failed",
+                                "Message": "started",
+                                "Err": "task: non-zero exit (127)",
+                                "ContainerStatus": {
+                                    "ContainerID": "f45b1785bca08314c9b6af63bdf8080aa79d60a427315d9fe96ba8928d1d1d54",
+                                    "PID": 0,
+                                    "ExitCode": 127,
+                                },
+                                "PortStatus": {},
+                            },
+                            "DesiredState": "shutdown",
+                        },
+                    ]
 
-        self.fake_docker_client.services.get = lambda _id: FakeService()
+            self.fake_docker_client.services.get = lambda _id: FakeService()
 
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
-            latest_deployment.status,
-        )
-        latest_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
-        latest_deployment.save()
-        token = Token.objects.get(user=owner)
-        monitor_docker_service_deployment(latest_deployment.hash, token.key)
-        latest_deployment = service.latest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.UNHEALTHY,
-            latest_deployment.status,
-        )
+            token = await Token.objects.aget(user=owner)
+            healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
+            healthcheck_details = HealthcheckDeploymentDetails(
+                deployment=SimpleDeploymentDetails(
+                    hash=latest_deployment.hash,
+                    service_id=latest_deployment.service.id,
+                    project_id=latest_deployment.service.project_id,
+                ),
+                auth_token=token.key,
+                healthcheck=(
+                    HealthCheckDto.from_dict(
+                        dict(
+                            type=healthcheck.type,
+                            value=healthcheck.value,
+                            timeout_seconds=healthcheck.timeout_seconds,
+                            interval_seconds=healthcheck.interval_seconds,
+                            id=healthcheck.id,
+                        )
+                    )
+                    if healthcheck is not None
+                    else None
+                ),
+            )
+            await env.client.execute_workflow(
+                workflow=MonitorDockerDeploymentWorkflow.run,
+                arg=healthcheck_details,
+                id=latest_deployment.monitor_schedule_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.UNHEALTHY,
+                latest_deployment.status,
+            )
+
+    async def test_service_fail_outside_of_zane_control(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY,
+                latest_deployment.status,
+            )
+
+            class FakeService:
+                @staticmethod
+                def tasks(*args, **kwargs):
+                    return []
+
+            self.fake_docker_client.services.get = lambda _id: FakeService()
+
+            token = await Token.objects.aget(user=owner)
+            healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
+            healthcheck_details = HealthcheckDeploymentDetails(
+                deployment=SimpleDeploymentDetails(
+                    hash=latest_deployment.hash,
+                    service_id=latest_deployment.service.id,
+                    project_id=latest_deployment.service.project_id,
+                ),
+                auth_token=token.key,
+                healthcheck=(
+                    HealthCheckDto.from_dict(
+                        dict(
+                            type=healthcheck.type,
+                            value=healthcheck.value,
+                            timeout_seconds=healthcheck.timeout_seconds,
+                            interval_seconds=healthcheck.interval_seconds,
+                            id=healthcheck.id,
+                        )
+                    )
+                    if healthcheck is not None
+                    else None
+                ),
+            )
+            await env.client.execute_workflow(
+                workflow=MonitorDockerDeploymentWorkflow.run,
+                arg=healthcheck_details,
+                id=latest_deployment.monitor_schedule_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+            latest_deployment = await service.alatest_production_deployment
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.UNHEALTHY,
+                latest_deployment.status,
+            )

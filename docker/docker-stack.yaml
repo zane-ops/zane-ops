@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: fredkiss3/zane-caddy-proxy:dev
+    image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
     logging:
       driver: "fluentd"
@@ -55,7 +55,10 @@ services:
     image: temporalio/auto-setup:1.24.2
     volumes:
       - ./temporalio/dynamicconfig:/etc/temporal/config/dynamicconfig/
+      - ./temporalio/config/development.yaml:/etc/temporal/config/development.yaml
       - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
+      - temporal-archival:/tmp/temporal_archival/development
+      - temporal-visibility-archival:/tmp/temporal_vis_archival/development
     networks:
       zane:
         aliases:
@@ -87,6 +90,8 @@ services:
 volumes:
   caddy-data:
   caddy-config:
+  temporal-archival:
+  temporal-visibility-archival:
 networks:
   zane:
     external: true

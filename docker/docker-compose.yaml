@@ -1,4 +1,11 @@
 services:
+  proxy-test:
+    image: ghcr.io/zane-ops/proxy:canary
+    command: caddy run --resume
+    ports:
+      - "2020:2020"
+    environment:
+      CADDY_ADMIN: 0.0.0.0:2020
   dnsmasq:
     image: andyshinn/dnsmasq
     cap_add:
@@ -28,6 +35,30 @@ services:
       DB_PORT: 5432
       CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
       ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
+    networks:
+      - zane
+  temporal-worker:
+    build:
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
+    command: >
+      bash -c "source /venv/bin/activate &&
+               uv pip install watchdog &&
+               uv pip install -r requirements.txt &&
+               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
+    volumes:
+      - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - redis
+    environment:
+      REDIS_URL: redis://zane.cache:6379/0
+      DB_HOST: zane.db
+      DB_PORT: 5432
+      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+      ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
+      TEMPORALIO_SERVER_URL: zane.temporal:7233
     networks:
       - zane
   celery-beat:

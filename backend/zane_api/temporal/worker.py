@@ -3,8 +3,7 @@ from temporalio.client import Client
 from temporalio.service import KeepAliveConfig
 from temporalio.worker import Worker
 
-from .activities import greet, say_goodbye, get_project
-from .workflows import HelloWorkflow, GetProjectWorkflow
+from .workflows import get_workflows_and_activities
 
 
 async def run_worker():
@@ -18,9 +17,8 @@ async def run_worker():
     worker = Worker(
         client,
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-        workflows=[HelloWorkflow, GetProjectWorkflow],
-        activities=[greet, say_goodbye, get_project],
         debug_mode=True,
+        **get_workflows_and_activities(),
     )
     print(f"running worker...🔄")
     await worker.run()

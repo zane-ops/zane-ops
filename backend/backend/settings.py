@@ -10,15 +10,20 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import asyncio
 import os
 import sys
 from datetime import timedelta
 from pathlib import Path
 
+import uvloop
 from dotenv_vault import load_dotenv
 
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
+
+loop = uvloop.new_event_loop()
+asyncio.set_event_loop(loop)
 
 try:
     load_dotenv(".env", override=True)
@@ -106,7 +111,6 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "drf_standardized_errors",
     "django_filters",
-    "adrf",
 ]
 
 MIDDLEWARE = [
@@ -347,6 +351,7 @@ CELERY_RESULT_EXPIRES = timedelta(hours=1)
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST", "http://127.0.0.1:2019"
 )
+CADDY_PROXY_CONFIG_ID_SUFFIX = ""
 ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
@@ -373,5 +378,8 @@ if not TESTING:
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
     )
 
+# temporalio config
+
+TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = timedelta(minutes=30)
 TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
 TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"

@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
 import json
+import random
+import string
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -170,3 +172,8 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
+
+
+def random_word(length: int = 10):
+    letters = string.ascii_lowercase
+    return "".join(random.choice(letters) for _ in range(length))

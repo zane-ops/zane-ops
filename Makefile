@@ -4,7 +4,7 @@ help: ### Show this help
 
 setup: ### Initial setup of the project
 	echo 'Creating a virtual env...'
-	docker network create --driver overlay zane || true
+	docker network create --driver overlay --attachable zane || true
 	python3 -m venv ./backend/venv
 	echo 'activating the virtualenv...'
 	chmod a+x ./backend/venv/bin/activate
