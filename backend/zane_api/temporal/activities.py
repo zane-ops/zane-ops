@@ -25,6 +25,8 @@ with workflow.unsafe.imports_passed_through():
         SimpleLog,
     )
     from docker.models.networks import Network
+    from urllib3.exceptions import HTTPError
+    from requests import RequestException
     import requests
     from docker.types import EndpointSpec, NetworkAttachmentConfig, RestartPolicy
     from django.conf import settings
@@ -1126,7 +1128,7 @@ class DockerSwarmActivities:
                                     "utf-8"
                                 )
 
-                        except TimeoutError as e:
+                        except (HTTPError, RequestException) as e:
                             deployment_status = (
                                 DockerDeployment.DeploymentStatus.UNHEALTHY
                             )

@@ -18,6 +18,7 @@ services:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
+    container_name: zane-temporal-worker
     command: >
       bash -c "source /venv/bin/activate &&
                uv pip install watchdog &&
@@ -29,15 +30,7 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      REDIS_URL: redis://zane.cache:6379/0
-      DB_HOST: zane.db
-      DB_PORT: 5432
-      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-      ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
-      TEMPORALIO_SERVER_URL: zane.temporal:7233
-    networks:
-      - zane
+    network_mode: host
   registry:
     image: registry:2
     container_name: zane-registry
