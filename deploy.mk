@@ -54,6 +54,9 @@ deploy: ### Install and deploy zaneops
 	set -a; . ./.env; set +a && docker stack deploy --detach=false --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
 	fi
 	@. ./attach-proxy-networks.sh
+	@docker exec -it $(docker ps -qf "name=zane_temporal-server") tctl --ns default namespace register -rd 3 || true
+	@docker exec -it $(docker ps -qf "name=zane_temporal-server") temporal operator namespace update --history-archival-state enabled default || true
+	@docker exec -it $(docker ps -qf "name=zane_temporal-server") temporal operator namespace update --visibility-archival-state enabled default || true
 	@echo "Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo "You can monitor the services deployed by running \`docker service ls --filter label=\"zane.stack=true\"\`"
 	@echo "Wait for all services to show up as \`replicated   1/1\` to attest that everything started succesfully"
