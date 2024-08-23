@@ -107,6 +107,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "drf_spectacular",
+    "django_celery_results",
+    "django_celery_beat",
     "drf_standardized_errors",
     "django_filters",
 ]
@@ -324,7 +326,6 @@ SPECTACULAR_SETTINGS = {
 
 # For having colorized output in tests
 TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
-
 
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(

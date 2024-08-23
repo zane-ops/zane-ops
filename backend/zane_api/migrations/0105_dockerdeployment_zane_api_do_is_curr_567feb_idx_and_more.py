@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        # ("django_celery_beat", "0018_improve_crontab_helptext"),
+        ("django_celery_beat", "0018_improve_crontab_helptext"),
         ("zane_api", "0104_dockerdeployment_zane_api_do_status_00a3ce_idx_and_more"),
     ]
 

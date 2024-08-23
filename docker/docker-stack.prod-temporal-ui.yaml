@@ -1,7 +1,7 @@
 services:
   temporal-ui:
     depends_on:
-      - temporal
+      - temporal-server
     environment:
       - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
