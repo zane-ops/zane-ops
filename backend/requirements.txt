@@ -5,6 +5,7 @@ attrs==23.2.0
 automat==22.10.0
 billiard==4.2.0
 black==24.3.0
+celery==5.3.6
 certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
@@ -18,6 +19,8 @@ cron-descriptor==1.4.3
 cryptography==41.0.7
 dill==0.3.8
 django==5.0.4
+django-celery-beat==2.6.0
+django-celery-results==2.5.1
 django-compat==1.0.15
 django-cors-headers==4.4.0
 django-filter==23.5
