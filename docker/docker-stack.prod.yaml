@@ -26,7 +26,7 @@ services:
         fluentd-async: "true"
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
-        tag: "{\"service_id\":\"zane.proxy\"}"
+        tag: '{"service_id":"zane.proxy"}'
     deploy:
       replicas: 1
       update_config:
@@ -115,7 +115,7 @@ services:
       - valkey
       - proxy
   temporal-server:
-    entrypoint: [ "/etc/temporal/entrypoint.sh" ]
+    entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -207,7 +207,7 @@ services:
         aliases:
           - zane.valkey
     healthcheck:
-      test: [ "CMD", "valkey-cli", "ping" ]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       retries: 10
       timeout: 2s
@@ -237,7 +237,7 @@ services:
           cpus: "1"
           memory: 500M
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       retries: 5
       start_period: 30s
