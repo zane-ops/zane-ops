@@ -10,7 +10,7 @@ services:
         fluentd-async: "true"
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
-        tag: "{\"service_id\":\"zane.proxy\"}"
+        tag: '{"service_id":"zane.proxy"}'
     deploy:
       replicas: 1
       update_config:
@@ -42,7 +42,7 @@ services:
         aliases:
           - zane.proxy
   temporal:
-    entrypoint: [ "/bin/bash", "-c", "/etc/temporal/entrypoint.sh" ]
+    entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
       - DB=postgres12
       - DB_PORT=5432

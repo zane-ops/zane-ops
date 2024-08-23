@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 current_dir = $(shell pwd)
+db_password = "$(shell openssl rand -base64 32)"
+django_secret = "$(shell openssl rand -base64 48 | tr -d '=+/ ' | cut -c1-64)"
 .DEFAULT_GOAL := help
 help: ### Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -16,17 +18,23 @@ setup: ### Launch initial setup before installing zaneops
 	@chmod 777 .fluentd
 	@echo "Step 2️⃣ Done ✅"
 	@echo "Step 3️⃣: Downloading docker compose files for zaneops..."
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml 2>/dev/null > ./docker-stack.prod.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml 2>/dev/null > ./docker-stack.prod-http.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/attach-proxy-networks.sh 2>/dev/null > ./attach-proxy-networks.sh
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf 2>/dev/null > ./fluent.conf
+	@mkdir -p $(current_dir)/temporalio/config
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/development.yaml > ./temporalio/config/development.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/attach-proxy-networks.sh > ./attach-proxy-networks.sh
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
 	@chmod a+x ./attach-proxy-networks.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
-	@if [ ! -f ".env.local" ]; then \
-  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.example 2>/dev/null > ./.env.local; \
-  	sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env.local; \
-  	rm .env.local.bak; \
+	@if [ ! -f ".env" ]; then \
+  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.example > ./.env; \
+  	sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
+	sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
+	sed -i'.bak' "s#{{ZANE_DJANGO_SECRET_KEY}}#\"$(django_secret)\"#g" ./.env; \
+  	rm .env.bak; \
   	fi
 	@echo "Step 4️⃣ Done ✅"
 	@echo "Step 5️⃣: Create docker network for zaneops..."
@@ -40,9 +48,9 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
 	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
-	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
+	docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 	else \
-	set -a; . ./.env.local; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
+	docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
 	fi
 	@. ./attach-proxy-networks.sh
 	@echo "Deploy done, Please give this is a little minutes before accessing your website 🏁"

@@ -44,7 +44,7 @@ services:
         zane.role: "proxy"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 200M
     ports:
       - "443:443"
@@ -75,7 +75,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 100M
     networks:
       zane:
@@ -100,7 +100,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
@@ -114,8 +114,8 @@ services:
       - db
       - valkey
       - proxy
-  temporal:
-    entrypoint: [ "/bin/bash", "-c", "/etc/temporal/entrypoint.sh" ]
+  temporal-server:
+    entrypoint: [ "/etc/temporal/entrypoint.sh" ]
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -146,7 +146,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
@@ -163,6 +163,7 @@ services:
       - db
       - valkey
       - proxy
+      - temporal-server
     <<: *env-vars
     deploy:
       replicas: 1
@@ -180,7 +181,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       - zane
@@ -199,7 +200,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
@@ -233,7 +234,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 500M
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
@@ -266,7 +267,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 100M
   #  registry:
   #    image: registry:2
