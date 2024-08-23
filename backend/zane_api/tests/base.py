@@ -21,7 +21,6 @@ from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
 from ..models import (
     Project,
     DockerDeploymentChange,
@@ -29,6 +28,7 @@ from ..models import (
     DockerDeployment,
     Volume,
 )
+from ..temporal import get_network_resource_name, DockerImageResultFromRegistry
 from ..temporal import (
     get_workflows_and_activities,
     get_swarm_service_name_for_deployment,
@@ -188,15 +188,6 @@ class APITestCase(TestCase):
         # these functions are always patched
         patch(
             "zane_api.temporal.activities.asyncio.sleep", new_callable=AsyncMock
-        ).start()
-        patch("zane_api.tasks.expose_docker_service_to_http").start()
-        patch("zane_api.tasks.unexpose_docker_service_from_http").start()
-        patch("zane_api.tasks.expose_docker_service_deployment_to_http").start()
-        patch("zane_api.tasks.unexpose_docker_deployment_from_http").start()
-        patch("zane_api.tasks.apply_deleted_urls_changes").start()
-        patch(
-            "zane_api.docker_operations.get_docker_client",
-            return_value=self.fake_docker_client,
         ).start()
         patch(
             "zane_api.temporal.activities.get_docker_client",

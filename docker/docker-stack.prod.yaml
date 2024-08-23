@@ -12,6 +12,7 @@ x-backend-vars: &env-vars
     DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
     CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
     ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+    TEMPORALIO_SERVER_URL: zane.temporal:7233
 
 services:
   proxy:
@@ -43,7 +44,7 @@ services:
         zane.role: "proxy"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 200M
     ports:
       - "443:443"
@@ -74,7 +75,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 100M
     networks:
       zane:
@@ -99,7 +100,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
@@ -113,16 +114,22 @@ services:
       - db
       - valkey
       - proxy
-  #    healthcheck:
-  #      # https://stackoverflow.com/a/47722899/5008962
-  #      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "http://localhost:8000/api/ping", "||", "exit", "1" ]
-  #      interval: 5s
-  #      timeout: 10s
-  #      retries: 3
-  #      start_period: 5s
-  celery-worker:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "source /venv/bin/activate && celery -A backend worker -E -l info"
+  temporal-server:
+    entrypoint: [ "/etc/temporal/entrypoint.sh" ]
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${ZANE_DB_USER:-zane}
+      - POSTGRES_PWD=${ZANE_DB_PASSWORD}
+      - POSTGRES_SEEDS=zane.db
+      - SERVICES=history,matching,frontend,worker
+      - BIND_ON_IP=0.0.0.0
+    image: temporalio/auto-setup:1.24.2
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/development.yaml:/etc/temporal/config/development.yaml"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
+      - temporal-archival:/tmp/temporal_archival/development
+      - temporal-visibility-archival:/tmp/temporal_vis_archival/development
     deploy:
       replicas: 1
       update_config:
@@ -139,20 +146,25 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '1'
+          cpus: "0.5"
           memory: 500M
     networks:
-      - zane
-    <<: *env-vars
+      zane:
+        aliases:
+          - zane.temporal
+    depends_on:
+      - db
+  temporal-worker:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - db
       - valkey
       - proxy
-  celery-beat:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "source /venv/bin/activate && celery -A backend beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+      - temporal-server
+    <<: *env-vars
     deploy:
       replicas: 1
       update_config:
@@ -169,15 +181,10 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
-          memory: 100M
+          cpus: "0.5"
+          memory: 500M
     networks:
       - zane
-    <<: *env-vars
-    depends_on:
-      - db
-      - valkey
-      - proxy
   valkey:
     image: valkey/valkey:7.2.5-alpine
     volumes:
@@ -193,7 +200,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
@@ -227,7 +234,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 500M
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
@@ -260,7 +267,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 100M
   #  registry:
   #    image: registry:2
@@ -288,9 +295,8 @@ volumes:
   redis-data:
     labels:
       zane.stack: "true"
-  #  registry-lib-data:
-  #    labels:
-  #      zane.stack: "true"
+  temporal-archival:
+  temporal-visibility-archival:
   caddy-data:
     labels:
       zane.stack: "true"

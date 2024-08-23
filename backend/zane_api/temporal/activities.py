@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import timedelta
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 
 from rest_framework import status
 from temporalio import activity, workflow
@@ -25,6 +25,8 @@ with workflow.unsafe.imports_passed_through():
         SimpleLog,
     )
     from docker.models.networks import Network
+    from urllib3.exceptions import HTTPError
+    from requests import RequestException
     import requests
     from docker.types import EndpointSpec, NetworkAttachmentConfig, RestartPolicy
     from django.conf import settings
@@ -64,6 +66,72 @@ def get_docker_client():
     if docker_client is None:
         docker_client = docker.from_env()
     return docker_client
+
+
+class DockerAuthConfig(TypedDict):
+    username: str
+    password: str
+
+
+def check_if_port_is_available_on_host(port: int) -> bool:
+    client = get_docker_client()
+    try:
+        client.containers.run(
+            image="nginx:alpine",
+            ports={"80/tcp": ("0.0.0.0", port)},
+            command="echo hello world",
+            remove=True,
+        )
+    except docker.errors.APIError:
+        return False
+    else:
+        return True
+
+
+def check_if_docker_image_exists(
+    image: str, credentials: DockerAuthConfig = None
+) -> bool:
+    client = get_docker_client()
+    try:
+        client.images.get_registry_data(image, auth_config=credentials)
+    except docker.errors.APIError:
+        return False
+    else:
+        return True
+
+
+class DockerImageResultFromRegistry(TypedDict):
+    name: str
+    description: str
+    is_official: bool
+    is_automated: bool
+
+
+class DockerImageResult(TypedDict):
+    full_image: str
+    description: str
+
+
+def search_images_docker_hub(term: str) -> List[DockerImageResult]:
+    """
+    List all images in registry starting with a certain term.
+    """
+    client = get_docker_client()
+    result: List[DockerImageResultFromRegistry] = []
+    try:
+        result = client.images.search(term=term, limit=30)
+    except docker.errors.APIError:
+        pass
+    images_to_return: List[DockerImageResult] = []
+
+    for image in result:
+        images_to_return.append(
+            dict(
+                full_image=image["name"],
+                description=image["description"],
+            )
+        )
+    return images_to_return
 
 
 def get_network_resource_name(project_id: str) -> str:
@@ -211,6 +279,20 @@ def get_caddy_request_for_deployment_url(
             }
         ],
     }
+
+
+def get_docker_volume_size(volume_id: str) -> int:
+    client = get_docker_client()
+    docker_volume_name = get_volume_resource_name(volume_id)
+
+    result: bytes = client.containers.run(
+        image="alpine",
+        command="du -sb /data",
+        volumes={docker_volume_name: {"bind": "/data", "mode": "ro"}},
+        remove=True,
+    )
+    size_string, _ = result.decode(encoding="utf-8").split("\t")
+    return int(size_string)
 
 
 def get_caddy_request_for_url(
@@ -1046,7 +1128,7 @@ class DockerSwarmActivities:
                                     "utf-8"
                                 )
 
-                        except TimeoutError as e:
+                        except (HTTPError, RequestException) as e:
                             deployment_status = (
                                 DockerDeployment.DeploymentStatus.UNHEALTHY
                             )

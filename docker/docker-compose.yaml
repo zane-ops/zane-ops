@@ -14,33 +14,11 @@ services:
     volumes:
       - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf
     network_mode: 'host'
-  celery-worker:
-    build:
-      context: ../backend
-      dockerfile: ../backend/Dockerfile
-    command: >
-      bash -c "source /venv/bin/activate &&
-               uv pip install watchdog &&
-               uv pip install -r requirements.txt &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- celery -A backend worker -E -l info"
-    volumes:
-      - ../backend:/code
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - db
-      - redis
-    environment:
-      REDIS_URL: redis://zane.cache:6379/0
-      DB_HOST: zane.db
-      DB_PORT: 5432
-      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-      ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
-    networks:
-      - zane
   temporal-worker:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
+    container_name: zane-temporal-worker
     command: >
       bash -c "source /venv/bin/activate &&
                uv pip install watchdog &&
@@ -52,37 +30,7 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      REDIS_URL: redis://zane.cache:6379/0
-      DB_HOST: zane.db
-      DB_PORT: 5432
-      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-      ZANE_FLUENTD_HOST: unix://$HOME/.fluentd/fluentd.sock
-      TEMPORALIO_SERVER_URL: zane.temporal:7233
-    networks:
-      - zane
-  celery-beat:
-    build:
-      context: ../backend
-      dockerfile: ../backend/Dockerfile
-    command: >
-      bash -c "source /venv/bin/activate &&
-               uv pip install watchdog &&
-               uv pip install -r requirements.txt &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- celery -A backend beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
-    volumes:
-      - ../backend:/code
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      REDIS_URL: redis://zane.redis:6379/0
-      DB_HOST: zane.db
-      DB_PORT: 5432
-      CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-    depends_on:
-      - db
-      - redis
-    networks:
-      - zane
+    network_mode: host
   registry:
     image: registry:2
     container_name: zane-registry

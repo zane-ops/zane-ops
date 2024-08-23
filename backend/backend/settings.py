@@ -107,8 +107,6 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "drf_spectacular",
-    "django_celery_results",
-    "django_celery_beat",
     "drf_standardized_errors",
     "django_filters",
 ]
@@ -225,11 +223,6 @@ LOGGING = {
 if DEBUG:
     LOGGING["loggers"].update(
         {
-            "celery": {
-                "handlers": ["console"],
-                "level": "DEBUG",
-                "propagate": True,
-            },
             "gunicorn.error": {
                 "handlers": ["console"],
                 "level": "INFO",
@@ -332,20 +325,6 @@ SPECTACULAR_SETTINGS = {
 # For having colorized output in tests
 TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
 
-# Celery config
-CELERY_BROKER_URL = REDIS_URL
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
-CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_REJECT_ON_WORKER_LOST = True
-CELERY_RESULT_BACKEND = "django-db"
-CELERY_CACHE_BACKEND = "default"
-CELERY_ACCEPT_CONTENT = ["application/json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_RESULT_CACHE_MAX = 1_000
-CELERY_RESULT_EXPIRES = timedelta(hours=1)
 
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
