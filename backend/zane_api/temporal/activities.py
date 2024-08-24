@@ -1020,17 +1020,7 @@ class DockerSwarmActivities:
             task_list = swarm_service.tasks(
                 filters={"label": f"deployment_hash={docker_deployment.hash}"}
             )
-            if len(task_list) == 0:
-                if docker_deployment.status in [
-                    DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerDeployment.DeploymentStatus.STARTING,
-                    DockerDeployment.DeploymentStatus.RESTARTING,
-                ]:
-                    return (
-                        DockerDeployment.DeploymentStatus.UNHEALTHY,
-                        "An Unknown error occurred, did you manually scale down the service ?",
-                    )
-            else:
+            if len(task_list) > 0:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
                     max(
                         task_list,
@@ -1062,6 +1052,10 @@ class DockerSwarmActivities:
 
                 exited_without_error = 0
                 deployment_status = state_matrix[most_recent_swarm_task.state]
+
+                if deployment_status == starting_status:
+                    docker_deployment.status = starting_status
+                    await docker_deployment.asave()
 
                 deployment_status_reason = (
                     most_recent_swarm_task.Status.Err
@@ -1137,22 +1131,19 @@ class DockerSwarmActivities:
 
                 healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
-                    deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
-                    and healthcheck_time_left
-                    > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
+                    deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                    or healthcheck_time_left
+                    <= settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
                 ):
                     print(
-                        f"Healtcheck for deployment {docker_deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
-                        + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
+                        f"Healtcheck for {docker_deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
+                        f"| finished with {deployment_status=} ✅"
                     )
-                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    continue
-
-                print(
-                    f"Healtcheck for {docker_deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
-                    f"| finished with {deployment_status=} ✅"
-                )
-                return deployment_status, deployment_status_reason
+                    return deployment_status, deployment_status_reason
+            print(
+                f"Healtcheck for deployment {docker_deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
+                + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
+            )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
         return deployment_status, deployment_status_reason
 
