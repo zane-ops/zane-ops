@@ -1125,3 +1125,19 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
 
         self.assertEqual(4, await initial_deployment.http_logs.acount())
         self.assertEqual(2, await latest_deployment.http_logs.acount())
+
+
+class DeploymentSystemLogViewTests(AuthAPITestCase):
+    async def test_log_intermediate_steps_when_deploying_a_service(self):
+        _, service = await self.acreate_and_deploy_caddy_docker_service()
+
+        first_deployment: DockerDeployment = await service.deployments.afirst()
+        self.assertNotEqual(
+            0,
+            await SimpleLog.objects.filter(
+                source=SimpleLog.LogSource.SYSTEM,
+                deployment_id=first_deployment.hash,
+                service_id=service.id,
+                level=SimpleLog.LogLevel.INFO,
+            ).acount(),
+        )
