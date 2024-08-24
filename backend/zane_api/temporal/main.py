@@ -30,7 +30,6 @@ async def create_schedule(
     task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
     execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
 ):
-    print(f"create_schedule({workflow=}, {id=}, payload={args})")
     client = await get_temporalio_client()
     await client.create_schedule(
         f"schedule-{id}",
@@ -48,7 +47,6 @@ async def create_schedule(
 
 
 async def pause_schedule(id: str, note: str = None):
-    print(f"pause_schedule({id=}")
     client = await get_temporalio_client()
     handle = client.get_schedule_handle(
         f"schedule-{id}",
@@ -58,7 +56,6 @@ async def pause_schedule(id: str, note: str = None):
 
 
 async def unpause_schedule(id: str, note: str = None):
-    print(f"pause_schedule({id=}")
     client = await get_temporalio_client()
     handle = client.get_schedule_handle(
         f"schedule-{id}",
@@ -68,7 +65,6 @@ async def unpause_schedule(id: str, note: str = None):
 
 
 async def delete_schedule(id: str):
-    print(f"delete_schedule({id=}")
     client = await get_temporalio_client()
     handle = client.get_schedule_handle(
         f"schedule-{id}",
@@ -87,7 +83,6 @@ async def start_workflow(
         maximum_attempts=1,
     ),
 ) -> WorkflowHandle:
-    print(f"start_workflow({workflow=}, {id=}, payload={args})")
     client = await get_temporalio_client()
     try:
         await client.start_workflow(
