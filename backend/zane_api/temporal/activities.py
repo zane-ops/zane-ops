@@ -39,6 +39,7 @@ with workflow.unsafe.imports_passed_through():
         format_seconds,
         DockerSwarmTask,
         DockerSwarmTaskState,
+        Colors,
     )
 
 from ..dtos import (
@@ -395,6 +396,29 @@ def get_caddy_request_for_url(
     }
 
 
+async def deployment_log(
+    deployment: DeploymentDetails | DeploymentHealthcheckResult, message: str
+):
+    current_time = timezone.now()
+    print(f"[{current_time.isoformat()}]: {message}")
+
+    if isinstance(deployment, DeploymentDetails):
+        deployment_id = deployment.hash
+        service_id = deployment.service.id
+    else:
+        deployment_id = deployment.deployment_hash
+        service_id = deployment.service_id
+
+    await SimpleLog.objects.acreate(
+        source=SimpleLog.LogSource.SYSTEM,
+        level=SimpleLog.LogLevel.INFO,
+        content=message,
+        time=current_time,
+        deployment_id=deployment_id,
+        service_id=service_id,
+    )
+
+
 class DockerSwarmActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
@@ -594,6 +618,10 @@ class DockerSwarmActivities:
     @activity.defn
     async def prepare_deployment(self, deployment: DeploymentDetails):
         try:
+            await deployment_log(
+                deployment,
+                f"Preparing deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+            )
             docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
                 hash=deployment.hash, service_id=deployment.service.id
             )
@@ -650,6 +678,18 @@ class DockerSwarmActivities:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
+            )
+        else:
+            status_color = (
+                Colors.GREEN
+                if current_deployment.status
+                == DockerDeployment.DeploymentStatus.HEALTHY
+                else Colors.RED
+            )
+            await deployment_log(
+                healthcheck_result,
+                f"Deployment {Colors.YELLOW}{healthcheck_result.deployment_hash}{Colors.ENDC}"
+                f" finished with status {status_color}{current_deployment.status}{Colors.ENDC}.",
             )
 
     @activity.defn
@@ -853,6 +893,10 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
+            await deployment_log(
+                deployment,
+                f"Pulling image {Colors.YELLOW}{service.image}{Colors.ENDC}...",
+            )
             self.docker_client.images.pull(
                 repository=service.image,
                 auth_config=(
@@ -860,6 +904,10 @@ class DockerSwarmActivities:
                     if service.credentials is not None
                     else None
                 ),
+            )
+            await deployment_log(
+                deployment,
+                f"Finished pulling image {Colors.YELLOW}{service.image}{Colors.ENDC} ✅",
             )
 
             # env variables
@@ -924,6 +972,10 @@ class DockerSwarmActivities:
             if len(exposed_ports) > 0:
                 endpoint_spec = EndpointSpec(ports=exposed_ports)
 
+            await deployment_log(
+                deployment,
+                f"Creating service for the deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+            )
             self.docker_client.services.create(
                 image=service.image,
                 command=service.command,
@@ -966,6 +1018,10 @@ class DockerSwarmActivities:
                     "fluentd-sub-second-precision": "true",
                 },
             )
+            await deployment_log(
+                deployment,
+                f"Service created succesfully for the deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC} ✅",
+            )
 
     @activity.defn
     async def run_deployment_healthcheck(
@@ -1007,30 +1063,22 @@ class DockerSwarmActivities:
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             "The service failed to meet the healthcheck requirements when starting the service.",
         )
+        await deployment_log(deployment, f"Running deployment healthchecks...")
         while (monotonic() - start_time) < healthcheck_timeout:
             healthcheck_attempts += 1
             healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
 
-            # TODO (#67) : send system logs when the state changes
-            print(
-                f"Healtcheck for {docker_deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
-                f"| healthcheck_time_left={format_seconds(healthcheck_time_left)} 💓"
+            await deployment_log(
+                deployment,
+                f"Healtcheck for deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC}"
+                f" | healthcheck_time_left={Colors.YELLOW}{format_seconds(healthcheck_time_left)}{Colors.ENDC} 💓",
             )
 
             task_list = swarm_service.tasks(
                 filters={"label": f"deployment_hash={docker_deployment.hash}"}
             )
-            if len(task_list) == 0:
-                if docker_deployment.status in [
-                    DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerDeployment.DeploymentStatus.STARTING,
-                    DockerDeployment.DeploymentStatus.RESTARTING,
-                ]:
-                    return (
-                        DockerDeployment.DeploymentStatus.UNHEALTHY,
-                        "An Unknown error occurred, did you manually scale down the service ?",
-                    )
-            else:
+            if len(task_list) > 0:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
                     max(
                         task_list,
@@ -1062,6 +1110,10 @@ class DockerSwarmActivities:
 
                 exited_without_error = 0
                 deployment_status = state_matrix[most_recent_swarm_task.state]
+
+                if deployment_status == starting_status:
+                    docker_deployment.status = starting_status
+                    await docker_deployment.asave()
 
                 deployment_status_reason = (
                     most_recent_swarm_task.Status.Err
@@ -1137,23 +1189,43 @@ class DockerSwarmActivities:
 
                 healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
-                    deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
-                    and healthcheck_time_left
-                    > settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
+                    deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                    or healthcheck_time_left
+                    <= settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
                 ):
-                    print(
-                        f"Healtcheck for deployment {docker_deployment.hash} | ATTEMPT #{healthcheck_attempts} | FAILED,"
-                        + f" Retrying in {format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)} 🔄"
+                    status_color = (
+                        Colors.GREEN
+                        if deployment_status
+                        == DockerDeployment.DeploymentStatus.HEALTHY
+                        else Colors.RED
                     )
-                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    continue
+                    await deployment_log(
+                        deployment,
+                        f"Healtcheck for deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+                        f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
+                    )
+                    return deployment_status, deployment_status_reason
 
-                print(
-                    f"Healtcheck for {docker_deployment.hash=} | ATTEMPT #{healthcheck_attempts} "
-                    f"| finished with {deployment_status=} ✅"
-                )
-                return deployment_status, deployment_status_reason
+            await deployment_log(
+                deployment,
+                f"Healtcheck for deployment deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+                f"| FAILED, Retrying in {Colors.YELLOW}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+            )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+
+        status_color = (
+            Colors.GREEN
+            if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+            else Colors.RED
+        )
+        await deployment_log(
+            deployment,
+            f"Healtcheck for deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+            f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+            f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
+        )
         return deployment_status, deployment_status_reason
 
     @activity.defn
@@ -1194,6 +1266,7 @@ class DockerSwarmActivities:
     ):
         service = deployment.service
         if service.http_port is not None:
+            await deployment_log(deployment, f"Configuring service URLs...")
             previous_deployment: DockerDeployment | None = await (
                 DockerDeployment.objects.filter(
                     Q(service_id=deployment.service.id)
@@ -1257,6 +1330,8 @@ class DockerSwarmActivities:
                     json=routes,
                     timeout=5,
                 )
+
+            await deployment_log(deployment, f"Service URLs configured successfully ✅")
 
     @activity.defn
     async def scale_down_and_remove_docker_service_deployment(

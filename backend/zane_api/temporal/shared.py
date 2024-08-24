@@ -56,6 +56,7 @@ class DeploymentDetails:
 class DeploymentHealthcheckResult:
     deployment_hash: str
     status: str
+    service_id: str
     reason: Optional[str] = None
 
 

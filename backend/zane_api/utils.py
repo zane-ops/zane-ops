@@ -177,3 +177,11 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 def random_word(length: int = 10):
     letters = string.ascii_lowercase
     return "".join(random.choice(letters) for _ in range(length))
+
+
+class Colors:
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"  # Reset to default color

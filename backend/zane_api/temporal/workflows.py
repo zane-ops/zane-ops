@@ -113,12 +113,10 @@ class RemoveProjectResourcesWorkflow:
 class DeployDockerServiceWorkflow:
     @workflow.run
     async def run(self, deployment: DeploymentDetails):
-        print(f"\nRunning workflow `DeployDockerServiceWorkflow` with {deployment=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        print(f"Running activity `prepare_deployment({deployment=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.prepare_deployment,
             deployment,
@@ -126,7 +124,6 @@ class DeployDockerServiceWorkflow:
             retry_policy=retry_policy,
         )
 
-        print(f"Running activity `get_previous_production_deployment({deployment=})`")
         previous_production_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_production_deployment,
             deployment,
@@ -136,9 +133,6 @@ class DeployDockerServiceWorkflow:
 
         service = deployment.service
         if len(service.docker_volumes) > 0:
-            print(
-                f"Running activity `create_docker_volumes_for_service({deployment=})`"
-            )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.create_docker_volumes_for_service,
                 deployment,
@@ -149,9 +143,6 @@ class DeployDockerServiceWorkflow:
         if (
             len(service.volumes) > 0 or len(service.non_http_ports) > 0
         ) and previous_production_deployment is not None:
-            print(
-                f"Running activity `scale_down_service_deployment({previous_production_deployment=})`"
-            )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_service_deployment,
                 previous_production_deployment,
@@ -159,9 +150,6 @@ class DeployDockerServiceWorkflow:
                 retry_policy=retry_policy,
             )
 
-        print(
-            f"Running activity `create_swarm_service_for_docker_deployment({deployment=})`"
-        )
         await workflow.execute_activity_method(
             DockerSwarmActivities.create_swarm_service_for_docker_deployment,
             deployment,
@@ -170,9 +158,6 @@ class DeployDockerServiceWorkflow:
         )
 
         if deployment.service.http_port is not None:
-            print(
-                f"Running activity `expose_docker_service_deployment_to_http({deployment=})`"
-            )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.expose_docker_service_deployment_to_http,
                 deployment,
@@ -180,7 +165,6 @@ class DeployDockerServiceWorkflow:
                 retry_policy=retry_policy,
             )
 
-        print(f"Running activity `run_deployment_healthcheck({deployment=})`")
         healthcheck_timeout = (
             deployment.service.healthcheck.timeout_seconds
             if deployment.service.healthcheck is not None
@@ -197,9 +181,6 @@ class DeployDockerServiceWorkflow:
 
         if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
             if deployment.service.http_port is not None:
-                print(
-                    f"Running activity `expose_docker_service_to_http({deployment=})`"
-                )
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.expose_docker_service_to_http,
                     deployment,
@@ -211,8 +192,8 @@ class DeployDockerServiceWorkflow:
             deployment_hash=deployment.hash,
             status=deployment_status,
             reason=deployment_status_reason,
+            service_id=deployment.service.id,
         )
-        print(f"Running activity `finish_and_save_deployment({healthcheck_result=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.finish_and_save_deployment,
             healthcheck_result,
@@ -222,9 +203,6 @@ class DeployDockerServiceWorkflow:
 
         if healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY:
             if previous_production_deployment is not None:
-                print(
-                    f"Running activity `scale_down_and_remove_docker_service_deployment({previous_production_deployment=})`"
-                )
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
                     previous_production_deployment,
@@ -232,7 +210,6 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-                print(f"Running activity `remove_old_docker_volumes({deployment=})`")
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.remove_old_docker_volumes,
                     deployment,
@@ -240,7 +217,6 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-                print(f"Running activity `remove_old_urls({deployment=})`")
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.remove_old_urls,
                     deployment,
@@ -248,9 +224,6 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-                print(
-                    f"Running activity `cleanup_previous_deployment({previous_production_deployment=})`"
-                )
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.cleanup_previous_production_deployment,
                     previous_production_deployment,
@@ -258,9 +231,6 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-            print(
-                f"Running activity `create_deployment_healthcheck_schedule({deployment=})`"
-            )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.create_deployment_healthcheck_schedule,
                 deployment,
@@ -273,9 +243,6 @@ class DeployDockerServiceWorkflow:
                 project_id=deployment.service.project_id,
                 service_id=deployment.service.id,
             )
-            print(
-                f"Running activity `scale_down_and_remove_docker_service_deployment({current_deployment=})`"
-            )
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
                 current_deployment,
@@ -283,9 +250,6 @@ class DeployDockerServiceWorkflow:
                 retry_policy=retry_policy,
             )
             if previous_production_deployment is not None:
-                print(
-                    f"Running activity `scale_back_service_deployment({previous_production_deployment=})`"
-                )
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,
                     previous_production_deployment,
@@ -293,7 +257,6 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-        print(f"Running activity `get_previous_queued_deployment({deployment=})`")
         next_queued_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_queued_deployment,
             deployment,

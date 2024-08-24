@@ -38,6 +38,7 @@ class MonitorDockerDeploymentWorkflow:
             deployment_hash=payload.deployment.hash,
             status=deployment_status,
             reason=deployment_status_reason,
+            service_id=payload.deployment.service_id,
         )
         print(f"Running activity `save_deployment_status({healthcheck_result=})`")
         await workflow.execute_activity_method(
