@@ -65,6 +65,7 @@ class SimpleDeploymentDetails:
     hash: str
     project_id: str
     service_id: str
+    status: Optional[str] = None
     url: Optional[str] = None
 
     @property

@@ -141,8 +141,11 @@ class DeployDockerServiceWorkflow:
             )
 
         if (
-            len(service.volumes) > 0 or len(service.non_http_ports) > 0
-        ) and previous_production_deployment is not None:
+            (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
+            and previous_production_deployment is not None
+            and previous_production_deployment.status
+            != DockerDeployment.DeploymentStatus.FAILED
+        ):
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_service_deployment,
                 previous_production_deployment,
@@ -249,7 +252,11 @@ class DeployDockerServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
-            if previous_production_deployment is not None:
+            if (
+                previous_production_deployment is not None
+                and previous_production_deployment.status
+                != DockerDeployment.DeploymentStatus.FAILED
+            ):
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,
                     previous_production_deployment,
