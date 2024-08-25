@@ -972,8 +972,10 @@ class ToggleDockerServiceAPIView(APIView):
 
     @extend_schema(
         operation_id="toggleDockerService",
+        request=None,
         responses={
             409: ErrorResponse409Serializer,
+            200: DockerServiceDeploymentSerializer,
         },
         summary="Stop/Restart a docker service",
         description="Stops a running docker service and restart it if it was stopped.",
