@@ -117,8 +117,8 @@ urlpatterns += [
         name="services.docker.archive",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/stop/?$",
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/toggle-service/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
         views.ToggleDockerServiceAPIView.as_view(),
         name="services.docker.toggle",
     ),
