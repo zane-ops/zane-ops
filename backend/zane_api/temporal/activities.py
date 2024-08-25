@@ -519,14 +519,18 @@ class DockerSwarmActivities:
                 async def wait_for_service_deployment_to_be_down():
                     nonlocal swarm_service
                     print(f"waiting for service {swarm_service.name=} to be down...")
-                    task_list = swarm_service.tasks()
+                    task_list = swarm_service.tasks(
+                        filters={"desired-state": "running"}
+                    )
                     while len(task_list) > 0:
                         print(
                             f"service {swarm_service.name=} is not down yet, "
                             + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
                         )
                         await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                        task_list = swarm_service.tasks()
+                        task_list = swarm_service.tasks(
+                            filters={"desired-state": "running"}
+                        )
                         continue
                     print(f"service {swarm_service.name=} is down, YAY !! 🎉")
 
@@ -693,7 +697,9 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
-    async def get_previous_production_deployment(self, deployment: DeploymentDetails):
+    async def get_previous_production_deployment(
+        self, deployment: DeploymentDetails
+    ) -> Optional[SimpleDeploymentDetails]:
         latest_production_deployment: DockerDeployment | None = await (
             DockerDeployment.objects.filter(
                 Q(service_id=deployment.service.id)
@@ -709,6 +715,7 @@ class DockerSwarmActivities:
                 hash=latest_production_deployment.hash,
                 service_id=latest_production_deployment.service_id,
                 project_id=deployment.service.project_id,
+                status=latest_production_deployment.status,
             )
         return None
 
@@ -805,14 +812,14 @@ class DockerSwarmActivities:
 
             async def wait_for_service_to_be_down():
                 print(f"waiting for service `{swarm_service.name=}` to be down...")
-                task_list = swarm_service.tasks()
+                task_list = swarm_service.tasks(filters={'desired-state': 'running'})
                 while len(task_list) > 0:
                     print(
                         f"service `{swarm_service.name=}` is not down yet, "
                         + f"retrying in `{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}` seconds..."
                     )
                     await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    task_list = swarm_service.tasks()
+                    task_list = swarm_service.tasks(filters={'desired-state': 'running'})
                 print(f"service `{swarm_service.name=}` is down, YAY !! 🎉")
 
             await wait_for_service_to_be_down()
@@ -1353,14 +1360,16 @@ class DockerSwarmActivities:
 
             async def wait_for_service_to_be_down():
                 print(f"waiting for service {swarm_service.name=} to be down...")
-                task_list = swarm_service.tasks()
+                task_list = swarm_service.tasks(filters={"desired-state": "running"})
                 while len(task_list) > 0:
                     print(
                         f"service {swarm_service.name=} is not down yet, "
                         + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
                     )
                     await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    task_list = swarm_service.tasks()
+                    task_list = swarm_service.tasks(
+                        filters={"desired-state": "running"}
+                    )
                 print(f"service {swarm_service.name=} is down, YAY !! 🎉")
 
             await wait_for_service_to_be_down()
