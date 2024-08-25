@@ -812,25 +812,24 @@ class DockerSwarmActivities:
 
             async def wait_for_service_to_be_down():
                 print(f"waiting for service `{swarm_service.name=}` to be down...")
-                task_list = swarm_service.tasks(filters={'desired-state': 'running'})
+                task_list = swarm_service.tasks(filters={"desired-state": "running"})
                 while len(task_list) > 0:
                     print(
                         f"service `{swarm_service.name=}` is not down yet, "
                         + f"retrying in `{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}` seconds..."
                     )
                     await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    task_list = swarm_service.tasks(filters={'desired-state': 'running'})
+                    task_list = swarm_service.tasks(
+                        filters={"desired-state": "running"}
+                    )
                 print(f"service `{swarm_service.name=}` is down, YAY !! 🎉")
 
             await wait_for_service_to_be_down()
-
             # Change the status to be accurate
             docker_deployment: DockerDeployment | None = (
                 await DockerDeployment.objects.filter(
-                    Q(hash=deployment.hash) & Q(service_id=deployment.service_id)
-                )
-                .select_related("service")
-                .afirst()
+                    hash=deployment.hash, service_id=deployment.service_id
+                ).afirst()
             )
 
             if docker_deployment is not None:
@@ -838,7 +837,7 @@ class DockerSwarmActivities:
                 await docker_deployment.asave()
                 try:
                     await pause_schedule(
-                        id=docker_deployment.monitor_schedule_id,
+                        id=deployment.monitor_schedule_id,
                         note="Paused to prevent zero-downtime deployment",
                     )
                 except RPCError:
