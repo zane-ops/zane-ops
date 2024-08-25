@@ -305,6 +305,31 @@ class ArchiveDockerServiceWorkflow:
         )
 
 
+@workflow.defn(name="toggle-docker-service-state-workflow")
+class ToggleDockerServiceWorkflow:
+    @workflow.run
+    async def run(self, deployment: SimpleDeploymentDetails):
+        print(f"\nRunning workflow `ToggleDockerServiceWorkflow` with {deployment=}")
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+        if deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.scale_back_service_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=retry_policy,
+            )
+        else:
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.scale_down_service_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=retry_policy,
+            )
+
+
 def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
@@ -315,6 +340,7 @@ def get_workflows_and_activities():
             RemoveProjectResourcesWorkflow,
             DeployDockerServiceWorkflow,
             MonitorDockerDeploymentWorkflow,
+            ToggleDockerServiceWorkflow,
         ],
         activities=[
             swarm_activities.attach_network_to_proxy,

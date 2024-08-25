@@ -2033,6 +2033,96 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedSimpleLogList'
           description: ''
+  /api/projects/{project_slug}/toggle-service/docker/{service_slug}/:
+    put:
+      operationId: toggleDockerService
+      description: Stops a running docker service and restart it if it was stopped.
+      summary: Stop/Restart a docker service
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -5480,6 +5570,13 @@ components:
         * `SYSTEM` - System Logs
         * `PROXY` - Proxy Logs
         * `SERVICE` - Service Logs
+    ToggleDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     URLItemChangeFieldEnum:
       enum:
       - urls

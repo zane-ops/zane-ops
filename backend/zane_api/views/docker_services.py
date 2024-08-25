@@ -78,6 +78,7 @@ from ..temporal import (
     ArchivedServiceDetails,
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
+    ToggleDockerServiceWorkflow,
 )
 
 
@@ -964,3 +965,64 @@ class ArchiveDockerServiceAPIView(APIView):
         service.delete()
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class ToggleDockerServiceAPIView(APIView):
+    serializer_class = DockerServiceDeploymentSerializer
+
+    @extend_schema(
+        operation_id="toggleDockerService",
+        request=None,
+        responses={
+            409: ErrorResponse409Serializer,
+            200: DockerServiceDeploymentSerializer,
+        },
+        summary="Stop/Restart a docker service",
+        description="Stops a running docker service and restart it if it was stopped.",
+    )
+    @transaction.atomic()
+    def put(self, request: Request, project_slug: str, service_slug: str):
+        project: Project | None = (
+            Project.objects.filter(
+                slug=project_slug.lower(), owner=request.user
+            ).select_related("archived_version")
+        ).first()
+
+        if project is None:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+
+        service: DockerRegistryService | None = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            ).select_related("project")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+
+        production_deployment = service.latest_production_deployment
+        if production_deployment is None:
+            raise ResourceConflict(
+                "This service has not been deployed yet, and thus its state cannot be toggled."
+            )
+
+        payload = SimpleDeploymentDetails(
+            hash=production_deployment.hash,
+            project_id=project.id,
+            service_id=service.id,
+            status=production_deployment.status,
+        )
+        transaction.on_commit(
+            lambda: start_workflow(
+                ToggleDockerServiceWorkflow.run,
+                args=payload,
+                id=f"toggle-{service.id}-{project.id}",
+            )
+        )
+
+        response = DockerServiceDeploymentSerializer(production_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
