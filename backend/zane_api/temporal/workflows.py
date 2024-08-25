@@ -328,7 +328,6 @@ class ToggleDockerServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
-        return
 
 
 def get_workflows_and_activities():
