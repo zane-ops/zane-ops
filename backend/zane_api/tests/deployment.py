@@ -478,10 +478,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
         DockerDeploymentChange.objects.create(
-            field="volumes",
+            field=DockerDeploymentChange.ChangeField.VOLUMES,
             type=DockerDeploymentChange.ChangeType.ADD,
             new_value={
-                "mode": "READ_WRITE",
+                "mode": Volume.VolumeMode.READ_ONLY,
                 "name": "zane-logs",
                 "container_path": "/etc/localtime",
                 "host_path": "/etc/localtime",
@@ -490,12 +490,63 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
 
         changes_payload = {
-            "field": "volumes",
+            "field": DockerDeploymentChange.ChangeField.VOLUMES,
             "type": "ADD",
             "new_value": {
                 "name": "zane-logs2",
                 "container_path": "/etc/logs/zane",
                 "host_path": "/etc/localtime",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_volume_host_volume_defaults_to_readonly(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.VOLUMES,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "name": "docker socket",
+                "container_path": "/var/run/docker.sock",
+                "host_path": "/var/run/docker.sock",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service=service, field=DockerDeploymentChange.ChangeField.VOLUMES
+        ).first()
+        self.assertEqual(Volume.VolumeMode.READ_ONLY, change.new_value.get("mode"))
+
+    def test_validate_volume_allow_host_volume_only_on_readonly(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.VOLUMES,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "mode": Volume.VolumeMode.READ_WRITE,
+                "name": "docker socket",
+                "container_path": "/var/run/docker.sock",
+                "host_path": "/var/run/docker.sock",
             },
         }
         response = self.client.put(

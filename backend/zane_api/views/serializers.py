@@ -55,9 +55,20 @@ class VolumeRequestSerializer(serializers.Serializer):
         ("READ_ONLY", _("READ_ONLY")),
         ("READ_WRITE", _("READ_WRITE")),
     )
-    mode = serializers.ChoiceField(
-        required=False, choices=VOLUME_MODE_CHOICES, default="READ_WRITE"
-    )
+    mode = serializers.ChoiceField(required=False, choices=VOLUME_MODE_CHOICES)
+
+    def validate(self, attrs: dict):
+        if attrs.get("mode") is None:
+            if attrs.get("host_path") is not None:
+                attrs["mode"] = "READ_ONLY"
+            else:
+                attrs["mode"] = "READ_WRITE"
+        else:
+            if attrs.get("host_path") is not None and attrs.get("mode") != "READ_ONLY":
+                raise serializers.ValidationError(
+                    {"mode": [f"Host volumes can only be mounted in `READ_ONLY` mode."]}
+                )
+        return attrs
 
 
 class URLRequestSerializer(serializers.Serializer):
