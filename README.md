@@ -12,7 +12,12 @@
 
 ---
 
-## 📸 Screenshots
+
+## 🚀 Installation
+
+Follow the [instructions](https://zane.fredkiss.dev/docs/get-started/) in the documentation to install and setup zaneops.
+
+## 📸 Some Screenshots
 
 ### Login
 
