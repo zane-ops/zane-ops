@@ -112,9 +112,6 @@ You can view all the in-app screenshots in the [documentation](https://zane.fred
   - [ ] Multi-server support
 </details>
 
-## 🍙 Getting Started
-
-All the steps to install and run ZaneOps are listed in the [documentation](https://zane.fredkiss.dev/docs).
 
 ## ❤️ Contributing
 
