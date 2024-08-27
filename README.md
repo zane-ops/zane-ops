@@ -65,49 +65,52 @@ You can view all the in-app screenshots in the [documentation](https://zane.fred
 
 ## 🛣️ ROADMAP 
 
-### beta
+<details>
+<summary>Click to see the roadmap</summary>
 
-- [ ] Docker services frontend 
-  - [ ] Details page 
-  - [ ] Env variables page
-  - [ ] Settings page
-  - [ ] Single deployment page
-  - [ ] Single deployment application logs page
-  - [ ] Single deployment http logs page
-  - [ ] deploy & redeploy deployments
-- [ ] Project frontend
-  - [ ] settings page 
-- [ ] CLI
-  - [ ] install & setup zaneops
-  - [ ] shutting down & uninstalling ZaneOps
-  - [ ] upgrading ZaneOps
-  - [ ] authenticate with token (require token UI+API in ZaneOps)
-  - [ ] Deploy a service using the CLI
-- [ ] Tons of docs
-  - [ ] Using the CLI
-  - [ ] Examples of deploying different kind of apps
+- **beta** :
+   - [ ] Docker services frontend 
+     - [ ] Details page 
+     - [ ] Env variables page
+     - [ ] Settings page
+     - [ ] Single deployment page
+     - [ ] Single deployment application logs page
+     - [ ] Single deployment http logs page
+     - [ ] deploy & redeploy deployments
+   - [ ] Project frontend
+     - [ ] settings page 
+   - [ ] CLI
+     - [ ] install & setup zaneops
+     - [ ] shutting down & uninstalling ZaneOps
+     - [ ] upgrading ZaneOps
+     - [ ] authenticate with token (require token UI+API in ZaneOps)
+     - [ ] Deploy a service using the CLI
+   - [ ] Tons of docs
+     - [ ] Using the CLI
+     - [ ] Examples of deploying different kind of apps
 
-### v1 
+- **v1** :
 
-- [ ] Rewrite from celery to temporal (not sure)
-- [ ] Managing environments (stating, production, and ephemeral envs)
-- [ ] Support workers (A.K.A sleeping services)
-- [ ] Git services API
-  - [ ] create service from a public repo
-  - [ ] deploy service  
-    - [ ] Building service with nixpacks  
-  - [ ] archive service
-  - [ ] Pull Request environments
-  - [ ] Auto-comments with deployment status on github
-- [ ] Git services frontend & API (same as docker services)
+  - [ ] Rewrite from celery to temporal (not sure)
+  - [ ] Managing environments (stating, production, and ephemeral envs)
+  - [ ] Support workers (A.K.A sleeping services)
+  - [ ] Git services API
+    - [ ] create service from a public repo
+    - [ ] deploy service  
+      - [ ] Building service with nixpacks  
+    - [ ] archive service
+    - [ ] Pull Request environments
+    - [ ] Auto-comments with deployment status on github
+  - [ ] Git services frontend & API (same as docker services)
 
-### v2
+- **v2** :
 
-- [ ] Static websites support
-- [ ] CRONs support for services
-- [ ] Template support
-  - [ ] Allow also for seeding templates
-- [ ] Multi-server support
+  - [ ] Static websites support
+  - [ ] CRONs support for services
+  - [ ] Template support
+    - [ ] Allow also for seeding templates
+  - [ ] Multi-server support
+</details>
 
 ## 🍙 Getting Started
 
