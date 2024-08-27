@@ -56,8 +56,8 @@ SECURE_HSTS_SECONDS = 0 if ENVIRONMENT != PRODUCTION_ENV else 60
 
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
-ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
-ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
+ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
+ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 
 ALLOWED_HOSTS = (

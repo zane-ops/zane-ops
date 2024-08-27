@@ -6,14 +6,6 @@ services:
       - "2020:2020"
     environment:
       CADDY_ADMIN: 0.0.0.0:2020
-  dnsmasq:
-    image: andyshinn/dnsmasq
-    cap_add:
-      - NET_ADMIN
-    command: --log-facility=-
-    volumes:
-      - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf
-    network_mode: 'host'
   temporal-worker:
     build:
       context: ../backend

@@ -34,7 +34,7 @@ echo "$services" | while IFS= read -r service; do
 done
 
 # Wait until Ctrl+C is pressed
-echo "Server launched at http://app.zaneops.local"
+echo "Server launched at http://app.127-0-0-1.sslip.io/"
 echo "Press Ctrl+C to stop everything..."
 while true; do
   sleep 1
