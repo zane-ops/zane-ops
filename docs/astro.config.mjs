@@ -38,7 +38,7 @@ export default defineConfig({
           label: "Start here",
           items: [
             {
-              label: "Get started",
+              label: "Installation and Setup",
               slug: "get-started"
             },
             {
