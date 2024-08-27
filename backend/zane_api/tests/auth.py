@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest.mock import patch, Mock
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import QueryDict
 from django.urls import reverse
@@ -144,13 +145,15 @@ class AuthMeViewTests(AuthAPITestCase):
             reverse("zane_api:auth.me.with_token"),
             content_type="application/json",
             HTTP_ACCEPT="text/html",
-            HTTP_HOST="example-service-dpl-xyz.zaneops.local",
+            HTTP_HOST=f"example-service-dpl-xyz.{settings.ROOT_DOMAIN}",
             HTTP_X_FORWARED_URI="/",
             HTTP_X_FORWARED_PROTO="https",
         )
         self.assertEqual(status.HTTP_302_FOUND, response.status_code)
         params = QueryDict(mutable=True)
-        params["redirect_to"] = "https://example-service-dpl-xyz.zaneops.local/"
+        params["redirect_to"] = (
+            f"https://example-service-dpl-xyz.{settings.ROOT_DOMAIN}/"
+        )
 
         self.assertEqual(
             f"{reverse('zane_api:auth.login')}?{params.urlencode()}",

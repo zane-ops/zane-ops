@@ -2,6 +2,7 @@ SHELL := /bin/bash
 current_dir = $(shell pwd)
 db_password = "$(shell openssl rand -base64 32)"
 django_secret = "$(shell openssl rand -base64 48 | tr -d '=+/ ' | cut -c1-64)"
+db_username = "$(shell curl -s https://randomuser.me/api/ | jq -r '.results[0].login.username')"
 .DEFAULT_GOAL := help
 help: ### Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -33,6 +34,7 @@ setup: ### Launch initial setup before installing zaneops
 	@if [ ! -f ".env" ]; then \
   	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.example > ./.env; \
   	sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
+	sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
 	sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
 	sed -i'.bak' "s#{{ZANE_DJANGO_SECRET_KEY}}#\"$(django_secret)\"#g" ./.env; \
   	rm .env.bak; \

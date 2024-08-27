@@ -1,31 +1,28 @@
 ---
-title: Deploying Zaneops to your server (alpha)
-description: 'Setup and install zaneops'
+title: Install ZaneOps on a server or locally
+description: 'Guide to setting up and installing ZaneOps'
 ---
 
-import {FileTree, Steps} from '@astrojs/starlight/components';
+import {FileTree, Steps, Aside} from '@astrojs/starlight/components';
 
-This guide will show how to deploy zaneops to your server, keep in mind that this is very alpha and is subject to change
-and/or break, do not use this for production.
+ZaneOps is a deployment platform that simplifies the process of managing and deploying web applications. This guide will walk you through the steps to install ZaneOps either locally or on a remote server with minimal configuration.
 
-But if you like living on the edge 😎, feel free to test the app and report any bug encountered.
-For now the features implemented are :
+<Aside type="caution" title="Important">
+ZaneOps is currently in **alpha** and is not stable for production use. However, we encourage you to contribute by testing the platform locally, reporting bugs, and providing feedback to help improve it.
+</Aside>
 
-- **UI** : login/logout, creating project
-- **API** : login/logout, creating,updating,archiving projects, creating services from docker images, archiving services,
-updating services (by redeploying them). You can find a reference of the API
-at https://zane.fredkiss.dev/docs/api-reference/openapi
+
 
 ## Prerequesites
 
-You need to install [docker](https://docs.docker.com/engine/install/) and be on a Unix machine.
+Ensure you have [Docker](https://docs.docker.com/engine/install/) installed and are using a Unix-based machine. It's recommended to use the latest version of Docker to avoid compatibility issues.
 
 ## Process
 
 <Steps>
-1. Go to the folder where you want to install zaneops
+1. **Create the installation directory**:
 
-    This can be any folder, but in this setup we will choose `/var/www/zaneops` :
+    Choose a directory for ZaneOps. This guide uses `/var/www/zaneops`:
 
     ```shell
     mkdir -p /var/www/zaneops 
@@ -44,8 +41,7 @@ You need to install [docker](https://docs.docker.com/engine/install/) and be on 
     make setup
     ```
 
-    After this step, you should have a folder looking like this :
-
+    After this step, your directory structure should look like this:
 
     <FileTree>
 
@@ -63,18 +59,20 @@ You need to install [docker](https://docs.docker.com/engine/install/) and be on 
     </FileTree>
 
 4. Update environment variables in `.env` :
-
-    please modify the contents to better suit your needs (see [Here for how to customize](#how-is-each-env-variable-used) ) :
-
+    The setup process will generate sane defaults for environment variables, 
+    but you can modify the contents to better suit your needs (see here for [how to customize](#environment-variables-explained)):
+    
     ```shell
-    # This is an EXAMPLE, please modify before using in production
-    IMAGE_VERSION=canary # zaneops version to install
-    ZANE_APP_DIRECTORY="/var/www/zaneops" # where you will install zaneops 
-    ZANE_DB_USER=zane
-    ZANE_DB_PASSWORD= # generate with "$(openssl rand -base64 32)" 
-    DJANGO_SECRET_KEY= # generate with "$(openssl rand -base64 64)" 
-    ROOT_DOMAIN="127-0-0-1.sslip.io" # The root domain which will be used to generate domains for applications
-    ZANE_APP_DOMAIN="127-0-0-1.sslip.io" # the domain where the zaneops dashboard will be installed 
+    # Example configuration - Modify before production use
+    IMAGE_VERSION=canary # ZaneOps version to install
+    ZANE_APP_DIRECTORY="/var/www/zaneops" # Installation directory for ZaneOps
+    ZANE_DB_USER= # Generate with: "curl -s https://randomuser.me/api/ | jq -r '.results[0].login.username'"
+    ZANE_DB_PASSWORD= # Generate with: "$(openssl rand -base64 32)"
+    DJANGO_SECRET_KEY= # Generate with: "$(openssl rand -base64 64)"
+
+    # ⚠️ Update if ZaneOps is not hosted locally ⚠️
+    ROOT_DOMAIN="127-0-0-1.sslip.io" # Root domain for generating app domains
+    ZANE_APP_DOMAIN="127-0-0-1.sslip.io" # Domain for ZaneOps dashboard
     ```
 
 5. Deploy ZaneOps :
@@ -88,40 +86,34 @@ You need to install [docker](https://docs.docker.com/engine/install/) and be on 
     ```shell
     make create-user
     ```
+
+7. Log in to the dashboard by connecting to the domain specified in `ZANE_APP_DOMAIN`. If hosted locally, you can use http://127-0-0-1.sslip.io.
 </Steps>
 
 
 
-### How is each env variable used
+### Environment Variables Explained
 
-1. `IMAGE_VERSION` : used to tell which version of zaneops to install
-2. `ZANE_APP_DIRECTORY` : Used for telling where is the directory where zaneops will be installed
-3. `ZANE_DB_USER` / `ZANE_DB_PASSWORD` : credentials used for authenticating to DB where zaneops is installed
-4. `DJANGO_SECRET_KEY` :
-    - This is used by the API to do many things, such as hashing user session tokens, read more
-here  https://stackoverflow.com/a/47117966/10322846
-    - This needs to be really secure and at least 64 chars for good mesure, you can use a tool
-like `openssl`
-to generate a strong password, ex: `openssl rand -base64 64`
-5. `ROOT_DOMAIN` :
-    - ZaneOps will use this domain to generate subdomains for the web apps deployed with zaneops, like
-this: `my-web-app.zaneops.local`
-    - The domain in itself won't be used for anything else, you may use the root domain to host the dashboard there
-6. `ZANE_APP_DOMAIN`:  ZaneOps will use this domain as the access point where it will be installed and accessible, once deployed you
-will be able to access the dashboard using this domain. This can have be the same as `ROOT_DOMAIN`.
+1. `IMAGE_VERSION`: Specifies the ZaneOps version to install.
+2. `ZANE_APP_DIRECTORY`: Defines the directory where ZaneOps will be installed.
+3. `ZANE_DB_USER` / `ZANE_DB_PASSWORD`: Credentials for connecting to the database.
+4. `DJANGO_SECRET_KEY`: Used by the API for various security functions, such as hashing user session tokens. Generate a secure key with at least 64 characters using a tool like [openssl](https://github.com/openssl/openssl) (e.g., `openssl rand -base64 64`).
+5. `ROOT_DOMAIN`: Used to generate subdomains for deployed web apps, e.g., `my-web-app.127-0-0-1.sslip.io`. The root domain itself can also host the dashboard if desired.
+6. `ZANE_APP_DOMAIN`: The domain where the ZaneOps dashboard will be accessible after deployment. It can be the same as `ROOT_DOMAIN`
 
+### Additional Commands
 
-### Other commands
+Use these commands for managing your ZaneOps installation:
 
 ```shell
-# Shutting down zaneops
+# Shut down ZaneOps
 make remove
 
-# Deleting zaneops & all resources created by it
+# Delete ZaneOps and all its associated resources
 make delete-resources
 ```
 
-### In case you want to deploy locally
+### Installing Locally 
 
-It is totally possible to do so, for that you will need to not specify the env variable `ZANE_APP_DOMAIN`, 
-zaneops will automatically be available at http://127-0-0-1.sslip.io.
+ZaneOps can be installed locally with minimal configuration changes. 
+To do this, keep the `ZANE_APP_DOMAIN` and `ROOT_DOMAIN` environment variables set to http://127-0-0-1.sslip.io.
