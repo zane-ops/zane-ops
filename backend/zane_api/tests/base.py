@@ -14,7 +14,7 @@ from django.core.cache import cache
 from django.test import AsyncClient
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from docker.types import EndpointSpec
+from docker.types import EndpointSpec, Resources
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -28,7 +28,11 @@ from ..models import (
     DockerDeployment,
     Volume,
 )
-from ..temporal import get_network_resource_name, DockerImageResultFromRegistry
+from ..temporal import (
+    get_network_resource_name,
+    DockerImageResultFromRegistry,
+    SERVER_RESOURCE_LIMIT_COMMAND,
+)
 from ..temporal import (
     get_workflows_and_activities,
     get_swarm_service_name_for_deployment,
@@ -627,6 +631,7 @@ class FakeDockerClient:
             volumes: dict[str, dict[str, str]] = None,
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
+            resources: Resources = None,
         ):
             self.attrs = {
                 "Spec": {
@@ -640,6 +645,7 @@ class FakeDockerClient:
             self.attached_volumes = {} if volumes is None else volumes
             self.env = {} if env is None else env
             self.endpoint = endpoint
+            self.resources = resources
             self.id = name
             self.swarm_tasks = [
                 {
@@ -692,6 +698,9 @@ class FakeDockerClient:
     FAILING_CMD = "invalid"
     NONEXISTANT_IMAGE = "nonexistant"
     NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
+    GET_VOLUME_STORAGE_COMMAND = ""
+    HOST_CPUS = 4
+    HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -756,7 +765,10 @@ class FakeDockerClient:
             if port == self.PORT_USED_BY_HOST:
                 raise docker.errors.APIError(f"Port {port} is already used")
         if command == "du -sb /data":
-            return "72689062\t/data".encode(encoding="utf-8")
+            volume_size = 500 * 1024 * 1024  # 500mb
+            return f"{volume_size}\t/data".encode("utf-8")
+        if command == SERVER_RESOURCE_LIMIT_COMMAND:
+            return f"{self.HOST_CPUS}\n{self.HOST_MEMORY_IN_BYTES}\n".encode("utf-8")
 
     def volumes_create(self, name: str, labels: dict, **kwargs):
         self.volume_map[name] = FakeDockerClient.FakeVolume(
@@ -798,6 +810,7 @@ class FakeDockerClient:
         mounts: list[str] = kwargs.get("mounts", [])
         env: list[str] = kwargs.get("env", [])
         endpoint_spec = kwargs.get("endpoint_spec", None)
+        resources = kwargs.get("resources", None)
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")
         volumes: dict[str, dict[str, str]] = {}
@@ -816,7 +829,12 @@ class FakeDockerClient:
             envs[key] = value
 
         self.service_map[name] = FakeDockerClient.FakeService(
-            parent=self, name=name, volumes=volumes, env=envs, endpoint=endpoint_spec
+            parent=self,
+            name=name,
+            volumes=volumes,
+            env=envs,
+            endpoint=endpoint_spec,
+            resources=resources,
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):
