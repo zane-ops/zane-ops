@@ -26,9 +26,7 @@ all [issues](https://github.com/zane-ops/zane-ops/issues), and the issue might n
 
 You can open a new issue with this [issue form](https://github.com/zane-ops/zane-ops/issues/new).
 
-## Projects setup
-
-## 🚀 How to work on the project ?
+## How to work on the project ?
 
 
 1. First you have to clone the repository
@@ -76,7 +74,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
    The app should be available at http://app.127-0-0-1.sslip.io
 
-## 🔍 Debugging
+## Debugging
 
 You may end up having issues where the project is not working, the app is not reachable on the browser, or the API seems
 to be down, this section is to help debugging this case, if the app is working fine on your end, you don't need to read
@@ -90,7 +88,7 @@ this section.
 5. If the app is still unresponsive, run `make reset-db` However, it's crucial to note that this action will completely
    erase all data in the database and reset the project to its initial state.
 
-## 🧐 Project structure
+## Project structure
 
 A quick look at the top-level files and directories you will see in this project.
 
