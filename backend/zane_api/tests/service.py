@@ -702,6 +702,45 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertIsNone(deleted_docker_service)
 
+    async def test_archive_service_with_resource_limits(self):
+        resource_limits = {
+            "cpus": 1.5,
+            "memory": {"value": 500, "unit": "MEGABYTES"},
+        }
+        project, service = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value=resource_limits,
+                ),
+            ]
+        )
+        deployment = await service.deployments.afirst()
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0,
+            await DockerEnvVariable.objects.filter(service__slug=service.slug).acount(),
+        )
+
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(original_id=service.id).afirst()
+        )
+        self.assertEqual(resource_limits, archived_service.resource_limits)
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+
     async def test_archive_service_with_port(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service()
         deployment = await service.deployments.afirst()
@@ -800,7 +839,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     async def test_archive_should_delete_monitoring_tasks_for_the_deployment(self):
-        project, service = await self.acreate_and_deploy_redis_docker_service()
+        project, service = await self.acreate_and_deploy_redis_docker_service(
+            with_healthcheck=True
+        )
         initial_deployment = await service.deployments.afirst()
 
         response = await self.async_client.delete(
@@ -815,6 +856,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             0,
             await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
         )
+
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(original_id=service.id).afirst()
+        )
+        self.assertIsNotNone(archived_service.healthcheck)
         self.assertIsNone(
             self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
         )
