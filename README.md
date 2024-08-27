@@ -8,7 +8,11 @@
 
 # <div align="center">Zane Ops</div>
 
-### <div align="center">ZaneOps is a self-hosted, open source platform for hosting static sites, web apps, databases, CRONS, Workers using docker swarm as the engine.</div>
+<div align="center">
+  <strong>
+ ZaneOps is a self-hosted, open-source platform for hosting static sites, web apps, databases and CRON jobs, all powered by Docker Swarm.
+  </strong>
+</div>
 
 ---
 
