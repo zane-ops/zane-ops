@@ -134,40 +134,35 @@ import { FileTree } from '@astrojs/starlight/components';
 <FileTree>
 
 - .
+  - backend/
+  - frontend/
+  - cli/
   - .github/
     - workflows
         - pytests.yaml
         - check-format.yaml
-  - backend/
-    - zane_api/
-  - frontend/
-   - src/
   - docker/
-   - proxy
-      - Dockerfile
-   - docker-stack.yaml
-   - docker-compose.yaml
+    - docker-stack.yaml
+    - docker-compose.yaml
   - openapi/
-   - schema.yaml
-  - cli/
+    - schema.yaml
 
 </FileTree>
 
 
-1. **`.github/`**: this folder contains the GitHub Actions workflow configuration for Continuous Integration/Continuous
-   Deployment.
+1. **`backend/`**: A standard Django App, the code source of the API is in the `backend/zane_api/` folder.
 
-    1. **`check-format.yaml`** : this workflow is used to check that the frontend files are properly formatted with
-       biome.
-
-    2. **`pytests.yaml`** : this workflow is used to test the api of the project.
-
-2. **`backend/`**: A standard Django App, the code source of the API is in the `backend/zane_api/` folder.
-
-3. **`frontend/`**: this folder contains the frontend made with vite and react, you can find the source files of the
+2. **`frontend/`**: this folder contains the frontend made with vite and react, you can find the source files of the
    frontend in `frontend/src/`.
 
-4. **`cli/`**: this folder contains the source for the CLI to setup the project, it is written in Go
+3. **`cli/`**: this folder contains the source for the CLI to setup the project, it is written in Go
+
+4. **`.github/`**: this folder contains the GitHub Actions workflow configuration for Continuous Integration/Continuous
+   Deployment.
+    1. **`check-format.yaml`** : this workflow is used to check that the frontend files are properly formatted with
+       biome.
+    2. **`pytests.yaml`** : this workflow is used to test the api of the project.
+
 
 5. **`docker`**: this folder contains the docker specific files for working with the project locally :
     1. **`docker-compose.yaml`**: this file contains the docker-compose configuration for the services used in
@@ -175,6 +170,5 @@ import { FileTree } from '@astrojs/starlight/components';
     2. **`docker-stack.yaml`**: this file contains the specification for services in developpement
        that needs work within docker swarm : notably, caddy zane-proxy that exposes the services we deploy to HTTP
 
-    3. **`proxy/`** : Folder for cady proxy, it contains a `Dockerfile` to build zane-proxy.
 
 6. **`openapi/schema.yaml`**: this file contains the openapi schema generated from the backend API.
