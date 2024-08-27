@@ -135,6 +135,10 @@ class BaseService(TimestampedModel):
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
     network_alias = models.CharField(max_length=300, null=True, unique=True)
+    resource_limits = models.JSONField(
+        max_length=255,
+        null=True,
+    )
 
     @property
     def host_volumes(self):
@@ -659,9 +663,10 @@ class DockerDeploymentChange(BaseDeploymentChange):
         CREDENTIALS = "credentials", _("credentials")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
-        ENV_VARIABLES = "env_variables", _("env_variables")
+        ENV_VARIABLES = "env_variables", _("env variables")
         URLS = "urls", _("urls")
         PORTS = "ports", _("ports")
+        RESOURCE_LIMITS = "resource_limits", _("resource limits")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(

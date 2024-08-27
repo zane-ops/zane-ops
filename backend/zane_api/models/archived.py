@@ -116,6 +116,14 @@ class ArchivedBaseService(TimestampArchivedModel):
     volumes = models.ManyToManyField(to=ArchivedVolume)
     ports = models.ManyToManyField(to=ArchivedPortConfiguration)
     original_id = models.CharField(max_length=255)
+    resource_limits = models.JSONField(
+        max_length=255,
+        null=True,
+    )
+    healthcheck = models.JSONField(
+        max_length=255,
+        null=True,
+    )
 
     class Meta:
         abstract = True
