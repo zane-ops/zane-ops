@@ -121,7 +121,8 @@ You can view all the in-app screenshots in the [documentation](https://zane.fred
 
 Interested in contributing? Check out the [contribution guidelines](./CONTRIBUTING.md).
 
-## Credits
+## 🙏 Credits
 
 - [Plane](https://github.com/makeplane/plane): for giving us content for the contributions templates (contribution
   guidelines).
+- [Coolify](https://github.com/coollabsio/coolify) which we used inspired ourselves from a lot.
