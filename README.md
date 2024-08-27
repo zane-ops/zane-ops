@@ -19,47 +19,49 @@ Follow the [instructions](https://zane.fredkiss.dev/docs/get-started/) in the do
 
 ## 📸 Some Screenshots
 
-### Login
+You can view all the in-app screenshots in the [documentation](https://zane.fredkiss.dev/docs/screenshots/), but here's a quick showcase:
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./images/login-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="./images/login-light.png">
-    <img src="./images/login-dark.png" alt="Login page" />
-  </picture>
-</p>
 
-### Dashboard
+1. Login
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./images/dashboard-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="./images/dashboard-light.png">
-    <img src="./images/dashboard-dark.png" alt="Login page" />
-  </picture>
-</p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/login-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/login-light.png">
+      <img src="./images/login-dark.png" alt="Login page" />
+    </picture>
+  </p>
 
-### Creating a Project
+2. Dashboard
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./images/create-project-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="./images/create-project-light.png">
-    <img src="./images/create-project-dark.png" alt="Login page" />
-  </picture>
-</p>
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/dashboard-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/dashboard-light.png">
+      <img src="./images/dashboard-dark.png" alt="Login page" />
+    </picture>
+  </p>
 
-### Project detail
+3. Creating a Project
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./images/project-detail-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="./images/project-detail-light.png">
-    <img src="./images/project-detail-dark.png" alt="Login page" />
-  </picture>
-</p>
 
-> More to come
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/create-project-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/create-project-light.png">
+      <img src="./images/create-project-dark.png" alt="Login page" />
+    </picture>
+  </p>
+
+4. Project detail
+
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/project-detail-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/project-detail-light.png">
+      <img src="./images/project-detail-dark.png" alt="Login page" />
+    </picture>
+  </p>
 
 ## 🛣️ ROADMAP 
 
