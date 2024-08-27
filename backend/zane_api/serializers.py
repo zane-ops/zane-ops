@@ -154,6 +154,7 @@ class DockerServiceSerializer(ModelSerializer):
             "network_aliases",
             "network_alias",
             "unapplied_changes",
+            "resource_limits",
         ]
 
 

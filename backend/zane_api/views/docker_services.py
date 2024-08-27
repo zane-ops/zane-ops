@@ -47,6 +47,7 @@ from .serializers import (
     DeploymentLogsFilterSet,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
+    ResourceLimitChangeSerializer,
 )
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto, URLDto, VolumeDto
 from ..models import (
@@ -168,6 +169,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 DockerCommandFieldChangeSerializer,
                 DockerImageFieldChangeSerializer,
                 HealthcheckFieldChangeSerializer,
+                ResourceLimitChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -209,6 +211,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             "command": DockerCommandFieldChangeSerializer,
             "image": DockerImageFieldChangeSerializer,
             "healthcheck": HealthcheckFieldChangeSerializer,
+            "resource_limits": ResourceLimitChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(

@@ -6,7 +6,7 @@ import string
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, TypeVar, List, Optional
+from typing import Callable, TypeVar, List, Optional, Literal
 
 from django.core.cache import cache
 
@@ -148,6 +148,44 @@ def format_seconds(seconds: float):
         return f"{minutes}m{remaining_seconds:02}s"
     else:
         return f"{remaining_seconds}s"
+
+
+def convert_value_to_bytes(
+    value: int,
+    unit: (
+        Literal["bytes"]
+        | Literal["kilobytes"]
+        | Literal["megabytes"]
+        | Literal["gigabytes"]
+    ) = "bytes",
+):
+    match unit.lower():
+        case "bytes":
+            return value
+        case "kilobytes":
+            return value * 1024
+        case "megabytes":
+            return value * 1024 * 1024
+        case "gigabytes":
+            return value * 1024 * 1024 * 1024
+        case _:
+            raise ValueError(
+                f"Unit `{unit}` is not valid, must be one of `bytes`, `kilobytes`, `megabytes` or `gigabytes`"
+            )
+
+
+def format_storage_value(value: int):
+    kb = 1024
+    mb = 1024 * kb
+    gb = 1024 * mb
+
+    if value < kb:
+        return f"{value} bytes"
+    if value < mb:
+        return f"{value/kb:.2f} kb"
+    if value < gb:
+        return f"{value/mb:.2f} mb"
+    return f"{value/gb:.2f} gb"
 
 
 def jprint(value: dict | list | str | int | float):

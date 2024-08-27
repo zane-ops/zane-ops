@@ -12,6 +12,7 @@ from ..dtos import (
     HealthCheckDto,
     DockerCredentialsDto,
     DeploymentChangeDto,
+    ResourceLimitsDto,
 )
 from ..models import DockerRegistryService, DockerDeploymentChange
 from ..serializers import DockerServiceSerializer
@@ -57,14 +58,21 @@ def compute_docker_service_snapshot_with_changes(
     }
     for change in deployment_changes:
         match change.field:
-            case "image" | "command":
+            case (
+                DockerDeploymentChange.ChangeField.IMAGE
+                | DockerDeploymentChange.ChangeField.COMMAND
+            ):
                 setattr(service_snapshot, change.field, change.new_value)
-            case "healthcheck":
+            case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                 service_snapshot.healthcheck = HealthCheckDto.from_dict(
                     change.new_value,
                 )
-            case "credentials":
+            case DockerDeploymentChange.ChangeField.CREDENTIALS:
                 service_snapshot.credentials = DockerCredentialsDto.from_dict(
+                    change.new_value
+                )
+            case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                service_snapshot.resource_limits = ResourceLimitsDto.from_dict(
                     change.new_value
                 )
             case _:

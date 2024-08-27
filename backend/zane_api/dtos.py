@@ -76,6 +76,36 @@ class DockerCredentialsDto:
 
 
 @dataclass
+class MemoryLimitDto:
+    unit: Literal["bytes", "kilobytes", "megabytes", "gigabytes"]
+    value: int
+
+
+@dataclass
+class ResourceLimitsDto:
+    cpus: Optional[float] = None
+    memory: Optional[MemoryLimitDto] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, float | dict]):
+        memory_dict = data.get("memory")
+        memory = MemoryLimitDto(**memory_dict) if memory_dict is not None else None
+        return cls(
+            cpus=data.get("cpus"),
+            memory=memory,
+        )
+
+    def to_dict(self):
+        return dict(
+            cpu=self.cpus,
+            memory=dict(
+                unit=self.memory.unit,
+                value=self.memory.value,
+            ),
+        )
+
+
+@dataclass
 class DockerServiceSnapshot:
     image: str
     project_id: str
@@ -85,6 +115,7 @@ class DockerServiceSnapshot:
     command: Optional[str] = None
     network_aliases: List[str] = field(default_factory=list)
     healthcheck: Optional[HealthCheckDto] = None
+    resource_limits: Optional[ResourceLimitsDto] = None
     credentials: Optional[DockerCredentialsDto] = None
     volumes: List[VolumeDto] = field(default_factory=list)
     ports: List[PortConfigurationDto] = field(default_factory=list)
@@ -140,6 +171,11 @@ class DockerServiceSnapshot:
             if data.get("credentials") is not None
             else None
         )
+        resource_limits = (
+            ResourceLimitsDto.from_dict(data["resource_limits"])
+            if data.get("resource_limits") is not None
+            else None
+        )
 
         return cls(
             image=data["image"],
@@ -150,6 +186,7 @@ class DockerServiceSnapshot:
             env_variables=env_variables,
             healthcheck=healthcheck,
             credentials=credentials,
+            resource_limits=resource_limits,
             id=data["id"],
             project_id=data["project_id"],
             network_aliases=data["network_aliases"],

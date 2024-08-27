@@ -28,7 +28,7 @@ from ..models import (
     HttpLog,
 )
 from ..temporal import check_if_docker_image_exists, check_if_port_is_available_on_host
-from ..utils import EnhancedJSONEncoder
+from ..utils import EnhancedJSONEncoder, convert_value_to_bytes
 from ..validators import validate_url_path, validate_env_name
 
 
@@ -135,6 +135,34 @@ class URLRequestSerializer(serializers.Serializer):
             )
 
         return url
+
+
+class MemoryLimitRequestSerializer(serializers.Serializer):
+    MEMORY_UNITS = (
+        ("BYTES", _("bytes")),
+        ("KILOBYTES", _("kilobytes")),
+        ("MEGABYTES", _("megabytes")),
+        ("GIGABYTES", _("gigabytes")),
+    )
+    value = serializers.IntegerField(min_value=0)
+    unit = serializers.ChoiceField(choices=MEMORY_UNITS, default="MEGABYTES")
+
+    def validate(self, attrs: dict[str, int | str]):
+        six_megabytes = 6 * 1024 * 1024
+        value_in_bytes = convert_value_to_bytes(attrs["value"], attrs["unit"])
+        if value_in_bytes < six_megabytes:
+            raise serializers.ValidationError(
+                {"value": "Cannot limit a container max memory to less than 6mb."}
+            )
+        return attrs
+
+
+class ResourceLimitsRequestSerializer(serializers.Serializer):
+    cpus = serializers.FloatField(required=False, min_value=0.1)
+    memory = MemoryLimitRequestSerializer(required=False)
+
+    def validate(self, attrs: dict):
+        return attrs
 
 
 class HealthCheckRequestSerializer(serializers.Serializer):
@@ -749,6 +777,20 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
+class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["resource_limits"], required=True)
+    new_value = ResourceLimitsRequestSerializer(required=True, allow_null=True)
+
+    def validate(self, attrs: dict):
+        service = self.get_service()
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+
+        if snapshot.resource_limits is not None:
+            pass
+
+        return attrs
+
+
 class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["credentials"], required=True)
     new_value = DockerCredentialsRequestSerializer(required=True, allow_null=True)
@@ -830,6 +872,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
             "command",
             "image",
             "healthcheck",
+            "resource_limits",
         ],
     )
 

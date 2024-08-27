@@ -60,6 +60,10 @@ from .shared import (
 )
 
 docker_client: docker.DockerClient | None = None
+SERVER_RESOURCE_LIMIT_COMMAND = (
+    "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
+)
+VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
 
 
 def get_docker_client():
@@ -282,7 +286,7 @@ def get_caddy_request_for_deployment_url(
     }
 
 
-def get_docker_volume_size(volume_id: str) -> int:
+def get_docker_volume_size_in_bytes(volume_id: str) -> int:
     client = get_docker_client()
     docker_volume_name = get_volume_resource_name(volume_id)
 
@@ -294,6 +298,18 @@ def get_docker_volume_size(volume_id: str) -> int:
     )
     size_string, _ = result.decode(encoding="utf-8").split("\t")
     return int(size_string)
+
+
+def get_server_resource_limits() -> tuple[int, int]:
+    client = get_docker_client()
+
+    result: bytes = client.containers.run(
+        "busybox",
+        SERVER_RESOURCE_LIMIT_COMMAND,
+        remove=True,
+    )
+    no_of_cpus, max_memory = result.decode(encoding="utf-8").split("\n")
+    return int(no_of_cpus), int(max_memory)
 
 
 def get_caddy_request_for_url(
