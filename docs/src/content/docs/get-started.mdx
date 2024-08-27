@@ -98,7 +98,7 @@ Ensure you have [Docker](https://docs.docker.com/engine/install/) installed and 
 2. `ZANE_APP_DIRECTORY`: Defines the directory where ZaneOps will be installed.
 3. `ZANE_DB_USER` / `ZANE_DB_PASSWORD`: Credentials for connecting to the database.
 4. `DJANGO_SECRET_KEY`: Used by the API for various security functions, such as hashing user session tokens. Generate a secure key with at least 64 characters using a tool like [openssl](https://github.com/openssl/openssl) (e.g., `openssl rand -base64 64`).
-5. `ROOT_DOMAIN`: Used to generate subdomains for deployed web apps, e.g., `my-web-app.zaneops.local`. The root domain itself can also host the dashboard if desired.
+5. `ROOT_DOMAIN`: Used to generate subdomains for deployed web apps, e.g., `my-web-app.127-0-0-1.sslip.io`. The root domain itself can also host the dashboard if desired.
 6. `ZANE_APP_DOMAIN`: The domain where the ZaneOps dashboard will be accessible after deployment. It can be the same as `ROOT_DOMAIN`
 
 ### Additional Commands
