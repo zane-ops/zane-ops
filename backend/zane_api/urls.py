@@ -49,11 +49,6 @@ urlpatterns = [
         name="docker.check_port_mapping",
     ),
     re_path(
-        r"^volumes/(?P<volume_id>[a-zA-Z0-9_]+)/size/?$",
-        views.VolumeGetSizeView.as_view(),
-        name="volume.size",
-    ),
-    re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/create-service/docker/?$",
         views.CreateDockerServiceAPIView.as_view(),
         name="services.docker.create",

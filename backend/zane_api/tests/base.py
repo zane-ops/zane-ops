@@ -764,9 +764,6 @@ class FakeDockerClient:
             _, port = list(ports.values())[0]
             if port == self.PORT_USED_BY_HOST:
                 raise docker.errors.APIError(f"Port {port} is already used")
-        if command == "du -sb /data":
-            volume_size = 500 * 1024 * 1024  # 500mb
-            return f"{volume_size}\t/data".encode("utf-8")
         if command == SERVER_RESOURCE_LIMIT_COMMAND:
             return f"{self.HOST_CPUS}\n{self.HOST_MEMORY_IN_BYTES}\n".encode("utf-8")
 
