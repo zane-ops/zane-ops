@@ -1050,9 +1050,9 @@ class DockerSwarmActivities:
                 restart_policy=RestartPolicy(
                     condition="on-failure",
                     max_attempts=3,
-                    delay=5,
+                    delay=int(5e9),  # delay is in nanoseconds
                 ),
-                stop_grace_period=30,
+                stop_grace_period=int(30e9),  # stop_grace_period is in nanoseconds
                 log_driver="fluentd",
                 log_driver_options={
                     "fluentd-address": settings.ZANE_FLUENTD_HOST,
