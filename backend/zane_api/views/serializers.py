@@ -627,8 +627,8 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "new_value": {
-                            "host_path": f"Cannot set the `host path` of a volume mounted to one to null, "
-                            f"you need to delete and recreate the volume without a host path instead."
+                            "host_path": f"Cannot remove the host path from a volume that was originally mounted with one, "
+                            f"you need to delete and recreate the volume without the host path."
                         }
                     }
                 )
@@ -640,8 +640,8 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "new_value": {
-                            "host_path": f"Cannot mount a volume to host path if it wasn't mounted to one before, "
-                            f"you need to delete and recreate the volume with a host path instead."
+                            "host_path": f"Cannot mount a volume to a host path if it wasn't originally mounted that way, "
+                            f"you need to delete and recreate the volume with a host path."
                         }
                     }
                 )
