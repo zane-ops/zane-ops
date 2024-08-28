@@ -828,10 +828,9 @@ class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["credentials"], required=True)
     new_value = DockerCredentialsRequestSerializer(required=True, allow_null=True)
 
-    def validate(self, attrs: dict[str, OrderedDict]):
+    def validate(self, attrs: dict[str, str | OrderedDict]):
         service = self.get_service()
         new_value = attrs.get("new_value")
-        print(f"{len(new_value)=}")
         if len(new_value) == 0 or (
             new_value.get("username") == new_value.get("password") == ""
         ):
