@@ -654,7 +654,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def finish_and_save_deployment(
         self, healthcheck_result: DeploymentHealthcheckResult
-    ) -> Optional[SimpleDeploymentDetails]:
+    ) -> str:
         try:
             deployment: DockerDeployment = (
                 await DockerDeployment.objects.filter(

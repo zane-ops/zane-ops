@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import Optional
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -8,6 +9,8 @@ from .shared import (
     DeploymentHealthcheckResult,
     SimpleDeploymentDetails,
     ArchivedServiceDetails,
+    CancelDeploymentResult,
+    DeployDockerServiceWorkflowResult,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -111,11 +114,41 @@ class RemoveProjectResourcesWorkflow:
 
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
+    def __init__(self):
+        self.has_finished = False
+        self.cancellation_requested = False
+
+    @workflow.update
+    def cancel_deployment(self) -> CancelDeploymentResult:
+        if not self.has_finished and not self.cancellation_requested:
+            self.cancellation_requested = True
+            return CancelDeploymentResult(success=True)
+
+        return CancelDeploymentResult(
+            success=False,
+            message=(
+                "Deployment already finished"
+                if self.has_finished
+                else "Cancellation already requested"
+            ),
+        )
+
     @workflow.run
-    async def run(self, deployment: DeploymentDetails):
+    async def run(
+        self, deployment: DeploymentDetails
+    ) -> DeployDockerServiceWorkflowResult:
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
+
+        if self.cancellation_requested:
+            next_queued_deployment = await self.queue_next_deployment(
+                deployment, retry_policy
+            )
+            return DeployDockerServiceWorkflowResult(
+                deployment_status=DockerDeployment.DeploymentStatus.CANCELLED,
+                next_queued_deployment=next_queued_deployment,
+            )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.prepare_deployment,
@@ -191,13 +224,14 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
+        self.has_finished = True
         healthcheck_result = DeploymentHealthcheckResult(
             deployment_hash=deployment.hash,
             status=deployment_status,
             reason=deployment_status_reason,
             service_id=deployment.service.id,
         )
-        await workflow.execute_activity_method(
+        final_deployment_status = await workflow.execute_activity_method(
             DockerSwarmActivities.finish_and_save_deployment,
             healthcheck_result,
             start_to_close_timeout=timedelta(seconds=5),
@@ -264,6 +298,19 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
+        next_queued_deployment = await self.queue_next_deployment(
+            deployment, retry_policy
+        )
+        return DeployDockerServiceWorkflowResult(
+            deployment_status=final_deployment_status,
+            healthcheck_result=healthcheck_result,
+            next_queued_deployment=next_queued_deployment,
+        )
+
+    @staticmethod
+    async def queue_next_deployment(
+        deployment: DeploymentDetails, retry_policy: RetryPolicy
+    ) -> Optional[DeploymentDetails]:
         next_queued_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_queued_deployment,
             deployment,
@@ -271,12 +318,8 @@ class DeployDockerServiceWorkflow:
             retry_policy=retry_policy,
         )
         if next_queued_deployment is not None:
-            print(f"{next_queued_deployment=}")
             await workflow.continue_as_new(next_queued_deployment)
-        return dict(
-            healthcheck_result=healthcheck_result,
-            next_queued_deployment=next_queued_deployment,
-        )
+        return next_queued_deployment
 
 
 @workflow.defn(name="archive-docker-service-workflow")

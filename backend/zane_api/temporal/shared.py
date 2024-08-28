@@ -88,3 +88,16 @@ class HealthcheckDeploymentDetails:
     deployment: SimpleDeploymentDetails
     auth_token: str
     healthcheck: Optional[HealthCheckDto] = None
+
+
+@dataclass
+class CancelDeploymentResult:
+    success: bool
+    message: Optional[str] = None
+
+
+@dataclass
+class DeployDockerServiceWorkflowResult:
+    deployment_status: str
+    healthcheck_result: Optional[DeploymentHealthcheckResult] = None
+    next_queued_deployment: Optional[DeploymentDetails] = None
