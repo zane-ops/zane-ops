@@ -814,15 +814,6 @@ class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["resource_limits"], required=True)
     new_value = ResourceLimitsRequestSerializer(required=True, allow_null=True)
 
-    def validate(self, attrs: dict):
-        service = self.get_service()
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
-
-        if snapshot.resource_limits is not None:
-            pass
-
-        return attrs
-
 
 class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["credentials"], required=True)
