@@ -1052,6 +1052,7 @@ class DockerSwarmActivities:
                     max_attempts=3,
                     delay=5,
                 ),
+                stop_grace_period=30,
                 log_driver="fluentd",
                 log_driver_options={
                     "fluentd-address": settings.ZANE_FLUENTD_HOST,
