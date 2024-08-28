@@ -47,6 +47,7 @@ from .serializers import (
     DeploymentLogsFilterSet,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
+    ResourceLimitChangeSerializer,
 )
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto, URLDto, VolumeDto
 from ..models import (
@@ -168,6 +169,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 DockerCommandFieldChangeSerializer,
                 DockerImageFieldChangeSerializer,
                 HealthcheckFieldChangeSerializer,
+                ResourceLimitChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -209,6 +211,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             "command": DockerCommandFieldChangeSerializer,
             "image": DockerImageFieldChangeSerializer,
             "healthcheck": HealthcheckFieldChangeSerializer,
+            "resource_limits": ResourceLimitChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -229,7 +232,22 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 change_type = data.get("type")
                 old_value: Any = None
                 match field:
-                    case "image" | "command" | "credentials":
+                    case "image" | "command":
+                        old_value = getattr(service, field)
+                    case "resource_limits":
+                        if new_value is not None and len(new_value) == 0:
+                            new_value = None
+                        old_value = getattr(service, field)
+                    case "credentials":
+                        if new_value is not None and (
+                            len(new_value) == 0
+                            or new_value
+                            == {
+                                "username": "",
+                                "password": "",
+                            }
+                        ):
+                            new_value = None
                         old_value = getattr(service, field)
                     case "healthcheck":
                         old_value = (
@@ -259,16 +277,17 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                                 service.env_variables.get(id=item_id)
                             ).data
 
-                service.add_change(
-                    DockerDeploymentChange(
-                        type=change_type,
-                        field=field,
-                        old_value=old_value,
-                        new_value=new_value,
-                        service=service,
-                        item_id=item_id,
+                if new_value != old_value:
+                    service.add_change(
+                        DockerDeploymentChange(
+                            type=change_type,
+                            field=field,
+                            old_value=old_value,
+                            new_value=new_value,
+                            service=service,
+                            item_id=item_id,
+                        )
                     )
-                )
 
                 response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_200_OK)
@@ -308,6 +327,7 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                 "command": DockerCommandFieldChangeSerializer,
                 "image": DockerImageFieldChangeSerializer,
                 "healthcheck": HealthcheckFieldChangeSerializer,
+                "resource_limits": ResourceLimitChangeSerializer,
             }
 
             request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -326,7 +346,22 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                     change_type = data.get("type")
                     old_value: Any = None
                     match field:
-                        case "image" | "command" | "credentials":
+                        case "image" | "command":
+                            old_value = getattr(service, field)
+                        case "resource_limits":
+                            if new_value is not None and len(new_value) == 0:
+                                new_value = None
+                            old_value = getattr(service, field)
+                        case "credentials":
+                            if new_value is not None and (
+                                len(new_value) == 0
+                                or new_value
+                                == {
+                                    "username": "",
+                                    "password": "",
+                                }
+                            ):
+                                new_value = None
                             old_value = getattr(service, field)
                         case "healthcheck":
                             old_value = (
@@ -355,17 +390,17 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                                 old_value = DockerEnvVariableSerializer(
                                     service.env_variables.get(id=item_id)
                                 ).data
-
-                    service.add_change(
-                        DockerDeploymentChange(
-                            type=change_type,
-                            field=field,
-                            old_value=old_value,
-                            new_value=new_value,
-                            service=service,
-                            item_id=item_id,
+                    if new_value != old_value:
+                        service.add_change(
+                            DockerDeploymentChange(
+                                type=change_type,
+                                field=field,
+                                old_value=old_value,
+                                new_value=new_value,
+                                service=service,
+                                item_id=item_id,
+                            )
                         )
-                    )
 
         response = DockerServiceSerializer(service)
         return Response(response.data, status=status.HTTP_200_OK)

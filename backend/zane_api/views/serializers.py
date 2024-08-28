@@ -1,6 +1,6 @@
 import dataclasses
 import json
-from typing import Any
+from typing import Any, OrderedDict
 
 import django_filters
 from django.conf import settings
@@ -27,8 +27,12 @@ from ..models import (
     SimpleLog,
     HttpLog,
 )
-from ..temporal import check_if_docker_image_exists, check_if_port_is_available_on_host
-from ..utils import EnhancedJSONEncoder
+from ..temporal import (
+    check_if_docker_image_exists,
+    check_if_port_is_available_on_host,
+    get_server_resource_limits,
+)
+from ..utils import EnhancedJSONEncoder, convert_value_to_bytes, format_storage_value
 from ..validators import validate_url_path, validate_env_name
 
 
@@ -40,6 +44,17 @@ from ..validators import validate_url_path, validate_env_name
 class DockerCredentialsRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=100, allow_blank=True, required=False)
     password = serializers.CharField(max_length=100, allow_blank=True, required=False)
+
+    def validate(self, attrs: dict[str, str]):
+        if attrs.get("username") and not attrs.get("password"):
+            raise serializers.ValidationError(
+                {"password": "This field may not be blank."}
+            )
+        elif attrs.get("password") and not attrs.get("username"):
+            raise serializers.ValidationError(
+                {"username": "This field may not be blank."}
+            )
+        return attrs
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
@@ -135,6 +150,52 @@ class URLRequestSerializer(serializers.Serializer):
             )
 
         return url
+
+
+class MemoryLimitRequestSerializer(serializers.Serializer):
+    MEMORY_UNITS = (
+        ("BYTES", _("bytes")),
+        ("KILOBYTES", _("kilobytes")),
+        ("MEGABYTES", _("megabytes")),
+        ("GIGABYTES", _("gigabytes")),
+    )
+    value = serializers.IntegerField(min_value=0)
+    unit = serializers.ChoiceField(choices=MEMORY_UNITS, default="MEGABYTES")
+
+    def validate(self, attrs: dict[str, int | str]):
+        _, max_memory = get_server_resource_limits()
+        six_megabytes = 6 * 1024 * 1024
+        value_in_bytes = convert_value_to_bytes(attrs["value"], attrs["unit"])
+        # The documentation for docker says that we can't use less than 6mb of memory :
+        # https://docs.docker.com/engine/containers/resource_constraints/#limit-a-containers-access-to-memory
+        if value_in_bytes < six_megabytes:
+            raise serializers.ValidationError(
+                {"value": "Cannot limit a container max memory to less than 6mb."}
+            )
+        if value_in_bytes > max_memory:
+            raise serializers.ValidationError(
+                {
+                    "value": f"Maximum memory limit is {format_storage_value(max_memory)}."
+                }
+            )
+
+        return attrs
+
+
+class ResourceLimitsRequestSerializer(serializers.Serializer):
+    cpus = serializers.FloatField(required=False, min_value=0.1)
+    memory = MemoryLimitRequestSerializer(required=False)
+
+    def validate(self, attrs: dict):
+        max_cpus, _ = get_server_resource_limits()
+
+        cpu_limit = attrs.get("cpus", 0)
+        if cpu_limit > max_cpus:
+            raise serializers.ValidationError(
+                {"cpus": f"Cannot exceed {max_cpus} CPUs."}
+            )
+
+        return attrs
 
 
 class HealthCheckRequestSerializer(serializers.Serializer):
@@ -566,8 +627,8 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "new_value": {
-                            "host_path": f"Cannot set the `host path` of a volume mounted to one to null, "
-                            f"you need to delete and recreate the volume without a host path instead."
+                            "host_path": f"Cannot remove the host path from a volume that was originally mounted with one, "
+                            f"you need to delete and recreate the volume without the host path."
                         }
                     }
                 )
@@ -579,8 +640,8 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "new_value": {
-                            "host_path": f"Cannot mount a volume to host path if it wasn't mounted to one before, "
-                            f"you need to delete and recreate the volume with a host path instead."
+                            "host_path": f"Cannot mount a volume to a host path if it wasn't originally mounted that way, "
+                            f"you need to delete and recreate the volume with a host path."
                         }
                     }
                 )
@@ -749,12 +810,22 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         return attrs
 
 
+class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["resource_limits"], required=True)
+    new_value = ResourceLimitsRequestSerializer(required=True, allow_null=True)
+
+
 class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["credentials"], required=True)
     new_value = DockerCredentialsRequestSerializer(required=True, allow_null=True)
 
-    def validate(self, attrs: dict):
+    def validate(self, attrs: dict[str, str | OrderedDict]):
         service = self.get_service()
+        new_value = attrs.get("new_value")
+        if len(new_value) == 0 or (
+            new_value.get("username") == new_value.get("password") == ""
+        ):
+            attrs["new_value"] = None
         snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         if snapshot.credentials is not None:
@@ -830,6 +901,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
             "command",
             "image",
             "healthcheck",
+            "resource_limits",
         ],
     )
 

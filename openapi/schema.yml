@@ -3047,10 +3047,11 @@ components:
       - $ref: '#/components/schemas/DockerCommandFieldChangeRequest'
       - $ref: '#/components/schemas/DockerImageFieldChangeRequest'
       - $ref: '#/components/schemas/HealthcheckFieldChangeRequest'
+      - $ref: '#/components/schemas/ResourceLimitChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/HealthcheckFieldChangeRequest'
+          null: '#/components/schemas/ResourceLimitChangeRequest'
     DockerCommandFieldChangeFieldEnum:
       enum:
       - command
@@ -3147,6 +3148,7 @@ components:
       - env_variables
       - urls
       - ports
+      - resource_limits
       type: string
       description: |-
         * `image` - image
@@ -3154,9 +3156,10 @@ components:
         * `credentials` - credentials
         * `healthcheck` - healthcheck
         * `volumes` - volumes
-        * `env_variables` - env_variables
+        * `env_variables` - env variables
         * `urls` - urls
         * `ports` - ports
+        * `resource_limits` - resource limits
     DockerDeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -3309,6 +3312,10 @@ components:
           items:
             $ref: '#/components/schemas/DockerDeploymentChange'
           readOnly: true
+        resource_limits:
+          allOf:
+          - $ref: '#/components/schemas/ResourceLimits'
+          nullable: true
       required:
       - command
       - created_at
@@ -3321,6 +3328,7 @@ components:
       - network_aliases
       - ports
       - project_id
+      - resource_limits
       - slug
       - unapplied_changes
       - updated_at
@@ -4193,6 +4201,29 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    MemoryLimit:
+      type: object
+      properties:
+        value:
+          type: integer
+          minimum: 0
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+      required:
+      - unit
+      - value
+    MemoryLimitRequestRequest:
+      type: object
+      properties:
+        value:
+          type: integer
+          minimum: 0
+        unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          default: MEGABYTES
+      required:
+      - value
     PING:
       type: object
       properties:
@@ -4812,6 +4843,10 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIntervalSecondsErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCpusErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryValueErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryUnitErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -4837,6 +4872,10 @@ components:
           new_value.type: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
           new_value.timeout_seconds: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
           new_value.interval_seconds: '#/components/schemas/RequestDeploymentChangesNewValueIntervalSecondsErrorComponent'
+          new_value.cpus: '#/components/schemas/RequestDeploymentChangesNewValueCpusErrorComponent'
+          new_value.memory.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent'
+          new_value.memory.value: '#/components/schemas/RequestDeploymentChangesNewValueMemoryValueErrorComponent'
+          new_value.memory.unit: '#/components/schemas/RequestDeploymentChangesNewValueMemoryUnitErrorComponent'
     RequestDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
@@ -4954,6 +4993,32 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCpusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.cpus
+          type: string
+          description: '* `new_value.cpus` - new_value.cpus'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
         detail:
           type: string
       required:
@@ -5152,6 +5217,78 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.memory.non_field_errors
+          type: string
+          description: '* `new_value.memory.non_field_errors` - new_value.memory.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueMemoryUnitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.memory.unit
+          type: string
+          description: '* `new_value.memory.unit` - new_value.memory.unit'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueMemoryValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.memory.value
+          type: string
+          description: '* `new_value.memory.value` - new_value.memory.value'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -5481,6 +5618,50 @@ components:
         * `HTTP/1.1` - HTTP/1.1
         * `HTTP/2.0` - HTTP/2.0
         * `HTTP/3.0` - HTTP/3.0
+    ResourceLimitChangeFieldEnum:
+      enum:
+      - resource_limits
+      type: string
+      description: '* `resource_limits` - resource_limits'
+    ResourceLimitChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          allOf:
+          - $ref: '#/components/schemas/ResourceLimitsRequestRequest'
+          nullable: true
+        field:
+          $ref: '#/components/schemas/ResourceLimitChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    ResourceLimits:
+      type: object
+      properties:
+        cpus:
+          type: number
+          format: double
+          nullable: true
+        memory:
+          allOf:
+          - $ref: '#/components/schemas/MemoryLimit'
+          nullable: true
+      required:
+      - cpus
+      - memory
+    ResourceLimitsRequestRequest:
+      type: object
+      properties:
+        cpus:
+          type: number
+          format: double
+          minimum: 0.1
+        memory:
+          $ref: '#/components/schemas/MemoryLimitRequestRequest'
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -5633,6 +5814,18 @@ components:
           default: true
       required:
       - domain
+    UnitEnum:
+      enum:
+      - BYTES
+      - KILOBYTES
+      - MEGABYTES
+      - GIGABYTES
+      type: string
+      description: |-
+        * `BYTES` - bytes
+        * `KILOBYTES` - kilobytes
+        * `MEGABYTES` - megabytes
+        * `GIGABYTES` - gigabytes
     UpdateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -5851,9 +6044,7 @@ components:
           minLength: 1
           maxLength: 255
         mode:
-          allOf:
-          - $ref: '#/components/schemas/VolumeRequestModeEnum'
-          default: READ_WRITE
+          $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
     _proxyLogsListContentErrorComponent:

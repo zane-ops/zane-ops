@@ -116,6 +116,14 @@ class ArchivedBaseService(TimestampArchivedModel):
     volumes = models.ManyToManyField(to=ArchivedVolume)
     ports = models.ManyToManyField(to=ArchivedPortConfiguration)
     original_id = models.CharField(max_length=255)
+    resource_limits = models.JSONField(
+        max_length=255,
+        null=True,
+    )
+    healthcheck = models.JSONField(
+        max_length=255,
+        null=True,
+    )
 
     class Meta:
         abstract = True
@@ -165,6 +173,17 @@ class ArchivedDockerService(ArchivedBaseService):
             command=service.command,
             original_id=service.id,
             credentials=service.credentials,
+            resource_limits=service.resource_limits,
+            healthcheck=(
+                dict(
+                    type=service.healthcheck.type,
+                    value=service.healthcheck.value,
+                    interval_seconds=service.healthcheck.interval_seconds,
+                    timeout_seconds=service.healthcheck.timeout_seconds,
+                )
+                if service.healthcheck is not None
+                else None
+            ),
             deployment_urls=[
                 dpl.url for dpl in service.deployments.filter(url__isnull=False)
             ],
