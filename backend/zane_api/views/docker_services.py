@@ -327,6 +327,7 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                 "command": DockerCommandFieldChangeSerializer,
                 "image": DockerImageFieldChangeSerializer,
                 "healthcheck": HealthcheckFieldChangeSerializer,
+                "resource_limits": ResourceLimitChangeSerializer,
             }
 
             request_serializer = DockerDeploymentFieldChangeRequestSerializer(
