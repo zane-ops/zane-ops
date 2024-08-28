@@ -1009,7 +1009,7 @@ class DockerSwarmActivities:
             if service.resource_limits is not None:
                 nano_cpus = None
                 if service.resource_limits.cpus is not None:
-                    nano_cpus = service.resource_limits.cpus * 1e9
+                    nano_cpus = int(service.resource_limits.cpus * 1e9)
                 mem_limit_in_bytes = None
                 if service.resource_limits.memory is not None:
                     mem_limit_in_bytes = convert_value_to_bytes(
