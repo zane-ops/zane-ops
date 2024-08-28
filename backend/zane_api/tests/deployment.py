@@ -24,7 +24,7 @@ from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_caddy_uri_for_url,
 )
-from ..utils import jprint, convert_value_to_bytes
+from ..utils import convert_value_to_bytes
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -635,7 +635,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_new_image_with_existing_credentials(self):
