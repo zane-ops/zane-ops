@@ -77,7 +77,7 @@ class DockerCredentialsDto:
 
 @dataclass
 class MemoryLimitDto:
-    unit: Literal["bytes", "kilobytes", "megabytes", "gigabytes"]
+    unit: Literal["BYTES", "KILOBYTES", "MEGABYTES", "GIGABYTES"]
     value: int
 
 

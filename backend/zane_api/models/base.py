@@ -320,6 +320,14 @@ class DockerRegistryService(BaseService):
                         "username": change.new_value.get("username"),
                         "password": change.new_value.get("password"),
                     }
+                case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                    if change.new_value is None:
+                        self.resource_limits = None
+                        continue
+                    self.resource_limits = {
+                        "cpus": change.new_value.get("cpus"),
+                        "memory": change.new_value.get("memory"),
+                    }
                 case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                     if change.new_value is None:
                         if self.healthcheck is not None:

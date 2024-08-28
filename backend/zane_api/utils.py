@@ -6,9 +6,33 @@ import string
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
+from functools import wraps
 from typing import Callable, TypeVar, List, Optional, Literal
 
 from django.core.cache import cache
+
+
+def cache_result(timeout: int = None, cache_key: str = None):
+    def decorator(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            # Generate a cache key if not provided
+            key = (
+                cache_key
+                or f"{func.__name__}_{'_'.join(map(str, args))}_{'_'.join(f'{k}_{v}' for k, v in kwargs.items())}"
+            )
+
+            # Try to get the result from the cache
+            result = cache.get(key)
+            if result is None:
+                # If cache miss, call the function and cache the result
+                result = func(*args, **kwargs)
+                cache.set(key, result, timeout)
+            return result
+
+        return wrapped
+
+    return decorator
 
 
 def strip_slash_if_exists(

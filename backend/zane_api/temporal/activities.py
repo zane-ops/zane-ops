@@ -28,7 +28,12 @@ with workflow.unsafe.imports_passed_through():
     from urllib3.exceptions import HTTPError
     from requests import RequestException
     import requests
-    from docker.types import EndpointSpec, NetworkAttachmentConfig, RestartPolicy
+    from docker.types import (
+        EndpointSpec,
+        NetworkAttachmentConfig,
+        RestartPolicy,
+        Resources,
+    )
     from django.conf import settings
     from django.utils import timezone
     from time import monotonic
@@ -40,6 +45,8 @@ with workflow.unsafe.imports_passed_through():
         DockerSwarmTask,
         DockerSwarmTaskState,
         Colors,
+        cache_result,
+        convert_value_to_bytes,
     )
 
 from ..dtos import (
@@ -64,6 +71,7 @@ SERVER_RESOURCE_LIMIT_COMMAND = (
     "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
 )
 VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
+ONE_HOUR = 3600  # seconds
 
 
 def get_docker_client():
@@ -300,16 +308,19 @@ def get_docker_volume_size_in_bytes(volume_id: str) -> int:
     return int(size_string)
 
 
+@cache_result(timeout=ONE_HOUR)
 def get_server_resource_limits() -> tuple[int, int]:
     client = get_docker_client()
 
     result: bytes = client.containers.run(
-        "busybox",
-        SERVER_RESOURCE_LIMIT_COMMAND,
+        image="busybox",
+        command=SERVER_RESOURCE_LIMIT_COMMAND,
         remove=True,
     )
-    no_of_cpus, max_memory = result.decode(encoding="utf-8").split("\n")
-    return int(no_of_cpus), int(max_memory)
+    no_of_cpus, max_memory_in_bytes = (
+        result.decode(encoding="utf-8").strip().split("\n")
+    )
+    return int(no_of_cpus), int(max_memory_in_bytes)
 
 
 def get_caddy_request_for_url(
@@ -994,6 +1005,22 @@ class DockerSwarmActivities:
             if len(exposed_ports) > 0:
                 endpoint_spec = EndpointSpec(ports=exposed_ports)
 
+            resources: Resources | None = None
+            if service.resource_limits is not None:
+                nano_cpus = None
+                if service.resource_limits.cpus is not None:
+                    nano_cpus = service.resource_limits.cpus * 1e9
+                mem_limit_in_bytes = None
+                if service.resource_limits.memory is not None:
+                    mem_limit_in_bytes = convert_value_to_bytes(
+                        service.resource_limits.memory.value,
+                        service.resource_limits.memory.unit,
+                    )
+                resources = Resources(
+                    cpu_limit=nano_cpus,
+                    mem_limit=mem_limit_in_bytes,
+                )
+
             await deployment_log(
                 deployment,
                 f"Creating service for the deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
@@ -1039,6 +1066,7 @@ class DockerSwarmActivities:
                     "fluentd-max-retries": "10",
                     "fluentd-sub-second-precision": "true",
                 },
+                resources=resources,
             )
             await deployment_log(
                 deployment,

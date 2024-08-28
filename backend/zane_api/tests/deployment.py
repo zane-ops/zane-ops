@@ -343,13 +343,14 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
+        resource_limits = {
+            "cpus": 1.5,
+            "memory": {"value": 500, "unit": "MEGABYTES"},
+        }
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
-            "new_value": {
-                "cpus": 1.5,
-                "memory": {"value": 500, "unit": "MEGABYTES"},
-            },
+            "new_value": resource_limits,
         }
         response = self.client.put(
             reverse(
@@ -367,12 +368,178 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(resource_limit_changes)
         self.assertEqual(
-            {
-                "cpus": 1.5,
-                "memory": {"value": 500, "unit": "MEGABYTES"},
-            },
+            resource_limits,
             resource_limit_changes.new_value,
         )
+
+    def test_validate_resource_limits_empty_is_considered_as_null(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "type": "UPDATE",
+            "new_value": {},
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            service__slug="app",
+        ).first()
+        self.assertIsNone(changes)
+
+    def test_validate_credentials_empty_is_considered_as_null(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "type": "UPDATE",
+            "new_value": {
+                "username": "",
+                "password": "",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+            service__slug="app",
+        ).first()
+        self.assertIsNone(changes)
+
+    def test_validate_credentials_cannot_pass_username_without_password(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "type": "UPDATE",
+            "new_value": {
+                "username": "helloworld",
+                "password": "",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_credentials_cannot_pass_password_without_username(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "type": "UPDATE",
+            "new_value": {
+                "username": "",
+                "password": "supersecret123",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_credentials_empty_object_is_considered_as_null(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "type": "UPDATE",
+            "new_value": {},
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+            service__slug="app",
+        ).first()
+        self.assertIsNone(changes)
 
     def test_validate_resource_limits_cannot_use_less_than_6mb(self):
         owner = self.loginUser()
@@ -403,10 +570,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_resource_limits_cannot_go_over_host_limits(self):
+    def test_validate_resource_limits_cannot_go_over_host_cpu_limits(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
 
@@ -426,6 +592,36 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "type": "UPDATE",
             "new_value": {
                 "cpus": self.fake_docker_client.HOST_CPUS + 1,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_resource_limits_cannot_go_over_host_memory_limits(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "ghcr.io/zane-ops/app",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "type": "UPDATE",
+            "new_value": {
                 "memory": {
                     "value": self.fake_docker_client.HOST_MEMORY_IN_BYTES + 1,
                     "unit": "BYTES",
@@ -1949,6 +2145,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
+
         resource_limits = {
             "cpus": 1.5,
             "memory": {"value": 500, "unit": "MEGABYTES"},

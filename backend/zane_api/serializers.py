@@ -2,6 +2,7 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models import TextChoices
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
@@ -123,6 +124,22 @@ class DockerCredentialSerializer(serializers.Serializer):
     password = serializers.CharField(required=True)
 
 
+class MemoryLimitSerializer(serializers.Serializer):
+    MEMORY_UNITS = (
+        ("BYTES", _("bytes")),
+        ("KILOBYTES", _("kilobytes")),
+        ("MEGABYTES", _("megabytes")),
+        ("GIGABYTES", _("gigabytes")),
+    )
+    value = serializers.IntegerField(min_value=0, required=True)
+    unit = serializers.ChoiceField(choices=MEMORY_UNITS, required=True)
+
+
+class ResourceLimitsSerializer(serializers.Serializer):
+    cpus = serializers.FloatField(required=True, allow_null=True)
+    memory = MemoryLimitSerializer(required=True, allow_null=True)
+
+
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
@@ -134,6 +151,7 @@ class DockerServiceSerializer(ModelSerializer):
     )
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
     credentials = DockerCredentialSerializer(allow_null=True)
+    resource_limits = ResourceLimitsSerializer(allow_null=True)
 
     class Meta:
         model = models.DockerRegistryService

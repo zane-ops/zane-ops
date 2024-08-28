@@ -64,16 +64,24 @@ def compute_docker_service_snapshot_with_changes(
             ):
                 setattr(service_snapshot, change.field, change.new_value)
             case DockerDeploymentChange.ChangeField.HEALTHCHECK:
-                service_snapshot.healthcheck = HealthCheckDto.from_dict(
-                    change.new_value,
+                service_snapshot.healthcheck = (
+                    HealthCheckDto.from_dict(
+                        change.new_value,
+                    )
+                    if change.new_value is not None
+                    else None
                 )
             case DockerDeploymentChange.ChangeField.CREDENTIALS:
-                service_snapshot.credentials = DockerCredentialsDto.from_dict(
-                    change.new_value
+                service_snapshot.credentials = (
+                    DockerCredentialsDto.from_dict(change.new_value)
+                    if change.new_value is not None
+                    else None
                 )
             case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
-                service_snapshot.resource_limits = ResourceLimitsDto.from_dict(
-                    change.new_value
+                service_snapshot.resource_limits = (
+                    ResourceLimitsDto.from_dict(change.new_value)
+                    if change.new_value is not None
+                    else None
                 )
             case _:
                 dto_class: type[VolumeDto] = field_dto_map[change.field]
