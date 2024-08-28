@@ -656,7 +656,7 @@ class DockerSwarmActivities:
         self, healthcheck_result: DeploymentHealthcheckResult
     ) -> Optional[SimpleDeploymentDetails]:
         try:
-            current_deployment: DockerDeployment = (
+            deployment: DockerDeployment = (
                 await DockerDeployment.objects.filter(
                     hash=healthcheck_result.deployment_hash
                 )
@@ -664,30 +664,30 @@ class DockerSwarmActivities:
                 .afirst()
             )
 
-            if current_deployment is None:
+            if deployment is None:
                 raise DockerDeployment.DoesNotExist(
                     f"Docker deployment with hash='{healthcheck_result.deployment_hash}' does not exist."
                 )
 
-            current_deployment.status_reason = healthcheck_result.reason
+            deployment.status_reason = healthcheck_result.reason
             if (
                 healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
-                or await current_deployment.service.deployments.acount() == 1
+                or await deployment.service.deployments.acount() == 1
             ):
-                current_deployment.is_current_production = True
+                deployment.is_current_production = True
 
-            current_deployment.status = (
+            deployment.status = (
                 DockerDeployment.DeploymentStatus.HEALTHY
                 if healthcheck_result.status
                 == DockerDeployment.DeploymentStatus.HEALTHY
                 else DockerDeployment.DeploymentStatus.FAILED
             )
 
-            current_deployment.finished_at = timezone.now()
-            await current_deployment.asave()
+            deployment.finished_at = timezone.now()
+            await deployment.asave()
 
-            if current_deployment.is_current_production:
-                await current_deployment.service.deployments.filter(
+            if deployment.is_current_production:
+                await deployment.service.deployments.filter(
                     ~Q(hash=healthcheck_result.deployment_hash)
                 ).aupdate(is_current_production=False)
         except DockerDeployment.DoesNotExist:
@@ -698,15 +698,15 @@ class DockerSwarmActivities:
         else:
             status_color = (
                 Colors.GREEN
-                if current_deployment.status
-                == DockerDeployment.DeploymentStatus.HEALTHY
+                if deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
                 else Colors.RED
             )
             await deployment_log(
                 healthcheck_result,
                 f"Deployment {Colors.YELLOW}{healthcheck_result.deployment_hash}{Colors.ENDC}"
-                f" finished with status {status_color}{current_deployment.status}{Colors.ENDC}.",
+                f" finished with status {status_color}{deployment.status}{Colors.ENDC}.",
             )
+            return deployment.status
 
     @activity.defn
     async def get_previous_production_deployment(
