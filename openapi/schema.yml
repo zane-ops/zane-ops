@@ -2444,84 +2444,6 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
-  /api/volumes/{volume_id}/size/:
-    get:
-      operationId: getVolumeSize
-      description: Get the total data size in the volume, in bytes.
-      summary: Get volume size
-      parameters:
-      - in: path
-        name: volume_id
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - volumes
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetVolumeSizeErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VolumeGetSizeResponse'
-          description: ''
 components:
   schemas:
     ApplyDeploymentChangesCommitMessageErrorComponent:
@@ -3823,13 +3745,6 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetSingleProjectErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    GetVolumeSizeErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -5984,13 +5899,6 @@ components:
       - id
       - mode
       - name
-    VolumeGetSizeResponse:
-      type: object
-      properties:
-        size:
-          type: integer
-      required:
-      - size
     VolumeItemChangeFieldEnum:
       enum:
       - volumes

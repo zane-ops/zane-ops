@@ -70,7 +70,6 @@ docker_client: docker.DockerClient | None = None
 SERVER_RESOURCE_LIMIT_COMMAND = (
     "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
 )
-VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
 ONE_HOUR = 3600  # seconds
 
 
@@ -292,20 +291,6 @@ def get_caddy_request_for_deployment_url(
             }
         ],
     }
-
-
-def get_docker_volume_size_in_bytes(volume_id: str) -> int:
-    client = get_docker_client()
-    docker_volume_name = get_volume_resource_name(volume_id)
-
-    result: bytes = client.containers.run(
-        image="alpine",
-        command="du -sb /data",
-        volumes={docker_volume_name: {"bind": "/data", "mode": "ro"}},
-        remove=True,
-    )
-    size_string, _ = result.decode(encoding="utf-8").split("\t")
-    return int(size_string)
 
 
 @cache_result(ttl=ONE_HOUR)
