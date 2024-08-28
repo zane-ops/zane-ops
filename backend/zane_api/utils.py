@@ -176,25 +176,20 @@ def format_seconds(seconds: float):
 
 def convert_value_to_bytes(
     value: int,
-    unit: (
-        Literal["bytes"]
-        | Literal["kilobytes"]
-        | Literal["megabytes"]
-        | Literal["gigabytes"]
-    ) = "bytes",
+    unit: Literal["BYTES", "KILOBYTES", "MEGABYTES", "GIGABYTES"] = "BYTES",
 ):
-    match unit.lower():
-        case "bytes":
+    match unit:
+        case "BYTES":
             return value
-        case "kilobytes":
+        case "KILOBYTES":
             return value * 1024
-        case "megabytes":
+        case "MEGABYTES":
             return value * 1024 * 1024
-        case "gigabytes":
+        case "GIGABYTES":
             return value * 1024 * 1024 * 1024
         case _:
             raise ValueError(
-                f"Unit `{unit}` is not valid, must be one of `bytes`, `kilobytes`, `megabytes` or `gigabytes`"
+                f"Unit `{unit}` is not valid, must be one of `BYTES`, `KILOBYTES`, `MEGABYTES` or `GIGABYTES`",
             )
 
 
