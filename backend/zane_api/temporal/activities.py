@@ -89,7 +89,7 @@ def check_if_port_is_available_on_host(port: int) -> bool:
     client = get_docker_client()
     try:
         client.containers.run(
-            image="nginx:alpine",
+            image="busybox",
             ports={"80/tcp": ("0.0.0.0", port)},
             command="echo hello world",
             remove=True,
