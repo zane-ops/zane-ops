@@ -308,7 +308,7 @@ def get_docker_volume_size_in_bytes(volume_id: str) -> int:
     return int(size_string)
 
 
-@cache_result(timeout=ONE_HOUR)
+@cache_result(ttl=ONE_HOUR)
 def get_server_resource_limits() -> tuple[int, int]:
     client = get_docker_client()
 

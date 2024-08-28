@@ -12,7 +12,7 @@ from typing import Callable, TypeVar, List, Optional, Literal
 from django.core.cache import cache
 
 
-def cache_result(timeout: int = None, cache_key: str = None):
+def cache_result(ttl: int = None, cache_key: str = None):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -27,7 +27,7 @@ def cache_result(timeout: int = None, cache_key: str = None):
             if result is None:
                 # If cache miss, call the function and cache the result
                 result = func(*args, **kwargs)
-                cache.set(key, result, timeout)
+                cache.set(key, result, ttl)
             return result
 
         return wrapped
