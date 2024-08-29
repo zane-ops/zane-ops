@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 from temporalio import workflow
@@ -49,10 +50,8 @@ class DockerDeploymentDetails:
         cls,
         deployment: DockerDeployment,
         auth_token: str,
-        _pause_at_step: int = 0,
     ):
         return cls(
-            pause_at_step=_pause_at_step,
             hash=deployment.hash,
             slot=deployment.slot,
             auth_token=auth_token,
@@ -71,6 +70,36 @@ class DockerDeploymentDetails:
                     )
                 )
                 for change in deployment.changes.all()
+            ],
+        )
+
+    @classmethod
+    async def afrom_deployment(
+        cls,
+        deployment: DockerDeployment,
+        auth_token: str,
+        pause_at_step: Enum = None,
+    ):
+        return cls(
+            pause_at_step=pause_at_step.value,
+            hash=deployment.hash,
+            slot=deployment.slot,
+            auth_token=auth_token,
+            queued_at=deployment.queued_at.isoformat(),
+            unprefixed_hash=deployment.unprefixed_hash,
+            url=deployment.url,
+            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),
+            changes=[
+                DeploymentChangeDto.from_dict(
+                    dict(
+                        type=change.type,
+                        field=change.field,
+                        new_value=change.new_value,
+                        old_value=change.old_value,
+                        item_id=change.item_id,
+                    )
+                )
+                async for change in deployment.changes.all()
             ],
         )
 

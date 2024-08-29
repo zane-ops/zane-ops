@@ -653,7 +653,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
-        await DockerDeployment.objects.filter(hash=deployment.hash).update(
+        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
             status=DockerDeployment.DeploymentStatus.CANCELLED
         )
 
@@ -802,6 +802,10 @@ class DockerSwarmActivities:
     async def create_docker_volumes_for_service(
         self, deployment: DockerDeploymentDetails
     ):
+        await deployment_log(
+            deployment,
+            f"Creating volumes for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+        )
         service = deployment.service
         for volume in service.docker_volumes:
             try:
@@ -812,6 +816,10 @@ class DockerSwarmActivities:
                     driver="local",
                     labels=get_resource_labels(service.project_id, parent=service.id),
                 )
+        await deployment_log(
+            deployment,
+            f"Volumes created succesfully for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}  ✅",
+        )
 
     @activity.defn
     async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
@@ -1107,7 +1115,10 @@ class DockerSwarmActivities:
             DockerDeployment.DeploymentStatus.UNHEALTHY,
             "The service failed to meet the healthcheck requirements when starting the service.",
         )
-        await deployment_log(deployment, f"Running deployment healthchecks...")
+        await deployment_log(
+            deployment,
+            f"Running healthchecks for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+        )
         while (monotonic() - start_time) < healthcheck_timeout:
             healthcheck_attempts += 1
             healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)

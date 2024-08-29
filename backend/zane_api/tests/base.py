@@ -174,7 +174,7 @@ class AsyncCustomAPIClient(AsyncClient):
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging celery tasks
+    # DEBUG=True,  # uncomment for debugging temporalio workflows
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -462,7 +462,12 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        await service.arefresh_from_db()
+        service = (
+            await DockerRegistryService.objects.filter(id=service.id)
+            .select_related("project", "healthcheck")
+            .prefetch_related("volumes", "env_variables", "urls")
+            .afirst()
+        )
         return project, service
 
     async def acreate_and_deploy_caddy_docker_service(
@@ -536,7 +541,12 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        await service.arefresh_from_db()
+        service = (
+            await DockerRegistryService.objects.filter(id=service.id)
+            .select_related("project", "healthcheck")
+            .prefetch_related("volumes", "env_variables", "urls")
+            .afirst()
+        )
         return project, service
 
     def create_and_deploy_caddy_docker_service(
