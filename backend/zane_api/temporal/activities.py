@@ -61,7 +61,7 @@ from .shared import (
     ArchivedProjectDetails,
     ArchivedServiceDetails,
     SimpleDeploymentDetails,
-    DeploymentDetails,
+    DockerDeploymentDetails,
     DeploymentHealthcheckResult,
     HealthcheckDeploymentDetails,
 )
@@ -409,12 +409,12 @@ def get_caddy_request_for_url(
 
 
 async def deployment_log(
-    deployment: DeploymentDetails | DeploymentHealthcheckResult, message: str
+    deployment: DockerDeploymentDetails | DeploymentHealthcheckResult, message: str
 ):
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
 
-    if isinstance(deployment, DeploymentDetails):
+    if isinstance(deployment, DockerDeploymentDetails):
         deployment_id = deployment.hash
         service_id = deployment.service.id
     else:
@@ -632,7 +632,7 @@ class DockerSwarmActivities:
         network_associated_to_project.remove()
 
     @activity.defn
-    async def prepare_deployment(self, deployment: DeploymentDetails):
+    async def prepare_deployment(self, deployment: DockerDeploymentDetails):
         try:
             await deployment_log(
                 deployment,
@@ -650,6 +650,12 @@ class DockerSwarmActivities:
                 "Cannot execute a deploy on a non existent deployment.",
                 non_retryable=True,
             )
+
+    @activity.defn
+    async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
+        await DockerDeployment.objects.filter(hash=deployment.hash).update(
+            status=DockerDeployment.DeploymentStatus.CANCELLED
+        )
 
     @activity.defn
     async def finish_and_save_deployment(
@@ -710,7 +716,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def get_previous_production_deployment(
-        self, deployment: DeploymentDetails
+        self, deployment: DockerDeploymentDetails
     ) -> Optional[SimpleDeploymentDetails]:
         latest_production_deployment: DockerDeployment | None = await (
             DockerDeployment.objects.filter(
@@ -732,7 +738,7 @@ class DockerSwarmActivities:
         return None
 
     @activity.defn
-    async def get_previous_queued_deployment(self, deployment: DeploymentDetails):
+    async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
         next_deployment = (
             await DockerDeployment.objects.filter(
                 Q(service_id=deployment.service.id)
@@ -743,7 +749,7 @@ class DockerSwarmActivities:
         )
 
         if next_deployment is not None:
-            return DeploymentDetails(
+            return DockerDeploymentDetails(
                 hash=next_deployment.hash,
                 slot=next_deployment.slot,
                 auth_token=deployment.auth_token,
@@ -793,7 +799,9 @@ class DockerSwarmActivities:
                 pass
 
     @activity.defn
-    async def create_docker_volumes_for_service(self, deployment: DeploymentDetails):
+    async def create_docker_volumes_for_service(
+        self, deployment: DockerDeploymentDetails
+    ):
         service = deployment.service
         for volume in service.docker_volumes:
             try:
@@ -898,7 +906,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(
-        self, deployment: DeploymentDetails
+        self, deployment: DockerDeploymentDetails
     ):
         service = deployment.service
 
@@ -1062,7 +1070,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def run_deployment_healthcheck(
         self,
-        deployment: DeploymentDetails,
+        deployment: DockerDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         docker_deployment: DockerDeployment = (
             await DockerDeployment.objects.filter(
@@ -1267,7 +1275,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def expose_docker_service_deployment_to_http(
         self,
-        deployment: DeploymentDetails,
+        deployment: DockerDeploymentDetails,
     ):
         # add URL conf for deployment
         service = deployment.service
@@ -1298,7 +1306,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def expose_docker_service_to_http(
         self,
-        deployment: DeploymentDetails,
+        deployment: DockerDeploymentDetails,
     ):
         service = deployment.service
         if service.http_port is not None:
@@ -1405,7 +1413,7 @@ class DockerSwarmActivities:
             swarm_service.remove()
 
     @activity.defn
-    async def remove_old_docker_volumes(self, deployment: DeploymentDetails):
+    async def remove_old_docker_volumes(self, deployment: DockerDeploymentDetails):
         for volume_change in filter(
             lambda change: change.field == DockerDeploymentChange.ChangeField.VOLUMES
             and change.type == DockerDeploymentChange.ChangeType.DELETE,
@@ -1422,7 +1430,7 @@ class DockerSwarmActivities:
                 volume.remove(force=True)
 
     @activity.defn
-    async def remove_old_urls(self, deployment: DeploymentDetails):
+    async def remove_old_urls(self, deployment: DockerDeploymentDetails):
         # We need to remove both deleted URLs and urls that are not valid anymore
         urls_to_delete = list(
             map(
@@ -1528,8 +1536,50 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
+    async def unexpose_docker_service_deployment_from_http(
+        self, deployment: DockerDeploymentDetails
+    ):
+        if deployment.url is not None:
+            requests.delete(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+                timeout=5,
+            )
+
+        service = deployment.service
+        for url in service.urls:
+            # TODO
+            pass
+            # # get all the routes of the domain
+            # response = requests.get(
+            #     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
+            #     timeout=5,
+            # )
+            #
+            # if response.status_code != status.HTTP_404_NOT_FOUND:
+            #     current_routes: list[dict[str, dict]] = response.json()
+            #     routes = list(
+            #         filter(
+            #             lambda route: route.get("@id") != get_caddy_id_for_url(url),
+            #             current_routes,
+            #         )
+            #     )
+            #
+            #     # delete the domain config when there are no routes for the domain anymore
+            #     if len(routes) == 0:
+            #         requests.delete(
+            #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
+            #             timeout=5,
+            #         )
+            #     else:
+            #         # in the other case, we just delete the caddy config
+            #         requests.delete(
+            #             get_caddy_uri_for_url(url),
+            #             timeout=5,
+            #         )
+
+    @activity.defn
     async def create_deployment_healthcheck_schedule(
-        self, deployment: DeploymentDetails
+        self, deployment: DockerDeploymentDetails
     ):
         try:
             docker_deployment: DockerDeployment = (
