@@ -49,7 +49,7 @@ from .serializers import (
     DockerServiceDeployServiceSerializer,
     ResourceLimitChangeSerializer,
 )
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto, URLDto, VolumeDto
+from ..dtos import URLDto, VolumeDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -75,7 +75,7 @@ from ..serializers import (
 from ..temporal import (
     start_workflow,
     DeployDockerServiceWorkflow,
-    DeploymentDetails,
+    DockerDeploymentDetails,
     ArchivedServiceDetails,
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
@@ -536,36 +536,16 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.save()
 
             token = Token.objects.get(user=request.user)
-            payload = DeploymentDetails(
-                hash=new_deployment.hash,
-                slot=new_deployment.slot,
+            payload = DockerDeploymentDetails.from_deployment(
+                deployment=new_deployment,
                 auth_token=token.key,
-                queued_at=new_deployment.queued_at.isoformat(),
-                unprefixed_hash=new_deployment.unprefixed_hash,
-                url=new_deployment.url,
-                service=DockerServiceSnapshot.from_dict(
-                    new_deployment.service_snapshot
-                ),
-                changes=[
-                    DeploymentChangeDto.from_dict(
-                        dict(
-                            type=change.type,
-                            field=change.field,
-                            new_value=change.new_value,
-                            old_value=change.old_value,
-                            item_id=change.item_id,
-                        )
-                    )
-                    for change in new_deployment.changes.all()
-                ],
             )
-            workflow_id = new_deployment.workflow_id
 
             transaction.on_commit(
                 lambda: start_workflow(
                     DeployDockerServiceWorkflow.run,
                     payload,
-                    id=workflow_id,
+                    id=payload.workflow_id,
                 )
             )
 
@@ -650,34 +630,16 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.save()
 
         token = Token.objects.get(user=request.user)
-        payload = DeploymentDetails(
-            hash=new_deployment.hash,
-            slot=new_deployment.slot,
+        payload = DockerDeploymentDetails.from_deployment(
+            new_deployment,
             auth_token=token.key,
-            queued_at=new_deployment.queued_at.isoformat(),
-            unprefixed_hash=new_deployment.unprefixed_hash,
-            url=new_deployment.url,
-            service=DockerServiceSnapshot.from_dict(new_deployment.service_snapshot),
-            changes=[
-                DeploymentChangeDto.from_dict(
-                    dict(
-                        type=change.type,
-                        field=change.field,
-                        new_value=change.new_value,
-                        old_value=change.old_value,
-                        item_id=change.item_id,
-                    )
-                )
-                for change in new_deployment.changes.all()
-            ],
         )
-        workflow_id = new_deployment.workflow_id
 
         transaction.on_commit(
             lambda: start_workflow(
                 DeployDockerServiceWorkflow.run,
                 payload,
-                id=workflow_id,
+                id=payload.workflow_id,
             )
         )
 
