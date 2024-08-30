@@ -99,6 +99,7 @@ class DockerDeploymentDetails:
                 )
                 async for change in deployment.changes.all()
             ],
+            workflow_id=deployment.workflow_id,
         )
 
     @property
