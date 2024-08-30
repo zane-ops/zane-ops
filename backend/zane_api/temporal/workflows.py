@@ -413,7 +413,12 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
         if self.last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED:
-            raise NotImplementedError
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.delete_created_volumes,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=retry_policy,
+            )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.save_cancelled_deployment,
@@ -555,6 +560,7 @@ def get_workflows_and_activities():
             swarm_activities.prepare_deployment,
             swarm_activities.scale_down_service_deployment,
             swarm_activities.create_docker_volumes_for_service,
+            swarm_activities.delete_created_volumes,
             swarm_activities.create_swarm_service_for_docker_deployment,
             swarm_activities.run_deployment_healthcheck,
             swarm_activities.expose_docker_deployment_to_http,

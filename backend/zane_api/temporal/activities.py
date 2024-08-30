@@ -763,24 +763,6 @@ class DockerSwarmActivities:
             return await DockerDeploymentDetails.afrom_deployment(
                 deployment=next_deployment,
                 auth_token=deployment.auth_token,
-                queued_at=next_deployment.queued_at.isoformat(),
-                unprefixed_hash=next_deployment.unprefixed_hash,
-                url=next_deployment.url,
-                service=DockerServiceSnapshot.from_dict(
-                    next_deployment.service_snapshot
-                ),
-                changes=[
-                    DeploymentChangeDto.from_dict(
-                        dict(
-                            type=change.type,
-                            field=change.field,
-                            new_value=change.new_value,
-                            old_value=change.old_value,
-                            item_id=change.item_id,
-                        )
-                    )
-                    async for change in next_deployment.changes.all()
-                ],
             )
         return None
 
@@ -832,16 +814,57 @@ class DockerSwarmActivities:
             f"Volumes created succesfully for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}  ✅",
         )
 
-        return list(
+        new_volumes = map(
+            lambda change: VolumeDto.from_dict(change.new_value),
+            filter(
+                lambda change: change.field
+                == DockerDeploymentChange.ChangeField.VOLUMES
+                and change.type == DockerDeploymentChange.ChangeType.ADD,
+                deployment.changes,
+            ),
+        )
+
+        return new_volumes
+
+    @activity.defn
+    async def delete_created_volumes(
+        self, deployment: DockerDeploymentDetails
+    ) -> List[VolumeDto]:
+        await deployment_log(
+            deployment,
+            f"Deleting created volumes for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+        )
+        service = deployment.service
+        new_volumes = list(
             map(
                 lambda change: VolumeDto.from_dict(change.new_value),
                 filter(
                     lambda change: change.field
-                    == DockerDeploymentChange.ChangeField.VOLUMES,
+                    == DockerDeploymentChange.ChangeField.VOLUMES
+                    and change.type == DockerDeploymentChange.ChangeType.ADD,
                     deployment.changes,
                 ),
             )
         )
+
+        for volume in new_volumes:
+            print(f"{volume=}")
+            pass
+            # try:
+            #     self.docker_client.volumes.get(get_volume_resource_name(volume.id))
+            # except docker.errors.NotFound:
+            #     self.docker_client.volumes.create(
+            #         name=get_volume_resource_name(volume.id),
+            #         driver="local",
+            #         labels=get_resource_labels(service.project_id, parent=service.id),
+            #     )
+
+        await deployment_log(
+            deployment,
+            f"Volumes deleted succesfully for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}  ✅",
+        )
+
+        return new_volumes
 
     @activity.defn
     async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
