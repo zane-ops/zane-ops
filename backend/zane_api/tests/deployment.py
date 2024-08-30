@@ -4262,24 +4262,24 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_volume_created_step(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
             owner = await self.aLoginUser()
-            p, service = await self.acreate_and_deploy_redis_docker_service(
-                other_changes=[
-                    DockerDeploymentChange(
-                        field=DockerDeploymentChange.ChangeField.VOLUMES,
-                        type=DockerDeploymentChange.ChangeType.ADD,
-                        new_value={
-                            "container_path": "/data",
-                            "mode": Volume.VolumeMode.READ_WRITE,
-                        },
-                    ),
-                ]
-            )
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+
             service_snapshot = await sync_to_async(
                 lambda: DockerServiceSerializer(service).data
             )()
             new_deployment = await DockerDeployment.objects.acreate(
                 service_snapshot=service_snapshot,
                 service=service,
+            )
+            await DockerDeploymentChange.objects.acreate(
+                field=DockerDeploymentChange.ChangeField.VOLUMES,
+                type=DockerDeploymentChange.ChangeType.ADD,
+                new_value={
+                    "container_path": "/data",
+                    "mode": Volume.VolumeMode.READ_WRITE,
+                },
+                service=service,
+                deployment=new_deployment,
             )
 
             token = await Token.objects.aget(user=owner)

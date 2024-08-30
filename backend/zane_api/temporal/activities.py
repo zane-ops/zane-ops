@@ -55,6 +55,7 @@ from ..dtos import (
     DockerServiceSnapshot,
     DeploymentChangeDto,
     HealthCheckDto,
+    VolumeDto,
 )
 from .shared import (
     ProjectDetails,
@@ -801,7 +802,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def create_docker_volumes_for_service(
         self, deployment: DockerDeploymentDetails
-    ):
+    ) -> list[VolumeDto]:
         await deployment_log(
             deployment,
             f"Creating volumes for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
@@ -816,9 +817,21 @@ class DockerSwarmActivities:
                     driver="local",
                     labels=get_resource_labels(service.project_id, parent=service.id),
                 )
+
         await deployment_log(
             deployment,
             f"Volumes created succesfully for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}  ✅",
+        )
+
+        return list(
+            map(
+                lambda change: VolumeDto.from_dict(change.new_value),
+                filter(
+                    lambda change: change.field
+                    == DockerDeploymentChange.ChangeField.VOLUMES,
+                    deployment.changes,
+                ),
+            )
         )
 
     @activity.defn
@@ -1284,7 +1297,7 @@ class DockerSwarmActivities:
         return deployment_status, deployment_status_reason
 
     @activity.defn
-    async def expose_docker_service_deployment_to_http(
+    async def expose_docker_deployment_to_http(
         self,
         deployment: DockerDeploymentDetails,
     ):
@@ -1318,7 +1331,7 @@ class DockerSwarmActivities:
     async def expose_docker_service_to_http(
         self,
         deployment: DockerDeploymentDetails,
-    ):
+    ) -> List[URLDto]:
         service = deployment.service
         if service.http_port is not None:
             await deployment_log(deployment, f"Configuring service URLs...")
@@ -1387,6 +1400,16 @@ class DockerSwarmActivities:
                 )
 
             await deployment_log(deployment, f"Service URLs configured successfully ✅")
+        return list[
+            map(
+                lambda change: URLDto.from_dict(change.new_value),
+                filter(
+                    lambda change: change.field
+                    == DockerDeploymentChange.ChangeField.URLS,
+                    deployment.changes,
+                ),
+            )
+        ]
 
     @activity.defn
     async def scale_down_and_remove_docker_service_deployment(
@@ -1547,7 +1570,7 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
-    async def unexpose_docker_service_deployment_from_http(
+    async def unexpose_docker_deployment_from_http(
         self, deployment: DockerDeploymentDetails
     ):
         if deployment.url is not None:
@@ -1556,6 +1579,10 @@ class DockerSwarmActivities:
                 timeout=5,
             )
 
+    @activity.defn
+    async def unexpose_docker_service_deployment_from_http(
+        self, deployment: DockerDeploymentDetails
+    ):
         service = deployment.service
         for url in service.urls:
             # TODO

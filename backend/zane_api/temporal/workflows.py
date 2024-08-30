@@ -126,6 +126,7 @@ class DockerDeploymentStep(Enum):
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
     SWARM_SERVICE_CREATED = auto()
     DEPLOYMENT_EXPOSED_TO_HTTP = auto()
+    DEPLOYMENT_SERVICE_EXPOSED_TO_HTTP = auto()
     FINISHED = auto()
 
     def __lt__(self, other):
@@ -177,10 +178,6 @@ class DeployDockerServiceWorkflow:
             else None
         )
 
-        if pause_at_step == self.last_completed_step:
-            await workflow.wait_condition(
-                lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
-            )
         if self.cancellation_requested:
             return await self.handle_cancellation(deployment, retry_policy)
 
@@ -190,9 +187,6 @@ class DeployDockerServiceWorkflow:
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
-
-        if self.cancellation_requested:
-            return await self.handle_cancellation(deployment, retry_policy)
 
         previous_production_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_production_deployment,
@@ -212,14 +206,10 @@ class DeployDockerServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
             )
+
         self.last_completed_step = DockerDeploymentStep.VOLUMES_CREATED
-        if pause_at_step == self.last_completed_step:
-            await workflow.wait_condition(
-                lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
-            )
         if self.cancellation_requested:
             return await self.handle_cancellation(deployment, retry_policy)
-
         if (
             (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
             and previous_production_deployment is not None
@@ -234,10 +224,6 @@ class DeployDockerServiceWorkflow:
             )
 
         self.last_completed_step = DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
-        if pause_at_step == self.last_completed_step:
-            await workflow.wait_condition(
-                lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
-            )
         if self.cancellation_requested:
             return await self.handle_cancellation(deployment, retry_policy)
 
@@ -249,16 +235,12 @@ class DeployDockerServiceWorkflow:
         )
 
         self.last_completed_step = DockerDeploymentStep.SWARM_SERVICE_CREATED
-        if pause_at_step == self.last_completed_step:
-            await workflow.wait_condition(
-                lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
-            )
         if self.cancellation_requested:
             return await self.handle_cancellation(deployment, retry_policy)
 
         if deployment.service.http_port is not None:
             await workflow.execute_activity_method(
-                DockerSwarmActivities.expose_docker_service_deployment_to_http,
+                DockerSwarmActivities.expose_docker_deployment_to_http,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
@@ -282,9 +264,6 @@ class DeployDockerServiceWorkflow:
             )
         )
 
-        if self.cancellation_requested:
-            return await self.handle_cancellation(deployment, retry_policy)
-
         if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
             if deployment.service.http_port is not None:
                 await workflow.execute_activity_method(
@@ -294,10 +273,7 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-        if pause_at_step == self.last_completed_step:
-            await workflow.wait_condition(
-                lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
-            )
+        self.last_completed_step = DockerDeploymentStep.DEPLOYMENT_SERVICE_EXPOSED_TO_HTTP
         if self.cancellation_requested:
             return await self.handle_cancellation(deployment, retry_policy)
 
@@ -370,8 +346,24 @@ class DeployDockerServiceWorkflow:
                 "Cannot cancel a deployment that already finished", non_retryable=True
             )
 
+        if (
+            self.last_completed_step
+            >= DockerDeploymentStep.DEPLOYMENT_SERVICE_EXPOSED_TO_HTTP
+        ):
+            raise workflow.execute_activity_method(
+                DockerSwarmActivities.unexpose_docker_service_deployment_from_http,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=retry_policy,
+            )
+
         if self.last_completed_step >= DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP:
-            raise NotImplemented
+            raise workflow.execute_activity_method(
+                DockerSwarmActivities.unexpose_docker_deployment_from_http,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=retry_policy,
+            )
 
         if self.last_completed_step >= DockerDeploymentStep.SWARM_SERVICE_CREATED:
             await workflow.execute_activity_method(
@@ -528,6 +520,7 @@ def get_workflows_and_activities():
         ],
         activities=[
             swarm_activities.save_cancelled_deployment,
+            swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.unexpose_docker_service_deployment_from_http,
             swarm_activities.attach_network_to_proxy,
             swarm_activities.create_project_network,
@@ -541,7 +534,7 @@ def get_workflows_and_activities():
             swarm_activities.create_docker_volumes_for_service,
             swarm_activities.create_swarm_service_for_docker_deployment,
             swarm_activities.run_deployment_healthcheck,
-            swarm_activities.expose_docker_service_deployment_to_http,
+            swarm_activities.expose_docker_deployment_to_http,
             swarm_activities.expose_docker_service_to_http,
             swarm_activities.finish_and_save_deployment,
             swarm_activities.cleanup_previous_production_deployment,

@@ -36,14 +36,11 @@ class DockerDeploymentDetails:
     auth_token: str
     unprefixed_hash: str
     queued_at: str
+    workflow_id: str
     service: DockerServiceSnapshot
     url: Optional[str] = None
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
-
-    @property
-    def workflow_id(self):
-        return f"deploy-{self.service.id}-{self.service.project_id}"
 
     @classmethod
     def from_deployment(
@@ -71,6 +68,7 @@ class DockerDeploymentDetails:
                 )
                 for change in deployment.changes.all()
             ],
+            workflow_id=deployment.workflow_id,
         )
 
     @classmethod
