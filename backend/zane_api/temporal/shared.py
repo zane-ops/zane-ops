@@ -125,6 +125,13 @@ class DeploymentHealthcheckResult:
 
 
 @dataclass
+class DeploymentCreateVolumesResult:
+    deployment_hash: str
+    service_id: str
+    created_volumes: List[VolumeDto] = field(default_factory=list)
+
+
+@dataclass
 class SimpleDeploymentDetails:
     hash: str
     project_id: str

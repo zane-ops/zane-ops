@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum, auto
-from typing import Optional
+from typing import Optional, List
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -13,7 +13,9 @@ from .shared import (
     SimpleDeploymentDetails,
     ArchivedServiceDetails,
     DeployDockerServiceWorkflowResult,
+    DeploymentCreateVolumesResult,
 )
+from ..dtos import VolumeDto
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
@@ -155,6 +157,7 @@ class DeployDockerServiceWorkflow:
     def __init__(self):
         self.last_completed_step = DockerDeploymentStep.INITIALIZED
         self.cancellation_requested = False
+        self.created_volumes: List[VolumeDto] = []
 
     @workflow.signal
     def cancel_deployment(self):
@@ -219,7 +222,7 @@ class DeployDockerServiceWorkflow:
 
         service = deployment.service
         if len(service.docker_volumes) > 0:
-            await workflow.execute_activity_method(
+            self.created_volumes = await workflow.execute_activity_method(
                 DockerSwarmActivities.create_docker_volumes_for_service,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
@@ -412,10 +415,17 @@ class DeployDockerServiceWorkflow:
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=retry_policy,
                 )
-        if self.last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED:
+        if (
+            self.last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED
+            and len(self.created_volumes) > 0
+        ):
             await workflow.execute_activity_method(
                 DockerSwarmActivities.delete_created_volumes,
-                deployment,
+                DeploymentCreateVolumesResult(
+                    deployment_hash=deployment.hash,
+                    service_id=deployment.service.id,
+                    created_volumes=self.created_volumes,
+                ),
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=retry_policy,
             )

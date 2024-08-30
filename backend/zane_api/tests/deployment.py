@@ -4315,5 +4315,4 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment
             )
             self.assertIsNone(docker_deployment)
-            print(self.fake_docker_client.volume_map)
             self.assertEqual(0, len(self.fake_docker_client.volume_map))
