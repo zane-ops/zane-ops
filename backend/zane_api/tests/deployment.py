@@ -4264,11 +4264,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
-            service_snapshot = await sync_to_async(
-                lambda: DockerServiceSerializer(service).data
-            )()
             new_deployment = await DockerDeployment.objects.acreate(
-                service_snapshot=service_snapshot,
                 service=service,
             )
             await DockerDeploymentChange.objects.acreate(
@@ -4281,6 +4277,12 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 service=service,
                 deployment=new_deployment,
             )
+
+            await sync_to_async(service.apply_pending_changes)(new_deployment)
+            new_deployment.service_snapshot = await sync_to_async(
+                lambda: DockerServiceSerializer(service).data
+            )()
+            await new_deployment.asave()
 
             token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
