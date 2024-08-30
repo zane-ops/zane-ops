@@ -521,17 +521,9 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
             latest_deployment = service.latest_production_deployment
-            if (
-                latest_deployment is not None
-                and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-                and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-                # 👆🏽 technically this can only be true for the initial deployment
-                # for the next deployments, when they fail, they will not be promoted to production
-            ):
-                new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-            else:
-                new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
+            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
+                latest_deployment
+            )
             new_deployment.service_snapshot = DockerServiceSerializer(service).data
             new_deployment.save()
 
@@ -612,17 +604,9 @@ class RedeployDockerServiceAPIView(APIView):
         )
         service.apply_pending_changes(deployment=new_deployment)
 
-        if (
-            latest_deployment is not None
-            and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-            and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-            # 👆🏽 technically this can only be true for the initial deployment
-            # for the next deployments, when they fail, they will not be promoted to production
-        ):
-            new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-        else:
-            new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
+        new_deployment.slot = DockerDeployment.get_next_deployment_slot(
+            latest_deployment
+        )
         if len(service.urls.all()) > 0:
             new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 

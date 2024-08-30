@@ -590,6 +590,23 @@ class DockerDeployment(BaseDeployment):
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
 
+    @classmethod
+    def get_next_deployment_slot(
+        cls,
+        latest_production_deployment: Optional["DockerDeployment"],
+    ) -> str:
+        if (
+            latest_production_deployment is not None
+            and latest_production_deployment.slot
+            == DockerDeployment.DeploymentSlot.BLUE
+            and latest_production_deployment.status
+            != DockerDeployment.DeploymentStatus.FAILED
+            # 👆🏽 technically this can only be true for the initial deployment
+            # for the next deployments, when they fail, they will not be promoted to production
+        ):
+            return DockerDeployment.DeploymentSlot.GREEN
+        return DockerDeployment.DeploymentSlot.BLUE
+
     @property
     def workflow_id(self):
         return f"deploy-{self.service.id}-{self.service.project_id}"

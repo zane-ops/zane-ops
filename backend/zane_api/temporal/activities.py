@@ -741,19 +741,27 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
-        next_deployment = (
+        next_deployment: DockerDeployment = (
             await DockerDeployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
             )
+            .select_related("service")
             .order_by("queued_at")
             .afirst()
         )
 
         if next_deployment is not None:
-            return DockerDeploymentDetails(
-                hash=next_deployment.hash,
-                slot=next_deployment.slot,
+            latest_deployment = (
+                await next_deployment.service.alatest_production_deployment
+            )
+            next_deployment.slot = DockerDeployment.get_next_deployment_slot(
+                latest_deployment
+            )
+            await next_deployment.asave()
+
+            return await DockerDeploymentDetails.afrom_deployment(
+                deployment=next_deployment,
                 auth_token=deployment.auth_token,
                 queued_at=next_deployment.queued_at.isoformat(),
                 unprefixed_hash=next_deployment.unprefixed_hash,
