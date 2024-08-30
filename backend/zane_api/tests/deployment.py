@@ -4299,7 +4299,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            wf_result, _ = await asyncio.gather(
+            workflow_result, _ = await asyncio.gather(
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
@@ -4308,11 +4308,140 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.CANCELLED, wf_result.deployment_status
+                DockerDeployment.DeploymentStatus.CANCELLED,
+                workflow_result.deployment_status,
             )
-            self.assertIsNone(wf_result.healthcheck_result)
+            self.assertIsNone(workflow_result.healthcheck_result)
             docker_deployment = self.fake_docker_client.get_deployment_service(
                 new_deployment
             )
             self.assertIsNone(docker_deployment)
             self.assertEqual(0, len(self.fake_docker_client.volume_map))
+
+    async def test_cancel_deployment_at_service_scaled_down(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service(
+                other_changes=[
+                    DockerDeploymentChange(
+                        field=DockerDeploymentChange.ChangeField.PORTS,
+                        type=DockerDeploymentChange.ChangeType.ADD,
+                        new_value={
+                            "host": 6739,
+                            "forwarded": 6739,
+                        },
+                    )
+                ]
+            )
+
+            production_deployment = await service.alatest_production_deployment
+
+            new_deployment = await DockerDeployment.objects.acreate(
+                service=service,
+                service_snapshot=await sync_to_async(
+                    lambda: DockerServiceSerializer(service).data
+                )(),
+            )
+
+            fake_service = MagicMock()
+            fake_service.tasks.side_effect = lambda *args, **kwargs: []
+            fake_service_list = MagicMock()
+            fake_service_list.get.return_value = fake_service
+            self.fake_docker_client.services = fake_service_list
+
+            token = await Token.objects.aget(user=owner)
+            payload = await DockerDeploymentDetails.afrom_deployment(
+                deployment=new_deployment,
+                auth_token=token.key,
+                pause_at_step=DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
+            )
+
+            workflow_handle = await env.client.start_workflow(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+
+            workflow_result, _ = await asyncio.gather(
+                workflow_handle.result(),
+                workflow_handle.signal(
+                    DeployDockerServiceWorkflow.cancel_deployment,
+                    rpc_timeout=timedelta(seconds=5),
+                ),
+            )  # type: DeployDockerServiceWorkflowResult, None
+
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED,
+                workflow_result.deployment_status,
+            )
+            self.assertIsNone(workflow_result.healthcheck_result)
+            docker_deployment = self.fake_docker_client.get_deployment_service(
+                new_deployment
+            )
+            self.assertIsNone(docker_deployment)
+
+            fake_service_list.get.assert_has_calls(
+                [
+                    call(
+                        get_swarm_service_name_for_deployment(
+                            deployment_hash=production_deployment.hash,
+                            service_id=production_deployment.service_id,
+                            project_id=production_deployment.service.project_id,
+                        )
+                    )
+                ],
+                any_order=True,
+            )
+            fake_service.scale.assert_has_calls(
+                [call(1)],
+                any_order=True,
+            )
+
+    async def test_cancel_deployment_at_swarm_service_created(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+
+            production_deployment = await service.alatest_production_deployment
+
+            new_deployment = await DockerDeployment.objects.acreate(
+                service=service,
+                service_snapshot=await sync_to_async(
+                    lambda: DockerServiceSerializer(service).data
+                )(),
+            )
+
+            token = await Token.objects.aget(user=owner)
+            payload = await DockerDeploymentDetails.afrom_deployment(
+                deployment=new_deployment,
+                auth_token=token.key,
+                pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
+            )
+
+            workflow_handle = await env.client.start_workflow(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+
+            workflow_result, _ = await asyncio.gather(
+                workflow_handle.result(),
+                workflow_handle.signal(
+                    DeployDockerServiceWorkflow.cancel_deployment,
+                    rpc_timeout=timedelta(seconds=5),
+                ),
+            )  # type: DeployDockerServiceWorkflowResult, None
+
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED,
+                workflow_result.deployment_status,
+            )
+            self.assertIsNone(workflow_result.healthcheck_result)
+            docker_deployment = self.fake_docker_client.get_deployment_service(
+                new_deployment
+            )
+            self.assertIsNone(docker_deployment)

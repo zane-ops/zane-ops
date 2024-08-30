@@ -394,7 +394,11 @@ class DeployDockerServiceWorkflow:
         if self.last_completed_step >= DockerDeploymentStep.SWARM_SERVICE_CREATED:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
-                deployment,
+                SimpleDeploymentDetails(
+                    hash=deployment.hash,
+                    service_id=deployment.service.id,
+                    project_id=deployment.service.project_id,
+                ),
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )

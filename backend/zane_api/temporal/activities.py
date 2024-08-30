@@ -411,17 +411,25 @@ def get_caddy_request_for_url(
 
 
 async def deployment_log(
-    deployment: DockerDeploymentDetails | DeploymentHealthcheckResult, message: str
+    deployment: (
+        DockerDeploymentDetails
+        | DeploymentHealthcheckResult
+        | DeploymentCreateVolumesResult
+    ),
+    message: str,
 ):
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
 
-    if isinstance(deployment, DockerDeploymentDetails):
-        deployment_id = deployment.hash
-        service_id = deployment.service.id
-    else:
-        deployment_id = deployment.deployment_hash
-        service_id = deployment.service_id
+    match deployment:
+        case DockerDeploymentDetails():
+            deployment_id = deployment.hash
+            service_id = deployment.service.id
+        case DeploymentCreateVolumesResult() | DeploymentHealthcheckResult():
+            deployment_id = deployment.deployment_hash
+            service_id = deployment.service_id
+        case _:
+            raise TypeError(f"unsupported type {type(deployment)}")
 
     await SimpleLog.objects.acreate(
         source=SimpleLog.LogSource.SYSTEM,
