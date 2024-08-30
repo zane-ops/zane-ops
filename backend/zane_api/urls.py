@@ -106,6 +106,12 @@ urlpatterns += [
         name="services.docker.redeploy_service",
     ),
     re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-deployment/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        views.RedeployDockerServiceAPIView.as_view(),
+        name="services.docker.cancel_deployment",
+    ),
+    re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker"
         r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
         views.ArchiveDockerServiceAPIView.as_view(),

@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import Any
 from unittest.mock import patch, Mock, MagicMock, call
 
 import requests
@@ -4628,3 +4629,46 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 self.fake_docker_client.get_deployment_service(new_deployment)
             )
 
+
+class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
+    async def test_cancel_deployment(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        async with self.workflowEnvironment(
+            patch_start_workflow=False
+        ) as env:  # type: WorkflowEnvironment
+            response = await self.async_client.put(
+                reverse(
+                    "zane_api:services.docker.deploy_service",
+                    kwargs={
+                        "project_slug": p.slug,
+                        "service_slug": service.slug,
+                    },
+                ),
+            )
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+            deployment_hash = response.json().get("hash")
+            new_deployment: DockerDeployment = await DockerDeployment.objects.aget(
+                hash=deployment_hash
+            )
+
+            workflow_handle = env.client.get_workflow_handle_for(
+                DeployDockerServiceWorkflow.run, new_deployment.workflow_id
+            )
+            wf_result, response = await asyncio.gather(
+                workflow_handle.result(),
+                self.async_client.put(
+                    reverse(
+                        "zane_api:services.docker.cancel_deployment",
+                        kwargs={
+                            "project_slug": p.slug,
+                            "service_slug": service.slug,
+                            "deployment_hash": new_deployment.hash,
+                        },
+                    ),
+                ),
+            )  # type: DeployDockerServiceWorkflowResult, Any
+
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+            self.assertEqual(2, await service.deployments.acount())
