@@ -79,7 +79,7 @@ class DockerDeploymentDetails:
         pause_at_step: Enum = None,
     ):
         return cls(
-            pause_at_step=pause_at_step.value,
+            pause_at_step=pause_at_step.value if pause_at_step is not None else 0,
             hash=deployment.hash,
             slot=deployment.slot,
             auth_token=auth_token,
