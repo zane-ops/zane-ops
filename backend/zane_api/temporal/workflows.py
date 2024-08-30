@@ -179,6 +179,19 @@ class DeployDockerServiceWorkflow:
         )
 
         async def check_for_cancellation():
+            """
+            This function allows us to pause and potentially bypass the workflow's execution
+            during testing. It is useful for stopping the workflow at specific points to
+            simulate and handle cancellation.
+
+            Because workflows are asynchronous, the workflow might progress to another step
+            by the time the user triggers `cancel_deployment`. This function helps ensure
+            that the workflow can pause at a predefined step (indicated by `pause_at_step`)
+            and wait for a cancellation signal.
+
+            Note: `pause_at_step`  is intended only for testing and should not be used in
+            the application logic.
+            """
             if pause_at_step is not None:
                 if pause_at_step != self.last_completed_step:
                     return False
