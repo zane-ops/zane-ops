@@ -735,6 +735,7 @@ class DockerSwarmActivities:
                 service_id=latest_production_deployment.service_id,
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
+                url=latest_production_deployment.url,
             )
         return None
 
