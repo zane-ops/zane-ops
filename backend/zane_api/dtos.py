@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any, Literal
 class VolumeDto:
     container_path: str
     mode: Literal["READ_ONLY", "READ_WRITE"]
-    name: str = None
+    name: Optional[str] = None
     host_path: Optional[str] = None
     id: Optional[str] = None
 
