@@ -430,7 +430,9 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = await DockerRegistryService.objects.aget(slug="redis")
+        service: DockerRegistryService = await DockerRegistryService.objects.aget(
+            slug="redis"
+        )
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -462,12 +464,7 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        service = (
-            await DockerRegistryService.objects.filter(id=service.id)
-            .select_related("project", "healthcheck")
-            .prefetch_related("volumes", "env_variables", "urls")
-            .afirst()
-        )
+        await service.arefresh_from_db()
         return project, service
 
     async def acreate_and_deploy_caddy_docker_service(
@@ -541,12 +538,7 @@ class AuthAPITestCase(APITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        service = (
-            await DockerRegistryService.objects.filter(id=service.id)
-            .select_related("project", "healthcheck")
-            .prefetch_related("volumes", "env_variables", "urls")
-            .afirst()
-        )
+        await service.arefresh_from_db()
         return project, service
 
     def create_and_deploy_caddy_docker_service(
