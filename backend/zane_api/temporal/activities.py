@@ -51,7 +51,6 @@ with workflow.unsafe.imports_passed_through():
 
 from ..dtos import (
     URLDto,
-    PortConfigurationDto,
     DockerServiceSnapshot,
     DeploymentChangeDto,
     HealthCheckDto,
@@ -201,8 +200,14 @@ def sort_proxy_routes(routes: list[dict[str, list[dict[str, list[str]]]]]):
     return sorted_paths
 
 
-def get_caddy_uri_for_url(url: URLDto | URL):
-    return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+def get_caddy_uri_for_url(url: URLDto | URL | str):
+    match url:
+        case URLDto() | URL():
+            return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}"
+        case str():
+            return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}"
+        case _:
+            raise TypeError(f"Unsupported url type {type(url)}")
 
 
 def get_caddy_id_for_domain(domain: str):
@@ -210,14 +215,20 @@ def get_caddy_id_for_domain(domain: str):
 
 
 def get_caddy_id_for_url(url: URLDto | URL):
-    normalized_path = strip_slash_if_exists(
-        url.base_path, strip_end=True, strip_start=True
-    ).replace("/", "-")
+    match url:
+        case URLDto() | URL():
+            normalized_path = strip_slash_if_exists(
+                url.base_path, strip_end=True, strip_start=True
+            ).replace("/", "-")
 
-    if len(normalized_path) == 0:
-        normalized_path = "*"
+            if len(normalized_path) == 0:
+                normalized_path = "*"
 
-    return f"{url.domain}-{normalized_path}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}"
+            return (
+                f"{url.domain}-{normalized_path}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}"
+            )
+        case _:
+            raise TypeError(f"Unsupported url type {type(url)}")
 
 
 def get_caddy_request_for_domain(domain: str):
@@ -313,13 +324,13 @@ def get_server_resource_limits() -> tuple[int, int]:
 def get_caddy_request_for_url(
     url: URLDto,
     service: DockerServiceSnapshot,
-    http_port: PortConfigurationDto,
     current_deployment_hash: str = None,
     current_deployment_slot: str = None,
     service_id: str = None,
     previous_deployment_hash: str = None,
     previous_deployment_slot: str = None,
 ):
+    http_port = service.http_port
     blue_hash = None
     green_hash = None
 
@@ -439,6 +450,90 @@ async def deployment_log(
         deployment_id=deployment_id,
         service_id=service_id,
     )
+
+
+def upsert_url_in_proxy(
+    url: URLDto,
+    deployment: DockerDeploymentDetails,
+    previous_deployment: DockerDeployment | None,
+) -> bool:
+    service = deployment.service
+    response = requests.get(
+        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
+        timeout=5,
+    )
+
+    # if the domain doesn't exist we create the config for the domain
+    if response.status_code == status.HTTP_404_NOT_FOUND:
+        requests.put(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
+            headers={"content-type": "application/json"},
+            json=get_caddy_request_for_domain(url.domain),
+            timeout=5,
+        )
+
+    # now we create or modify the config for the URL
+    response = requests.get(
+        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes"
+    )
+
+    routes = list(
+        filter(
+            lambda route: route["@id"] != get_caddy_id_for_url(url),
+            response.json(),
+        )
+    )
+    new_url = get_caddy_request_for_url(
+        url,
+        service,
+        current_deployment_hash=deployment.hash,
+        current_deployment_slot=deployment.slot,
+        service_id=deployment.service.id,
+        previous_deployment_hash=(
+            previous_deployment.hash if previous_deployment is not None else None
+        ),
+        previous_deployment_slot=(
+            previous_deployment.slot if previous_deployment is not None else None
+        ),
+    )
+    routes.append(new_url)
+    routes = sort_proxy_routes(routes)
+
+    requests.patch(
+        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
+        headers={"content-type": "application/json"},
+        json=routes,
+        timeout=5,
+    )
+
+
+def remove_url_from_proxy(url: URLDto):
+    response = requests.get(
+        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
+        timeout=5,
+    )
+
+    if response.status_code != status.HTTP_404_NOT_FOUND:
+        current_routes: list[dict[str, dict]] = response.json()
+        routes = list(
+            filter(
+                lambda route: route.get("@id") != get_caddy_id_for_url(url),
+                current_routes,
+            )
+        )
+
+        # delete the domain config when there are no routes for the domain anymore
+        if len(routes) == 0:
+            requests.delete(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
+                timeout=5,
+            )
+        else:
+            # in the other case, we just delete the caddy config
+            requests.delete(
+                get_caddy_uri_for_url(url),
+                timeout=5,
+            )
 
 
 class DockerSwarmActivities:
@@ -1320,7 +1415,7 @@ class DockerSwarmActivities:
         if service.http_port is not None:
             if deployment.url is not None:
                 response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+                    get_caddy_uri_for_url(deployment.url),
                     timeout=5,
                 )
 
@@ -1345,10 +1440,13 @@ class DockerSwarmActivities:
     async def expose_docker_service_to_http(
         self,
         deployment: DockerDeploymentDetails,
-    ) -> List[URLDto]:
+    ):
         service = deployment.service
         if service.http_port is not None:
-            await deployment_log(deployment, f"Configuring service URLs...")
+            await deployment_log(
+                deployment,
+                f"Configuring service URLs for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+            )
             previous_deployment: DockerDeployment | None = await (
                 DockerDeployment.objects.filter(
                     Q(service_id=deployment.service.id)
@@ -1360,70 +1458,16 @@ class DockerSwarmActivities:
             )
 
             for url in service.urls:
-                response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
-                    timeout=5,
+                upsert_url_in_proxy(
+                    url=url,
+                    deployment=deployment,
+                    previous_deployment=previous_deployment,
                 )
 
-                # if the domain doesn't exist we create the config for the domain
-                if response.status_code == status.HTTP_404_NOT_FOUND:
-                    requests.put(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
-                        headers={"content-type": "application/json"},
-                        json=get_caddy_request_for_domain(url.domain),
-                        timeout=5,
-                    )
-
-                # now we create or modify the config for the URL
-                response = requests.get(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes"
-                )
-                routes = list(
-                    filter(
-                        lambda route: route["@id"] != get_caddy_id_for_url(url),
-                        response.json(),
-                    )
-                )
-                routes.append(
-                    get_caddy_request_for_url(
-                        url,
-                        service,
-                        service.http_port,
-                        current_deployment_hash=deployment.hash,
-                        current_deployment_slot=deployment.slot,
-                        service_id=deployment.service.id,
-                        previous_deployment_hash=(
-                            previous_deployment.hash
-                            if previous_deployment is not None
-                            else None
-                        ),
-                        previous_deployment_slot=(
-                            previous_deployment.slot
-                            if previous_deployment is not None
-                            else None
-                        ),
-                    )
-                )
-                routes = sort_proxy_routes(routes)
-
-                requests.patch(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
-                    headers={"content-type": "application/json"},
-                    json=routes,
-                    timeout=5,
-                )
-
-            await deployment_log(deployment, f"Service URLs configured successfully ✅")
-        return list[
-            map(
-                lambda change: URLDto.from_dict(change.new_value),
-                filter(
-                    lambda change: change.field
-                    == DockerDeploymentChange.ChangeField.URLS,
-                    deployment.changes,
-                ),
+            await deployment_log(
+                deployment,
+                f"Service URLs for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC} configured successfully ✅",
             )
-        ]
 
     @activity.defn
     async def scale_down_and_remove_docker_service_deployment(
@@ -1517,69 +1561,18 @@ class DockerSwarmActivities:
                 urls_to_delete.remove(existing_url)
 
         for url in urls_to_delete:  # type: URLDto
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}/handle/0/routes",
-                timeout=5,
-            )
-
-            if response.status_code != 404:
-                current_routes: list[dict[str, dict]] = response.json()
-                routes = list(
-                    filter(
-                        lambda route: route.get("@id") != get_caddy_id_for_url(url),
-                        current_routes,
-                    )
-                )
-
-                # delete the domain when there are no routes for the domain anymore
-                if len(routes) == 0:
-                    requests.delete(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
-                        timeout=5,
-                    )
-                else:
-                    # in the other case, we just delete the caddy config
-                    requests.delete(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_url(url)}",
-                        timeout=5,
-                    )
+            remove_url_from_proxy(url)
 
     @activity.defn
     async def unexpose_docker_service_from_http(
         self, service_details: ArchivedServiceDetails
     ):
         for url in service_details.urls:
-            # get all the routes of the domain
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
-                timeout=5,
-            )
-
-            if response.status_code != status.HTTP_404_NOT_FOUND:
-                current_routes: list[dict[str, dict]] = response.json()
-                routes = list(
-                    filter(
-                        lambda route: route.get("@id") != get_caddy_id_for_url(url),
-                        current_routes,
-                    )
-                )
-
-                # delete the domain config when there are no routes for the domain anymore
-                if len(routes) == 0:
-                    requests.delete(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
-                        timeout=5,
-                    )
-                else:
-                    # in the other case, we just delete the caddy config
-                    requests.delete(
-                        get_caddy_uri_for_url(url),
-                        timeout=5,
-                    )
+            remove_url_from_proxy(url)
 
         for url in service_details.deployment_urls:
             requests.delete(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+                get_caddy_uri_for_url(url),
                 timeout=5,
             )
 
@@ -1589,45 +1582,55 @@ class DockerSwarmActivities:
     ):
         if deployment.url is not None:
             requests.delete(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+                get_caddy_uri_for_url(deployment.url),
                 timeout=5,
             )
 
     @activity.defn
-    async def unexpose_docker_service_deployment_from_http(
+    async def remove_changed_urls_in_deployment(
         self, deployment: DockerDeploymentDetails
     ):
-        service = deployment.service
-        for url in service.urls:
-            # TODO
-            pass
-            # # get all the routes of the domain
-            # response = requests.get(
-            #     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
-            #     timeout=5,
-            # )
-            #
-            # if response.status_code != status.HTTP_404_NOT_FOUND:
-            #     current_routes: list[dict[str, dict]] = response.json()
-            #     routes = list(
-            #         filter(
-            #             lambda route: route.get("@id") != get_caddy_id_for_url(url),
-            #             current_routes,
-            #         )
-            #     )
-            #
-            #     # delete the domain config when there are no routes for the domain anymore
-            #     if len(routes) == 0:
-            #         requests.delete(
-            #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}",
-            #             timeout=5,
-            #         )
-            #     else:
-            #         # in the other case, we just delete the caddy config
-            #         requests.delete(
-            #             get_caddy_uri_for_url(url),
-            #             timeout=5,
-            #         )
+        previous_deployment: DockerDeployment | None = await (
+            DockerDeployment.objects.filter(
+                Q(service_id=deployment.service.id)
+                & Q(queued_at__lt=deployment.queued_at_as_datetime)
+                & ~Q(hash=deployment.hash)
+            )
+            .order_by("-queued_at")
+            .afirst()
+        )
+        new_urls = map(
+            lambda change: URLDto.from_dict(change.new_value),
+            filter(
+                lambda change: change.type == DockerDeploymentChange.ChangeType.ADD,
+                deployment.changes,
+            ),
+        )
+        updated_url_changes = filter(
+            lambda change: change.type == DockerDeploymentChange.ChangeType.UPDATE,
+            deployment.changes,
+        )
+        for url in new_urls:
+            remove_url_from_proxy(url)
+
+        for url_change in updated_url_changes:  # type: DeploymentChangeDto
+            old_url = URLDto.from_dict(url_change.old_value)
+            new_url = URLDto.from_dict(url_change.new_value)
+
+            # Readd old url
+            upsert_url_in_proxy(
+                url=old_url,
+                deployment=deployment,
+                previous_deployment=previous_deployment,
+            )
+
+            # This is so that we don't delete the urls we just added
+            # Sometimes the change can just be about `strip_prefix` and it might delete the old URL
+            if (
+                new_url.domain != old_url.domain
+                or new_url.base_path != old_url.base_path
+            ):
+                remove_url_from_proxy(new_url)
 
     @activity.defn
     async def create_deployment_healthcheck_schedule(

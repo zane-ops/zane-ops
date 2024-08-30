@@ -128,7 +128,7 @@ class DockerDeploymentStep(Enum):
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
     SWARM_SERVICE_CREATED = auto()
     DEPLOYMENT_EXPOSED_TO_HTTP = auto()
-    DEPLOYMENT_SERVICE_EXPOSED_TO_HTTP = auto()
+    SERVICE_EXPOSED_TO_HTTP = auto()
     FINISHED = auto()
 
     def __lt__(self, other):
@@ -296,9 +296,7 @@ class DeployDockerServiceWorkflow:
                     retry_policy=retry_policy,
                 )
 
-        self.last_completed_step = (
-            DockerDeploymentStep.DEPLOYMENT_SERVICE_EXPOSED_TO_HTTP
-        )
+        self.last_completed_step = DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
         if await check_for_cancellation():
             return await self.handle_cancellation(deployment, retry_policy)
 
@@ -372,19 +370,16 @@ class DeployDockerServiceWorkflow:
                 "Cannot cancel a deployment that already finished", non_retryable=True
             )
 
-        if (
-            self.last_completed_step
-            >= DockerDeploymentStep.DEPLOYMENT_SERVICE_EXPOSED_TO_HTTP
-        ):
-            raise workflow.execute_activity_method(
-                DockerSwarmActivities.unexpose_docker_service_deployment_from_http,
+        if self.last_completed_step >= DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.remove_changed_urls_in_deployment,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
 
         if self.last_completed_step >= DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP:
-            raise workflow.execute_activity_method(
+            await workflow.execute_activity_method(
                 DockerSwarmActivities.unexpose_docker_deployment_from_http,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
@@ -563,7 +558,7 @@ def get_workflows_and_activities():
         activities=[
             swarm_activities.save_cancelled_deployment,
             swarm_activities.unexpose_docker_deployment_from_http,
-            swarm_activities.unexpose_docker_service_deployment_from_http,
+            swarm_activities.remove_changed_urls_in_deployment,
             swarm_activities.attach_network_to_proxy,
             swarm_activities.create_project_network,
             swarm_activities.unexpose_docker_service_from_http,

@@ -12,6 +12,7 @@ from rest_framework.authtoken.models import Token
 from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
+from ..dtos import URLDto
 from ..models import (
     Project,
     DockerDeployment,
@@ -23,7 +24,7 @@ from ..models import (
     HealthCheck,
     DockerEnvVariable,
 )
-from ..serializers import DockerServiceSerializer
+from ..serializers import DockerServiceSerializer, URLModelSerializer
 from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_caddy_uri_for_url,
@@ -4445,3 +4446,142 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment
             )
             self.assertIsNone(docker_deployment)
+
+    async def test_cancel_deployment_at_deployment_exposed_to_http(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_caddy_docker_service()
+
+            new_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
+                service=service,
+                service_snapshot=await sync_to_async(
+                    lambda: DockerServiceSerializer(service).data
+                )(),
+            )
+            new_deployment.url = f"{p.slug}-{service.slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
+            await new_deployment.asave()
+
+            token = await Token.objects.aget(user=owner)
+            payload = await DockerDeploymentDetails.afrom_deployment(
+                deployment=new_deployment,
+                auth_token=token.key,
+                pause_at_step=DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
+            )
+
+            workflow_handle = await env.client.start_workflow(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+
+            workflow_result, _ = await asyncio.gather(
+                workflow_handle.result(),
+                workflow_handle.signal(
+                    DeployDockerServiceWorkflow.cancel_deployment,
+                    rpc_timeout=timedelta(seconds=5),
+                ),
+            )  # type: DeployDockerServiceWorkflowResult, None
+
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED,
+                workflow_result.deployment_status,
+            )
+            self.assertIsNone(workflow_result.healthcheck_result)
+            docker_deployment = self.fake_docker_client.get_deployment_service(
+                new_deployment
+            )
+            self.assertIsNone(docker_deployment)
+            response = requests.get(get_caddy_uri_for_url(new_deployment.url))
+            self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    async def test_cancel_deployment_at_service_exposed_to_http(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_caddy_docker_service()
+            url_to_update: URL = await service.urls.afirst()
+            updated_url = URLDto(
+                domain=f"caddy.{settings.ROOT_DOMAIN}", base_path="/", strip_prefix=True
+            )
+            url_to_add = URLDto(
+                domain="web-server.fred.kiss", base_path="/", strip_prefix=True
+            )
+
+            new_deployment = await DockerDeployment.objects.acreate(
+                service=service,
+            )
+            await DockerDeploymentChange.objects.abulk_create(
+                [
+                    DockerDeploymentChange(
+                        field=DockerDeploymentChange.ChangeField.URLS,
+                        type=DockerDeploymentChange.ChangeType.ADD,
+                        new_value=dict(
+                            domain=url_to_add.domain,
+                            base_path=url_to_add.base_path,
+                            strip_prefix=url_to_add.strip_prefix,
+                        ),
+                        service=service,
+                    ),
+                    DockerDeploymentChange(
+                        field=DockerDeploymentChange.ChangeField.URLS,
+                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        item_id=url_to_update.id,
+                        old_value=URLModelSerializer(url_to_update).data,
+                        new_value=dict(
+                            domain=updated_url.domain,
+                            base_path=updated_url.base_path,
+                            strip_prefix=updated_url.strip_prefix,
+                        ),
+                        service=service,
+                    ),
+                ]
+            )
+
+            await sync_to_async(service.apply_pending_changes)(new_deployment)
+            new_deployment.service_snapshot = await sync_to_async(
+                lambda: DockerServiceSerializer(service).data
+            )()
+            await new_deployment.asave()
+
+            token = await Token.objects.aget(user=owner)
+            payload = await DockerDeploymentDetails.afrom_deployment(
+                deployment=new_deployment,
+                auth_token=token.key,
+                pause_at_step=DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
+            )
+
+            workflow_handle = await env.client.start_workflow(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+
+            workflow_result, _ = await asyncio.gather(
+                workflow_handle.result(),
+                workflow_handle.signal(
+                    DeployDockerServiceWorkflow.cancel_deployment,
+                    rpc_timeout=timedelta(seconds=5),
+                ),
+            )  # type: DeployDockerServiceWorkflowResult, None
+
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED,
+                workflow_result.deployment_status,
+            )
+            self.assertIsNone(workflow_result.healthcheck_result)
+            docker_deployment = self.fake_docker_client.get_deployment_service(
+                new_deployment
+            )
+            self.assertIsNone(docker_deployment)
+
+            response = requests.get(get_caddy_uri_for_url(url_to_add))
+            self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+            response = requests.get(get_caddy_uri_for_url(updated_url))
+            self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+            response = requests.get(get_caddy_uri_for_url(url_to_update))
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
