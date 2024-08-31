@@ -318,7 +318,6 @@ class ProjectServiceListView(APIView):
         # Prefetch related fields and use annotate to count volumes
         filters = Q(project=project)
         query = request.query_params.get("query", "")
-        print(f"{query=}")
         if query:
             filters = filters & Q(slug__icontains=query)
 
@@ -333,7 +332,10 @@ class ProjectServiceListView(APIView):
             .annotate(
                 volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
-                    DockerDeployment.objects.filter(service_id=OuterRef("pk"))
+                    DockerDeployment.objects.filter(
+                        Q(service_id=OuterRef("pk"))
+                        & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
+                    )
                     .order_by("-queued_at")
                     .values("status")[:1]
                 ),
@@ -353,7 +355,6 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.CANCELLED: "CANCELLED",
             }
 
             service_image = service.image
