@@ -762,6 +762,11 @@ class DockerSwarmActivities:
             status=DockerDeployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
         )
+        await deployment_log(
+            deployment,
+            f"Deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}"
+            f" finished with status {Colors.GREY}{DockerDeployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
+        )
 
     @activity.defn
     async def finish_and_save_deployment(
