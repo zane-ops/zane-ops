@@ -1,5 +1,4 @@
 import asyncio
-from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum, auto
 from typing import Optional, List
@@ -115,12 +114,6 @@ class RemoveProjectResourcesWorkflow:
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=retry_policy,
         )
-
-
-@dataclass
-class CancelDeploymentResult:
-    success: bool
-    message: Optional[str] = None
 
 
 class DockerDeploymentStep(Enum):
