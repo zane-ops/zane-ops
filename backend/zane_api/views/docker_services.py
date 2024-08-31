@@ -688,6 +688,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
         transaction.on_commit(
             lambda: workflow_signal(
                 workflow=DeployDockerServiceWorkflow.run,
+                arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
                 signal=DeployDockerServiceWorkflow.cancel_deployment,
                 workflow_id=deployment.workflow_id,
             )

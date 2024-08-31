@@ -172,3 +172,8 @@ class DeployDockerServiceWorkflowResult:
     deployment_status: str
     healthcheck_result: Optional[DeploymentHealthcheckResult] = None
     next_queued_deployment: Optional[DockerDeploymentDetails] = None
+
+
+@dataclass
+class CancelDeploymentSignalInput:
+    deployment_hash: str

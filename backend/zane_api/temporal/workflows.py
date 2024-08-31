@@ -14,6 +14,7 @@ from .shared import (
     ArchivedServiceDetails,
     DeployDockerServiceWorkflowResult,
     DeploymentCreateVolumesResult,
+    CancelDeploymentSignalInput,
 )
 from ..dtos import VolumeDto
 
@@ -158,16 +159,20 @@ class DeployDockerServiceWorkflow:
         self.last_completed_step = DockerDeploymentStep.INITIALIZED
         self.cancellation_requested = False
         self.created_volumes: List[VolumeDto] = []
+        self.deployment_hash: str = None
 
     @workflow.signal
-    def cancel_deployment(self):
-        if self.last_completed_step < DockerDeploymentStep.FINISHED:
-            self.cancellation_requested = True
+    def cancel_deployment(self, input: CancelDeploymentSignalInput):
+        if self.deployment_hash == input.deployment_hash:
+            if self.last_completed_step < DockerDeploymentStep.FINISHED:
+                self.cancellation_requested = True
 
     @workflow.run
     async def run(
         self, deployment: DockerDeploymentDetails
     ) -> DeployDockerServiceWorkflowResult:
+        self.deployment_hash = deployment.hash
+
         print(
             f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
         )

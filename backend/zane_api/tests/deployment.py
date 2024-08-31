@@ -33,6 +33,7 @@ from ..temporal import (
     DockerDeploymentStep,
     DeployDockerServiceWorkflow,
     DeployDockerServiceWorkflowResult,
+    CancelDeploymentSignalInput,
 )
 from ..utils import convert_value_to_bytes
 
@@ -4224,7 +4225,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             service_snapshot = await sync_to_async(
                 lambda: DockerServiceSerializer(service).data
             )()
-            new_deployment = await DockerDeployment.objects.acreate(
+            new_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
                 service_snapshot=service_snapshot,
                 service=service,
             )
@@ -4248,6 +4249,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
@@ -4305,6 +4309,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
@@ -4370,6 +4377,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
@@ -4406,8 +4416,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
-            production_deployment = await service.alatest_production_deployment
-
             new_deployment = await DockerDeployment.objects.acreate(
                 service=service,
                 service_snapshot=await sync_to_async(
@@ -4434,6 +4442,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
@@ -4481,6 +4492,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
@@ -4564,6 +4578,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
@@ -4618,6 +4635,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow_handle.result(),
                 workflow_handle.signal(
                     DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
                     rpc_timeout=timedelta(seconds=5),
                 ),
             )  # type: DeployDockerServiceWorkflowResult, None
