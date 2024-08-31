@@ -761,6 +761,7 @@ class DockerSwarmActivities:
         await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
             status=DockerDeployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
+            finished_at=timezone.now(),
         )
         await deployment_log(
             deployment,
