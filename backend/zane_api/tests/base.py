@@ -249,7 +249,7 @@ class AuthAPITestCase(APITestCase):
         return user
 
     @asynccontextmanager
-    async def workflowEnvironment(self, patch_start_workflow: bool = True):
+    async def workflowEnvironment(self):
         env = await WorkflowEnvironment.start_time_skipping()
         await env.__aenter__()
         worker = Worker(
@@ -313,11 +313,8 @@ class AuthAPITestCase(APITestCase):
         patch_temporal_delete_schedule.start()
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
-        mock_client.start_workflow.side_effect = (
-            env.client.execute_workflow
-            if patch_start_workflow
-            else env.client.start_workflow
-        )
+        mock_client.start_workflow.side_effect = env.client.execute_workflow
+        mock_client.get_workflow_handle_for = env.client.get_workflow_handle_for
 
         patch_transaction_on_commit = patch(
             "django.db.transaction.on_commit", side_effect=collect_commit_callbacks

@@ -110,7 +110,7 @@ async def workflow_signal(
     timeout: timedelta = timedelta(seconds=5),
 ):
     client = await get_temporalio_client()
-    workflow_handle = await client.get_workflow_handle_for(
+    workflow_handle = client.get_workflow_handle_for(
         workflow=workflow, workflow_id=workflow_id
     )
     try:
