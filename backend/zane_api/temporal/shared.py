@@ -162,12 +162,6 @@ class HealthcheckDeploymentDetails:
 
 
 @dataclass
-class CancelDeploymentResult:
-    success: bool
-    message: Optional[str] = None
-
-
-@dataclass
 class DeployDockerServiceWorkflowResult:
     deployment_status: str
     healthcheck_result: Optional[DeploymentHealthcheckResult] = None
