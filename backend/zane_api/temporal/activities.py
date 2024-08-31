@@ -759,7 +759,8 @@ class DockerSwarmActivities:
     @activity.defn
     async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
         await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
-            status=DockerDeployment.DeploymentStatus.CANCELLED
+            status=DockerDeployment.DeploymentStatus.CANCELLED,
+            status_reason="Deployment cancelled.",
         )
 
     @activity.defn
