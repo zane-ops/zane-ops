@@ -1073,7 +1073,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CancelDockerServiveDeploymentResponse'
+                $ref: '#/components/schemas/DockerService'
           description: ''
   /api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
     delete:
@@ -2676,13 +2676,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    CancelDockerServiveDeploymentResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-      required:
-      - success
     CheckIfPortIsAvailableError:
       oneOf:
       - $ref: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'

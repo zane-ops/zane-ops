@@ -12,7 +12,7 @@ from drf_spectacular.utils import (
     PolymorphicProxySerializer,
 )
 from faker import Faker
-from rest_framework import status, exceptions, serializers
+from rest_framework import status, exceptions
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
@@ -81,6 +81,7 @@ from ..temporal import (
     SimpleDeploymentDetails,
     ToggleDockerServiceWorkflow,
     workflow_signal,
+    CancelDeploymentSignalInput,
 )
 
 
@@ -636,13 +637,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=None,
-        responses={
-            409: ErrorResponse409Serializer,
-            200: inline_serializer(
-                name="CancelDockerServiveDeploymentResponseSerializer",
-                fields={"success": serializers.BooleanField()},
-            ),
-        },
+        responses={409: ErrorResponse409Serializer, 200: DockerServiceSerializer},
         operation_id="cancelDockerServiceDeployment",
         summary="Cancel deployment",
         description="Cancel a deployment in progress.",
@@ -698,7 +693,8 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
         )
 
-        return Response({"sucess": True}, status=status.HTTP_200_OK)
+        response = DockerServiceDeploymentSerializer(deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
 
 
 class GetDockerServiceAPIView(APIView):
