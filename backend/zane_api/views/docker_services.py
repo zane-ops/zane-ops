@@ -12,7 +12,7 @@ from drf_spectacular.utils import (
     PolymorphicProxySerializer,
 )
 from faker import Faker
-from rest_framework import status, exceptions
+from rest_framework import status, exceptions, serializers
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
@@ -80,6 +80,7 @@ from ..temporal import (
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
     ToggleDockerServiceWorkflow,
+    workflow_signal,
 )
 
 
@@ -629,6 +630,75 @@ class RedeployDockerServiceAPIView(APIView):
 
         response = DockerServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
+
+
+class CancelDockerServiceDeploymentAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        responses={
+            409: ErrorResponse409Serializer,
+            200: inline_serializer(
+                name="CancelDockerServiveDeploymentResponseSerializer",
+                fields={"success": serializers.BooleanField()},
+            ),
+        },
+        operation_id="cancelDockerServiceDeployment",
+        summary="Cancel deployment",
+        description="Cancel a deployment in progress.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        try:
+            deployment = service.deployments.get(hash=deployment_hash)
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        if deployment.finished_at is not None:
+            raise ResourceConflict(detail="Cannot cancel already finished deployment.")
+
+        if deployment.started_at is None:
+            deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
+            deployment.status_reason = "Deployment cancelled."
+            deployment.save()
+
+        transaction.on_commit(
+            lambda: workflow_signal(
+                workflow=DeployDockerServiceWorkflow.run,
+                signal=DeployDockerServiceWorkflow.cancel_deployment,
+                workflow_id=deployment.workflow_id,
+            )
+        )
+
+        return Response({"sucess": True}, status=status.HTTP_200_OK)
 
 
 class GetDockerServiceAPIView(APIView):
