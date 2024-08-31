@@ -4649,8 +4649,10 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
             deployment_hash = response.json().get("hash")
-            new_deployment: DockerDeployment = await DockerDeployment.objects.aget(
-                hash=deployment_hash
+            new_deployment: DockerDeployment = (
+                await DockerDeployment.objects.filter(hash=deployment_hash)
+                .select_related("service")
+                .afirst()
             )
 
             workflow_handle = env.client.get_workflow_handle_for(
@@ -4672,3 +4674,72 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
             self.assertEqual(status.HTTP_200_OK, response.status_code)
             self.assertEqual(2, await service.deployments.acount())
+            await new_deployment.arefresh_from_db()
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED, new_deployment.status
+            )
+            self.assertIsNotNone(new_deployment.status_reason)
+
+    async def test_cancel_not_started_deployment_set_status_to_cancelled(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        new_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
+            service=service
+        )
+        new_deployment.service_snapshot = await sync_to_async(
+            lambda: DockerServiceSerializer(service).data
+        )()
+        await new_deployment.asave()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.cancel_deployment",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": new_deployment.hash,
+                },
+            ),
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        await new_deployment.arefresh_from_db()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.CANCELLED, new_deployment.status
+        )
+        self.assertIsNotNone(new_deployment.status_reason)
+
+    async def test_cannot_cancel_already_finished_deployment(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        deployment_hash = response.json().get("hash")
+        new_deployment: DockerDeployment = (
+            await DockerDeployment.objects.filter(hash=deployment_hash)
+            .select_related("service")
+            .afirst()
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.cancel_deployment",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": new_deployment.hash,
+                },
+            ),
+        )
+
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, await service.deployments.acount())
