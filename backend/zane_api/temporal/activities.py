@@ -377,6 +377,11 @@ def get_caddy_request_for_url(
                     "x-request-id": ["{http.request.uuid}"],
                 },
             },
+            "request": {
+                "add": {
+                    "x-request-id": ["{http.request.uuid}"],
+                },
+            },
         },
     ]
 
