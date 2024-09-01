@@ -326,7 +326,6 @@ def get_caddy_request_for_url(
     service: DockerServiceSnapshot,
     current_deployment_hash: str = None,
     current_deployment_slot: str = None,
-    service_id: str = None,
     previous_deployment_hash: str = None,
     previous_deployment_slot: str = None,
 ):
@@ -348,7 +347,7 @@ def get_caddy_request_for_url(
         {
             "handler": "log_append",
             "key": "zane_service_id",
-            "value": service_id,
+            "value": service.id,
         },
         {
             "handler": "log_append",
@@ -369,6 +368,15 @@ def get_caddy_request_for_url(
             "handler": "log_append",
             "key": "zane_request_id",
             "value": "{http.request.uuid}",
+        },
+        {
+            "handler": "request",
+            "request": {
+                "add": {
+                    "server": ["zaneops"],
+                    "x-request-id": ["{http.request.uuid}"],
+                },
+            },
         },
     ]
 
@@ -493,7 +501,6 @@ def upsert_url_in_proxy(
         service,
         current_deployment_hash=deployment.hash,
         current_deployment_slot=deployment.slot,
-        service_id=deployment.service.id,
         previous_deployment_hash=(
             previous_deployment.hash if previous_deployment is not None else None
         ),
