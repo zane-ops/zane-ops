@@ -149,19 +149,17 @@ class DockerDeploymentStep(Enum):
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     def __init__(self):
-        self.last_completed_step: DockerDeploymentStep = None
         self.cancellation_requested = False
         self.created_volumes: List[VolumeDto] = []
         self.deployment_hash: str = None
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
 
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
         if self.deployment_hash == input.deployment_hash:
-            if (
-                self.last_completed_step is None
-                or self.last_completed_step < DockerDeploymentStep.FINISHED
-            ):
-                self.cancellation_requested = True
+            self.cancellation_requested = True
 
     @workflow.run
     async def run(
@@ -172,9 +170,6 @@ class DeployDockerServiceWorkflow:
         print(
             f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
         )
-        retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
 
         pause_at_step = (
             DockerDeploymentStep(deployment.pause_at_step)
@@ -182,7 +177,9 @@ class DeployDockerServiceWorkflow:
             else None
         )
 
-        async def check_for_cancellation():
+        async def check_for_cancellation(
+            last_completed_step: DockerDeploymentStep,
+        ):
             """
             This function allows us to pause and potentially bypass the workflow's execution
             during testing. It is useful for stopping the workflow at specific points to
@@ -197,7 +194,7 @@ class DeployDockerServiceWorkflow:
             the application logic.
             """
             if pause_at_step is not None:
-                if pause_at_step != self.last_completed_step:
+                if pause_at_step != last_completed_step:
                     return False
                 await workflow.wait_condition(
                     lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
@@ -208,19 +205,21 @@ class DeployDockerServiceWorkflow:
             DockerSwarmActivities.prepare_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
         previous_production_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_production_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
-        self.last_completed_step = DockerDeploymentStep.INITIALIZED
-        if await check_for_cancellation():
-            return await self.handle_cancellation(deployment, retry_policy)
+        if await check_for_cancellation(DockerDeploymentStep.INITIALIZED):
+            return await self.handle_cancellation(
+                deployment,
+                DockerDeploymentStep.INITIALIZED,
+            )
 
         service = deployment.service
         if len(service.docker_volumes) > 0:
@@ -228,12 +227,13 @@ class DeployDockerServiceWorkflow:
                 DockerSwarmActivities.create_docker_volumes_for_service,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
 
-        self.last_completed_step = DockerDeploymentStep.VOLUMES_CREATED
-        if await check_for_cancellation():
-            return await self.handle_cancellation(deployment, retry_policy)
+        if await check_for_cancellation(DockerDeploymentStep.VOLUMES_CREATED):
+            return await self.handle_cancellation(
+                deployment, DockerDeploymentStep.VOLUMES_CREATED
+            )
 
         if (
             (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
@@ -245,35 +245,42 @@ class DeployDockerServiceWorkflow:
                 DockerSwarmActivities.scale_down_service_deployment,
                 previous_production_deployment,
                 start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
 
-        self.last_completed_step = DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
-        if await check_for_cancellation():
-            return await self.handle_cancellation(deployment, retry_policy)
+        if await check_for_cancellation(
+            DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
+        ):
+            return await self.handle_cancellation(
+                deployment, DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
+            )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.create_swarm_service_for_docker_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
-        self.last_completed_step = DockerDeploymentStep.SWARM_SERVICE_CREATED
-        if await check_for_cancellation():
-            return await self.handle_cancellation(deployment, retry_policy)
+        if await check_for_cancellation(DockerDeploymentStep.SWARM_SERVICE_CREATED):
+            return await self.handle_cancellation(
+                deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
+            )
 
         if deployment.service.http_port is not None:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.expose_docker_deployment_to_http,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
 
-        self.last_completed_step = DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
-        if await check_for_cancellation():
-            return await self.handle_cancellation(deployment, retry_policy)
+        if await check_for_cancellation(
+            DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
+        ):
+            return await self.handle_cancellation(
+                deployment, DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
+            )
 
         healthcheck_timeout = (
             deployment.service.healthcheck.timeout_seconds
@@ -284,7 +291,7 @@ class DeployDockerServiceWorkflow:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.run_deployment_healthcheck,
                 deployment,
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
                 start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
             )
         )
@@ -295,12 +302,13 @@ class DeployDockerServiceWorkflow:
                     DockerSwarmActivities.expose_docker_service_to_http,
                     deployment,
                     start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=retry_policy,
+                    retry_policy=self.retry_policy,
                 )
 
-        self.last_completed_step = DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
-        if await check_for_cancellation():
-            return await self.handle_cancellation(deployment, retry_policy)
+        if await check_for_cancellation(DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP):
+            return await self.handle_cancellation(
+                deployment, DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
+            )
 
         healthcheck_result = DeploymentHealthcheckResult(
             deployment_hash=deployment.hash,
@@ -312,24 +320,21 @@ class DeployDockerServiceWorkflow:
             DockerSwarmActivities.finish_and_save_deployment,
             healthcheck_result,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
-
-        self.last_completed_step = DockerDeploymentStep.FINISHED
 
         if healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY:
             if previous_production_deployment is not None:
                 await self.cleanup_previous_production_deployment(
                     previous_deployment=previous_production_deployment,
                     current_deployment=deployment,
-                    retry_policy=retry_policy,
                 )
 
             await workflow.execute_activity_method(
                 DockerSwarmActivities.create_deployment_healthcheck_schedule,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
         else:
             current_deployment = SimpleDeploymentDetails(
@@ -341,7 +346,7 @@ class DeployDockerServiceWorkflow:
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
                 current_deployment,
                 start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
             if (
                 previous_production_deployment is not None
@@ -352,12 +357,10 @@ class DeployDockerServiceWorkflow:
                     DockerSwarmActivities.scale_back_service_deployment,
                     previous_production_deployment,
                     start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=retry_policy,
+                    retry_policy=self.retry_policy,
                 )
 
-        next_queued_deployment = await self.queue_next_deployment(
-            deployment, retry_policy
-        )
+        next_queued_deployment = await self.queue_next_deployment(deployment)
         return DeployDockerServiceWorkflowResult(
             deployment_status=final_deployment_status,
             healthcheck_result=healthcheck_result,
@@ -365,30 +368,32 @@ class DeployDockerServiceWorkflow:
         )
 
     async def handle_cancellation(
-        self, deployment: DockerDeploymentDetails, retry_policy: RetryPolicy
+        self,
+        deployment: DockerDeploymentDetails,
+        last_completed_step: DockerDeploymentStep,
     ) -> DeployDockerServiceWorkflowResult:
-        if self.last_completed_step >= DockerDeploymentStep.FINISHED:
+        if last_completed_step >= DockerDeploymentStep.FINISHED:
             raise ApplicationError(
                 "Cannot cancel a deployment that already finished", non_retryable=True
             )
 
-        if self.last_completed_step >= DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
+        if last_completed_step >= DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.remove_changed_urls_in_deployment,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
 
-        if self.last_completed_step >= DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP:
+        if last_completed_step >= DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.unexpose_docker_deployment_from_http,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
 
-        if self.last_completed_step >= DockerDeploymentStep.SWARM_SERVICE_CREATED:
+        if last_completed_step >= DockerDeploymentStep.SWARM_SERVICE_CREATED:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
                 SimpleDeploymentDetails(
@@ -397,27 +402,24 @@ class DeployDockerServiceWorkflow:
                     project_id=deployment.service.project_id,
                 ),
                 start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
-        if (
-            self.last_completed_step
-            >= DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
-        ):
+        if last_completed_step >= DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN:
             previous_production_deployment = await workflow.execute_activity_method(
                 DockerSwarmActivities.get_previous_production_deployment,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
             if previous_production_deployment is not None:
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,
                     previous_production_deployment,
                     start_to_close_timeout=timedelta(seconds=60),
-                    retry_policy=retry_policy,
+                    retry_policy=self.retry_policy,
                 )
         if (
-            self.last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED
+            last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED
             and len(self.created_volumes) > 0
         ):
             await workflow.execute_activity_method(
@@ -428,69 +430,65 @@ class DeployDockerServiceWorkflow:
                     created_volumes=self.created_volumes,
                 ),
                 start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=retry_policy,
+                retry_policy=self.retry_policy,
             )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.save_cancelled_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
-        next_queued_deployment = await self.queue_next_deployment(
-            deployment, retry_policy
-        )
+        next_queued_deployment = await self.queue_next_deployment(deployment)
         return DeployDockerServiceWorkflowResult(
             deployment_status=DockerDeployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
         )
 
-    @staticmethod
     async def queue_next_deployment(
-        deployment: DockerDeploymentDetails, retry_policy: RetryPolicy
+        self, deployment: DockerDeploymentDetails
     ) -> Optional[DockerDeploymentDetails]:
         next_queued_deployment = await workflow.execute_activity_method(
             DockerSwarmActivities.get_previous_queued_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
         if next_queued_deployment is not None:
             await workflow.continue_as_new(next_queued_deployment)
         return next_queued_deployment
 
-    @staticmethod
     async def cleanup_previous_production_deployment(
+        self,
         previous_deployment: SimpleDeploymentDetails,
         current_deployment: DockerDeploymentDetails,
-        retry_policy: RetryPolicy,
     ):
         await workflow.execute_activity_method(
             DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=60),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.remove_old_docker_volumes,
             current_deployment,
             start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.remove_old_urls,
             current_deployment,
             start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
+            retry_policy=self.retry_policy,
         )
 
 
