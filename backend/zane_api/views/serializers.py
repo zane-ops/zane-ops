@@ -1034,6 +1034,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "request_host",
             "status",
             "request_ip",
+            "request_id",
         ]
 
 
