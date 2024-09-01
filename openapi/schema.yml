@@ -1887,6 +1887,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: request_id
+        schema:
+          type: string
+      - in: query
         name: request_ip
         schema:
           type: string
@@ -2053,6 +2057,22 @@ paths:
           type: string
           pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
         required: true
+      - in: query
+        name: source
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - PROXY
+            - SERVICE
+            - SYSTEM
+        description: |-
+          * `SYSTEM` - System Logs
+          * `PROXY` - Proxy Logs
+          * `SERVICE` - Service Logs
+        explode: true
+        style: form
       - in: query
         name: time_after
         schema:
@@ -4506,6 +4526,7 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -4515,6 +4536,7 @@ components:
           request_host: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
           request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
+          request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
@@ -4532,6 +4554,25 @@ components:
           - request_host
           type: string
           description: '* `request_host` - request_host'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_id
+          type: string
+          description: '* `request_id` - request_id'
         code:
           enum:
           - null_characters_not_allowed
@@ -4751,12 +4792,14 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           level: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent'
           content: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent'
           time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent'
+          source: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListValidationError'
@@ -4779,6 +4822,28 @@ components:
           - invalid_choice
           type: string
           description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - source
+          type: string
+          description: '* `source` - source'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
         detail:
           type: string
       required:

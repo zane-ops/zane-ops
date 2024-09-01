@@ -25,6 +25,7 @@ services:
     network_mode: host
     environment:
       BACKEND_COMPONENT: WORKER
+      ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   registry:
     image: registry:2
     container_name: zane-registry
