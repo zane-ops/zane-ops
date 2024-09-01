@@ -149,7 +149,7 @@ class DockerDeploymentStep(Enum):
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     def __init__(self):
-        self.last_completed_step = DockerDeploymentStep.INITIALIZED
+        self.last_completed_step: DockerDeploymentStep = None
         self.cancellation_requested = False
         self.created_volumes: List[VolumeDto] = []
         self.deployment_hash: str = None
@@ -157,7 +157,10 @@ class DeployDockerServiceWorkflow:
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
         if self.deployment_hash == input.deployment_hash:
-            if self.last_completed_step < DockerDeploymentStep.FINISHED:
+            if (
+                self.last_completed_step is None
+                or self.last_completed_step < DockerDeploymentStep.FINISHED
+            ):
                 self.cancellation_requested = True
 
     @workflow.run
@@ -215,6 +218,7 @@ class DeployDockerServiceWorkflow:
             retry_policy=retry_policy,
         )
 
+        self.last_completed_step = DockerDeploymentStep.INITIALIZED
         if await check_for_cancellation():
             return await self.handle_cancellation(deployment, retry_policy)
 
