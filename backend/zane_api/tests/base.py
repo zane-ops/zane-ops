@@ -180,7 +180,6 @@ class AsyncCustomAPIClient(AsyncClient):
     CELERY_BROKER_URL="memory://",
     CELERY_TASK_STORE_EAGER_RESULT=True,
     CADDY_PROXY_ADMIN_HOST="http://127.0.0.1:2020",
-    TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT=timedelta(seconds=10),
 )
 class APITestCase(TestCase):
     def setUp(self):
