@@ -370,8 +370,8 @@ def get_caddy_request_for_url(
             "value": "{http.request.uuid}",
         },
         {
-            "handler": "request",
-            "request": {
+            "handler": "headers",
+            "response": {
                 "add": {
                     "server": ["zaneops"],
                     "x-request-id": ["{http.request.uuid}"],
