@@ -49,7 +49,7 @@ from .serializers import (
     DockerServiceDeployServiceSerializer,
     ResourceLimitChangeSerializer,
 )
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto, URLDto, VolumeDto
+from ..dtos import URLDto, VolumeDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -75,11 +75,13 @@ from ..serializers import (
 from ..temporal import (
     start_workflow,
     DeployDockerServiceWorkflow,
-    DeploymentDetails,
+    DockerDeploymentDetails,
     ArchivedServiceDetails,
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
     ToggleDockerServiceWorkflow,
+    workflow_signal,
+    CancelDeploymentSignalInput,
 )
 
 
@@ -521,51 +523,23 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
             latest_deployment = service.latest_production_deployment
-            if (
-                latest_deployment is not None
-                and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-                and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-                # 👆🏽 technically this can only be true for the initial deployment
-                # for the next deployments, when they fail, they will not be promoted to production
-            ):
-                new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-            else:
-                new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
+            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
+                latest_deployment
+            )
             new_deployment.service_snapshot = DockerServiceSerializer(service).data
             new_deployment.save()
 
             token = Token.objects.get(user=request.user)
-            payload = DeploymentDetails(
-                hash=new_deployment.hash,
-                slot=new_deployment.slot,
+            payload = DockerDeploymentDetails.from_deployment(
+                deployment=new_deployment,
                 auth_token=token.key,
-                queued_at=new_deployment.queued_at.isoformat(),
-                unprefixed_hash=new_deployment.unprefixed_hash,
-                url=new_deployment.url,
-                service=DockerServiceSnapshot.from_dict(
-                    new_deployment.service_snapshot
-                ),
-                changes=[
-                    DeploymentChangeDto.from_dict(
-                        dict(
-                            type=change.type,
-                            field=change.field,
-                            new_value=change.new_value,
-                            old_value=change.old_value,
-                            item_id=change.item_id,
-                        )
-                    )
-                    for change in new_deployment.changes.all()
-                ],
             )
-            workflow_id = new_deployment.workflow_id
 
             transaction.on_commit(
                 lambda: start_workflow(
                     DeployDockerServiceWorkflow.run,
                     payload,
-                    id=workflow_id,
+                    id=payload.workflow_id,
                 )
             )
 
@@ -632,17 +606,9 @@ class RedeployDockerServiceAPIView(APIView):
         )
         service.apply_pending_changes(deployment=new_deployment)
 
-        if (
-            latest_deployment is not None
-            and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-            and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-            # 👆🏽 technically this can only be true for the initial deployment
-            # for the next deployments, when they fail, they will not be promoted to production
-        ):
-            new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-        else:
-            new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
+        new_deployment.slot = DockerDeployment.get_next_deployment_slot(
+            latest_deployment
+        )
         if len(service.urls.all()) > 0:
             new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
@@ -650,38 +616,85 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.save()
 
         token = Token.objects.get(user=request.user)
-        payload = DeploymentDetails(
-            hash=new_deployment.hash,
-            slot=new_deployment.slot,
+        payload = DockerDeploymentDetails.from_deployment(
+            new_deployment,
             auth_token=token.key,
-            queued_at=new_deployment.queued_at.isoformat(),
-            unprefixed_hash=new_deployment.unprefixed_hash,
-            url=new_deployment.url,
-            service=DockerServiceSnapshot.from_dict(new_deployment.service_snapshot),
-            changes=[
-                DeploymentChangeDto.from_dict(
-                    dict(
-                        type=change.type,
-                        field=change.field,
-                        new_value=change.new_value,
-                        old_value=change.old_value,
-                        item_id=change.item_id,
-                    )
-                )
-                for change in new_deployment.changes.all()
-            ],
         )
-        workflow_id = new_deployment.workflow_id
 
         transaction.on_commit(
             lambda: start_workflow(
                 DeployDockerServiceWorkflow.run,
                 payload,
-                id=workflow_id,
+                id=payload.workflow_id,
             )
         )
 
         response = DockerServiceDeploymentSerializer(new_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
+class CancelDockerServiceDeploymentAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        responses={409: ErrorResponse409Serializer, 200: DockerServiceSerializer},
+        operation_id="cancelDockerServiceDeployment",
+        summary="Cancel deployment",
+        description="Cancel a deployment in progress.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        try:
+            deployment = service.deployments.get(hash=deployment_hash)
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        if deployment.finished_at is not None:
+            raise ResourceConflict(detail="Cannot cancel already finished deployment.")
+
+        if deployment.started_at is None:
+            deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
+            deployment.status_reason = "Deployment cancelled."
+            deployment.save()
+
+        transaction.on_commit(
+            lambda: workflow_signal(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                signal=DeployDockerServiceWorkflow.cancel_deployment,
+                workflow_id=deployment.workflow_id,
+            )
+        )
+
+        response = DockerServiceDeploymentSerializer(deployment)
         return Response(response.data, status=status.HTTP_200_OK)
 
 

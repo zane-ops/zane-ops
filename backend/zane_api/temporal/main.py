@@ -1,7 +1,9 @@
 from datetime import timedelta
 from typing import Any, Awaitable, Callable, Union
 
+import temporalio.common
 from temporalio import workflow
+from temporalio.service import RPCError
 
 with workflow.unsafe.imports_passed_through():
     from asgiref.sync import async_to_sync
@@ -97,3 +99,26 @@ async def start_workflow(
         pass
 
     return client.get_workflow_handle(id)
+
+
+@async_to_sync
+async def workflow_signal(
+    workflow: Union[str, Callable[..., Awaitable[Any]]],
+    workflow_id: str,
+    signal: Union[str, Callable[..., Awaitable[Any]]],
+    arg: Any = temporalio.common._arg_unset,
+    timeout: timedelta = timedelta(seconds=5),
+):
+    client = await get_temporalio_client()
+    workflow_handle = client.get_workflow_handle_for(
+        workflow=workflow, workflow_id=workflow_id
+    )
+    try:
+        await workflow_handle.signal(
+            signal,
+            arg=arg,
+            rpc_timeout=timeout,
+        )
+    except RPCError:
+        # probably because the signal sent to the workflow could not be executed
+        pass

@@ -174,7 +174,7 @@ class AsyncCustomAPIClient(AsyncClient):
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging celery tasks
+    # DEBUG=True,  # uncomment for debugging temporalio workflows
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -314,6 +314,7 @@ class AuthAPITestCase(APITestCase):
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
         mock_client.start_workflow.side_effect = env.client.execute_workflow
+        mock_client.get_workflow_handle_for = env.client.get_workflow_handle_for
 
         patch_transaction_on_commit = patch(
             "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
@@ -430,7 +431,9 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = await DockerRegistryService.objects.aget(slug="redis")
+        service: DockerRegistryService = await DockerRegistryService.objects.aget(
+            slug="redis"
+        )
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:

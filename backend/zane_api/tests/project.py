@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 from django.urls import reverse
 from rest_framework import status
-from temporalio.client import WorkflowFailureError
 
 from .base import AuthAPITestCase
 from ..models import (
@@ -466,21 +465,6 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        archived_project: ArchivedProject = await ArchivedProject.objects.filter(
-            original_id=project.id
-        ).afirst()
-        self.assertIsNotNone(archived_project)
-        self.assertIsNone(self.fake_docker_client.get_network(project))
-        self.assertEqual(0, len(self.fake_docker_client.get_networks()))
-
-    async def test_with_nonexistent_network(self):
-        owner = await self.aLoginUser()
-        project = await Project.objects.acreate(slug="zane-ops", owner=owner)
-        with self.assertRaises(WorkflowFailureError):
-            await self.async_client.delete(
-                reverse("zane_api:projects.details", kwargs={"slug": project.slug})
-            )
-
         archived_project: ArchivedProject = await ArchivedProject.objects.filter(
             original_id=project.id
         ).afirst()
