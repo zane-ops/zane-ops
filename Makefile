@@ -10,7 +10,7 @@ setup: ### Initial setup of the project
 	chmod a+x ./backend/venv/bin/activate
 	. ./backend/venv/bin/activate
 	echo 'installing dependencies...'
-	pip install uv
+	pip install uv==0.4.2
 	uv pip install -r ./backend/requirements.txt
 	pnpm install --frozen-lockfile
 	echo 'initializating docker swarm'
