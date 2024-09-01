@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
+from temporalio.common import RetryPolicy
 from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
@@ -4241,6 +4242,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4301,6 +4305,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4369,6 +4376,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4434,6 +4444,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4484,6 +4497,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4570,6 +4586,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4627,6 +4646,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
@@ -4676,6 +4698,9 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 workflow=DeployDockerServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
