@@ -1,18 +1,17 @@
 x-backend-vars: &env-vars
-  environment:
-    ENVIRONMENT: PRODUCTION
-    REDIS_URL: redis://zane.valkey:6379/0
-    DB_HOST: zane.db
-    DB_PORT: 5432
-    DB_NAME: zane
-    DB_USER: ${ZANE_DB_USER:-zane}
-    DB_PASSWORD: ${ZANE_DB_PASSWORD}
-    ROOT_DOMAIN: ${ROOT_DOMAIN}
-    ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
-    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-    CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-    ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
-    TEMPORALIO_SERVER_URL: zane.temporal:7233
+  ENVIRONMENT: PRODUCTION
+  REDIS_URL: redis://zane.valkey:6379/0
+  DB_HOST: zane.db
+  DB_PORT: 5432
+  DB_NAME: zane
+  DB_USER: ${ZANE_DB_USER:-zane}
+  DB_PASSWORD: ${ZANE_DB_PASSWORD}
+  ROOT_DOMAIN: ${ROOT_DOMAIN}
+  ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+  ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+  TEMPORALIO_SERVER_URL: zane.temporal:7233
 
 services:
   proxy:
@@ -107,7 +106,8 @@ services:
         aliases:
           - zane.api
           - zane.api.zaneops.internal
-    <<: *env-vars
+    environment:
+      <<: *env-vars
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -115,7 +115,7 @@ services:
       - valkey
       - proxy
   temporal-server:
-    entrypoint: ["/etc/temporal/entrypoint.sh"]
+    entrypoint: [ "/etc/temporal/entrypoint.sh" ]
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -164,7 +164,9 @@ services:
       - valkey
       - proxy
       - temporal-server
-    <<: *env-vars
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
     deploy:
       replicas: 1
       update_config:
@@ -207,7 +209,7 @@ services:
         aliases:
           - zane.valkey
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: [ "CMD", "valkey-cli", "ping" ]
       interval: 5s
       retries: 10
       timeout: 2s
@@ -237,7 +239,7 @@ services:
           cpus: "1"
           memory: 500M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       retries: 5
       start_period: 30s

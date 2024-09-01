@@ -45,6 +45,7 @@ SECRET_KEY = os.environ.get(
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
+BACKEND_COMPONENT = os.environ.get("BACKEND_COMPONENT", "API")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT != PRODUCTION_ENV
@@ -349,7 +350,7 @@ DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
 
-if not TESTING:
+if not TESTING and BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,

@@ -23,6 +23,8 @@ services:
       - db
       - redis
     network_mode: host
+    environment:
+      BACKEND_COMPONENT: WORKER
   registry:
     image: registry:2
     container_name: zane-registry
