@@ -614,18 +614,19 @@ class DockerSwarmActivities:
                             domain=url.domain,
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
+                            id=url.original_id,
                         )
                         for url in service.urls.all()
                     ],
                     project_id=archived_project.original_id,
-                    deployment_urls=service.deployment_urls,
                     deployments=[
                         SimpleDeploymentDetails(
-                            hash=deployment_hash,
+                            hash=dpl.get("hash"),
+                            url=dpl.get("url"),
                             project_id=service.project.original_id,
                             service_id=service.original_id,
                         )
-                        for deployment_hash in service.deployment_hashes
+                        for dpl in service.deployments
                     ],
                 )
             )
@@ -1594,7 +1595,9 @@ class DockerSwarmActivities:
         for url in service_details.urls:
             remove_url_from_proxy(url)
 
-        for url in service_details.deployment_urls:
+        for deployment in filter(
+            lambda dpl: dpl.url is not None, service_details.deployments
+        ):  # type: SimpleDeploymentDetails
             requests.delete(
                 get_caddy_uri_for_url(url),
                 timeout=5,

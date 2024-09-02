@@ -73,6 +73,7 @@ class ArchivedURL(models.Model):
     )
     base_path = models.CharField(default="/")
     strip_prefix = models.BooleanField(default=True)
+    original_id = models.CharField(null=True)
 
     def __str__(self):
         base_path = (
@@ -155,8 +156,9 @@ class ArchivedDockerService(ArchivedBaseService):
         max_length=255,
         null=True,
     )
-    deployment_urls = models.JSONField(null=False, default=list)
-    deployment_hashes = models.JSONField(null=False, default=list)
+    deployments = models.JSONField(
+        null=False, default=list
+    )  # type: list[dict[str, str]]
 
     @property
     def workflow_id(self):
@@ -184,10 +186,9 @@ class ArchivedDockerService(ArchivedBaseService):
                 if service.healthcheck is not None
                 else None
             ),
-            deployment_urls=[
-                dpl.url for dpl in service.deployments.filter(url__isnull=False)
+            deployments=[
+                dict(url=dpl.url, hash=dpl.hash) for dpl in service.deployments.all()
             ],
-            deployment_hashes=[dpl.hash for dpl in service.deployments.all()],
         )
 
         archived_volumes = ArchivedVolume.objects.bulk_create(
@@ -226,6 +227,7 @@ class ArchivedDockerService(ArchivedBaseService):
                     domain=url.domain,
                     base_path=url.base_path,
                     strip_prefix=url.strip_prefix,
+                    original_id=url.id,
                 )
                 for url in service.urls.all()
             ]
