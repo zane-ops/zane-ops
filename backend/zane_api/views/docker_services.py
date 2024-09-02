@@ -537,8 +537,8 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
 
             transaction.on_commit(
                 lambda: start_workflow(
-                    DeployDockerServiceWorkflow.run,
-                    payload,
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=payload,
                     id=payload.workflow_id,
                 )
             )
@@ -1067,8 +1067,8 @@ class ToggleDockerServiceAPIView(APIView):
         )
         transaction.on_commit(
             lambda: start_workflow(
-                ToggleDockerServiceWorkflow.run,
-                args=payload,
+                workflow=ToggleDockerServiceWorkflow.run,
+                arg=payload,
                 id=f"toggle-{service.id}-{project.id}",
             )
         )
