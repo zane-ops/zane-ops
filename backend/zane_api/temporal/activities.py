@@ -1570,20 +1570,26 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def remove_old_docker_volumes(self, deployment: DockerDeploymentDetails):
-        for change in deployment.changes:
-            if (
-                change.field == DockerDeploymentChange.ChangeField.VOLUMES
-                and change.type == DockerDeploymentChange.ChangeType.DELETE
-            ):
-                try:
-                    volume = self.docker_client.volumes.get(
-                        get_volume_resource_name(change.item_id)
-                    )
-                except docker.errors.NotFound:
-                    # the volume has already been deleted, do nothing
-                    pass
-                else:
-                    volume.remove(force=True)
+        service = deployment.service
+        docker_volume_names = [
+            get_volume_resource_name(volume.id) for volume in service.docker_volumes
+        ]
+
+        docker_volume_list = self.docker_client.volumes.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service.project_id,
+                        parent=service.id,
+                    ).items()
+                ]
+            }
+        )
+
+        for volume in docker_volume_list:
+            if volume.name not in docker_volume_names:
+                volume.remove(force=True)
 
     @activity.defn
     async def remove_old_urls(self, deployment: DockerDeploymentDetails):
