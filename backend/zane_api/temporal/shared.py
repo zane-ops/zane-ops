@@ -149,7 +149,6 @@ class ArchivedServiceDetails:
     original_id: str
     project_id: str
     deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
-    deployment_urls: List[str] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     volumes: List[VolumeDto] = field(default_factory=list)
 

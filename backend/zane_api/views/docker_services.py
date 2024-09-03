@@ -537,8 +537,8 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
 
             transaction.on_commit(
                 lambda: start_workflow(
-                    DeployDockerServiceWorkflow.run,
-                    payload,
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=payload,
                     id=payload.workflow_id,
                 )
             )
@@ -976,6 +976,7 @@ class ArchiveDockerServiceAPIView(APIView):
                         domain=url.domain,
                         base_path=url.base_path,
                         strip_prefix=url.strip_prefix,
+                        id=url.original_id,
                     )
                     for url in archived_service.urls.all()
                 ],
@@ -990,21 +991,21 @@ class ArchiveDockerServiceAPIView(APIView):
                     for volume in archived_service.volumes.all()
                 ],
                 project_id=archived_project.original_id,
-                deployment_urls=archived_service.deployment_urls,
                 deployments=[
                     SimpleDeploymentDetails(
-                        hash=deployment_hash,
+                        hash=dpl.get("hash"),
+                        url=dpl.get("url"),
                         project_id=archived_service.project.original_id,
                         service_id=archived_service.original_id,
                     )
-                    for deployment_hash in archived_service.deployment_hashes
+                    for dpl in archived_service.deployments
                 ],
             )
 
             transaction.on_commit(
                 lambda: start_workflow(
-                    ArchiveDockerServiceWorkflow.run,
-                    payload,
+                    workflow=ArchiveDockerServiceWorkflow.run,
+                    arg=payload,
                     id=archived_service.workflow_id,
                 )
             )
@@ -1066,8 +1067,8 @@ class ToggleDockerServiceAPIView(APIView):
         )
         transaction.on_commit(
             lambda: start_workflow(
-                ToggleDockerServiceWorkflow.run,
-                args=payload,
+                workflow=ToggleDockerServiceWorkflow.run,
+                arg=payload,
                 id=f"toggle-{service.id}-{project.id}",
             )
         )

@@ -329,9 +329,9 @@ TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
 
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
-    "CADDY_PROXY_ADMIN_HOST", "http://127.0.0.1:2019"
+    "CADDY_PROXY_ADMIN_HOST",
+    "http://127.0.0.1:2020" if TESTING else "http://127.0.0.1:2019",
 )
-CADDY_PROXY_CONFIG_ID_SUFFIX = ""
 ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
@@ -350,7 +350,7 @@ DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
 
-if not TESTING and BACKEND_COMPONENT == "API":
+if BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,
