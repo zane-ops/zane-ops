@@ -196,9 +196,15 @@ class DeployDockerServiceWorkflow:
             if pause_at_step is not None:
                 if pause_at_step != last_completed_step:
                     return False
-                await workflow.wait_condition(
-                    lambda: self.cancellation_requested, timeout=timedelta(seconds=5)
-                )
+                try:
+                    await workflow.wait_condition(
+                        lambda: self.cancellation_requested,
+                        timeout=timedelta(seconds=5),
+                    )
+                except Exception:
+                    raise ApplicationError(
+                        non_retryable=True, message="Workflow condition timed out !!"
+                    )
             return self.cancellation_requested
 
         await workflow.execute_activity_method(
