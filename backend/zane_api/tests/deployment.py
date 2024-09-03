@@ -4538,7 +4538,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )
             self.assertIsNone(docker_deployment)
             response = requests.get(
-                ZaneProxyClient.get_deployment_uri(new_deployment.hash)
+                ZaneProxyClient.get_uri_for_deployment(new_deployment.hash)
             )
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 

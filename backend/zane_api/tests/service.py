@@ -823,7 +823,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
         response = requests.get(
-            ZaneProxyClient.get_deployment_uri(deployment.hash),
+            ZaneProxyClient.get_uri_for_deployment(deployment.hash),
             timeout=5,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

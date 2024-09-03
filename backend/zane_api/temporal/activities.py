@@ -234,11 +234,11 @@ class ZaneProxyClient:
         return f"{deployment_hash}-url"
 
     @classmethod
-    def get_deployment_uri(cls, deployment_hash: str):
+    def get_uri_for_deployment(cls, deployment_hash: str):
         return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_deployment(deployment_hash)}"
 
     @classmethod
-    def get_caddy_request_for_deployment(cls, deployment: DockerDeploymentDetails):
+    def _get_request_for_deployment(cls, deployment: DockerDeploymentDetails):
         service = deployment.service
         service_name = get_swarm_service_name_for_deployment(
             deployment_hash=deployment.hash,
@@ -498,7 +498,7 @@ class ZaneProxyClient:
     def insert_deployment_url(cls, deployment: DockerDeploymentDetails):
         if deployment.url is not None:
             response = requests.get(
-                cls.get_deployment_uri(deployment.hash),
+                cls.get_uri_for_deployment(deployment.hash),
                 timeout=5,
             )
 
@@ -507,7 +507,7 @@ class ZaneProxyClient:
                 requests.put(
                     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
                     headers={"content-type": "application/json"},
-                    json=cls.get_caddy_request_for_deployment(deployment),
+                    json=cls._get_request_for_deployment(deployment),
                     timeout=5,
                 )
 
@@ -609,7 +609,7 @@ class ZaneProxyClient:
     @classmethod
     def remove_deployment_url(cls, deployment_hash: str):
         requests.delete(
-            cls.get_deployment_uri(deployment_hash),
+            cls.get_uri_for_deployment(deployment_hash),
             timeout=5,
         )
 
