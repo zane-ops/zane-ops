@@ -29,7 +29,7 @@ from ..temporal import (
     MonitorDockerDeploymentWorkflow,
     HealthcheckDeploymentDetails,
     SimpleDeploymentDetails,
-    get_caddy_id_for_domain,
+    ZaneProxyClient,
 )
 
 
@@ -787,6 +787,13 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             ]
         )
         deployment: DockerDeployment = await service.deployments.afirst()
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(
+                service.id, await service.urls.afirst()
+            ),
+            timeout=5,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = await self.async_client.delete(
             reverse(
@@ -811,12 +818,12 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(1, len(archived_service.urls.all()))
         url: ArchivedURL = await archived_service.urls.afirst()
         response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{get_caddy_id_for_domain(url.domain)}/handle/0/routes",
+            ZaneProxyClient.get_uri_for_service_url(archived_service.original_id, url),
             timeout=5,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
         response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{deployment.url}{settings.CADDY_PROXY_CONFIG_ID_SUFFIX}",
+            ZaneProxyClient.get_deployment_uri(deployment.hash),
             timeout=5,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

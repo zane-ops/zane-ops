@@ -29,12 +29,12 @@ from ..models import (
 from ..serializers import DockerServiceSerializer, URLModelSerializer
 from ..temporal import (
     get_swarm_service_name_for_deployment,
-    get_caddy_uri_for_url,
     DockerDeploymentDetails,
     DockerDeploymentStep,
     DeployDockerServiceWorkflow,
     DeployDockerServiceWorkflowResult,
     CancelDeploymentSignalInput,
+    ZaneProxyClient,
 )
 from ..utils import convert_value_to_bytes
 
@@ -3023,8 +3023,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
         new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
-        service_url: URL = await service.urls.afirst()
-        response = requests.get(get_caddy_uri_for_url(service_url))
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(
+                service.id, await service.urls.afirst()
+            )
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_deploy_service_with_urls(
@@ -3049,7 +3052,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         service_url: URL = await service.urls.filter(
             domain="web-server.fred.kiss"
         ).afirst()
-        response = requests.get(get_caddy_uri_for_url(service_url))
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(service.id, service_url)
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_deploy_service_set_started_at(self):
@@ -3588,10 +3593,14 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         new_url: URL = await service.urls.afirst()
 
-        response = requests.get(get_caddy_uri_for_url(new_url))
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(service.id, new_url)
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        response = requests.get(get_caddy_uri_for_url(old_url))
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(service.id, old_url)
+        )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     async def test_update_url_do_not_delete_old_url_if_still_used(self):
@@ -3642,10 +3651,14 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         new_url: URL = await service.urls.afirst()
 
-        response = requests.get(get_caddy_uri_for_url(new_url))
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(service.id, new_url)
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        response = requests.get(get_caddy_uri_for_url(old_url))
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_service_url(service.id, old_url)
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_dont_do_zero_downtime_when_updating_with_volumes(self):
@@ -4524,7 +4537,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment
             )
             self.assertIsNone(docker_deployment)
-            response = requests.get(get_caddy_uri_for_url(new_deployment.url))
+            response = requests.get(
+                ZaneProxyClient.get_deployment_uri(new_deployment.hash)
+            )
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     async def test_cancel_deployment_at_service_exposed_to_http(self):
@@ -4614,13 +4629,19 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )
             self.assertIsNone(docker_deployment)
 
-            response = requests.get(get_caddy_uri_for_url(url_to_add))
+            response = requests.get(
+                ZaneProxyClient.get_uri_for_service_url(service.id, url_to_add)
+            )
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-            response = requests.get(get_caddy_uri_for_url(updated_url))
+            response = requests.get(
+                ZaneProxyClient.get_uri_for_service_url(service.id, updated_url)
+            )
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-            response = requests.get(get_caddy_uri_for_url(url_to_update))
+            response = requests.get(
+                ZaneProxyClient.get_uri_for_service_url(service.id, url_to_update)
+            )
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_cancel_already_finished_do_nothing(self):
