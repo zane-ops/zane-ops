@@ -194,9 +194,11 @@ class DeployDockerServiceWorkflow:
             the application logic.
             """
             if pause_at_step is not None:
+                print(f"SHOULD PAUSE @ {pause_at_step=} and {last_completed_step=}")
                 if pause_at_step != last_completed_step:
                     return False
                 try:
+                    print(f"WAITING FOR : {pause_at_step=}")
                     await workflow.wait_condition(
                         lambda: self.cancellation_requested,
                         timeout=timedelta(seconds=5),
