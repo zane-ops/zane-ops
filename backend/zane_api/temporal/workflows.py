@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from datetime import timedelta
 from enum import Enum, auto
 from typing import Optional, List
@@ -203,7 +204,9 @@ class DeployDockerServiceWorkflow:
                         lambda: self.cancellation_requested,
                         timeout=timedelta(seconds=5),
                     )
-                except Exception:
+                except Exception as e:
+                    print(f"exception={e}")
+                    traceback.print_exc()
                     raise ApplicationError(
                         non_retryable=True, message="Workflow condition timed out !!"
                     )
