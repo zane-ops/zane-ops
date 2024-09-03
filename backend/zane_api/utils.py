@@ -231,9 +231,14 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def random_word(length: int = 10):
+def random_string(length: int = 40):
     letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for _ in range(length))
+    return "".join(
+        random.choice(
+            string.ascii_lowercase + string.octdigits + "@_" + string.ascii_uppercase
+        )
+        for _ in range(length)
+    )
 
 
 class Colors:
