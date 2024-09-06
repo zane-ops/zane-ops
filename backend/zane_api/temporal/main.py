@@ -21,7 +21,9 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 
 
 async def get_temporalio_client():
-    return await Client.connect(settings.TEMPORALIO_SERVER_URL, namespace="default")
+    return await Client.connect(
+        settings.TEMPORALIO_SERVER_URL, namespace=settings.TEMPORALIO_WORKER_NAMESPACE
+    )
 
 
 async def create_schedule(
