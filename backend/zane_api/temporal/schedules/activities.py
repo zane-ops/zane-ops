@@ -35,6 +35,17 @@ class MonitorDockerDeploymentActivities:
         self.docker_client = get_docker_client()
 
     @activity.defn
+    async def monitor_close_faulty_db_connections(self):
+        """
+        This is to fix a bug we encountered when the worker hadn't run any job for a long time,
+        after that time, Django lost the DB connections, what is needed is to close the connection
+        so that Django can recreate the connection.
+        https://stackoverflow.com/questions/31504591/interfaceerror-connection-already-closed-using-django-celery-scrapy
+        """
+        for conn in db.connections.all():
+            conn.close_if_unusable_or_obsolete()
+
+    @activity.defn
     async def run_deployment_monitor_healthcheck(
         self,
         details: HealthcheckDeploymentDetails,
