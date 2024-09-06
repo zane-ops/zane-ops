@@ -13,6 +13,7 @@ setup: ### Initial setup of the project
 	pip install uv==0.4.2
 	uv pip install -r ./backend/requirements.txt
 	pnpm install --frozen-lockfile
+	chmod -R a+rx ./docker/temporalio/*.sh
 	echo 'initializating docker swarm'
 	docker swarm init || true
 

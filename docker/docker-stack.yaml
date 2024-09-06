@@ -49,22 +49,52 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PWD=password
       - POSTGRES_SEEDS=zane.db
+      - SKIP_SCHEMA_SETUP=false
+      - SKIP_DB_SETUP=false
       - SERVICES=history,matching,frontend,worker
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
     image: temporalio/auto-setup:1.24.2
     volumes:
-      - ./temporalio/dynamicconfig:/etc/temporal/config/dynamicconfig/
-      - ./temporalio/config/development.yaml:/etc/temporal/config/development.yaml
+      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
+      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
       - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
-      - temporal-archival:/tmp/temporal_archival/development
-      - temporal-visibility-archival:/tmp/temporal_vis_archival/development
+      - temporal-archival:/etc/temporal/archival
     networks:
       zane:
         aliases:
           - zane.temporal
     ports:
       - 7233:7233
+    deploy:
+      labels:
+        zane.role: "temporal"
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=zane.db
+      - SKIP_SCHEMA_SETUP=false
+      - SKIP_DB_SETUP=false
+      - SERVICES=history,matching,frontend,worker
+      - TEMPORAL_HOME=/etc/temporal
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    volumes:
+      - "./temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
+    entrypoint:
+      - /etc/temporal/setup.sh
+    deploy:
+      mode: replicated-job
+      restart_policy:
+        condition: on-failure
+    networks:
+      - zane
   temporal-ui:
     depends_on:
       - temporal
@@ -80,7 +110,6 @@ volumes:
   caddy-data:
   caddy-config:
   temporal-archival:
-  temporal-visibility-archival:
 networks:
   zane:
     external: true
