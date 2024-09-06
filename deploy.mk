@@ -19,16 +19,18 @@ setup: ### Launch initial setup before installing zaneops
 	@chmod 777 .fluentd
 	@echo "Step 2️⃣ Done ✅"
 	@echo "Step 3️⃣: Downloading docker compose files for zaneops..."
-	@mkdir -p $(current_dir)/temporalio/config
+	@mkdir -p $(current_dir)/temporalio/config/dynamicconfig
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/development.yaml > ./temporalio/config/development.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/config_template.yaml > ./temporalio/config/config_template.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/attach-proxy-networks.sh > ./attach-proxy-networks.sh
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
 	@chmod a+x ./attach-proxy-networks.sh
-	@chmod a+x ./temporalio/entrypoint.sh
+	@chmod -R a+x ./temporalio/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
 	@if [ ! -f ".env" ]; then \

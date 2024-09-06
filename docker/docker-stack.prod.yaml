@@ -115,7 +115,7 @@ services:
       - valkey
       - proxy
   temporal-server:
-    entrypoint: [ "/etc/temporal/entrypoint.sh" ]
+    entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -126,12 +126,57 @@ services:
       - BIND_ON_IP=0.0.0.0
     image: temporalio/auto-setup:1.24.2
     volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/development.yaml:/etc/temporal/config/development.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
-      - temporal-archival:/tmp/temporal_archival/development
-      - temporal-visibility-archival:/tmp/temporal_vis_archival/development
+      - temporal-archival:/etc/temporal/archival
     deploy:
       replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+        zane.role: "temporal"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    depends_on:
+      - db
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${ZANE_DB_USER:-zane}
+      - POSTGRES_PWD=${ZANE_DB_PASSWORD}
+      - POSTGRES_SEEDS=zane.db
+      - SKIP_SCHEMA_SETUP=false
+      - SKIP_DB_SETUP=false
+      - SERVICES=history,matching,frontend,worker
+      - TEMPORAL_HOME=/etc/temporal
+      - TEMPORAL_ADDRESS=zane.temporal:7233
+      - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
+    entrypoint: ["/etc/temporal/setup.sh"]
+    deploy:
+      mode: replicated-job
       update_config:
         parallelism: 1
         delay: 5s
@@ -149,11 +194,7 @@ services:
           cpus: "0.5"
           memory: 500M
     networks:
-      zane:
-        aliases:
-          - zane.temporal
-    depends_on:
-      - db
+      - zane
   temporal-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
     command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
@@ -183,8 +224,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.5"
-          memory: 500M
+          cpus: "1"
+          memory: 1G
     networks:
       - zane
   valkey:
@@ -209,7 +250,7 @@ services:
         aliases:
           - zane.valkey
     healthcheck:
-      test: [ "CMD", "valkey-cli", "ping" ]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       retries: 10
       timeout: 2s
@@ -239,7 +280,7 @@ services:
           cpus: "1"
           memory: 500M
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       retries: 5
       start_period: 30s
@@ -298,7 +339,6 @@ volumes:
     labels:
       zane.stack: "true"
   temporal-archival:
-  temporal-visibility-archival:
   caddy-data:
     labels:
       zane.stack: "true"
