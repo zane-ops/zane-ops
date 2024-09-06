@@ -1,3 +1,4 @@
+import docker
 import requests
 
 
@@ -77,3 +78,47 @@ def register_zaneops_app_on_proxy(
             f"[{config_id}] Got Response from proxy :\n {response.status_code=}\n {response.text=}\n"
         )
     return
+
+
+def create_default_temporal_namespace(
+    temporal_server_url: str, default_namespace: str = "zane"
+):
+    client = docker.from_env()
+    print("Pulling image temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0...")
+    client.images.pull("temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0")
+    print("Done !")
+
+    print(f"Creating default temporal namespace `{default_namespace}`...")
+    namespace_arguments = (
+        f"--namespace {default_namespace} "
+        "--history-archival-state enabled "
+        "--visibility-archival-state enabled "
+        "--history-uri file:///etc/temporal/archival/history  "
+        "--visibility-uri file:///etc/temporal/archival/visibility  "
+        "--retention 1d "
+    )
+    result = client.containers.run(
+        command=(
+            f'-c "temporal operator namespace create {namespace_arguments} || true '
+            f'&& temporal operator namespace describe {default_namespace}"'
+        ),
+        entrypoint="/bin/sh",
+        # remove=True,
+        environment=dict(
+            TEMPORAL_ADDRESS=temporal_server_url,
+            TEMPORAL_CLI_ADDRESS=temporal_server_url,
+        ),
+        image="temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0",
+        network="zane",
+        tty=True,
+    )
+    print("Done !")
+    print("Received result from temporal : ")
+
+    result_str = result.decode("utf-8")
+    if "error" in result_str and "code = AlreadyExists" not in result_str:
+        raise Exception(f"Failed to create default namespace, error={result_str}")
+    print("====== TEMPORAL RESULT ======")
+    print(result_str)
+    print("====== END TEMPORAL RESULT ======")
+    print()
