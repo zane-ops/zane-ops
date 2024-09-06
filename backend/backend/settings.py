@@ -20,7 +20,7 @@ import uvloop
 from dotenv_vault import load_dotenv
 
 from .api_description import API_DESCRIPTION
-from .bootstrap import register_zaneops_app_on_proxy, create_default_temporal_namespace
+from .bootstrap import register_zaneops_app_on_proxy
 
 loop = uvloop.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -363,8 +363,3 @@ if BACKEND_COMPONENT == "API":
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
     )
-
-    if not TESTING:
-        create_default_temporal_namespace(
-            "zane.temporal:7233", TEMPORALIO_WORKER_NAMESPACE
-        )
