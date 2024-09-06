@@ -599,6 +599,7 @@ def get_workflows_and_activities():
         activities=[
             swarm_activities.save_cancelled_deployment,
             swarm_activities.close_faulty_db_connections,
+            monitor_activities.monitor_close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,
             swarm_activities.attach_network_to_proxy,
