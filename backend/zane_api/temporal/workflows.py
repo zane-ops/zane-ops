@@ -38,6 +38,12 @@ class CreateProjectResourcesWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.close_faulty_db_connections,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
+        )
+
         print(f"Running activity `create_project_network({payload=})`")
         network_id = await workflow.execute_activity_method(
             DockerSwarmActivities.create_project_network,
@@ -64,6 +70,12 @@ class RemoveProjectResourcesWorkflow:
         print(f"\nRunning workflow `RemoveProjectResourcesWorkflow` with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.close_faulty_db_connections,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
         )
 
         print(f"Running activity `get_archived_project_services({payload=})`")
@@ -170,6 +182,12 @@ class DeployDockerServiceWorkflow:
 
         print(
             f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
+        )
+
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.close_faulty_db_connections,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=self.retry_policy,
         )
 
         pause_at_step = (
@@ -512,6 +530,12 @@ class ArchiveDockerServiceWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.close_faulty_db_connections,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
+        )
+
         print(f"Running activity `unexpose_docker_service_from_http({service=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.unexpose_docker_service_from_http,
@@ -536,6 +560,12 @@ class ToggleDockerServiceWorkflow:
         print(f"\nRunning workflow `ToggleDockerServiceWorkflow` with {deployment=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.close_faulty_db_connections,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
         )
 
         if deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
@@ -568,6 +598,7 @@ def get_workflows_and_activities():
         ],
         activities=[
             swarm_activities.save_cancelled_deployment,
+            swarm_activities.close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,
             swarm_activities.attach_network_to_proxy,
