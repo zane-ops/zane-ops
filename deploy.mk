@@ -19,20 +19,22 @@ setup: ### Launch initial setup before installing zaneops
 	@chmod 777 .fluentd
 	@echo "Step 2️⃣ Done ✅"
 	@echo "Step 3️⃣: Downloading docker compose files for zaneops..."
-	@mkdir -p $(current_dir)/temporalio/config
+	@mkdir -p $(current_dir)/temporalio/config/dynamicconfig
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/development.yaml > ./temporalio/config/development.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/config_template.yaml > ./temporalio/config/config_template.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/attach-proxy-networks.sh > ./attach-proxy-networks.sh
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
 	@chmod a+x ./attach-proxy-networks.sh
-	@chmod a+x ./temporalio/entrypoint.sh
+	@chmod -R a+x ./temporalio/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
 	@if [ ! -f ".env" ]; then \
-  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.example > ./.env; \
+  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.template > ./.env; \
   	sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
 	sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
 	sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
@@ -51,15 +53,12 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
 	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
-	set -a; . ./.env; set +a && docker stack deploy --detach=false --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
+	set -a; . ./.env; set +a && docker stack deploy\ --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 	else \
-	set -a; . ./.env; set +a && docker stack deploy --detach=false --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
+	set -a; . ./.env; set +a && docker stack deploy\ --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
 	fi
 	@. ./attach-proxy-networks.sh
-	@docker exec $$(docker ps -qf "name=zane_temporal-server") tctl --ns default namespace register -rd 3 || true
-	@docker exec $$(docker ps -qf "name=zane_temporal-server") temporal operator namespace update --history-archival-state enabled default || true
-	@docker exec $$(docker ps -qf "name=zane_temporal-server") temporal operator namespace update --visibility-archival-state enabled default || true
-	@echo "Deploy done, Please give this is a little minutes before accessing your website 🏁"
+	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo "You can monitor the services deployed by running \`docker service ls --filter label=\"zane.stack=true\"\`"
 	@echo "Wait for all services to show up as \`replicated   1/1\` to attest that everything started succesfully"
 

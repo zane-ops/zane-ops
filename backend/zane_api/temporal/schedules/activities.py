@@ -9,6 +9,7 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     import docker
     import docker.errors
+    from django import db
     from ...models import DockerDeployment, HealthCheck
     from ...utils import DockerSwarmTaskState, DockerSwarmTask
 
