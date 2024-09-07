@@ -74,10 +74,10 @@ delete-resources: ### Delete all resources created by zaneops
 	docker stack rm zane
 	docker network rm zane
 	@echo "Removing zane-ops volumes..."
-	docker volume rm $(docker volume ls --filter "label=zane.stack=true" -q)
+	docker volume rm $$(docker volume ls --filter "label=zane.stack=true" -q)
 	@echo "Removing down all services created by zane-ops..."
-	docker service rm $(docker service ls --filter "label=zane-managed=true" -q) || true
+	docker service rm $$(docker service ls --filter "label=zane-managed=true" -q) || true
 	@echo "Removing all networks created by zane-ops..."
-	docker network rm $(docker network ls --filter "label=zane-managed=true" -q) || true
+	docker network rm $$(docker network ls --filter "label=zane-managed=true" -q) || true
 	@echo "Removing all volumes created by zane-ops..."
-	docker volume rm $(docker volume ls --filter "label=zane-managed=true" -q) || true
+	docker volume rm $$(docker volume ls --filter "label=zane-managed=true" -q) || true
