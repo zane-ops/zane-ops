@@ -1,6 +1,5 @@
 import asyncio
 from datetime import timedelta
-from typing import Any
 from unittest.mock import patch, Mock, MagicMock, call
 
 import requests
@@ -4261,17 +4260,31 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4325,16 +4338,30 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4396,16 +4423,30 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4463,17 +4504,30 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4517,16 +4571,30 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4608,16 +4676,30 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4674,16 +4756,30 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            workflow_result, _ = await asyncio.gather(
-                workflow_handle.result(),
-                workflow_handle.signal(
-                    DeployDockerServiceWorkflow.cancel_deployment,
-                    arg=CancelDeploymentSignalInput(
-                        deployment_hash=new_deployment.hash
-                    ),
-                    rpc_timeout=timedelta(seconds=5),
-                ),
-            )  # type: DeployDockerServiceWorkflowResult, None
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+            # Send signal concurrently
+            await workflow_handle.signal(
+                DeployDockerServiceWorkflow.cancel_deployment,
+                arg=CancelDeploymentSignalInput(deployment_hash=new_deployment.hash),
+                rpc_timeout=timedelta(seconds=5),
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+            # workflow_result, _ = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     workflow_handle.signal(
+            #         DeployDockerServiceWorkflow.cancel_deployment,
+            #         arg=CancelDeploymentSignalInput(
+            #             deployment_hash=new_deployment.hash
+            #         ),
+            #         rpc_timeout=timedelta(seconds=5),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.HEALTHY,
@@ -4727,19 +4823,39 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
-            workflow_result, response = await asyncio.gather(
-                workflow_handle.result(),
-                self.async_client.put(
-                    reverse(
-                        "zane_api:services.docker.cancel_deployment",
-                        kwargs={
-                            "project_slug": p.slug,
-                            "service_slug": service.slug,
-                            "deployment_hash": new_deployment.hash,
-                        },
-                    ),
+            # Create task for the workflow result
+            workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+            # Send signal concurrently
+            response = await self.async_client.put(
+                reverse(
+                    "zane_api:services.docker.cancel_deployment",
+                    kwargs={
+                        "project_slug": p.slug,
+                        "service_slug": service.slug,
+                        "deployment_hash": new_deployment.hash,
+                    },
                 ),
-            )  # type: DeployDockerServiceWorkflowResult, Any
+            )
+
+            # Wait for the workflow result to complete
+            workflow_result: DeployDockerServiceWorkflowResult = (
+                await workflow_result_task
+            )
+
+            # workflow_result, response = await asyncio.gather(
+            #     workflow_handle.result(),
+            #     self.async_client.put(
+            #         reverse(
+            #             "zane_api:services.docker.cancel_deployment",
+            #             kwargs={
+            #                 "project_slug": p.slug,
+            #                 "service_slug": service.slug,
+            #                 "deployment_hash": new_deployment.hash,
+            #             },
+            #         ),
+            #     ),
+            # )  # type: DeployDockerServiceWorkflowResult, Any
 
             self.assertEqual(status.HTTP_200_OK, response.status_code)
             self.assertEqual(
