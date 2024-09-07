@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 from datetime import timedelta
 from enum import Enum, auto
 from typing import Optional, List
@@ -216,21 +215,18 @@ class DeployDockerServiceWorkflow:
                 if pause_at_step != last_completed_step:
                     return False
 
-                print("wait_condition ??")
                 print(
-                    f"check_for_cancellation({pause_at_step=}, {last_completed_step=})"
+                    f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
                 )
-                try:
-                    await workflow.wait_condition(
-                        lambda: self.cancellation_requested,
-                        timeout=timedelta(seconds=10),
-                    )
-                except Exception as e:
-                    print(
-                        f"check_for_cancellation({pause_at_step=}, {last_completed_step=}), exception={e}"
-                    )
-                    traceback.print_exc()
-                    return False
+                timeout = 15
+                start_time = workflow.time()
+                while (
+                    workflow.time() - start_time
+                ) < timeout and not self.cancellation_requested:
+                    await asyncio.sleep(1)
+                print(
+                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
+                )
             return self.cancellation_requested
 
         await workflow.execute_activity_method(
