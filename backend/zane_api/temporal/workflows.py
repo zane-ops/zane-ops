@@ -218,7 +218,7 @@ class DeployDockerServiceWorkflow:
                 print(
                     f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
                 )
-                timeout = 15
+                timeout = 5
                 start_time = workflow.time()
                 while (
                     workflow.time() - start_time
