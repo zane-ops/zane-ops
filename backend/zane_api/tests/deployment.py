@@ -4275,17 +4275,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 await workflow_result_task
             )
 
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
-
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
                 workflow_result.deployment_status,
@@ -4352,16 +4341,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4437,16 +4416,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4518,16 +4487,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4585,16 +4544,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4690,16 +4639,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.CANCELLED,
@@ -4770,16 +4709,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-            # workflow_result, _ = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     workflow_handle.signal(
-            #         DeployDockerServiceWorkflow.cancel_deployment,
-            #         arg=CancelDeploymentSignalInput(
-            #             deployment_hash=new_deployment.hash
-            #         ),
-            #         rpc_timeout=timedelta(seconds=5),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, None
 
             self.assertEqual(
                 DockerDeployment.DeploymentStatus.HEALTHY,
@@ -4842,20 +4771,6 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
             workflow_result: DeployDockerServiceWorkflowResult = (
                 await workflow_result_task
             )
-
-            # workflow_result, response = await asyncio.gather(
-            #     workflow_handle.result(),
-            #     self.async_client.put(
-            #         reverse(
-            #             "zane_api:services.docker.cancel_deployment",
-            #             kwargs={
-            #                 "project_slug": p.slug,
-            #                 "service_slug": service.slug,
-            #                 "deployment_hash": new_deployment.hash,
-            #             },
-            #         ),
-            #     ),
-            # )  # type: DeployDockerServiceWorkflowResult, Any
 
             self.assertEqual(status.HTTP_200_OK, response.status_code)
             self.assertEqual(
