@@ -34,7 +34,7 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
 	@if [ ! -f ".env" ]; then \
-  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.example > ./.env; \
+  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.template > ./.env; \
   	sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
 	sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
 	sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
