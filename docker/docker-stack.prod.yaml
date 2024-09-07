@@ -128,7 +128,6 @@ services:
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/development.yaml:/etc/temporal/config/development.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
       - temporal-archival:/etc/temporal/archival
     deploy:
@@ -312,25 +311,6 @@ services:
         limits:
           cpus: "0.1"
           memory: 100M
-  #  registry:
-  #    image: registry:2
-  #    container_name: zane-registry
-  #    restart: always
-  #    environment:
-  #      REGISTRY_AUTH: htpasswd
-  #      REGISTRY_AUTH_HTPASSWD_REALM: Registry
-  #      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-  #      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
-  #    volumes:
-  #      - ./registry/auth:/auth
-  #      - ./registry/data:/data
-  #      - registry-lib-data:/var/lib/registry
-  #    ports:
-  #      - "9989:5000"
-  #    networks:
-  #      zane:
-  #        aliases:
-  #          - zane.registry
 volumes:
   db-data:
     labels:
