@@ -339,6 +339,8 @@ volumes:
     labels:
       zane.stack: "true"
   temporal-archival:
+    labels:
+      zane.stack: "true"
   caddy-data:
     labels:
       zane.stack: "true"
