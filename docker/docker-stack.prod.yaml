@@ -176,11 +176,6 @@ services:
     entrypoint: ["/etc/temporal/setup.sh"]
     deploy:
       mode: replicated-job
-      update_config:
-        parallelism: 1
-        delay: 5s
-        order: start-first
-        failure_action: rollback
       restart_policy:
         condition: on-failure
       placement:
