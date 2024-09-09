@@ -53,9 +53,9 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
 	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
-	set -a; . ./.env; set +a && docker stack deploy\ --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
+	set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 	else \
-	set -a; . ./.env; set +a && docker stack deploy\ --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
+	set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
 	fi
 	@. ./attach-proxy-networks.sh
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
