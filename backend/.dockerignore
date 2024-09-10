@@ -2,3 +2,5 @@ lib/
 venv/
 __pycache__/
 .DS_Store
+venv/
+package.json
