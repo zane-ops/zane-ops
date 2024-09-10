@@ -10,7 +10,7 @@ async def run_worker():
     print(f"Connecting worker to temporal server...🔄")
     client = await Client.connect(
         settings.TEMPORALIO_SERVER_URL,
-        namespace="default",
+        namespace=settings.TEMPORALIO_WORKER_NAMESPACE,
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
     print(f"worker connected ✅")
