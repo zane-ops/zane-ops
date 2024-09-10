@@ -1,4 +1,4 @@
-FROM python:3.11.7-alpine
+FROM python:3.11.7-slim
 WORKDIR /app
 
 # set environment variables
