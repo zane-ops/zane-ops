@@ -1,7 +1,5 @@
 services:
   temporal-ui:
-    depends_on:
-      - temporal-server
     environment:
       - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
@@ -12,3 +10,19 @@ services:
           - zane.temporal_ui
     ports:
       - 8080:8080
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 100M
+networks:
+  zane:
+    external: true
