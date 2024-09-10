@@ -156,7 +156,7 @@ services:
     depends_on:
       - db
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-0.13.0
+    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
       - DB=postgres12
       - DB_PORT=5432
