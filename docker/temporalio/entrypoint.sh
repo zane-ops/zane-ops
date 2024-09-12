@@ -2,6 +2,9 @@
 
 set -eu -o pipefail
 
+# This is obligatory for temporal archival to work
+chown -R temporal:temporal /etc/temporal/archival
+
 : "${BIND_ON_IP:=$(getent hosts "$(hostname)" | awk '{print $1;}')}"
 export BIND_ON_IP
 
