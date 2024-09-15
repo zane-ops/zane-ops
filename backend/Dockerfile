@@ -1,4 +1,6 @@
-FROM python:3.11.7
+FROM python:3.11.7-slim
+
+RUN apt update && yes | apt install gcc python3-dev
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
