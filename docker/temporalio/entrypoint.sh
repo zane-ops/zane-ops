@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu -o pipefailr
+set -eu -o pipefail
 
 : "${BIND_ON_IP:=$(getent hosts "$(hostname)" | awk '{print $1;}')}"
 export BIND_ON_IP
