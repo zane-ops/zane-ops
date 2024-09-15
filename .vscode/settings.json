@@ -19,8 +19,5 @@
   },
   "[html]": {
     "editor.defaultFormatter": "vscode.html-language-features"
-  },
-  "[github-actions-workflow]": {
-    "editor.defaultFormatter": "kachick.vscode-yamlfmt"
   }
 }
