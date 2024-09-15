@@ -54,7 +54,7 @@ services:
       - SERVICES=history,matching,frontend,worker
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
-    image: temporalio/auto-setup:1.24.2
+    image: ghcr.io/zane-ops/temporal-with-archival:canary
     volumes:
       - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
       - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
