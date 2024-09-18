@@ -61,10 +61,9 @@ function ServiceDetails() {
     to: addDays(new Date(2022, 0, 20), 20)
   });
 
-  const [selectedFrameworks, setSelectedFrameworks] = React.useState<string[]>([
-    "react",
-    "angular"
-  ]);
+  const [selectedStatuses, setSelectedStatuses] = React.useState(
+    statuses.map((status) => status.value)
+  );
 
   return (
     <>
@@ -189,8 +188,8 @@ function ServiceDetails() {
             <div className="w-fit">
               <MultiSelect
                 options={statuses}
-                onValueChange={setSelectedFrameworks}
-                defaultValue={selectedFrameworks}
+                onValueChange={setSelectedStatuses}
+                defaultValue={selectedStatuses}
                 placeholder="Status"
                 variant="inverted"
                 animation={2}
