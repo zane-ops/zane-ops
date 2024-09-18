@@ -1,12 +1,38 @@
 import dataclasses
 import datetime
 import json
+import random
+import string
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, TypeVar, List, Optional
+from functools import wraps
+from typing import Callable, TypeVar, List, Optional, Literal
 
 from django.core.cache import cache
+
+
+def cache_result(ttl: int = None, cache_key: str = None):
+    def decorator(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            # Generate a cache key if not provided
+            key = (
+                cache_key
+                or f"{func.__name__}_{'_'.join(map(str, args))}_{'_'.join(f'{k}_{v}' for k, v in kwargs.items())}"
+            )
+
+            # Try to get the result from the cache
+            result = cache.get(key)
+            if result is None:
+                # If cache miss, call the function and cache the result
+                result = func(*args, **kwargs)
+                cache.set(key, result, ttl)
+            return result
+
+        return wrapped
+
+    return decorator
 
 
 def strip_slash_if_exists(
@@ -148,6 +174,39 @@ def format_seconds(seconds: float):
         return f"{remaining_seconds}s"
 
 
+def convert_value_to_bytes(
+    value: int,
+    unit: Literal["BYTES", "KILOBYTES", "MEGABYTES", "GIGABYTES"] = "BYTES",
+):
+    match unit:
+        case "BYTES":
+            return value
+        case "KILOBYTES":
+            return value * 1024
+        case "MEGABYTES":
+            return value * 1024 * 1024
+        case "GIGABYTES":
+            return value * 1024 * 1024 * 1024
+        case _:
+            raise ValueError(
+                f"Unit `{unit}` is not valid, must be one of `BYTES`, `KILOBYTES`, `MEGABYTES` or `GIGABYTES`",
+            )
+
+
+def format_storage_value(value: int):
+    kb = 1024
+    mb = 1024 * kb
+    gb = 1024 * mb
+
+    if value < kb:
+        return f"{value} bytes"
+    if value < mb:
+        return f"{value/kb:.2f} kb"
+    if value < gb:
+        return f"{value/mb:.2f} mb"
+    return f"{value/gb:.2f} gb"
+
+
 def jprint(value: dict | list | str | int | float):
     """
     Print & format value as JSON
@@ -170,3 +229,17 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
+
+
+def random_word(length: int = 10):
+    letters = string.ascii_lowercase
+    return "".join(random.choice(letters) for _ in range(length))
+
+
+class Colors:
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    GREY = "\033[90m"
+    ENDC = "\033[0m"  # Reset to default color

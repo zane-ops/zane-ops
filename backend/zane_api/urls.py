@@ -49,11 +49,6 @@ urlpatterns = [
         name="docker.check_port_mapping",
     ),
     re_path(
-        r"^volumes/(?P<volume_id>[a-zA-Z0-9_]+)/size/?$",
-        views.VolumeGetSizeView.as_view(),
-        name="volume.size",
-    ),
-    re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/create-service/docker/?$",
         views.CreateDockerServiceAPIView.as_view(),
         name="services.docker.create",
@@ -83,11 +78,6 @@ if settings.DEBUG:
 
 urlpatterns += [
     re_path(
-        "^_test/temporal/?$",
-        views.TestWorkflowAPIView.as_view(),
-        name="temporal.test_workflow",
-    ),
-    re_path(
         "^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
         name="proxy.check_certificates",
@@ -116,10 +106,22 @@ urlpatterns += [
         name="services.docker.redeploy_service",
     ),
     re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-deployment/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        views.CancelDockerServiceDeploymentAPIView.as_view(),
+        name="services.docker.cancel_deployment",
+    ),
+    re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker"
         r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
         views.ArchiveDockerServiceAPIView.as_view(),
         name="services.docker.archive",
+    ),
+    re_path(
+        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/toggle-service/docker"
+        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        views.ToggleDockerServiceAPIView.as_view(),
+        name="services.docker.toggle",
     ),
     re_path(
         r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"

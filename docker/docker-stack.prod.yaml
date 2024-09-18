@@ -1,17 +1,17 @@
 x-backend-vars: &env-vars
-  environment:
-    ENVIRONMENT: PRODUCTION
-    REDIS_URL: redis://zane.valkey:6379/0
-    DB_HOST: zane.db
-    DB_PORT: 5432
-    DB_NAME: zane
-    DB_USER: ${ZANE_DB_USER:-zane}
-    DB_PASSWORD: ${ZANE_DB_PASSWORD}
-    ROOT_DOMAIN: ${ROOT_DOMAIN}
-    ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
-    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-    CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-    ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+  ENVIRONMENT: PRODUCTION
+  REDIS_URL: redis://zane.valkey:6379/0
+  DB_HOST: zane.db
+  DB_PORT: 5432
+  DB_NAME: zane
+  DB_USER: ${ZANE_DB_USER:-zane}
+  DB_PASSWORD: ${ZANE_DB_PASSWORD}
+  ROOT_DOMAIN: ${ROOT_DOMAIN}
+  ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+  ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+  TEMPORALIO_SERVER_URL: zane.temporal:7233
 
 services:
   proxy:
@@ -25,7 +25,7 @@ services:
         fluentd-async: "true"
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
-        tag: "{\"service_id\":\"zane.proxy\"}"
+        tag: '{"service_id":"zane.proxy"}'
     deploy:
       replicas: 1
       update_config:
@@ -43,7 +43,7 @@ services:
         zane.role: "proxy"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 200M
     ports:
       - "443:443"
@@ -74,7 +74,7 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 100M
     networks:
       zane:
@@ -99,30 +99,37 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
         aliases:
           - zane.api
           - zane.api.zaneops.internal
-    <<: *env-vars
+    environment:
+      <<: *env-vars
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - db
       - valkey
       - proxy
-  #    healthcheck:
-  #      # https://stackoverflow.com/a/47722899/5008962
-  #      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "http://localhost:8000/api/ping", "||", "exit", "1" ]
-  #      interval: 5s
-  #      timeout: 10s
-  #      retries: 3
-  #      start_period: 5s
-  celery-worker:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "source /venv/bin/activate && celery -A backend worker -E -l info"
+  temporal-server:
+    entrypoint: ["/etc/temporal/entrypoint.sh"]
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${ZANE_DB_USER:-zane}
+      - POSTGRES_PWD=${ZANE_DB_PASSWORD}
+      - POSTGRES_SEEDS=zane.db
+      - SERVICES=history,matching,frontend,worker
+      - BIND_ON_IP=0.0.0.0
+    image: ghcr.io/zane-ops/temporal-with-archival:${IMAGE_VERSION}
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
+      - temporal-archival:/etc/temporal/archival
     deploy:
       replicas: 1
       update_config:
@@ -137,22 +144,64 @@ services:
           - node.role==manager
       labels:
         zane.stack: "true"
+        zane.role: "temporal"
       resources:
         limits:
-          cpus: '1'
+          cpus: "0.5"
+          memory: 500M
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    depends_on:
+      - db
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${ZANE_DB_USER:-zane}
+      - POSTGRES_PWD=${ZANE_DB_PASSWORD}
+      - POSTGRES_SEEDS=zane.db
+      - SKIP_SCHEMA_SETUP=false
+      - SKIP_DB_SETUP=false
+      - SERVICES=history,matching,frontend,worker
+      - TEMPORAL_HOME=/etc/temporal
+      - TEMPORAL_ADDRESS=zane.temporal:7233
+      - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
+    entrypoint: ["/etc/temporal/setup.sh"]
+    deploy:
+      mode: replicated-job
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.5"
           memory: 500M
     networks:
       - zane
-    <<: *env-vars
+  temporal-worker:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - db
       - valkey
       - proxy
-  celery-beat:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "source /venv/bin/activate && celery -A backend beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+      - temporal-server
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
     deploy:
       replicas: 1
       update_config:
@@ -169,15 +218,10 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
-          memory: 100M
+          cpus: "1"
+          memory: 1G
     networks:
       - zane
-    <<: *env-vars
-    depends_on:
-      - db
-      - valkey
-      - proxy
   valkey:
     image: valkey/valkey:7.2.5-alpine
     volumes:
@@ -193,14 +237,14 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 500M
     networks:
       zane:
         aliases:
           - zane.valkey
     healthcheck:
-      test: [ "CMD", "valkey-cli", "ping" ]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       retries: 10
       timeout: 2s
@@ -227,10 +271,10 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 500M
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       retries: 5
       start_period: 30s
@@ -260,27 +304,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 100M
-  #  registry:
-  #    image: registry:2
-  #    container_name: zane-registry
-  #    restart: always
-  #    environment:
-  #      REGISTRY_AUTH: htpasswd
-  #      REGISTRY_AUTH_HTPASSWD_REALM: Registry
-  #      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-  #      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
-  #    volumes:
-  #      - ./registry/auth:/auth
-  #      - ./registry/data:/data
-  #      - registry-lib-data:/var/lib/registry
-  #    ports:
-  #      - "9989:5000"
-  #    networks:
-  #      zane:
-  #        aliases:
-  #          - zane.registry
 volumes:
   db-data:
     labels:
@@ -288,9 +313,9 @@ volumes:
   redis-data:
     labels:
       zane.stack: "true"
-  #  registry-lib-data:
-  #    labels:
-  #      zane.stack: "true"
+  temporal-archival:
+    labels:
+      zane.stack: "true"
   caddy-data:
     labels:
       zane.stack: "true"

@@ -67,7 +67,7 @@ export function CreateProject() {
         action={(formData) => {
           mutate({
             slug: formData.get("slug")?.toString().trim(),
-            description: formData.get("description")?.toString()
+            description: formData.get("description")?.toString() || undefined
           });
         }}
         className="flex h-[60vh] flex-grow justify-center items-center"

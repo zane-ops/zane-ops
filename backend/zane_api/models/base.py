@@ -1,12 +1,11 @@
 import time
 import uuid
-from typing import Union
+from typing import Union, Optional
 
 from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 
@@ -39,10 +38,6 @@ class Project(TimestampedModel):
     @property
     def create_task_id(self):
         return f"create-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
-
-    @property
-    def archive_task_id(self):
-        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
 
     def __str__(self):
         return f"Project({self.slug})"
@@ -140,6 +135,10 @@ class BaseService(TimestampedModel):
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
     network_alias = models.CharField(max_length=300, null=True, unique=True)
+    resource_limits = models.JSONField(
+        max_length=255,
+        null=True,
+    )
 
     @property
     def host_volumes(self):
@@ -246,23 +245,6 @@ class DockerRegistryService(BaseService):
         )
 
     @property
-    def archive_task_id(self):
-        return f"archive-{self.id}-{datetime_to_timestamp_string(self.updated_at)}"
-
-    def delete_resources(self):
-        super().delete_resources()
-        all_deployments = self.deployments.all()
-        all_monitor_tasks = PeriodicTask.objects.filter(
-            dockerdeployment__in=all_deployments
-        )
-
-        interval_ids = []
-        for task in all_monitor_tasks.all():
-            interval_ids.append(task.interval_id)
-        IntervalSchedule.objects.filter(id__in=interval_ids).delete()
-        all_monitor_tasks.delete()
-
-    @property
     def latest_production_deployment(self) -> Union["DockerDeployment", None]:
         return (
             self.deployments.filter(is_current_production=True)
@@ -275,6 +257,21 @@ class DockerRegistryService(BaseService):
             )
             .order_by("-queued_at")
             .first()
+        )
+
+    @property
+    async def alatest_production_deployment(self) -> Optional["DockerDeployment"]:
+        return await (
+            self.deployments.filter(is_current_production=True)
+            .select_related("service", "service__project", "service__healthcheck")
+            .prefetch_related(
+                "service__volumes",
+                "service__urls",
+                "service__ports",
+                "service__env_variables",
+            )
+            .order_by("-queued_at")
+            .afirst()
         )
 
     @property
@@ -322,6 +319,14 @@ class DockerRegistryService(BaseService):
                     self.credentials = {
                         "username": change.new_value.get("username"),
                         "password": change.new_value.get("password"),
+                    }
+                case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                    if change.new_value is None:
+                        self.resource_limits = None
+                        continue
+                    self.resource_limits = {
+                        "cpus": change.new_value.get("cpus"),
+                        "memory": change.new_value.get("memory"),
                     }
                 case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                     if change.new_value is None:
@@ -521,7 +526,7 @@ class Volume(TimestampedModel):
     )
     container_path = models.CharField(max_length=255)
     host_path = models.CharField(
-        max_length=255, null=True, validators=[validate_url_path], unique=True
+        max_length=255, null=True, validators=[validate_url_path]
     )
 
     def __str__(self):
@@ -582,19 +587,33 @@ class DockerDeployment(BaseDeployment):
     service = models.ForeignKey(
         to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
     )
-    monitor_task = models.ForeignKey(
-        to=PeriodicTask, null=True, on_delete=models.SET_NULL
-    )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
 
-    @property
-    def task_id(self):
-        return f"deploy-{self.hash}-{self.service.id}-{self.service.project.id}"
+    @classmethod
+    def get_next_deployment_slot(
+        cls,
+        latest_production_deployment: Optional["DockerDeployment"],
+    ) -> str:
+        if (
+            latest_production_deployment is not None
+            and latest_production_deployment.slot
+            == DockerDeployment.DeploymentSlot.BLUE
+            and latest_production_deployment.status
+            != DockerDeployment.DeploymentStatus.FAILED
+            # 👆🏽 technically this can only be true for the initial deployment
+            # for the next deployments, when they fail, they will not be promoted to production
+        ):
+            return DockerDeployment.DeploymentSlot.GREEN
+        return DockerDeployment.DeploymentSlot.BLUE
 
     @property
-    def monitor_task_name(self):
-        return f"monitor_deployment_{self.hash}"
+    def workflow_id(self):
+        return f"deploy-{self.service.id}-{self.service.project_id}"
+
+    @property
+    def monitor_schedule_id(self):
+        return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
 
     @property
     def unprefixed_hash(self):
@@ -669,9 +688,10 @@ class DockerDeploymentChange(BaseDeploymentChange):
         CREDENTIALS = "credentials", _("credentials")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
-        ENV_VARIABLES = "env_variables", _("env_variables")
+        ENV_VARIABLES = "env_variables", _("env variables")
         URLS = "urls", _("urls")
         PORTS = "ports", _("ports")
+        RESOURCE_LIMITS = "resource_limits", _("resource limits")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(
@@ -856,48 +876,3 @@ class HttpLog(Log):
             models.Index(fields=["time"]),
         ]
         ordering = ("time",)
-
-
-class CRON(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255)
-    schedule = models.ForeignKey(to=CrontabSchedule, on_delete=models.RESTRICT)
-    archived = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.name
-
-
-class HttpCRON(CRON):
-    class RequestMethod(models.TextChoices):
-        GET = "GET", _("GET")
-        POST = "POST", _("POST")
-        PUT = "PUT", _("PUT")
-        DELETE = "DELETE", _("DELETE")
-        PATCH = "PATCH", _("PATCH")
-        OPTIONS = "OPTIONS", _("OPTIONS")
-        HEAD = "HEAD", _("HEAD")
-
-    url = models.URLField(max_length=2000)
-    headers = models.JSONField()
-    body = models.JSONField()
-    method = models.CharField(
-        max_length=7,
-        choices=RequestMethod.choices,
-    )
-
-    def __str__(self):
-        return f"HTTP CRON {self.name}"
-
-
-class ServiceCommandCRON(CRON):
-    command = models.TextField()
-    dockerService = models.ForeignKey(
-        to=DockerRegistryService, null=True, on_delete=models.CASCADE
-    )
-    gitService = models.ForeignKey(
-        to=GitRepositoryService, null=True, on_delete=models.CASCADE
-    )
-
-    def __str__(self):
-        return f"HTTP CRON {self.name}"

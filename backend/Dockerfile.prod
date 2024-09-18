@@ -1,11 +1,13 @@
-FROM python:3.11.7
+FROM python:3.11.7-slim
 WORKDIR /app
+
+RUN apt update && yes | apt install gcc python3-dev
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-RUN pip install uv==0.1.0
+RUN pip install uv==0.4.2
 ENV VIRTUAL_ENV=/venv
 RUN uv venv /venv
 COPY requirements.txt requirements.txt
@@ -15,4 +17,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD /bin/bash -c "source /venv/bin/activate && python manage.py migrate && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
+CMD /bin/bash -c "source /venv/bin/activate && python manage.py migrate && gunicorn --log-level=info -b 0.0.0.0:8000 backend.wsgi:application"

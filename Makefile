@@ -4,15 +4,16 @@ help: ### Show this help
 
 setup: ### Initial setup of the project
 	echo 'Creating a virtual env...'
-	docker network create --driver overlay zane || true
+	docker network create --driver overlay --attachable zane || true
 	python3 -m venv ./backend/venv
 	echo 'activating the virtualenv...'
 	chmod a+x ./backend/venv/bin/activate
 	. ./backend/venv/bin/activate
 	echo 'installing dependencies...'
-	pip install uv
+	pip install uv==0.4.2
 	uv pip install -r ./backend/requirements.txt
 	pnpm install --frozen-lockfile
+	chmod -R a+rx ./docker/temporalio/*.sh
 	echo 'initializating docker swarm'
 	docker swarm init || true
 

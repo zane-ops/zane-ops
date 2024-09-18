@@ -7,6 +7,7 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     
     services:
       postgres:
@@ -17,6 +18,12 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5434:5432
+      proxy:
+        image: ghcr.io/zane-ops/proxy:canary
+        ports:
+          - "2020:2020"
+        env:
+          CADDY_ADMIN: 0.0.0.0:2020
     
     steps:
       - uses: actions/checkout@v2
@@ -29,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install uv==0.1.0
+          pip install uv==0.4.2
           uv venv
           uv pip install -r requirements.txt
 
@@ -37,4 +44,5 @@ jobs:
         run: |
           cd backend
           source .venv/bin/activate
+          # echo "Disabling tests for now"
           python manage.py test --parallel

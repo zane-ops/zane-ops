@@ -1,0 +1,24 @@
+limit.maxIDLength:
+  - value: 255
+    constraints: { }
+frontend.persistenceMaxQPS:
+  - constraints: { }
+    value: 100000
+history.persistenceMaxQPS:
+  - constraints: { }
+    value: 100000
+matching.persistenceMaxQPS:
+  - constraints: { }
+    value: 100000
+worker.persistenceMaxQPS:
+  - constraints: { }
+    value: 100000
+visibility.persistenceMaxQPS:
+  - constraints: { }
+    value: 100000
+system.visibilityPersistenceMaxReadQPS:
+  - constraints: { }
+    value: 100000
+system.visibilityPersistenceMaxWriteQPS:
+  - constraints: { }
+    value: 100000

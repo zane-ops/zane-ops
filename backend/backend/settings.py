@@ -10,15 +10,20 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import asyncio
 import os
 import sys
 from datetime import timedelta
 from pathlib import Path
 
+import uvloop
 from dotenv_vault import load_dotenv
 
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
+
+loop = uvloop.new_event_loop()
+asyncio.set_event_loop(loop)
 
 try:
     load_dotenv(".env", override=True)
@@ -40,6 +45,7 @@ SECRET_KEY = os.environ.get(
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
+BACKEND_COMPONENT = os.environ.get("BACKEND_COMPONENT", "API")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT != PRODUCTION_ENV
@@ -51,8 +57,8 @@ SECURE_HSTS_SECONDS = 0 if ENVIRONMENT != PRODUCTION_ENV else 60
 
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
-ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "zaneops.local")
-ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.zaneops.local")
+ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
+ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 
 ALLOWED_HOSTS = (
@@ -91,7 +97,6 @@ SESSION_EXTEND_PERIOD = 7
 # Application definition
 
 INSTALLED_APPS = [
-    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -107,7 +112,6 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "drf_standardized_errors",
     "django_filters",
-    "adrf",
 ]
 
 MIDDLEWARE = [
@@ -222,11 +226,6 @@ LOGGING = {
 if DEBUG:
     LOGGING["loggers"].update(
         {
-            "celery": {
-                "handlers": ["console"],
-                "level": "DEBUG",
-                "propagate": True,
-            },
             "gunicorn.error": {
                 "handlers": ["console"],
                 "level": "INFO",
@@ -315,7 +314,6 @@ SPECTACULAR_SETTINGS = {
             ("SLEEPING", "Sleeping"),
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
             ("DEPLOYING", "Deploying"),
-            ("CANCELLED", "Cancelled"),
         ),
     },
     "POSTPROCESSING_HOOKS": [
@@ -329,24 +327,10 @@ SPECTACULAR_SETTINGS = {
 # For having colorized output in tests
 TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
 
-# Celery config
-CELERY_BROKER_URL = REDIS_URL
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
-CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_REJECT_ON_WORKER_LOST = True
-CELERY_RESULT_BACKEND = "django-db"
-CELERY_CACHE_BACKEND = "default"
-CELERY_ACCEPT_CONTENT = ["application/json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_RESULT_CACHE_MAX = 1_000
-CELERY_RESULT_EXPIRES = timedelta(hours=1)
-
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
-    "CADDY_PROXY_ADMIN_HOST", "http://127.0.0.1:2019"
+    "CADDY_PROXY_ADMIN_HOST",
+    "http://127.0.0.1:2020" if TESTING else "http://127.0.0.1:2019",
 )
 ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
@@ -366,13 +350,16 @@ DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
 
-if not TESTING:
+# temporalio config
+TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = timedelta(minutes=30)
+TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
+TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"
+TEMPORALIO_WORKER_NAMESPACE = "zane"
+
+if BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
     )
-
-TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
-TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"

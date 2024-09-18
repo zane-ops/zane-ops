@@ -1,7 +1,10 @@
+import asyncio
 import json
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import List
+from datetime import timedelta
+from typing import List, Callable, Optional
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
@@ -11,17 +14,31 @@ from django.core.cache import cache
 from django.test import AsyncClient
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from docker.types import EndpointSpec
+from docker.types import EndpointSpec, Resources
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from ..activities import get_project
-from ..docker_operations import get_network_resource_name, DockerImageResultFromRegistry
-from ..models import Project, DockerDeploymentChange, DockerRegistryService
-from ..workflows import GetProjectWorkflow
+from ..models import (
+    Project,
+    DockerDeploymentChange,
+    DockerRegistryService,
+    DockerDeployment,
+    Volume,
+)
+from ..temporal import (
+    get_network_resource_name,
+    DockerImageResultFromRegistry,
+    SERVER_RESOURCE_LIMIT_COMMAND,
+)
+from ..temporal import (
+    get_workflows_and_activities,
+    get_swarm_service_name_for_deployment,
+    get_volume_resource_name,
+)
+from ..utils import find_item_in_list
 
 
 class CustomAPIClient(APIClient):
@@ -34,16 +51,14 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-
-        with self.parent.captureOnCommitCallbacks(execute=True) as callbacks:
-            response = super().post(
-                path=path,
-                data=data,
-                format=format,
-                content_type=(
-                    content_type if content_type is not None else "application/json"
-                ),
-            )
+        response = super().post(
+            path=path,
+            data=data,
+            format=format,
+            content_type=(
+                content_type if content_type is not None else "application/json"
+            ),
+        )
         return response
 
     def put(
@@ -51,15 +66,15 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-        with self.parent.captureOnCommitCallbacks(execute=True):
-            response = super().put(
-                path=path,
-                data=data,
-                format=format,
-                content_type=(
-                    content_type if content_type is not None else "application/json"
-                ),
-            )
+
+        response = super().put(
+            path=path,
+            data=data,
+            format=format,
+            content_type=(
+                content_type if content_type is not None else "application/json"
+            ),
+        )
         return response
 
     def patch(
@@ -67,15 +82,14 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-        with self.parent.captureOnCommitCallbacks(execute=True):
-            response = super().patch(
-                path=path,
-                data=data,
-                format=format,
-                content_type=(
-                    content_type if content_type is not None else "application/json"
-                ),
-            )
+        response = super().patch(
+            path=path,
+            data=data,
+            format=format,
+            content_type=(
+                content_type if content_type is not None else "application/json"
+            ),
+        )
         return response
 
     def delete(
@@ -83,28 +97,26 @@ class CustomAPIClient(APIClient):
     ):
         if type(data) is not str:
             data = json.dumps(data)
-        with self.parent.captureOnCommitCallbacks(execute=True):
-            response = super().delete(
-                path=path,
-                data=data,
-                format=format,
-                content_type=(
-                    content_type if content_type is not None else "application/json"
-                ),
-            )
+        response = super().delete(
+            path=path,
+            data=data,
+            format=format,
+            content_type=(
+                content_type if content_type is not None else "application/json"
+            ),
+        )
         return response
 
 
 class AsyncCustomAPIClient(AsyncClient):
-    def __init__(self, parent: TestCase, **defaults):
+    def __init__(self, parent: "AuthAPITestCase", **defaults):
         super().__init__(enforce_csrf_checks=False, **defaults)
         self.parent = parent
 
     async def post(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-
-        with self.parent.captureOnCommitCallbacks(execute=True):
+        async with self.parent.acaptureCommitCallbacks(execute=True):
             response = await super().post(
                 path=path,
                 data=data,
@@ -117,7 +129,8 @@ class AsyncCustomAPIClient(AsyncClient):
     async def put(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-        with self.parent.captureOnCommitCallbacks(execute=True):
+
+        async with self.parent.acaptureCommitCallbacks(execute=True):
             response = await super().put(
                 path=path,
                 data=data,
@@ -130,7 +143,8 @@ class AsyncCustomAPIClient(AsyncClient):
     async def patch(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-        with self.parent.captureOnCommitCallbacks(execute=True):
+
+        async with self.parent.acaptureCommitCallbacks(execute=True):
             response = await super().patch(
                 path=path,
                 data=data,
@@ -143,7 +157,7 @@ class AsyncCustomAPIClient(AsyncClient):
     async def delete(self, path, data=None, content_type=None, follow=False, **extra):
         if type(data) is not str:
             data = json.dumps(data)
-        with self.parent.captureOnCommitCallbacks(execute=True):
+        async with self.parent.acaptureCommitCallbacks(execute=True):
             response = await super().delete(
                 path=path,
                 data=data,
@@ -160,7 +174,7 @@ class AsyncCustomAPIClient(AsyncClient):
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging celery tasks
+    # DEBUG=True,  # uncomment for debugging temporalio workflows
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -173,13 +187,15 @@ class APITestCase(TestCase):
         self.fake_docker_client = FakeDockerClient()
 
         # these functions are always patched
-        patch("zane_api.tasks.expose_docker_service_to_http").start()
-        patch("zane_api.tasks.unexpose_docker_service_from_http").start()
-        patch("zane_api.tasks.expose_docker_service_deployment_to_http").start()
-        patch("zane_api.tasks.unexpose_docker_deployment_from_http").start()
-        patch("zane_api.tasks.apply_deleted_urls_changes").start()
         patch(
-            "zane_api.docker_operations.get_docker_client",
+            "zane_api.temporal.activities.asyncio.sleep", new_callable=AsyncMock
+        ).start()
+        patch(
+            "zane_api.temporal.activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+        patch(
+            "zane_api.temporal.schedules.activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -195,10 +211,26 @@ class APITestCase(TestCase):
         self.assertEqual(subset, extracted_subset, msg)
 
 
+@dataclass
+class WorkflowScheduleHandle:
+    id: str
+    interval: timedelta
+    is_running: bool = True
+    note: Optional[str] = None
+
+
 class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
+        self.commit_callbacks: List[Callable] = []
+        self.workflow_env: Optional[WorkflowEnvironment] = None
+        self.workflow_schedules: List[WorkflowScheduleHandle] = []
+
+    def get_workflow_schedule_by_id(self, id: str):
+        return find_item_in_list(
+            lambda handle: handle.id == id, self.workflow_schedules
+        )
 
     def loginUser(self):
         self.client.login(username="Fredkiss3", password="password")
@@ -206,37 +238,119 @@ class AuthAPITestCase(APITestCase):
         Token.objects.get_or_create(user=user)
         return user
 
-    async def asyncLoginUser(self):
+    async def aLoginUser(self):
         await self.async_client.alogin(username="Fredkiss3", password="password")
         user = await User.objects.aget(username="Fredkiss3")
         await Token.objects.aget_or_create(user=user)
         return user
 
     @asynccontextmanager
-    async def asyncSetup(self):
+    async def workflowEnvironment(self):
         env = await WorkflowEnvironment.start_time_skipping()
         await env.__aenter__()
-
-        mock = patch(
-            "zane_api.temporal.get_temporalio_client", new_callable=AsyncMock
-        ).start()
-        mock_client = mock.return_value
-        mock_client.start_workflow.side_effect = env.client.execute_workflow
-        mock_client.get_workflow_handle.side_effect = env.client.get_workflow_handle
-
         worker = Worker(
             env.client,
             task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-            workflows=[GetProjectWorkflow],
-            activities=[get_project],
+            **get_workflows_and_activities(),
         )
         await worker.__aenter__()
+
+        def collect_commit_callbacks(func: Callable):
+            self.commit_callbacks.append(func)
+
+        patch_temporal_client = patch(
+            "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
+        )
+
+        async def create_schedule(id: str, interval: timedelta, *args, **kwargs):
+            self.workflow_schedules.append(
+                WorkflowScheduleHandle(id, interval=interval)
+            )
+
+        async def pause_schedule(id: str, note: str = None):
+            schedule_handle = find_item_in_list(
+                lambda handle: handle.id == id, self.workflow_schedules
+            )
+            if schedule_handle is not None:
+                schedule_handle.is_running = False
+                schedule_handle.note = note
+
+        async def unpause_schedule(id: str, note: str = None):
+            schedule_handle = find_item_in_list(
+                lambda handle: handle.id == id, self.workflow_schedules
+            )
+            if schedule_handle is not None:
+                schedule_handle.is_running = True
+                schedule_handle.note = note
+
+        async def delete_schedule(id: str):
+            schedule_handle = find_item_in_list(
+                lambda handle: handle.id == id, self.workflow_schedules
+            )
+            if schedule_handle is not None:
+                self.workflow_schedules.remove(schedule_handle)
+
+        patch_temporal_create_schedule = patch(
+            "zane_api.temporal.activities.create_schedule", side_effect=create_schedule
+        )
+        patch_temporal_pause_schedule = patch(
+            "zane_api.temporal.activities.pause_schedule", side_effect=pause_schedule
+        )
+        patch_temporal_unpause_schedule = patch(
+            "zane_api.temporal.activities.unpause_schedule",
+            side_effect=unpause_schedule,
+        )
+        patch_temporal_delete_schedule = patch(
+            "zane_api.temporal.activities.delete_schedule", side_effect=delete_schedule
+        )
+        patch_temporal_create_schedule.start()
+        patch_temporal_pause_schedule.start()
+        patch_temporal_unpause_schedule.start()
+        patch_temporal_delete_schedule.start()
+        mock_get_client = patch_temporal_client.start()
+        mock_client = mock_get_client.return_value
+        mock_client.start_workflow.side_effect = env.client.execute_workflow
+        mock_client.get_workflow_handle_for = env.client.get_workflow_handle_for
+
+        patch_transaction_on_commit = patch(
+            "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
+        )
+        patch_transaction_on_commit.start()
+        self.workflow_env = env
         try:
-            yield env, worker
+            yield env
         finally:
-            patch.stopall()
+            self.workflow_env = None
+            patch_temporal_client.stop()
+            patch_transaction_on_commit.stop()
+            patch_temporal_create_schedule.stop()
+            patch_temporal_pause_schedule.stop()
+            patch_temporal_unpause_schedule.stop()
+            patch_temporal_delete_schedule.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
+
+    @asynccontextmanager
+    async def acaptureCommitCallbacks(self, execute=False):
+        self.commit_callbacks = []
+        if self.workflow_env is None:
+            async with self.workflowEnvironment():
+                yield
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as pool:
+                    for callback in self.commit_callbacks:
+                        if execute:
+                            # Run callback in another thread because it is decorated with `@async_to_sync()`
+                            await loop.run_in_executor(pool, callback)
+        else:
+            yield
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor() as pool:
+                for callback in self.commit_callbacks:
+                    if execute:
+                        # Run callback in another thread because it is decorated with `@async_to_sync()`
+                        await loop.run_in_executor(pool, callback)
+        self.commit_callbacks = []
 
     def create_and_deploy_redis_docker_service(
         self,
@@ -289,6 +403,141 @@ class AuthAPITestCase(APITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return project, service
 
+    async def acreate_and_deploy_redis_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ) -> tuple[Project, DockerRegistryService]:
+        owner = await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = await Project.objects.aget(slug="zaneops", owner=owner)
+
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service: DockerRegistryService = await DockerRegistryService.objects.aget(
+            slug="redis"
+        )
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "valkey-cli validate",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 15,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        await DockerDeploymentChange.objects.abulk_create(other_changes)
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        await service.arefresh_from_db()
+        return project, service
+
+    async def acreate_and_deploy_caddy_docker_service(
+        self,
+        with_healthcheck: bool = False,
+        other_changes: list[DockerDeploymentChange] = None,
+    ):
+        owner = await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project: Project = await Project.objects.aget(slug="zaneops", owner=owner)
+
+        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service: DockerRegistryService = await DockerRegistryService.objects.aget(
+            slug="caddy"
+        )
+
+        service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+        await service.asave()
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "PATH",
+                        "value": "/",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"forwarded": 80, "host": 80},
+                    service=service,
+                ),
+            ]
+            + other_changes
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        await service.arefresh_from_db()
+        return project, service
+
     def create_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
@@ -296,7 +545,17 @@ class AuthAPITestCase(APITestCase):
     ):
         owner = self.loginUser()
         project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="caddy", project=project)
+
+        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug="caddy")
+
         service.network_alias = f"{service.slug}-{service.unprefixed_id}"
         service.save()
 
@@ -320,12 +579,6 @@ class AuthAPITestCase(APITestCase):
             change.service = service
         DockerDeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.PORTS,
                     type=DockerDeploymentChange.ChangeType.ADD,
@@ -377,6 +630,7 @@ class FakeDockerClient:
             volumes: dict[str, dict[str, str]] = None,
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
+            resources: Resources = None,
         ):
             self.attrs = {
                 "Spec": {
@@ -390,6 +644,7 @@ class FakeDockerClient:
             self.attached_volumes = {} if volumes is None else volumes
             self.env = {} if env is None else env
             self.endpoint = endpoint
+            self.resources = resources
             self.id = name
             self.swarm_tasks = [
                 {
@@ -408,6 +663,7 @@ class FakeDockerClient:
                         },
                     },
                     "DesiredState": "running",
+                    "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
                 }
             ]
 
@@ -427,6 +683,9 @@ class FakeDockerClient:
             if replicas == 0:
                 self.swarm_tasks = []
 
+        def get_attached_volume(self, volume: Volume):
+            return self.attached_volumes.get(get_volume_resource_name(volume.id))
+
     class FakeContainer:
         @staticmethod
         def exec_run(cmd: str, *args, **kwargs):
@@ -438,6 +697,9 @@ class FakeDockerClient:
     FAILING_CMD = "invalid"
     NONEXISTANT_IMAGE = "nonexistant"
     NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
+    GET_VOLUME_STORAGE_COMMAND = ""
+    HOST_CPUS = 4
+    HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -473,15 +735,26 @@ class FakeDockerClient:
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
 
+    def get_deployment_service(self, deployment: DockerDeployment):
+        return self.service_map.get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=deployment.hash,
+                service_id=deployment.service_id,
+                project_id=deployment.service.project_id,
+            )
+        )
+
     def services_list(self, **kwargs):
         if kwargs.get("filter") == {"label": "zane.role=proxy"}:
             return [self.service_map["proxy_service"]]
         return [service for service in self.service_map.values()]
 
-    def events(self, decode: bool, filters: dict):
+    @staticmethod
+    def events(decode: bool, filters: dict):
         return []
 
-    def containers_get(self, container_id: str):
+    @staticmethod
+    def containers_get(container_id: str):
         return FakeDockerClient.FakeContainer()
 
     def containers_run(self, command: str, *args, **kwargs):
@@ -490,8 +763,8 @@ class FakeDockerClient:
             _, port = list(ports.values())[0]
             if port == self.PORT_USED_BY_HOST:
                 raise docker.errors.APIError(f"Port {port} is already used")
-        if command == "du -sb /data":
-            return "72689062\t/data".encode(encoding="utf-8")
+        if command == SERVER_RESOURCE_LIMIT_COMMAND:
+            return f"{self.HOST_CPUS}\n{self.HOST_MEMORY_IN_BYTES}\n".encode("utf-8")
 
     def volumes_create(self, name: str, labels: dict, **kwargs):
         self.volume_map[name] = FakeDockerClient.FakeVolume(
@@ -533,6 +806,7 @@ class FakeDockerClient:
         mounts: list[str] = kwargs.get("mounts", [])
         env: list[str] = kwargs.get("env", [])
         endpoint_spec = kwargs.get("endpoint_spec", None)
+        resources = kwargs.get("resources", None)
         if image not in self.pulled_images:
             raise docker.errors.NotFound("image not pulled")
         volumes: dict[str, dict[str, str]] = {}
@@ -551,7 +825,12 @@ class FakeDockerClient:
             envs[key] = value
 
         self.service_map[name] = FakeDockerClient.FakeService(
-            parent=self, name=name, volumes=volumes, env=envs, endpoint=endpoint_spec
+            parent=self,
+            name=name,
+            volumes=volumes,
+            env=envs,
+            endpoint=endpoint_spec,
+            resources=resources,
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):
@@ -579,16 +858,19 @@ class FakeDockerClient:
             },
         ]
 
-    def images_pull(self, repository: str, tag: str = None, *args, **kwargs):
-        if tag is not None:
-            self.pulled_images.add(f"{repository}:{tag}")
-        else:
-            self.pulled_images.add(repository)
+    def images_pull(self, repository: str, *args, **kwargs):
+        if repository == self.NONEXISTANT_IMAGE:
+            raise docker.errors.ImageNotFound(
+                f"The image `{repository}` does not exists."
+            )
+        self.pulled_images.add(repository)
 
     def image_get_registry_data(self, image: str, auth_config: dict):
         if auth_config is not None:
             username, password = auth_config["username"], auth_config["password"]
-            if username != "fredkiss3" or password != "s3cret":
+            if (username != "fredkiss3" or password != "s3cret") and (
+                username != "" or password != ""
+            ):
                 raise docker.errors.APIError("Invalid credentials")
 
             if image == self.NONEXISTANT_PRIVATE_IMAGE:

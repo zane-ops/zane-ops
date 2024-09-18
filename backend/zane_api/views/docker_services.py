@@ -1,8 +1,9 @@
 import time
 from typing import Any
 
+import django.db.transaction as transaction
 from django.conf import settings
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError
 from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -19,8 +20,12 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
-from . import EMPTY_PAGINATED_RESPONSE, EMPTY_CURSOR_RESPONSE
-from .base import EMPTY_RESPONSE, ResourceConflict
+from .base import (
+    EMPTY_RESPONSE,
+    ResourceConflict,
+    EMPTY_PAGINATED_RESPONSE,
+    EMPTY_CURSOR_RESPONSE,
+)
 from .helpers import (
     compute_docker_service_snapshot_without_changes,
     compute_docker_changes_from_snapshots,
@@ -42,7 +47,9 @@ from .serializers import (
     DeploymentLogsFilterSet,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
+    ResourceLimitChangeSerializer,
 )
+from ..dtos import URLDto, VolumeDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -65,9 +72,16 @@ from ..serializers import (
     SimpleLogSerializer,
     HttpLogSerializer,
 )
-from ..tasks import (
-    delete_resources_for_docker_service,
-    deploy_docker_service_with_changes,
+from ..temporal import (
+    start_workflow,
+    DeployDockerServiceWorkflow,
+    DockerDeploymentDetails,
+    ArchivedServiceDetails,
+    ArchiveDockerServiceWorkflow,
+    SimpleDeploymentDetails,
+    ToggleDockerServiceWorkflow,
+    workflow_signal,
+    CancelDeploymentSignalInput,
 )
 
 
@@ -119,7 +133,10 @@ class CreateDockerServiceAPIView(APIView):
                         )
                     ]
 
-                    if docker_credentials is not None:
+                    if docker_credentials is not None and (
+                        len(docker_credentials.get("username", "")) > 0
+                        or len(docker_credentials.get("password", "")) > 0
+                    ):
                         initial_changes.append(
                             DockerDeploymentChange(
                                 field=DockerDeploymentChange.ChangeField.CREDENTIALS,
@@ -154,6 +171,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 DockerCommandFieldChangeSerializer,
                 DockerImageFieldChangeSerializer,
                 HealthcheckFieldChangeSerializer,
+                ResourceLimitChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -195,6 +213,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             "command": DockerCommandFieldChangeSerializer,
             "image": DockerImageFieldChangeSerializer,
             "healthcheck": HealthcheckFieldChangeSerializer,
+            "resource_limits": ResourceLimitChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -215,7 +234,22 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 change_type = data.get("type")
                 old_value: Any = None
                 match field:
-                    case "image" | "command" | "credentials":
+                    case "image" | "command":
+                        old_value = getattr(service, field)
+                    case "resource_limits":
+                        if new_value is not None and len(new_value) == 0:
+                            new_value = None
+                        old_value = getattr(service, field)
+                    case "credentials":
+                        if new_value is not None and (
+                            len(new_value) == 0
+                            or new_value
+                            == {
+                                "username": "",
+                                "password": "",
+                            }
+                        ):
+                            new_value = None
                         old_value = getattr(service, field)
                     case "healthcheck":
                         old_value = (
@@ -245,16 +279,17 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                                 service.env_variables.get(id=item_id)
                             ).data
 
-                service.add_change(
-                    DockerDeploymentChange(
-                        type=change_type,
-                        field=field,
-                        old_value=old_value,
-                        new_value=new_value,
-                        service=service,
-                        item_id=item_id,
+                if new_value != old_value:
+                    service.add_change(
+                        DockerDeploymentChange(
+                            type=change_type,
+                            field=field,
+                            old_value=old_value,
+                            new_value=new_value,
+                            service=service,
+                            item_id=item_id,
+                        )
                     )
-                )
 
                 response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_200_OK)
@@ -294,6 +329,7 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                 "command": DockerCommandFieldChangeSerializer,
                 "image": DockerImageFieldChangeSerializer,
                 "healthcheck": HealthcheckFieldChangeSerializer,
+                "resource_limits": ResourceLimitChangeSerializer,
             }
 
             request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -312,7 +348,22 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                     change_type = data.get("type")
                     old_value: Any = None
                     match field:
-                        case "image" | "command" | "credentials":
+                        case "image" | "command":
+                            old_value = getattr(service, field)
+                        case "resource_limits":
+                            if new_value is not None and len(new_value) == 0:
+                                new_value = None
+                            old_value = getattr(service, field)
+                        case "credentials":
+                            if new_value is not None and (
+                                len(new_value) == 0
+                                or new_value
+                                == {
+                                    "username": "",
+                                    "password": "",
+                                }
+                            ):
+                                new_value = None
                             old_value = getattr(service, field)
                         case "healthcheck":
                             old_value = (
@@ -341,17 +392,17 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                                 old_value = DockerEnvVariableSerializer(
                                     service.env_variables.get(id=item_id)
                                 ).data
-
-                    service.add_change(
-                        DockerDeploymentChange(
-                            type=change_type,
-                            field=field,
-                            old_value=old_value,
-                            new_value=new_value,
-                            service=service,
-                            item_id=item_id,
+                    if new_value != old_value:
+                        service.add_change(
+                            DockerDeploymentChange(
+                                type=change_type,
+                                field=field,
+                                old_value=old_value,
+                                new_value=new_value,
+                                service=service,
+                                item_id=item_id,
+                            )
                         )
-                    )
 
         response = DockerServiceSerializer(service)
         return Response(response.data, status=status.HTTP_200_OK)
@@ -468,34 +519,27 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             )
             service.apply_pending_changes(deployment=new_deployment)
 
-            if len(service.urls.all()) > 0:
+            if service.http_port is not None:
                 new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
             latest_deployment = service.latest_production_deployment
-            if (
-                latest_deployment is not None
-                and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-                and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-                # 👆🏽 technically this can only be true for the initial deployment
-                # for the next deployments, when they fail, they will not be promoted to production
-            ):
-                new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-            else:
-                new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
+            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
+                latest_deployment
+            )
             new_deployment.service_snapshot = DockerServiceSerializer(service).data
             new_deployment.save()
 
             token = Token.objects.get(user=request.user)
-            # Run celery deployment task
+            payload = DockerDeploymentDetails.from_deployment(
+                deployment=new_deployment,
+                auth_token=token.key,
+            )
+
             transaction.on_commit(
-                lambda: deploy_docker_service_with_changes.apply_async(
-                    kwargs=dict(
-                        deployment_hash=new_deployment.hash,
-                        service_id=service.id,
-                        auth_token=token.key,
-                    ),
-                    task_id=new_deployment.task_id,
+                lambda: start_workflow(
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
                 )
             )
 
@@ -562,17 +606,9 @@ class RedeployDockerServiceAPIView(APIView):
         )
         service.apply_pending_changes(deployment=new_deployment)
 
-        if (
-            latest_deployment is not None
-            and latest_deployment.slot == DockerDeployment.DeploymentSlot.BLUE
-            and latest_deployment.status != DockerDeployment.DeploymentStatus.FAILED
-            # 👆🏽 technically this can only be true for the initial deployment
-            # for the next deployments, when they fail, they will not be promoted to production
-        ):
-            new_deployment.slot = DockerDeployment.DeploymentSlot.GREEN
-        else:
-            new_deployment.slot = DockerDeployment.DeploymentSlot.BLUE
-
+        new_deployment.slot = DockerDeployment.get_next_deployment_slot(
+            latest_deployment
+        )
         if len(service.urls.all()) > 0:
             new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
@@ -580,15 +616,16 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.save()
 
         token = Token.objects.get(user=request.user)
-        # Run celery deployment task
+        payload = DockerDeploymentDetails.from_deployment(
+            new_deployment,
+            auth_token=token.key,
+        )
+
         transaction.on_commit(
-            lambda: deploy_docker_service_with_changes.apply_async(
-                kwargs=dict(
-                    deployment_hash=new_deployment.hash,
-                    service_id=service.id,
-                    auth_token=token.key,
-                ),
-                task_id=new_deployment.task_id,
+            lambda: start_workflow(
+                DeployDockerServiceWorkflow.run,
+                payload,
+                id=payload.workflow_id,
             )
         )
 
@@ -596,11 +633,75 @@ class RedeployDockerServiceAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
+class CancelDockerServiceDeploymentAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        responses={409: ErrorResponse409Serializer, 200: DockerServiceSerializer},
+        operation_id="cancelDockerServiceDeployment",
+        summary="Cancel deployment",
+        description="Cancel a deployment in progress.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service: DockerRegistryService = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        try:
+            deployment = service.deployments.get(hash=deployment_hash)
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        if deployment.finished_at is not None:
+            raise ResourceConflict(detail="Cannot cancel already finished deployment.")
+
+        if deployment.started_at is None:
+            deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
+            deployment.status_reason = "Deployment cancelled."
+            deployment.save()
+
+        transaction.on_commit(
+            lambda: workflow_signal(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                signal=DeployDockerServiceWorkflow.cancel_deployment,
+                workflow_id=deployment.workflow_id,
+            )
+        )
+
+        response = DockerServiceDeploymentSerializer(deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
 class GetDockerServiceAPIView(APIView):
     serializer_class = DockerServiceSerializer
 
     @extend_schema(
-        request=DockerServiceCreateRequestSerializer,
         operation_id="getDockerService",
         summary="Get single service",
         description="See all the details of a service.",
@@ -868,12 +969,44 @@ class ArchiveDockerServiceAPIView(APIView):
                 service, archived_project
             )
 
-            archive_task_id = service.archive_task_id
+            payload = ArchivedServiceDetails(
+                original_id=archived_service.original_id,
+                urls=[
+                    URLDto(
+                        domain=url.domain,
+                        base_path=url.base_path,
+                        strip_prefix=url.strip_prefix,
+                        id=url.original_id,
+                    )
+                    for url in archived_service.urls.all()
+                ],
+                volumes=[
+                    VolumeDto(
+                        container_path=volume.container_path,
+                        mode=volume.mode,
+                        name=volume.name,
+                        host_path=volume.host_path,
+                        id=volume.original_id,
+                    )
+                    for volume in archived_service.volumes.all()
+                ],
+                project_id=archived_project.original_id,
+                deployments=[
+                    SimpleDeploymentDetails(
+                        hash=dpl.get("hash"),
+                        url=dpl.get("url"),
+                        project_id=archived_service.project.original_id,
+                        service_id=archived_service.original_id,
+                    )
+                    for dpl in archived_service.deployments
+                ],
+            )
 
             transaction.on_commit(
-                lambda: delete_resources_for_docker_service.apply_async(
-                    kwargs=dict(archived_service_id=archived_service.id),
-                    task_id=archive_task_id,
+                lambda: start_workflow(
+                    workflow=ArchiveDockerServiceWorkflow.run,
+                    arg=payload,
+                    id=archived_service.workflow_id,
                 )
             )
 
@@ -881,3 +1014,64 @@ class ArchiveDockerServiceAPIView(APIView):
         service.delete()
 
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class ToggleDockerServiceAPIView(APIView):
+    serializer_class = DockerServiceDeploymentSerializer
+
+    @extend_schema(
+        operation_id="toggleDockerService",
+        request=None,
+        responses={
+            409: ErrorResponse409Serializer,
+            200: DockerServiceDeploymentSerializer,
+        },
+        summary="Stop/Restart a docker service",
+        description="Stops a running docker service and restart it if it was stopped.",
+    )
+    @transaction.atomic()
+    def put(self, request: Request, project_slug: str, service_slug: str):
+        project: Project | None = (
+            Project.objects.filter(
+                slug=project_slug.lower(), owner=request.user
+            ).select_related("archived_version")
+        ).first()
+
+        if project is None:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+
+        service: DockerRegistryService | None = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            ).select_related("project")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+
+        production_deployment = service.latest_production_deployment
+        if production_deployment is None:
+            raise ResourceConflict(
+                "This service has not been deployed yet, and thus its state cannot be toggled."
+            )
+
+        payload = SimpleDeploymentDetails(
+            hash=production_deployment.hash,
+            project_id=project.id,
+            service_id=service.id,
+            status=production_deployment.status,
+        )
+        transaction.on_commit(
+            lambda: start_workflow(
+                workflow=ToggleDockerServiceWorkflow.run,
+                arg=payload,
+                id=f"toggle-{service.id}-{project.id}",
+            )
+        )
+
+        response = DockerServiceDeploymentSerializer(production_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)

@@ -22,7 +22,7 @@ from drf_spectacular.utils import (
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -54,9 +54,12 @@ from ..serializers import (
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
 )
-from ..tasks import (
-    delete_docker_resources_for_project,
-    create_docker_resources_for_project,
+from ..temporal import (
+    CreateProjectResourcesWorkflow,
+    ProjectDetails,
+    start_workflow,
+    RemoveProjectResourcesWorkflow,
+    ArchivedProjectDetails,
 )
 
 
@@ -151,7 +154,9 @@ class ProjectsListAPIView(ListCreateAPIView):
             slug = data.get("slug", fake.slug()).lower()
             try:
                 new_project = Project.objects.create(
-                    slug=slug, owner=request.user, description=data.get("description")
+                    slug=slug,
+                    owner=request.user,
+                    description=data.get("description"),
                 )
             except IntegrityError:
                 raise ResourceConflict(
@@ -159,9 +164,12 @@ class ProjectsListAPIView(ListCreateAPIView):
                     f" please use another one for this project."
                 )
             else:
+
                 transaction.on_commit(
-                    lambda: create_docker_resources_for_project.apply_async(
-                        (slug,), task_id=new_project.create_task_id
+                    lambda: start_workflow(
+                        CreateProjectResourcesWorkflow.run,
+                        ProjectDetails(id=new_project.id),
+                        id=new_project.create_task_id,
                     )
                 )
                 response = ProjectSerializer(new_project)
@@ -269,9 +277,12 @@ class ProjectDetailsView(APIView):
         docker_service_list.delete()
 
         transaction.on_commit(
-            lambda: delete_docker_resources_for_project.apply_async(
-                kwargs=dict(archived_project_id=archived_version.id),
-                task_id=project.archive_task_id,
+            lambda: start_workflow(
+                RemoveProjectResourcesWorkflow.run,
+                ArchivedProjectDetails(
+                    id=archived_version.id, original_id=archived_version.original_id
+                ),
+                id=archived_version.workflow_id,
             )
         )
         project.delete()
@@ -307,7 +318,6 @@ class ProjectServiceListView(APIView):
         # Prefetch related fields and use annotate to count volumes
         filters = Q(project=project)
         query = request.query_params.get("query", "")
-        print(f"{query=}")
         if query:
             filters = filters & Q(slug__icontains=query)
 
@@ -322,7 +332,10 @@ class ProjectServiceListView(APIView):
             .annotate(
                 volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
-                    DockerDeployment.objects.filter(service_id=OuterRef("pk"))
+                    DockerDeployment.objects.filter(
+                        Q(service_id=OuterRef("pk"))
+                        & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
+                    )
                     .order_by("-queued_at")
                     .values("status")[:1]
                 ),
@@ -342,7 +355,6 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.CANCELLED: "CANCELLED",
             }
 
             service_image = service.image
