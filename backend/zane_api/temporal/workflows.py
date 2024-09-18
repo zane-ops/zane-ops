@@ -284,6 +284,13 @@ class DeployDockerServiceWorkflow:
             )
 
         await workflow.execute_activity_method(
+            DockerSwarmActivities.pull_image_for_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
             DockerSwarmActivities.create_swarm_service_for_docker_deployment,
             deployment,
             start_to_close_timeout=timedelta(seconds=30),
@@ -610,6 +617,7 @@ def get_workflows_and_activities():
             swarm_activities.get_archived_project_services,
             swarm_activities.prepare_deployment,
             swarm_activities.scale_down_service_deployment,
+            swarm_activities.pull_image_for_deployment,
             swarm_activities.create_docker_volumes_for_service,
             swarm_activities.delete_created_volumes,
             swarm_activities.create_swarm_service_for_docker_deployment,
