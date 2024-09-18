@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+import * as React from "react";
 import { cn } from "~/lib/utils";
 
 type TrackerColor = "red" | "green" | "yellow" | "gray";
 
 interface StatusBadgeProps {
   color: TrackerColor;
-  children: ReactNode;
+  children: React.ReactNode;
   isPing?: boolean;
   className?: string;
 }
