@@ -212,8 +212,8 @@ function ServiceDetails() {
               hash="1234"
               status="PREPARING"
               image="nginx:dmeo"
-              started_at={new Date("2024-08-27T09:15:15.160Z")}
-              queued_at={new Date()}
+              started_at={new Date("2024-09-18T23:05:49.741Z")}
+              queued_at={new Date("2024-09-18T23:05:45.741Z")}
             />
 
             <h2 className="text-gray-400 text-sm">Current</h2>
@@ -345,7 +345,9 @@ function DeploymentCard({
   React.useEffect(() => {
     if (started_at && !finished_at) {
       const timer = setInterval(() => {
-        setTimeElapsed((prev) => prev + 1);
+        setTimeElapsed((prev) =>
+          Math.ceil((new Date().getTime() - started_at.getTime()) / 1000)
+        );
       }, 1000);
 
       return () => clearInterval(timer);
@@ -373,6 +375,7 @@ function DeploymentCard({
       )}
     >
       <div className="flex ">
+        {/* First column */}
         <div className="w-[160px]">
           <h3 className="flex items-center gap-1 capitalize">
             <span
@@ -392,7 +395,7 @@ function DeploymentCard({
             >
               {capitalizeText(status)}
             </span>
-            {status === "PREPARING" && (
+            {Boolean(started_at && !finished_at) && (
               <Loader className="animate-spin" size={15} />
             )}
           </h3>
