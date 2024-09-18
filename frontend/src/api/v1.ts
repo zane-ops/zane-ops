@@ -79,6 +79,13 @@ export interface paths {
      */
     delete: operations["archiveDockerService"];
   };
+  "/api/projects/{project_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/": {
+    /**
+     * Cancel deployment
+     * @description Cancel a deployment in progress.
+     */
+    put: operations["cancelDockerServiceDeployment"];
+  };
   "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/": {
     /**
      * Cancel a config change
@@ -140,6 +147,13 @@ export interface paths {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_list"];
   };
+  "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/": {
+    /**
+     * Stop/Restart a docker service
+     * @description Stops a running docker service and restart it if it was stopped.
+     */
+    put: operations["toggleDockerService"];
+  };
   "/api/projects/{slug}/": {
     /** Get single project */
     get: operations["getSingleProject"];
@@ -154,13 +168,6 @@ export interface paths {
      * @description Get all services in a project
      */
     get: operations["projects_service_list_list"];
-  };
-  "/api/volumes/{volume_id}/size/": {
-    /**
-     * Get volume size
-     * @description Get the total data size in the volume, in bytes.
-     */
-    get: operations["getVolumeSize"];
   };
 }
 
@@ -216,6 +223,7 @@ export interface components {
       user: components["schemas"]["User"];
     };
     CancelDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CancelDockerServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CheckIfPortIsAvailableError: components["schemas"]["CheckIfPortIsAvailableNonFieldErrorsErrorComponent"] | components["schemas"]["CheckIfPortIsAvailablePortErrorComponent"];
     CheckIfPortIsAvailableErrorResponse400: components["schemas"]["CheckIfPortIsAvailableValidationError"] | components["schemas"]["ParseErrorResponse"];
     CheckIfPortIsAvailableNonFieldErrorsErrorComponent: {
@@ -414,7 +422,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerCredentialsFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["DockerImageFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"];
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerCredentialsFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["DockerImageFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
     /**
      * @description * `command` - command
      * @enum {string}
@@ -459,12 +467,13 @@ export interface components {
      * * `credentials` - credentials
      * * `healthcheck` - healthcheck
      * * `volumes` - volumes
-     * * `env_variables` - env_variables
+     * * `env_variables` - env variables
      * * `urls` - urls
      * * `ports` - ports
+     * * `resource_limits` - resource limits
      * @enum {string}
      */
-    DockerDeploymentChangeFieldEnum: "image" | "command" | "credentials" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports";
+    DockerDeploymentChangeFieldEnum: "image" | "command" | "credentials" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits";
     /**
      * @description * `UPDATE` - update
      * * `DELETE` - delete
@@ -511,13 +520,16 @@ export interface components {
       image: string | null;
       command: string | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
+      project_id: string;
       credentials: components["schemas"]["DockerCredential"] | null;
       urls: readonly components["schemas"]["URLModel"][];
       volumes: readonly components["schemas"]["Volume"][];
       ports: readonly components["schemas"]["PortConfiguration"][];
       env_variables: readonly components["schemas"]["DockerEnvVariable"][];
       network_aliases: readonly string[];
+      network_alias: string | null;
       unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
+      resource_limits: components["schemas"]["ResourceLimits"] | null;
     };
     DockerServiceCard: {
       /** Format: date-time */
@@ -729,7 +741,6 @@ export interface components {
     };
     GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetVolumeSizeErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitServiceCard: {
       /** Format: date-time */
       updated_at: string;
@@ -893,6 +904,15 @@ export interface components {
       errors: components["schemas"]["LoginError"][];
     };
     LogoutErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    MemoryLimit: {
+      value: number;
+      unit: components["schemas"]["UnitEnum"];
+    };
+    MemoryLimitRequestRequest: {
+      value: number;
+      /** @default MEGABYTES */
+      unit?: components["schemas"]["UnitEnum"];
+    };
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
@@ -1006,7 +1026,7 @@ export interface components {
       slug?: string;
       description?: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
       /**
@@ -1014,6 +1034,19 @@ export interface components {
        * @enum {string}
        */
       attr: "request_host";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent: {
+      /**
+       * @description * `request_id` - request_id
+       * @enum {string}
+       */
+      attr: "request_id";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -1138,7 +1171,7 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent: {
       /**
@@ -1151,6 +1184,20 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent: {
+      /**
+       * @description * `source` - source
+       * @enum {string}
+       */
+      attr: "source";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
+       * @enum {string}
+       */
+      code: "invalid_choice" | "invalid_list";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent: {
@@ -1173,7 +1220,7 @@ export interface components {
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -1242,6 +1289,22 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueCpusErrorComponent: {
+      /**
+       * @description * `new_value.cpus` - new_value.cpus
+       * @enum {string}
+       */
+      attr: "new_value.cpus";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
       detail: string;
     };
     RequestDeploymentChangesNewValueDomainErrorComponent: {
@@ -1362,6 +1425,51 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.memory.non_field_errors` - new_value.memory.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.memory.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueMemoryUnitErrorComponent: {
+      /**
+       * @description * `new_value.memory.unit` - new_value.memory.unit
+       * @enum {string}
+       */
+      attr: "new_value.memory.unit";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueMemoryValueErrorComponent: {
+      /**
+       * @description * `new_value.memory.value` - new_value.memory.value
+       * @enum {string}
+       */
+      attr: "new_value.memory.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
       detail: string;
     };
     RequestDeploymentChangesNewValueModeErrorComponent: {
@@ -1561,6 +1669,27 @@ export interface components {
      * @enum {string}
      */
     RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
+    /**
+     * @description * `resource_limits` - resource_limits
+     * @enum {string}
+     */
+    ResourceLimitChangeFieldEnum: "resource_limits";
+    ResourceLimitChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["ResourceLimitsRequestRequest"] | null;
+      field: components["schemas"]["ResourceLimitChangeFieldEnum"];
+    };
+    ResourceLimits: {
+      /** Format: double */
+      cpus: number | null;
+      memory: components["schemas"]["MemoryLimit"] | null;
+    };
+    ResourceLimitsRequestRequest: {
+      /** Format: double */
+      cpus?: number;
+      memory?: components["schemas"]["MemoryLimitRequestRequest"];
+    };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
@@ -1574,10 +1703,9 @@ export interface components {
      * * `SLEEPING` - Sleeping
      * * `NOT_DEPLOYED_YET` - Not deployed yet
      * * `DEPLOYING` - Deploying
-     * * `CANCELLED` - Cancelled
      * @enum {string}
      */
-    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING" | "CANCELLED";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
     SimpleLog: {
       /** Format: uuid */
       id: string;
@@ -1602,6 +1730,7 @@ export interface components {
      * @enum {string}
      */
     SourceEnum: "SYSTEM" | "PROXY" | "SERVICE";
+    ToggleDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `urls` - urls
      * @enum {string}
@@ -1627,6 +1756,14 @@ export interface components {
       /** @default true */
       strip_prefix?: boolean;
     };
+    /**
+     * @description * `BYTES` - bytes
+     * * `KILOBYTES` - kilobytes
+     * * `MEGABYTES` - megabytes
+     * * `GIGABYTES` - gigabytes
+     * @enum {string}
+     */
+    UnitEnum: "BYTES" | "KILOBYTES" | "MEGABYTES" | "GIGABYTES";
     UpdateProjectDescriptionErrorComponent: {
       /**
        * @description * `description` - description
@@ -1699,9 +1836,6 @@ export interface components {
       host_path: string | null;
       mode: components["schemas"]["VolumeModeEnum"];
     };
-    VolumeGetSizeResponse: {
-      size: number;
-    };
     /**
      * @description * `volumes` - volumes
      * @enum {string}
@@ -1729,7 +1863,6 @@ export interface components {
       name?: string;
       container_path: string;
       host_path?: string;
-      /** @default READ_WRITE */
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
     _proxyLogsListContentErrorComponent: {
@@ -2251,6 +2384,51 @@ export interface operations {
     };
   };
   /**
+   * Cancel deployment
+   * @description Cancel a deployment in progress.
+   */
+  cancelDockerServiceDeployment: {
+    parameters: {
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerService"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CancelDockerServiceDeploymentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
    * Cancel a config change
    * @description Cancel a config change that was requested.
    */
@@ -2621,6 +2799,7 @@ export interface operations {
         /** @description Number of results to return per page. */
         per_page?: number;
         request_host?: string;
+        request_id?: string;
         request_ip?: string;
         /**
          * @description * `GET` - GET
@@ -2685,6 +2864,12 @@ export interface operations {
         level?: "ERROR" | "INFO";
         /** @description Number of results to return per page. */
         per_page?: number;
+        /**
+         * @description * `SYSTEM` - System Logs
+         * * `PROXY` - Proxy Logs
+         * * `SERVICE` - Service Logs
+         */
+        source?: ("PROXY" | "SERVICE" | "SYSTEM")[];
         time_after?: string;
         time_before?: string;
       };
@@ -2713,6 +2898,50 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Stop/Restart a docker service
+   * @description Stops a running docker service and restart it if it was stopped.
+   */
+  toggleDockerService: {
+    parameters: {
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerServiceDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ToggleDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
@@ -2855,44 +3084,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceListListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Get volume size
-   * @description Get the total data size in the volume, in bytes.
-   */
-  getVolumeSize: {
-    parameters: {
-      path: {
-        volume_id: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["VolumeGetSizeResponse"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetVolumeSizeErrorResponse400"];
         };
       };
       401: {
