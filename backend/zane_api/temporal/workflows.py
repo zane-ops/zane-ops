@@ -182,53 +182,56 @@ class DeployDockerServiceWorkflow:
         print(
             f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
         )
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.close_faulty_db_connections,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=self.retry_policy,
+        )
+
+        pause_at_step = (
+            DockerDeploymentStep(deployment.pause_at_step)
+            if deployment.pause_at_step > 0
+            else None
+        )
+
+        async def check_for_cancellation(
+            last_completed_step: DockerDeploymentStep,
+        ):
+            """
+            This function allows us to pause and potentially bypass the workflow's execution
+            during testing. It is useful for stopping the workflow at specific points to
+            simulate and handle cancellation.
+
+            Because workflows are asynchronous, the workflow might progress to another step
+            by the time the user triggers `cancel_deployment`. This function helps ensure
+            that the workflow can pause at a predefined step (indicated by `pause_at_step`)
+            and wait for a cancellation signal.
+
+            Note: `pause_at_step`  is intended only for testing and should not be used in
+            the application logic.
+            """
+            if pause_at_step is not None:
+                if pause_at_step != last_completed_step:
+                    return False
+
+                print(
+                    f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
+                )
+                start_time = workflow.time()
+                print(f"{workflow.time()=}, {start_time=}")
+                try:
+                    await workflow.wait_condition(
+                        lambda: self.cancellation_requested,
+                        timeout=timedelta(seconds=30),
+                    )
+                except TimeoutError as error:
+                    print(f"TimeoutError {error=}")
+                print(
+                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
+                )
+            return self.cancellation_requested
+
         try:
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.close_faulty_db_connections,
-                start_to_close_timeout=timedelta(seconds=10),
-                retry_policy=self.retry_policy,
-            )
-
-            pause_at_step = (
-                DockerDeploymentStep(deployment.pause_at_step)
-                if deployment.pause_at_step > 0
-                else None
-            )
-
-            async def check_for_cancellation(
-                last_completed_step: DockerDeploymentStep,
-            ):
-                """
-                This function allows us to pause and potentially bypass the workflow's execution
-                during testing. It is useful for stopping the workflow at specific points to
-                simulate and handle cancellation.
-
-                Because workflows are asynchronous, the workflow might progress to another step
-                by the time the user triggers `cancel_deployment`. This function helps ensure
-                that the workflow can pause at a predefined step (indicated by `pause_at_step`)
-                and wait for a cancellation signal.
-
-                Note: `pause_at_step`  is intended only for testing and should not be used in
-                the application logic.
-                """
-                if pause_at_step is not None:
-                    if pause_at_step != last_completed_step:
-                        return False
-
-                    print(
-                        f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
-                    )
-                    timeout = 5
-                    start_time = workflow.time()
-                    while (
-                        workflow.time() - start_time
-                    ) < timeout and not self.cancellation_requested:
-                        await asyncio.sleep(1)
-                    print(
-                        f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
-                    )
-                return self.cancellation_requested
-
             await workflow.execute_activity_method(
                 DockerSwarmActivities.prepare_deployment,
                 deployment,

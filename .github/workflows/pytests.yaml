@@ -7,6 +7,7 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     
     services:
       postgres:
@@ -43,5 +44,5 @@ jobs:
         run: |
           cd backend
           source .venv/bin/activate
-          echo "Disabling tests for now"
-          # python manage.py test --parallel
+          # echo "Disabling tests for now"
+          python manage.py test --parallel
