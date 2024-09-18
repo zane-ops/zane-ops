@@ -94,7 +94,7 @@ function ServiceDetails() {
           <h1 className="text-2xl">nginxdemo</h1>
           <p className="flex gap-1 items-center">
             <Container size={15} />{" "}
-            <span className="text-gray-400 text-sm">
+            <span className="text-gray-500 dark:text-gray-400 text-sm">
               nginxdemo/hello:latest
             </span>
           </p>
@@ -289,7 +289,7 @@ function ServiceDetails() {
             </Button>
           </div>
 
-          {/**
+          {/* *
      * <div className="flex justify-center items-center">
             <div className=" flex gap-1 flex-col items-center mt-40">
               <h1 className="text-2xl font-bold">No Deployments made yet</h1>
@@ -306,35 +306,6 @@ function ServiceDetails() {
         <TabsContent value="settings"></TabsContent>
       </Tabs>
     </>
-  );
-}
-
-type TrackerColor = "red" | "green" | "orange" | "gray" | "blue";
-
-type StatusProps = {
-  color: TrackerColor;
-  children: React.ReactNode;
-  isPing?: boolean;
-  className?: string;
-};
-
-function Status({ children, color, className }: StatusProps) {
-  return (
-    <div className="flex items-center">
-      <div
-        className={cn(
-          "relative rounded-full bg-green-400 w-2 h-2",
-          {
-            "bg-green-600 ": color === "green",
-            "bg-red-400": color === "red",
-            "bg-orange-400": color === "orange",
-            "bg-gray-400": color === "gray"
-          },
-          className
-        )}
-      ></div>
-      {children}
-    </div>
   );
 }
 
@@ -413,7 +384,7 @@ function DeploymentCard({
                   status === "PREPARING",
                 "text-green-500": status === "HEALTHY",
                 "text-red-500": status === "UNHEALTHY" || status === "FAILED",
-                "text-gray-400":
+                "text-gray-500 dark:text-gray-400":
                   status === "REMOVED" ||
                   status === "CANCELLED" ||
                   status === "QUEUED",
@@ -479,45 +450,4 @@ function DeploymentCard({
       </div>
     </div>
   );
-}
-
-{
-  /**
-  <Status color="gray">
-                    <MenubarContentItem text="Queued" />
-                  </Status>
-                  <Status color="gray">
-                    <MenubarContentItem text="Canceled" />
-                  </Status>
-                  <Status color="red">
-                    <MenubarContentItem text="Failed" />
-                  </Status>
-
-                  <Status color="gray">
-                    <MenubarContentItem text="Preparing" />
-                  </Status>
-
-                  <Status color="blue">
-                    <MenubarContentItem text="Starting" />
-                  </Status>
-
-                  <Status color="blue">
-                    <MenubarContentItem text="Restarting" />
-                  </Status>
-
-                  <Status color="green">
-                    <MenubarContentItem text="Healthy" />
-                  </Status>
-
-                  <Status color="red">
-                    <MenubarContentItem text="Unhealthy" />
-                  </Status>
-
-                  <Status color="gray">
-                    <MenubarContentItem text="Removed" />
-                  </Status>
-
-                  <Status color="orange">
-                    <MenubarContentItem text="Sleeping" />
-                  </Status> */
 }

@@ -19,7 +19,7 @@ export function StatusBadge({
   return (
     <div
       className={cn(
-        "flex border md:w-fit w-40 px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2",
+        "inline-flex border w-fit whitespace-nowrap px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2",
         {
           "bg-green-600 bg-opacity-10 text-status-success border-green-600":
             color === "green",
