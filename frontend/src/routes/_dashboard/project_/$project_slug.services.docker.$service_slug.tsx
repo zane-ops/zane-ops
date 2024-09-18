@@ -38,7 +38,11 @@ import { MultiSelect } from "~/components/ui/mutiple-select";
 import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
-import { capitalizeText, mergeTimeAgoFormatterAndFormattedDate } from "~/utils";
+import {
+  capitalizeText,
+  formatElapsedTime,
+  mergeTimeAgoFormatterAndFormattedDate
+} from "~/utils";
 
 const statuses = [
   { value: "QUEUED", label: "QUEUED", color: "gray" },
@@ -458,7 +462,9 @@ function DeploymentCard({
                 </span>
               )}
 
-              {started_at && !finished_at && <span>{timeElapsed}s</span>}
+              {started_at && !finished_at && (
+                <span>{formatElapsedTime(timeElapsed)}</span>
+              )}
             </div>
             <div className="gap-1 inline-flex items-center">
               <Container size={15} />

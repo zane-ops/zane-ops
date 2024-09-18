@@ -101,6 +101,25 @@ export function mergeTimeAgoFormatterAndFormattedDate(
   return timeAgoFormatter(date);
 }
 
+export function formatElapsedTime(seconds: number) {
+  const secondsInMinute = 60;
+  const secondsInHour = 60 * secondsInMinute;
+
+  if (seconds < secondsInMinute) {
+    return `${seconds}s`;
+  }
+  if (seconds < secondsInHour) {
+    const secondsLeftInMinute = seconds % secondsInMinute;
+    return `${Math.floor(seconds / secondsInMinute)}min ${secondsLeftInMinute}s`;
+  }
+
+  const hours = Math.floor(seconds / secondsInHour);
+  const minutes = Math.floor((seconds % secondsInHour) / secondsInMinute);
+  const secondsLeft = seconds % secondsInMinute;
+
+  return `${hours}h ${minutes}min ${secondsLeft}s`;
+}
+
 export function capitalizeText(text: string): string {
   return text.charAt(0).toUpperCase() + text.substring(1).toLowerCase();
 }
