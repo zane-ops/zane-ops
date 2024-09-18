@@ -204,9 +204,16 @@ function ServiceDetails() {
             <DeploymentCard
               commit_message="Update service"
               hash="1234"
+              status="QUEUED"
+              image="nginx:dmeo"
+              queued_at={new Date()}
+            />
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
               status="PREPARING"
               image="nginx:dmeo"
-              started_at={new Date("2024-08-14T23:35:30.183Z")}
+              started_at={new Date("2024-08-27T09:15:15.160Z")}
               queued_at={new Date()}
             />
 
@@ -220,13 +227,58 @@ function ServiceDetails() {
               started_at={new Date()}
               queued_at={new Date()}
             />
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="FAILED"
+              image="nginx:dmeo"
+              finished_at={new Date()}
+              started_at={new Date()}
+              queued_at={new Date()}
+            />
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="SLEEPING"
+              image="nginx:dmeo"
+              finished_at={new Date()}
+              started_at={new Date()}
+              queued_at={new Date()}
+            />
 
             <h2 className="text-gray-400 text-sm">Previous</h2>
             <DeploymentCard
               commit_message="Update service"
               hash="1234"
-              status="QUEUED"
+              status="CANCELLED"
               image="nginx:dmeo"
+              queued_at={new Date()}
+            />
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="REMOVED"
+              image="nginx:dmeo"
+              finished_at={new Date()}
+              started_at={new Date()}
+              queued_at={new Date()}
+            />
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="REMOVED"
+              image="nginx:dmeo"
+              finished_at={new Date()}
+              started_at={new Date()}
+              queued_at={new Date()}
+            />
+            <DeploymentCard
+              commit_message="Update service"
+              hash="1234"
+              status="REMOVED"
+              image="nginx:dmeo"
+              finished_at={new Date()}
+              started_at={new Date()}
               queued_at={new Date()}
             />
           </div>
@@ -346,7 +398,7 @@ function DeploymentCard({
             status === "REMOVED" ||
             status === "CANCELLED" ||
             status === "QUEUED",
-          "border-orange-600 bg-orange-600": status === "SLEEPING"
+          "border-yellow-600 bg-yellow-600": status === "SLEEPING"
         }
       )}
     >
@@ -361,11 +413,11 @@ function DeploymentCard({
                   status === "PREPARING",
                 "text-green-500": status === "HEALTHY",
                 "text-red-500": status === "UNHEALTHY" || status === "FAILED",
-                "text-gray-500":
+                "text-gray-400":
                   status === "REMOVED" ||
                   status === "CANCELLED" ||
                   status === "QUEUED",
-                "text-orange-500": status === "SLEEPING"
+                "text-yellow-500": status === "SLEEPING"
               })}
             >
               {capitalizeText(status)}
@@ -418,7 +470,7 @@ function DeploymentCard({
               status === "REMOVED" ||
               status === "CANCELLED" ||
               status === "QUEUED",
-            "border-orange-600": status === "SLEEPING"
+            "border-yellow-600": status === "SLEEPING"
           })}
         >
           <Link to={`deployments/${hash}/logs`}>View logs</Link>
