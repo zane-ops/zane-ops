@@ -2,12 +2,16 @@ import { Popover } from "@radix-ui/react-popover";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { addDays, format } from "date-fns";
 import {
+  Ban,
   CalendarIcon,
   Container,
   EllipsisVertical,
+  Eye,
   KeyRound,
   Loader,
+  Redo2,
   Rocket,
+  ScrollText,
   Settings,
   Timer,
   TriangleAlert
@@ -34,6 +38,13 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 
+import {
+  Menubar,
+  MenubarContent,
+  MenubarContentItem,
+  MenubarMenu,
+  MenubarTrigger
+} from "~/components/ui/menubar";
 import { MultiSelect } from "~/components/ui/mutiple-select";
 import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -474,7 +485,7 @@ function DeploymentCard({
         </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         <Button
           asChild
           variant="ghost"
@@ -494,7 +505,25 @@ function DeploymentCard({
         >
           <Link to={`deployments/${hash}/logs`}>View logs</Link>
         </Button>
-        <EllipsisVertical />
+
+        <Menubar className="border-none md:block hidden w-fit">
+          <MenubarMenu>
+            <MenubarTrigger
+              className="flex justify-center items-center gap-2"
+              asChild
+            >
+              <Button variant="ghost" className="px-2">
+                <EllipsisVertical />
+              </Button>
+            </MenubarTrigger>
+            <MenubarContent className="border min-w-0 mx-9  border-border">
+              <MenubarContentItem icon={Eye} text="Details" />
+              <MenubarContentItem icon={ScrollText} text="View logs" />
+              <MenubarContentItem icon={Redo2} text="Redeploy" />
+              <MenubarContentItem icon={Ban} text="Cancel" />
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
       </div>
     </div>
   );
