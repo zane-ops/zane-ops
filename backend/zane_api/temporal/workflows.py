@@ -182,108 +182,107 @@ class DeployDockerServiceWorkflow:
         print(
             f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
         )
-
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.close_faulty_db_connections,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=self.retry_policy,
-        )
-
-        pause_at_step = (
-            DockerDeploymentStep(deployment.pause_at_step)
-            if deployment.pause_at_step > 0
-            else None
-        )
-
-        async def check_for_cancellation(
-            last_completed_step: DockerDeploymentStep,
-        ):
-            """
-            This function allows us to pause and potentially bypass the workflow's execution
-            during testing. It is useful for stopping the workflow at specific points to
-            simulate and handle cancellation.
-
-            Because workflows are asynchronous, the workflow might progress to another step
-            by the time the user triggers `cancel_deployment`. This function helps ensure
-            that the workflow can pause at a predefined step (indicated by `pause_at_step`)
-            and wait for a cancellation signal.
-
-            Note: `pause_at_step`  is intended only for testing and should not be used in
-            the application logic.
-            """
-            if pause_at_step is not None:
-                if pause_at_step != last_completed_step:
-                    return False
-
-                print(
-                    f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
-                )
-                timeout = 5
-                start_time = workflow.time()
-                while (
-                    workflow.time() - start_time
-                ) < timeout and not self.cancellation_requested:
-                    await asyncio.sleep(1)
-                print(
-                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
-                )
-            return self.cancellation_requested
-
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.prepare_deployment,
-            deployment,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=self.retry_policy,
-        )
-
-        previous_production_deployment = await workflow.execute_activity_method(
-            DockerSwarmActivities.get_previous_production_deployment,
-            deployment,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=self.retry_policy,
-        )
-
-        if await check_for_cancellation(DockerDeploymentStep.INITIALIZED):
-            return await self.handle_cancellation(
-                deployment,
-                DockerDeploymentStep.INITIALIZED,
-            )
-
-        service = deployment.service
-        if len(service.docker_volumes) > 0:
-            self.created_volumes = await workflow.execute_activity_method(
-                DockerSwarmActivities.create_docker_volumes_for_service,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-        if await check_for_cancellation(DockerDeploymentStep.VOLUMES_CREATED):
-            return await self.handle_cancellation(
-                deployment, DockerDeploymentStep.VOLUMES_CREATED
-            )
-
-        if (
-            (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
-            and previous_production_deployment is not None
-            and previous_production_deployment.status
-            != DockerDeployment.DeploymentStatus.FAILED
-        ):
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.scale_down_service_deployment,
-                previous_production_deployment,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=self.retry_policy,
-            )
-
-        if await check_for_cancellation(
-            DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
-        ):
-            return await self.handle_cancellation(
-                deployment, DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
-            )
-
         try:
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.close_faulty_db_connections,
+                start_to_close_timeout=timedelta(seconds=10),
+                retry_policy=self.retry_policy,
+            )
+
+            pause_at_step = (
+                DockerDeploymentStep(deployment.pause_at_step)
+                if deployment.pause_at_step > 0
+                else None
+            )
+
+            async def check_for_cancellation(
+                last_completed_step: DockerDeploymentStep,
+            ):
+                """
+                This function allows us to pause and potentially bypass the workflow's execution
+                during testing. It is useful for stopping the workflow at specific points to
+                simulate and handle cancellation.
+
+                Because workflows are asynchronous, the workflow might progress to another step
+                by the time the user triggers `cancel_deployment`. This function helps ensure
+                that the workflow can pause at a predefined step (indicated by `pause_at_step`)
+                and wait for a cancellation signal.
+
+                Note: `pause_at_step`  is intended only for testing and should not be used in
+                the application logic.
+                """
+                if pause_at_step is not None:
+                    if pause_at_step != last_completed_step:
+                        return False
+
+                    print(
+                        f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
+                    )
+                    timeout = 5
+                    start_time = workflow.time()
+                    while (
+                        workflow.time() - start_time
+                    ) < timeout and not self.cancellation_requested:
+                        await asyncio.sleep(1)
+                    print(
+                        f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
+                    )
+                return self.cancellation_requested
+
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.prepare_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+            previous_production_deployment = await workflow.execute_activity_method(
+                DockerSwarmActivities.get_previous_production_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+            if await check_for_cancellation(DockerDeploymentStep.INITIALIZED):
+                return await self.handle_cancellation(
+                    deployment,
+                    DockerDeploymentStep.INITIALIZED,
+                )
+
+            service = deployment.service
+            if len(service.docker_volumes) > 0:
+                self.created_volumes = await workflow.execute_activity_method(
+                    DockerSwarmActivities.create_docker_volumes_for_service,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+
+            if await check_for_cancellation(DockerDeploymentStep.VOLUMES_CREATED):
+                return await self.handle_cancellation(
+                    deployment, DockerDeploymentStep.VOLUMES_CREATED
+                )
+
+            if (
+                (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
+                and previous_production_deployment is not None
+                and previous_production_deployment.status
+                != DockerDeployment.DeploymentStatus.FAILED
+            ):
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.scale_down_service_deployment,
+                    previous_production_deployment,
+                    start_to_close_timeout=timedelta(seconds=60),
+                    retry_policy=self.retry_policy,
+                )
+
+            if await check_for_cancellation(
+                DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
+            ):
+                return await self.handle_cancellation(
+                    deployment, DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
+                )
+
             await workflow.execute_activity_method(
                 DockerSwarmActivities.pull_image_for_deployment,
                 deployment,
