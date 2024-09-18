@@ -27,6 +27,12 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 
 import { MultiSelect } from "~/components/ui/mutiple-select";
 import { PopoverContent, PopoverTrigger } from "~/components/ui/popover";
@@ -98,16 +104,50 @@ function ServiceDetails() {
             </span>
           </p>
           <div className="flex gap-3 items-center">
-            <Link className="underline text-link text-sm">
-              nginxdemo.zaneops.local
-            </Link>
-            <StatusBadge
-              className="relative top-0.5 text-xs"
-              color="gray"
-              isPing={false}
+            <a
+              href="https://nginxdemo.zaneops.local"
+              target="_blank"
+              className="underline text-link text-sm"
             >
-              +2 urls
-            </StatusBadge>
+              nginxdemo.zaneops.local
+            </a>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <span>
+                    <StatusBadge
+                      className="relative top-0.5 text-xs cursor-pointer"
+                      color="gray"
+                      isPing={false}
+                    >
+                      +2 urls
+                    </StatusBadge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent align="end" side="right">
+                  <ul>
+                    <li>
+                      <a
+                        href="https://nginxdemo.zaneops.local"
+                        target="_blank"
+                        className="underline text-link text-sm"
+                      >
+                        nginx-demo.zaneops.local
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://nginxdemo.zaneops.local"
+                        target="_blank"
+                        className="underline text-link text-sm"
+                      >
+                        nginx-demo-docker.zaneops.local
+                      </a>
+                    </li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
