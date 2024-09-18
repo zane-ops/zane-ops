@@ -2590,6 +2590,10 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
 
+        first_deployment = updated_service.deployments.first()
+        self.assertIsNotNone(first_deployment)
+        self.assertIsNotNone(first_deployment.url)
+
         new_port = updated_service.ports.filter(host__isnull=True).first()
         self.assertIsNotNone(new_port)
         self.assertEqual(80, new_port.forwarded)

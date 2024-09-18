@@ -519,7 +519,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             )
             service.apply_pending_changes(deployment=new_deployment)
 
-            if len(service.urls.all()) > 0:
+            if service.http_port is not None:
                 new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
 
             latest_deployment = service.latest_production_deployment
