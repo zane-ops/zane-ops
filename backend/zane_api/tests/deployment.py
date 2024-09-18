@@ -3132,6 +3132,51 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertFalse(new_deployment.is_current_production)
 
+    async def test_set_deployment_as_failed_when_image_fails_to_pull(self):
+        owner = await self.aLoginUser()
+        p = await Project.objects.acreate(slug="sandbox", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "redis:alpine",
+        }
+        response = await self.async_client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service = await DockerRegistryService.objects.aget(slug="app")
+
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value=self.fake_docker_client.NONEXISTANT_IMAGE,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_deployment: DockerDeployment = await service.deployments.afirst()
+
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.FAILED, first_deployment.status
+        )
+        self.assertIsNotNone(first_deployment.status_reason)
+        self.assertIsNotNone(first_deployment.finished_at)
+
 
 class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_set_different_deployment_slot(self):

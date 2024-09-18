@@ -1132,6 +1132,30 @@ class DockerSwarmActivities:
                     pass
 
     @activity.defn
+    async def pull_image_for_deployment(self, deployment: DockerDeploymentDetails):
+        service = deployment.service
+        await deployment_log(
+            deployment,
+            f"Pulling image {Colors.YELLOW}{service.image}{Colors.ENDC}...",
+        )
+        try:
+            self.docker_client.images.pull(
+                repository=service.image,
+                auth_config=(
+                    service.credentials.to_dict()
+                    if service.credentials is not None
+                    else None
+                ),
+            )
+        except docker.errors.ImageNotFound as e:
+            raise ApplicationError(non_retryable=True, message=str(e))
+        else:
+            await deployment_log(
+                deployment,
+                f"Finished pulling image {Colors.YELLOW}{service.image}{Colors.ENDC} ✅",
+            )
+
+    @activity.defn
     async def create_swarm_service_for_docker_deployment(
         self, deployment: DockerDeploymentDetails
     ):
@@ -1146,23 +1170,6 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
-            await deployment_log(
-                deployment,
-                f"Pulling image {Colors.YELLOW}{service.image}{Colors.ENDC}...",
-            )
-            self.docker_client.images.pull(
-                repository=service.image,
-                auth_config=(
-                    service.credentials.to_dict()
-                    if service.credentials is not None
-                    else None
-                ),
-            )
-            await deployment_log(
-                deployment,
-                f"Finished pulling image {Colors.YELLOW}{service.image}{Colors.ENDC} ✅",
-            )
-
             # env variables
             envs: list[str] = [
                 f"{env.key}={env.value}" for env in service.env_variables
