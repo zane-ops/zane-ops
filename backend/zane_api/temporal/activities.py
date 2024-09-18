@@ -1138,18 +1138,22 @@ class DockerSwarmActivities:
             deployment,
             f"Pulling image {Colors.YELLOW}{service.image}{Colors.ENDC}...",
         )
-        self.docker_client.images.pull(
-            repository=service.image,
-            auth_config=(
-                service.credentials.to_dict()
-                if service.credentials is not None
-                else None
-            ),
-        )
-        await deployment_log(
-            deployment,
-            f"Finished pulling image {Colors.YELLOW}{service.image}{Colors.ENDC} ✅",
-        )
+        try:
+            self.docker_client.images.pull(
+                repository=service.image,
+                auth_config=(
+                    service.credentials.to_dict()
+                    if service.credentials is not None
+                    else None
+                ),
+            )
+        except docker.errors.ImageNotFound as e:
+            raise ApplicationError(non_retryable=True, message=str(e))
+        else:
+            await deployment_log(
+                deployment,
+                f"Finished pulling image {Colors.YELLOW}{service.image}{Colors.ENDC} ✅",
+            )
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(
