@@ -290,26 +290,6 @@ class DeployDockerServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=self.retry_policy,
             )
-        except ActivityError as e:
-            healthcheck_result = DeploymentHealthcheckResult(
-                deployment_hash=deployment.hash,
-                status=DockerDeployment.DeploymentStatus.FAILED,
-                reason=str(e.cause),
-                service_id=deployment.service.id,
-            )
-            final_deployment_status = await workflow.execute_activity_method(
-                DockerSwarmActivities.finish_and_save_deployment,
-                healthcheck_result,
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
-            next_queued_deployment = await self.queue_next_deployment(deployment)
-            return DeployDockerServiceWorkflowResult(
-                deployment_status=final_deployment_status,
-                healthcheck_result=healthcheck_result,
-                next_queued_deployment=next_queued_deployment,
-            )
-        else:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.create_swarm_service_for_docker_deployment,
                 deployment,
@@ -410,6 +390,25 @@ class DeployDockerServiceWorkflow:
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
+            final_deployment_status = await workflow.execute_activity_method(
+                DockerSwarmActivities.finish_and_save_deployment,
+                healthcheck_result,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+            next_queued_deployment = await self.queue_next_deployment(deployment)
+            return DeployDockerServiceWorkflowResult(
+                deployment_status=final_deployment_status,
+                healthcheck_result=healthcheck_result,
+                next_queued_deployment=next_queued_deployment,
+            )
+        except ActivityError as e:
+            healthcheck_result = DeploymentHealthcheckResult(
+                deployment_hash=deployment.hash,
+                status=DockerDeployment.DeploymentStatus.FAILED,
+                reason=str(e.cause),
+                service_id=deployment.service.id,
+            )
             final_deployment_status = await workflow.execute_activity_method(
                 DockerSwarmActivities.finish_and_save_deployment,
                 healthcheck_result,
