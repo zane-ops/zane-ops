@@ -219,9 +219,13 @@ class DeployDockerServiceWorkflow:
                 )
                 start_time = workflow.time()
                 print(f"{workflow.time()=}, {start_time=}")
-                await workflow.wait_condition(
-                    lambda: self.cancellation_requested, timeout=timedelta(seconds=30)
-                )
+                try:
+                    await workflow.wait_condition(
+                        lambda: self.cancellation_requested,
+                        timeout=timedelta(seconds=30),
+                    )
+                except TimeoutError as error:
+                    print(f"TimeoutError {error=}")
                 print(
                     f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
                 )
