@@ -381,6 +381,10 @@ function DeploymentCard({
     }
   }, [started_at, finished_at]);
 
+  if (!image.includes(":")) {
+    image += ":latest";
+  }
+
   return (
     <div
       className={cn(
