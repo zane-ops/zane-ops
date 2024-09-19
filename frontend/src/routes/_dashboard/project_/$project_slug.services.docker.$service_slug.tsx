@@ -516,7 +516,12 @@ function DeploymentCard({
                 <EllipsisVertical />
               </Button>
             </MenubarTrigger>
-            <MenubarContent className="border min-w-0 mx-9  border-border">
+            <MenubarContent
+              side="bottom"
+              align="end"
+              sideOffset={0}
+              className="border min-w-0 mx-9  border-border"
+            >
               <MenubarContentItem icon={Eye} text="Details" />
               <MenubarContentItem icon={ScrollText} text="View logs" />
               <MenubarContentItem icon={Redo2} text="Redeploy" />
