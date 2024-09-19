@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { type ProjectSearch, projectKeys } from "~/key-factories";
-
-const FIVE_SECONDS = 5 * 1000;
+import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
 export function useProjectListQuery(filters: ProjectSearch) {
   return useQuery({
@@ -24,7 +23,7 @@ export function useProjectListQuery(filters: ProjectSearch) {
     enabled: filters.status !== "archived",
     refetchInterval: (query) => {
       if (query.state.data?.data) {
-        return FIVE_SECONDS;
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       }
       return false;
     }

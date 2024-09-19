@@ -26,13 +26,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 
-import { useMutation } from "@tanstack/react-query";
-import { type RequestInput, apiClient } from "~/api/client";
 import { Loader } from "~/components/loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-service-mutation";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
-import { formatURL, getCsrfTokenHeader, pluralize } from "~/utils";
+import { formatURL, pluralize } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"

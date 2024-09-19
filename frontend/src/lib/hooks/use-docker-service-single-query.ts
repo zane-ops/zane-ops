@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { serviceKeys } from "~/key-factories";
+import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
 export function useDockerServiceSingleQuery(
   project_slug: string,
@@ -21,6 +22,12 @@ export function useDockerServiceSingleQuery(
           signal
         }
       );
+    },
+    refetchInterval: (query) => {
+      if (query.state.data?.data) {
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      }
+      return false;
     }
   });
 }

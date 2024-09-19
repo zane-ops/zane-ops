@@ -90,7 +90,7 @@ export function mergeTimeAgoFormatterAndFormattedDate(
 ): string {
   const date = new Date(dateInput);
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.round((now.getTime() - date.getTime()) / 1000);
 
   const secondsInWeek = 7 * 24 * 3600;
 

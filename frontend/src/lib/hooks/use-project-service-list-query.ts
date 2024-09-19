@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { type ProjectServiceListSearch, projectKeys } from "~/key-factories";
-
-const FIVE_SECONDS = 5 * 1000;
+import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
 export function useProjectServiceListQuery(
   slug: string,
@@ -25,7 +24,7 @@ export function useProjectServiceListQuery(
     },
     refetchInterval: (query) => {
       if (query.state.data?.data) {
-        return FIVE_SECONDS;
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       }
       return false;
     }

@@ -4,8 +4,7 @@ import {
   type ServiceDeploymentListFilters,
   serviceKeys
 } from "~/key-factories";
-
-const FIVE_SECONDS = 5 * 1000;
+import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
 export function useDockerServiceDeploymentListQuery(
   project_slug: string,
@@ -40,7 +39,7 @@ export function useDockerServiceDeploymentListQuery(
     },
     refetchInterval: (query) => {
       if (query.state.data?.data) {
-        return FIVE_SECONDS;
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       }
       return false;
     }
