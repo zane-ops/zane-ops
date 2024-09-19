@@ -2,6 +2,7 @@ import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import {
   Container,
   KeyRound,
+  LoaderIcon,
   Rocket,
   Settings,
   TriangleAlert
@@ -17,7 +18,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -25,10 +26,12 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 
+import { useMutation } from "@tanstack/react-query";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Loader } from "~/components/loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDockerServiceSingle } from "~/lib/hooks/use-docker-service-single";
-import { formatURL, pluralize } from "~/utils";
+import { formatURL, getCsrfTokenHeader, pluralize } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
@@ -38,8 +41,39 @@ export const Route = createFileRoute(
 
 function ServiceDetailsLayout() {
   const { project_slug, service_slug } = Route.useParams();
-  const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
   const serviceSingleQuery = useDockerServiceSingle(project_slug, service_slug);
+  const { isPending: isDeploying, mutate: deploy } = useMutation({
+    mutationFn: async (
+      input: RequestInput<
+        "put",
+        "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/"
+      >
+    ) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          body: input,
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          }
+        }
+      );
+
+      if (error) return error;
+      if (data) {
+        await serviceSingleQuery.refetch();
+        return;
+      }
+    }
+  });
+
+  const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
   const service = serviceSingleQuery.data?.data;
   let serviceImage =
     service?.image ??
@@ -175,7 +209,22 @@ function ServiceDetailsLayout() {
                 </Button>
               )}
 
-              <Button variant="secondary">deploy</Button>
+              <form action={() => deploy({})}>
+                <SubmitButton
+                  isPending={isDeploying}
+                  variant="secondary"
+                  className="inline-flex gap-1 items-center"
+                >
+                  {isDeploying ? (
+                    <>
+                      <span>Deploying</span>
+                      <LoaderIcon className="animate-spin" size={15} />
+                    </>
+                  ) : (
+                    "Deploy"
+                  )}
+                </SubmitButton>
+              </form>
             </div>
           </div>
           <Tabs defaultValue="deployment" className="w-full mt-5">
