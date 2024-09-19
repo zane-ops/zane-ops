@@ -423,27 +423,6 @@ export interface components {
       errors: components["schemas"]["CreateProjectError"][];
     };
     DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerCredentialsFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["DockerImageFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
-    DeploymentDocker: {
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-      id: string;
-      slug: string;
-      image: string;
-      command: string | null;
-      healthcheck: components["schemas"]["HealthCheck"] | null;
-      project_id: string;
-      credentials: components["schemas"]["DockerCredential"] | null;
-      urls: readonly components["schemas"]["URLModel"][];
-      volumes: readonly components["schemas"]["Volume"][];
-      ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["DockerEnvVariable"][];
-      network_aliases: readonly string[];
-      network_alias: string | null;
-      unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
-      resource_limits: components["schemas"]["ResourceLimits"] | null;
-    };
     /**
      * @description * `command` - command
      * @enum {string}
@@ -596,7 +575,7 @@ export interface components {
       url: string | null;
       network_aliases: readonly string[];
       unprefixed_hash: string;
-      service_snapshot: components["schemas"]["DeploymentDocker"];
+      service_snapshot: components["schemas"]["DockerService"] | null;
       changes: readonly components["schemas"]["DockerDeploymentChange"][];
       commit_message: string;
     };

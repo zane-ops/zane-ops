@@ -3097,97 +3097,6 @@ components:
         propertyName: field
         mapping:
           null: '#/components/schemas/ResourceLimitChangeRequest'
-    DeploymentDocker:
-      type: object
-      properties:
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-        id:
-          type: string
-          maxLength: 255
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        image:
-          type: string
-        command:
-          type: string
-          nullable: true
-        healthcheck:
-          allOf:
-          - $ref: '#/components/schemas/HealthCheck'
-          readOnly: true
-          nullable: true
-        project_id:
-          type: string
-          readOnly: true
-        credentials:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredential'
-          nullable: true
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLModel'
-          readOnly: true
-        volumes:
-          type: array
-          items:
-            $ref: '#/components/schemas/Volume'
-          readOnly: true
-        ports:
-          type: array
-          items:
-            $ref: '#/components/schemas/PortConfiguration'
-          readOnly: true
-        env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerEnvVariable'
-          readOnly: true
-        network_aliases:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        network_alias:
-          type: string
-          nullable: true
-          maxLength: 300
-        unapplied_changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
-          readOnly: true
-        resource_limits:
-          allOf:
-          - $ref: '#/components/schemas/ResourceLimits'
-          nullable: true
-      required:
-      - command
-      - created_at
-      - credentials
-      - env_variables
-      - healthcheck
-      - id
-      - image
-      - network_alias
-      - network_aliases
-      - ports
-      - project_id
-      - resource_limits
-      - slug
-      - unapplied_changes
-      - updated_at
-      - urls
-      - volumes
     DockerCommandFieldChangeFieldEnum:
       enum:
       - command
@@ -3576,7 +3485,9 @@ components:
           type: string
           readOnly: true
         service_snapshot:
-          $ref: '#/components/schemas/DeploymentDocker'
+          allOf:
+          - $ref: '#/components/schemas/DockerService'
+          nullable: true
         changes:
           type: array
           items:
