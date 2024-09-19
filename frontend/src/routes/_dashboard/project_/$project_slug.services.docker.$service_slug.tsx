@@ -280,7 +280,7 @@ function ServiceDetails() {
               hash="1234"
               status="PREPARING"
               image="nginx:dmeo"
-              started_at={new Date("2024-09-18T23:05:49.741Z")}
+              started_at={new Date("2024-09-19T15:03:09.259Z")}
               queued_at={new Date("2024-09-18T23:05:45.741Z")}
             />
 
@@ -413,7 +413,7 @@ function DeploymentCard({
   React.useEffect(() => {
     if (started_at && !finished_at) {
       const timer = setInterval(() => {
-        setTimeElapsed((prev) =>
+        setTimeElapsed(() =>
           Math.ceil((new Date().getTime() - started_at.getTime()) / 1000)
         );
       }, 1000);
