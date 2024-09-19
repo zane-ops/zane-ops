@@ -5868,7 +5868,6 @@ components:
           maxLength: 255
         domain:
           type: string
-          nullable: true
           maxLength: 1000
         base_path:
           type: string
