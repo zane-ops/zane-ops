@@ -443,7 +443,7 @@ function DeploymentCard({
       )}
     >
       <div className="flex ">
-        {/* First column */}
+        {/* Status name */}
         <div className="w-[160px]">
           <h3 className="flex items-center gap-1 capitalize">
             <span
@@ -472,6 +472,7 @@ function DeploymentCard({
           </p>
         </div>
 
+        {/* Commit message & timer */}
         <div className="flex flex-col items-start">
           <h3>{commit_message}</h3>
           <div className="flex text-gray-400 gap-3 text-sm w-full items-center">
@@ -498,11 +499,12 @@ function DeploymentCard({
         </div>
       </div>
 
+      {/* View logs button & triple dot */}
       <div className="flex items-center gap-2">
         <Button
           asChild
           variant="ghost"
-          className={cn("border hover:bg-inherit", {
+          className={cn("border hover:bg-inherit focus:opacity-100", {
             "border-blue-600":
               status === "STARTING" ||
               status === "RESTARTING" ||
@@ -525,14 +527,13 @@ function DeploymentCard({
               className="flex justify-center items-center gap-2"
               asChild
             >
-              <Button variant="ghost" className="px-2 hover:bg-inherit">
+              <Button variant="ghost" className="px-1.5 py-1 hover:bg-inherit">
                 <EllipsisVertical />
               </Button>
             </MenubarTrigger>
             <MenubarContent
               side="bottom"
-              align="end"
-              sideOffset={0}
+              align="start"
               className="border min-w-0 mx-9  border-border"
             >
               <MenubarContentItem icon={Eye} text="Details" />
@@ -697,12 +698,6 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
       setIsPopoverOpen((prev) => !prev);
     };
 
-    const clearExtraOptions = () => {
-      const newSelectedValues = selectedValues.slice(0, maxCount);
-      setSelectedValues(newSelectedValues);
-      onValueChange(newSelectedValues);
-    };
-
     const toggleAll = () => {
       if (selectedValues.length === options.length) {
         handleClear();
@@ -854,13 +849,33 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
+                <CommandItem
+                  key="SELECT_ALL"
+                  onSelect={toggleAll}
+                  className="cursor-pointer flex gap-0.5"
+                >
+                  <div
+                    className={cn(
+                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                      selectedValues.length === options.length
+                        ? "bg-primary text-primary-foreground"
+                        : "opacity-50 [&_svg]:invisible"
+                    )}
+                  >
+                    <CheckIcon className="h-4 w-4" />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full">
+                    <span>(Select all)</span>
+                  </div>
+                </CommandItem>
                 {options.map((option) => {
                   const isSelected = selectedValues.includes(option.value);
                   return (
                     <CommandItem
                       key={option.value}
                       onSelect={() => toggleOption(option.value)}
-                      className="cursor-pointer"
+                      className="cursor-pointer flex gap-0.5"
                     >
                       <div
                         className={cn(
