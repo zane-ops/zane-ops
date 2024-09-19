@@ -145,7 +145,7 @@ function ProjectDetail() {
               <section className="flex gap-3 h-96 col-span-full flex-col items-center justify-center flex-grow py-20">
                 <div className="text-center">
                   {debouncedValue.length > 0 ? (
-                    <>
+                    <div className="flex flex-col gap-2 items-center">
                       <h2 className="text-2xl font-medium">
                         No services match the filter criteria
                       </h2>
@@ -153,7 +153,10 @@ function ProjectDetail() {
                         Your search for`{debouncedValue}` did not return any
                         results.
                       </h3>
-                    </>
+                      <Button asChild variant="outline">
+                        <Link href=".">Clear filters</Link>
+                      </Button>
+                    </div>
                   ) : (
                     <>
                       <div>
