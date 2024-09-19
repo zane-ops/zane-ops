@@ -1744,7 +1744,7 @@ export interface components {
     };
     URLModel: {
       id: string;
-      domain: string;
+      domain: string | null;
       /** @default / */
       base_path: string;
       strip_prefix: boolean;
