@@ -506,13 +506,13 @@ function DeploymentCard({
           <Link to={`deployments/${hash}/logs`}>View logs</Link>
         </Button>
 
-        <Menubar className="border-none md:block hidden w-fit">
+        <Menubar className="border-none h-auto md:block hidden w-fit">
           <MenubarMenu>
             <MenubarTrigger
               className="flex justify-center items-center gap-2"
               asChild
             >
-              <Button variant="ghost" className="px-2">
+              <Button variant="ghost" className="px-2 hover:bg-inherit">
                 <EllipsisVertical />
               </Button>
             </MenubarTrigger>
