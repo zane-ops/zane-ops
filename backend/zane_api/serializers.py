@@ -202,6 +202,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "status_reason",
             "url",
             "network_aliases",
+            "unprefixed_hash",
             "service_snapshot",
             "changes",
             "commit_message",
