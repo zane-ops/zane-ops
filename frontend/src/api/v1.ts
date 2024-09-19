@@ -574,6 +574,7 @@ export interface components {
       /** Format: uri */
       url: string | null;
       network_aliases: readonly string[];
+      unprefixed_hash: string;
       service_snapshot: components["schemas"]["DockerService"] | null;
       changes: readonly components["schemas"]["DockerDeploymentChange"][];
       commit_message: string;
