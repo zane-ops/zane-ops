@@ -1,4 +1,9 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Link,
+  createFileRoute,
+  notFound,
+  useNavigate
+} from "@tanstack/react-router";
 import { ChevronsUpDown, PlusIcon, Rocket, Search, Trash } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -24,12 +29,13 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
-import { projectDetailsSearchSchema } from "~/key-factories";
-import { useProjectDetails } from "~/lib/hooks/use-project-details";
+import { projectServiceListSearchSchema } from "~/key-factories";
+import { useProjectServiceList } from "~/lib/hooks/use-project-service-list";
+import { useProjectSingle } from "~/lib/hooks/use-project-single";
 import { timeAgoFormatter } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
-  validateSearch: (search) => projectDetailsSearchSchema.parse(search),
+  validateSearch: (search) => projectServiceListSearchSchema.parse(search),
   component: withAuthRedirect(ProjectDetail)
 });
 
@@ -40,10 +46,12 @@ function ProjectDetail() {
 
   const navigate = useNavigate();
 
-  const projectDetailsQuery = useProjectDetails(slug, {
+  const projectServiceListQuery = useProjectServiceList(slug, {
     query: debouncedValue
   });
-  const serviceList = projectDetailsQuery.data?.data;
+  const projectSingleQuery = useProjectSingle(slug);
+  const serviceList = projectServiceListQuery.data?.data;
+  const project = projectSingleQuery.data?.data;
 
   return (
     <main>
@@ -60,13 +68,13 @@ function ProjectDetail() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      {projectDetailsQuery.isLoading ? (
+      {projectSingleQuery.isLoading || projectServiceListQuery.isLoading ? (
         <>
           <div className="col-span-full">
             <Loader className="h-[70vh]" />
           </div>
         </>
-      ) : !projectDetailsQuery.isLoading && serviceList === undefined ? (
+      ) : project === undefined ? (
         <>
           <section className="col-span-full ">
             <MetaTitle title="404 - Project does not exist" />
@@ -86,11 +94,13 @@ function ProjectDetail() {
           <MetaTitle title="Project Detail" />
 
           <div className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap  gap-3 justify-between ">
-            <div className="flex items-center gap-4 ">
-              <h1 className="text-3xl capitalize font-medium">{slug}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl capitalize font-medium">
+                {project.slug}
+              </h1>
 
-              <Button asChild variant={"secondary"} className="flex gap-2">
-                <Link to={`create-service`}>
+              <Button asChild variant="secondary" className="flex gap-2">
+                <Link to="create-service">
                   New Service <PlusIcon size={18} />
                 </Link>
               </Button>
