@@ -3481,6 +3481,9 @@ components:
           items:
             type: string
           readOnly: true
+        unprefixed_hash:
+          type: string
+          readOnly: true
         service_snapshot:
           allOf:
           - $ref: '#/components/schemas/DockerService'
@@ -3506,6 +3509,7 @@ components:
       - started_at
       - status
       - status_reason
+      - unprefixed_hash
       - url
     DockerServiceDeploymentStatusEnum:
       enum:

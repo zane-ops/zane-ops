@@ -614,7 +614,7 @@ class DockerDeployment(BaseDeployment):
         return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
 
     @property
-    def unprefixed_hash(self):
+    def unprefixed_hash(self) -> str:
         return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
 
     @property
