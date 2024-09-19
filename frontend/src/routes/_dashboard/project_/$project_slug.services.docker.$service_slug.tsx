@@ -30,10 +30,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
 )({
-  component: withAuthRedirect(ServiceDetails)
+  component: withAuthRedirect(ServiceDetailsLayout)
 });
 
-function ServiceDetails() {
+function ServiceDetailsLayout() {
   const { project_slug, service_slug } = Route.useParams();
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
 
