@@ -186,11 +186,7 @@ function ServiceDetailsLayout() {
               )}
 
               <form action={() => deploy({})}>
-                <SubmitButton
-                  isPending={isDeploying}
-                  variant="secondary"
-                  className="inline-flex gap-1 items-center"
-                >
+                <SubmitButton isPending={isDeploying} variant="secondary">
                   {isDeploying ? (
                     <>
                       <span>Deploying</span>

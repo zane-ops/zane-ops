@@ -63,7 +63,11 @@ const SubmitButton = React.forwardRef<HTMLButtonElement, SubmitButtonProps>(
   ({ className, variant, size, isPending, ...props }, ref) => {
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(
+          buttonVariants({ variant, size }),
+          "inline-flex items-center gap-1",
+          className
+        )}
         ref={ref}
         {...props}
         aria-disabled={isPending}
