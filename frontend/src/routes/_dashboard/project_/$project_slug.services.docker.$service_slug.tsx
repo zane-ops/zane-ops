@@ -91,8 +91,8 @@ function ServiceDetails() {
   const { project_slug, service_slug } = Route.useParams();
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
   const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(2022, 0, 20),
-    to: addDays(new Date(2022, 0, 20), 20)
+    from: undefined,
+    to: undefined
   });
 
   const [selectedStatuses, setSelectedStatuses] = React.useState(
