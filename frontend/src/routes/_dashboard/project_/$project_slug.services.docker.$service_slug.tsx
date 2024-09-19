@@ -28,6 +28,7 @@ import {
 import { Loader } from "~/components/loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDockerServiceSingle } from "~/lib/hooks/use-docker-service-single";
+import { formatURL, pluralize } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
@@ -40,6 +41,19 @@ function ServiceDetailsLayout() {
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
   const serviceSingleQuery = useDockerServiceSingle(project_slug, service_slug);
   const service = serviceSingleQuery.data?.data;
+  let serviceImage =
+    service?.image ??
+    (service?.unapplied_changes.filter((change) => change.field === "image")[0]
+      ?.new_value as string);
+
+  if (serviceImage && !serviceImage.includes(":")) {
+    serviceImage += ":latest";
+  }
+  let extraServiceUrls: NonNullable<typeof service>["urls"] = [];
+  let _;
+  if (service && service.urls.length > 1) {
+    [_, ...extraServiceUrls] = service.urls;
+  }
 
   return (
     <>
@@ -86,73 +100,80 @@ function ServiceDetailsLayout() {
         </>
       ) : (
         <>
-          <MetaTitle title={service_slug} />
+          <MetaTitle title={service.slug} />
           <div className="flex items-center justify-between">
             <div className="mt-10">
-              <h1 className="text-2xl">nginxdemo</h1>
+              <h1 className="text-2xl">{service.slug}</h1>
               <p className="flex gap-1 items-center">
-                <Container size={15} />{" "}
+                <Container size={15} />
                 <span className="text-gray-500 dark:text-gray-400 text-sm">
-                  nginxdemo/hello:latest
+                  {serviceImage}
                 </span>
               </p>
-              <div className="flex gap-3 items-center">
-                <a
-                  href="https://nginxdemo.zaneops.local"
-                  target="_blank"
-                  className="underline text-link text-sm"
-                >
-                  nginxdemo.zaneops.local
-                </a>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <StatusBadge
-                          className="relative top-0.5 text-xs"
-                          color="gray"
-                          isPing={false}
+              {service.urls.length > 0 && (
+                <div className="flex gap-3 items-center">
+                  <a
+                    href={formatURL(service.urls[0])}
+                    target="_blank"
+                    className="underline text-link text-sm"
+                  >
+                    {formatURL(service.urls[0])}
+                  </a>
+                  {service.urls.length > 1 && (
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <StatusBadge
+                              className="relative top-0.5 text-xs"
+                              color="gray"
+                              isPing={false}
+                            >
+                              <span>
+                                {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}
+                              </span>
+                            </StatusBadge>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          align="end"
+                          side="right"
+                          className="px-4 py-3"
                         >
-                          <span>+2 urls</span>
-                        </StatusBadge>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      align="end"
-                      side="right"
-                      className="px-4 py-3"
-                    >
-                      <ul>
-                        <li>
-                          <a
-                            href="https://nginxdemo.zaneops.local"
-                            target="_blank"
-                            className="underline text-link text-sm"
-                          >
-                            nginx-demo.zaneops.local
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            href="https://nginxdemo.zaneops.local"
-                            target="_blank"
-                            className="underline text-link text-sm"
-                          >
-                            nginx-demo-docker.zaneops.local
-                          </a>
-                        </li>
-                      </ul>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+                          <ul>
+                            {extraServiceUrls.map((url) => (
+                              <li key={url.id}>
+                                <a
+                                  href={formatURL(url)}
+                                  target="_blank"
+                                  className="underline text-link text-sm"
+                                >
+                                  {formatURL(url)}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="warning">
-                <TriangleAlert size={15} />
-                <span className="mx-1">1 unapplied change</span>
-              </Button>
+              {service.unapplied_changes.length > 0 && (
+                <Button variant="warning">
+                  <TriangleAlert size={15} />
+                  <span className="mx-1">
+                    {service.unapplied_changes.length}{" "}
+                    {pluralize(
+                      "unapplied change",
+                      service.unapplied_changes.length
+                    )}
+                  </span>
+                </Button>
+              )}
 
               <Button variant="secondary">deploy</Button>
             </div>

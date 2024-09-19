@@ -123,3 +123,14 @@ export function formatElapsedTime(seconds: number) {
 export function capitalizeText(text: string): string {
   return text.charAt(0).toUpperCase() + text.substring(1).toLowerCase();
 }
+
+export function formatURL({
+  domain,
+  base_path
+}: { domain: string; base_path: string }) {
+  return `https://${domain}${base_path}`;
+}
+
+export function pluralize(word: string, item_count: number) {
+  return word + (item_count > 1 ? "s" : "");
+}
