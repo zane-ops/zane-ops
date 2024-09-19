@@ -54,9 +54,7 @@ class URL(models.Model):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    domain = models.CharField(
-        max_length=1000, null=True, blank=True, validators=[validate_url_domain]
-    )
+    domain = models.CharField(max_length=1000, validators=[validate_url_domain])
     base_path = models.CharField(default="/", validators=[validate_url_path])
     strip_prefix = models.BooleanField(default=True)
 
@@ -616,7 +614,7 @@ class DockerDeployment(BaseDeployment):
         return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
 
     @property
-    def unprefixed_hash(self):
+    def unprefixed_hash(self) -> str:
         return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
 
     @property
