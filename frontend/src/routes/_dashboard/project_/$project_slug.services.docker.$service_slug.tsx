@@ -144,15 +144,15 @@ function ServiceDetails() {
                 <TooltipTrigger asChild>
                   <span>
                     <StatusBadge
-                      className="relative top-0.5 text-xs cursor-pointer"
+                      className="relative top-0.5 text-xs"
                       color="gray"
                       isPing={false}
                     >
-                      +2 urls
+                      <span>+2 urls</span>
                     </StatusBadge>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent align="end" side="right">
+                <TooltipContent align="end" side="right" className="px-4 py-3">
                   <ul>
                     <li>
                       <a
@@ -848,7 +848,7 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
         >
           <Command>
             <CommandInput
-              placeholder="Search..."
+              placeholder="Filter Statuses..."
               onKeyDown={handleInputKeyDown}
             />
             <CommandList>
