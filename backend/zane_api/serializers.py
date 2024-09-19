@@ -176,11 +176,15 @@ class DockerServiceSerializer(ModelSerializer):
         ]
 
 
+class DeploymentDockerSerializer(DockerServiceSerializer):
+    image = serializers.CharField(allow_null=False)
+
+
 class DockerServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
-    service_snapshot = DockerServiceSerializer(allow_null=True)
+    service_snapshot = DeploymentDockerSerializer()
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
     changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
 
