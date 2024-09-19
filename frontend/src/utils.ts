@@ -81,5 +81,45 @@ export function timeAgoFormatter(dateInput: string | Date): string {
   }
 
   const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-  return rtf.format(-value, unit);
+  const formatedValue = rtf.format(-value, unit);
+  return formatedValue === "now" ? "Just now" : formatedValue;
+}
+
+export function mergeTimeAgoFormatterAndFormattedDate(
+  dateInput: string | Date
+): string {
+  const date = new Date(dateInput);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  const secondsInWeek = 7 * 24 * 3600;
+
+  if (diffInSeconds > secondsInWeek) {
+    return formattedDate(date);
+  }
+
+  return timeAgoFormatter(date);
+}
+
+export function formatElapsedTime(seconds: number) {
+  const secondsInMinute = 60;
+  const secondsInHour = 60 * secondsInMinute;
+
+  if (seconds < secondsInMinute) {
+    return `${seconds}s`;
+  }
+  if (seconds < secondsInHour) {
+    const secondsLeftInMinute = seconds % secondsInMinute;
+    return `${Math.floor(seconds / secondsInMinute)}min ${secondsLeftInMinute}s`;
+  }
+
+  const hours = Math.floor(seconds / secondsInHour);
+  const minutes = Math.floor((seconds % secondsInHour) / secondsInMinute);
+  const secondsLeft = seconds % secondsInMinute;
+
+  return `${hours}h ${minutes}min ${secondsLeft}s`;
+}
+
+export function capitalizeText(text: string): string {
+  return text.charAt(0).toUpperCase() + text.substring(1).toLowerCase();
 }

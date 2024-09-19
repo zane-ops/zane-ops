@@ -222,7 +222,7 @@ class DeployDockerServiceWorkflow:
                 try:
                     await workflow.wait_condition(
                         lambda: self.cancellation_requested,
-                        timeout=timedelta(seconds=30),
+                        timeout=timedelta(seconds=60),
                     )
                 except TimeoutError as error:
                     print(f"TimeoutError {error=}")
