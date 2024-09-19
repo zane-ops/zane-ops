@@ -4,7 +4,7 @@ import { type ProjectServiceListSearch, projectKeys } from "~/key-factories";
 
 const FIVE_SECONDS = 5 * 1000;
 
-export function useProjectServiceList(
+export function useProjectServiceListQuery(
   slug: string,
   filters: ProjectServiceListSearch
 ) {

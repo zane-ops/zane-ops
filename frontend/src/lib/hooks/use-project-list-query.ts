@@ -4,7 +4,7 @@ import { type ProjectSearch, projectKeys } from "~/key-factories";
 
 const FIVE_SECONDS = 5 * 1000;
 
-export function useProjectList(filters: ProjectSearch) {
+export function useProjectListQuery(filters: ProjectSearch) {
   return useQuery({
     queryKey: projectKeys.list(filters),
     queryFn: ({ signal }) => {
@@ -23,7 +23,7 @@ export function useProjectList(filters: ProjectSearch) {
     },
     enabled: filters.status !== "archived",
     refetchInterval: (query) => {
-      if (query.state.data?.data?.results) {
+      if (query.state.data?.data) {
         return FIVE_SECONDS;
       }
       return false;

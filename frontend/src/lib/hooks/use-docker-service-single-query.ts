@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { serviceKeys } from "~/key-factories";
 
-export function useDockerServiceSingle(
+export function useDockerServiceSingleQuery(
   project_slug: string,
   service_slug: string
 ) {

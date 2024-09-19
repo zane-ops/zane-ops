@@ -30,7 +30,8 @@ import { useMutation } from "@tanstack/react-query";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Loader } from "~/components/loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useDockerServiceSingle } from "~/lib/hooks/use-docker-service-single";
+import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-service-mutation";
+import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
 import { formatURL, getCsrfTokenHeader, pluralize } from "~/utils";
 
 export const Route = createFileRoute(
@@ -41,37 +42,12 @@ export const Route = createFileRoute(
 
 function ServiceDetailsLayout() {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingle(project_slug, service_slug);
-  const { isPending: isDeploying, mutate: deploy } = useMutation({
-    mutationFn: async (
-      input: RequestInput<
-        "put",
-        "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/"
-      >
-    ) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          body: input,
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          }
-        }
-      );
-
-      if (error) return error;
-      if (data) {
-        await serviceSingleQuery.refetch();
-        return;
-      }
-    }
-  });
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+  const { isPending: isDeploying, mutate: deploy } =
+    useDeployDockerServiceMutation(project_slug, service_slug);
 
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
   const service = serviceSingleQuery.data?.data;

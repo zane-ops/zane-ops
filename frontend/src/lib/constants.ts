@@ -1,0 +1,12 @@
+export const DEPLOYMENT_STATUSES = [
+  "QUEUED",
+  "CANCELLED",
+  "FAILED",
+  "PREPARING",
+  "HEALTHY",
+  "UNHEALTHY",
+  "STARTING",
+  "RESTARTING",
+  "REMOVED",
+  "SLEEPING"
+] as const;

@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { projectKeys } from "~/key-factories";
 
-export function useProjectSingle(slug: string) {
+export function useProjectSingleQuery(slug: string) {
   return useQuery({
     queryKey: projectKeys.single(slug),
     queryFn: ({ signal }) => {

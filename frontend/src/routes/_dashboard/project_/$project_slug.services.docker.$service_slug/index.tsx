@@ -9,6 +9,7 @@ import {
   EllipsisVertical,
   Eye,
   Loader,
+  LoaderIcon,
   Redo2,
   ScrollText,
   Timer
@@ -17,7 +18,7 @@ import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
 
 import { type VariantProps, cva } from "class-variance-authority";
@@ -42,6 +43,9 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
+import { DEPLOYMENT_STATUSES } from "~/lib/constants";
+import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-service-mutation";
+import { useDockerServiceDeploymentListQuery } from "~/lib/hooks/use-docker-service-deployment-list-query";
 import { cn } from "~/lib/utils";
 import {
   capitalizeText,
@@ -55,81 +59,100 @@ export const Route = createFileRoute(
   component: withAuthRedirect(ServiceDetails)
 });
 
-const statuses = [
-  { value: "QUEUED", label: "QUEUED", color: "gray" },
-  { value: "CANCELLED", label: "CANCELLED", color: "gray" },
-  { value: "FAILED", label: "FAILED", color: "red" },
-  { value: "PREPARING", label: "PREPARING", color: "blue" },
-  { value: "HEALTHY", label: "HEALTHY", color: "green" },
-  { value: "UNHEALTHY", label: "UNHEALTHY", color: "red" },
-  { value: "STARTING", label: "STARTING", color: "blue" },
-  { value: "RESTARTING", label: "RESTARTING", color: "blue" },
-  { value: "REMOVED", label: "REMOVED", color: "gray" },
-  { value: "SLEEPING", label: "SLEEPING", color: "orange" }
-];
-
 function ServiceDetails() {
+  const { project_slug, service_slug } = Route.useParams();
+  const deploymentListQuery = useDockerServiceDeploymentListQuery(
+    project_slug,
+    service_slug,
+    {}
+  );
+  const { isPending: isDeploying, mutate: deploy } =
+    useDeployDockerServiceMutation(project_slug, service_slug);
+
+  const deploymentList = deploymentListQuery.data?.data?.results ?? [];
+
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: undefined,
     to: undefined
   });
 
-  const [selectedStatuses, setSelectedStatuses] = React.useState(
-    statuses.map((status) => status.value)
+  const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>(
+    DEPLOYMENT_STATUSES as unknown as string[]
   );
   return (
     <>
-      <div className="flex mt-8 gap-2">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              id="date"
-              variant={"outline"}
-              className={cn(
-                "w-[300px] justify-start text-left font-normal",
-                !date && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
+      {deploymentList.length === 0 ? (
+        <div className="flex justify-center items-center">
+          <div className=" flex gap-1 flex-col items-center mt-40">
+            <h1 className="text-2xl font-bold">No Deployments made yet</h1>
+            <h2 className="text-lg">Your service is offline</h2>
+            <form action={() => deploy({})}>
+              <SubmitButton isPending={isDeploying}>
+                {isDeploying ? (
                   <>
-                    {format(date.from, "LLL dd, y")} -{" "}
-                    {format(date.to, "LLL dd, y")}
+                    <span>Deploying</span>
+                    <LoaderIcon className="animate-spin" size={15} />
                   </>
                 ) : (
-                  format(date.from, "LLL dd, y")
-                )
-              ) : (
-                <span>Pick a date</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={date?.from}
-              selected={date}
-              onSelect={setDate}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
-        <div className="w-fit">
-          <DeploymentStatusesMultiSelect
-            options={statuses}
-            onValueChange={setSelectedStatuses}
-            defaultValue={selectedStatuses}
-            placeholder="Status"
-            variant="inverted"
-            animation={2}
-            maxCount={3}
-          />
+                  "Deploy now"
+                )}
+              </SubmitButton>
+            </form>
+          </div>
         </div>
-      </div>
-      <div className="flex flex-col gap-4 mt-6">
-        <h2 className="text-gray-400 text-sm">New</h2>
+      ) : (
+        <>
+          <div className="flex mt-8 gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[300px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+            <div className="w-fit">
+              <DeploymentStatusesMultiSelect
+                options={DEPLOYMENT_STATUSES as unknown as string[]}
+                onValueChange={setSelectedStatuses}
+                defaultValue={selectedStatuses}
+                placeholder="Status"
+                variant="inverted"
+                animation={2}
+                maxCount={3}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 mt-6">
+            {/* <h2 className="text-gray-400 text-sm">New</h2>
         <DeploymentCard
           commit_message="Update service"
           hash="1234"
@@ -209,24 +232,15 @@ function ServiceDetails() {
           finished_at={new Date()}
           started_at={new Date()}
           queued_at={new Date()}
-        />
-      </div>
-      <div className="flex justify-center items-center my-5">
-        <Button variant="outline" className="w-1/3">
-          Load More
-        </Button>
-      </div>
-      {/* *
- * <div className="flex justify-center items-center">
-        <div className=" flex gap-1 flex-col items-center mt-40">
-          <h1 className="text-2xl font-bold">No Deployments made yet</h1>
-          <h2 className="text-lg">Your service is offline</h2>
-          <Button>
-            <Link to={`create-service`}> Deploy now</Link>
-          </Button>
-        </div>
-      </div>
- */}{" "}
+        /> */}
+          </div>
+          <div className="flex justify-center items-center my-5">
+            <Button variant="outline" className="w-1/3">
+              Load More
+            </Button>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -437,13 +451,7 @@ interface MultiSelectProps
    * An array of option objects to be displayed in the multi-select component.
    * Each option object has a label, value, and an optional icon.
    */
-  options: {
-    /** The text to display for the option. */
-    label: string;
-    /** The unique value associated with the option. */
-    value: string;
-    color: string;
-  }[];
+  options: string[];
 
   /**
    * Callback function triggered when the selected values change.
@@ -555,9 +563,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
       if (selectedValues.length === options.length) {
         handleClear();
       } else {
-        const allValues = options.map((option) => option.value);
-        setSelectedValues(allValues);
-        onValueChange(allValues);
+        setSelectedValues(options);
+        onValueChange(options);
       }
     };
 
@@ -723,11 +730,11 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                   </div>
                 </CommandItem>
                 {options.map((option) => {
-                  const isSelected = selectedValues.includes(option.value);
+                  const isSelected = selectedValues.includes(option);
                   return (
                     <CommandItem
-                      key={option.value}
-                      onSelect={() => toggleOption(option.value)}
+                      key={option}
+                      onSelect={() => toggleOption(option)}
                       className="cursor-pointer flex gap-0.5"
                     >
                       <div
@@ -741,19 +748,25 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                         <CheckIcon className="h-4 w-4" />
                       </div>
                       <div className="flex items-center justify-between w-full">
-                        <span>{option.label}</span>
+                        <span>{option}</span>
 
                         <div
                           className={cn(
                             "relative rounded-full bg-green-400 w-2.5 h-2.5",
                             {
-                              "bg-green-600 ": option.color === "green",
-                              "bg-red-400": option.color === "red",
-                              "bg-orange-400": option.color === "orange",
-                              "bg-gray-400": option.color === "gray",
-                              "bg-blue-400": option.color === "blue"
-                            },
-                            className
+                              "bg-blue-400":
+                                option === "STARTING" ||
+                                option === "RESTARTING" ||
+                                option === "PREPARING",
+                              "bg-green-600": option === "HEALTHY",
+                              "bg-red-400":
+                                option === "UNHEALTHY" || option === "FAILED",
+                              "bg-gray-400":
+                                option === "REMOVED" ||
+                                option === "CANCELLED" ||
+                                option === "QUEUED",
+                              "bg-orange-400": option === "SLEEPING"
+                            }
                           )}
                         ></div>
                       </div>

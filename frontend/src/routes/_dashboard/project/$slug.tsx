@@ -30,8 +30,8 @@ import {
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
 import { projectServiceListSearchSchema } from "~/key-factories";
-import { useProjectServiceList } from "~/lib/hooks/use-project-service-list";
-import { useProjectSingle } from "~/lib/hooks/use-project-single";
+import { useProjectServiceListQuery } from "~/lib/hooks/use-project-service-list-query";
+import { useProjectSingleQuery } from "~/lib/hooks/use-project-single-query";
 import { timeAgoFormatter } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
@@ -46,10 +46,10 @@ function ProjectDetail() {
 
   const navigate = useNavigate();
 
-  const projectServiceListQuery = useProjectServiceList(slug, {
+  const projectServiceListQuery = useProjectServiceListQuery(slug, {
     query: debouncedValue
   });
-  const projectSingleQuery = useProjectSingle(slug);
+  const projectSingleQuery = useProjectSingleQuery(slug);
   const serviceList = projectServiceListQuery.data?.data;
   const project = projectSingleQuery.data?.data;
 
