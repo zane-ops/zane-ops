@@ -1649,11 +1649,13 @@ class DockerSwarmActivities:
             URLDto.from_dict(change.new_value)
             for change in deployment.changes
             if change.type == DockerDeploymentChange.ChangeType.ADD
+            and change.field == DockerDeploymentChange.ChangeField.URLS
         ]
         updated_url_changes = [
             change
             for change in deployment.changes
             if change.type == DockerDeploymentChange.ChangeType.UPDATE
+            and change.field == DockerDeploymentChange.ChangeField.URLS
         ]
         for url in new_urls:
             ZaneProxyClient.remove_service_url(deployment.service.id, url)
