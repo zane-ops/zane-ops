@@ -20,12 +20,6 @@ import {
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 
 import { Loader } from "~/components/loader";
 import {
@@ -212,7 +206,7 @@ function ServiceDetailsLayout() {
             </div>
           </div>
           <Tabs defaultValue="deployment" className="w-full mt-5">
-            <TabsList className="w-full items-start justify-start bg-background rounded-none border-b border-border">
+            <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
               <TabsTrigger value="deployment" asChild>
                 <Link className="flex gap-2 items-center" to={baseUrl}>
                   Deployments <Rocket size={15} />
