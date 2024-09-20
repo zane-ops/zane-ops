@@ -28,7 +28,7 @@ import {
 
 import { Loader } from "~/components/loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-service-mutation";
+import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
 import { formatURL, pluralize } from "~/utils";
 

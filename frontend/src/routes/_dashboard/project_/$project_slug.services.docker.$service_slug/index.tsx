@@ -47,8 +47,10 @@ import {
 } from "~/components/ui/popover";
 import { serviceDeploymentListFilters } from "~/key-factories";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-service-mutation";
+import { useCancelDockerServiceDeploymentMutation } from "~/lib/hooks/use-cancel-docker-service-deployment-mutation";
+import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 import { useDockerServiceDeploymentListQuery } from "~/lib/hooks/use-docker-service-deployment-list-query";
+import { useRedeployDockerServiceMutation } from "~/lib/hooks/use-redeploy-docker-service-mutation";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
 import {
@@ -374,6 +376,11 @@ function DeploymentCard({
   is_current_production = false
 }: DeploymentCardProps) {
   const now = new Date();
+  const { project_slug, service_slug } = Route.useParams();
+  const { mutate: redeploy, isPending: isRedeploying } =
+    useRedeployDockerServiceMutation(project_slug, service_slug, hash);
+  const { mutate: cancel, isPending: isCancelling } =
+    useCancelDockerServiceDeploymentMutation(project_slug, service_slug, hash);
   const [timeElapsed, setTimeElapsed] = React.useState(
     started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
   );
@@ -541,13 +548,20 @@ function DeploymentCard({
                 }}
               />
               {!is_current_production && finished_at && (
-                <MenubarContentItem icon={Redo2} text="Redeploy" />
+                <MenubarContentItem
+                  icon={isRedeploying ? LoaderIcon : Redo2}
+                  iconClassName={isRedeploying ? "animate-spin" : ""}
+                  text="Redeploy"
+                  onClick={() => redeploy()}
+                />
               )}
               {!finished_at && (
                 <MenubarContentItem
                   className="text-red-500"
-                  icon={Ban}
+                  icon={isCancelling ? LoaderIcon : Ban}
+                  iconClassName={isCancelling ? "animate-spin" : ""}
                   text="Cancel"
+                  onClick={() => cancel()}
                 />
               )}
             </MenubarContent>

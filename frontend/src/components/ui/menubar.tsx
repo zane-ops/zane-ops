@@ -218,6 +218,7 @@ type MenubarContentItemProps = {
   icon?: React.ElementType;
   text: string;
   className?: string;
+  iconClassName?: string;
   onClick?: () => void;
 };
 
@@ -225,6 +226,7 @@ export function MenubarContentItem({
   icon: Icon,
   text,
   className,
+  iconClassName,
   onClick
 }: MenubarContentItemProps) {
   return (
@@ -232,7 +234,7 @@ export function MenubarContentItem({
       className={cn("flex pr-4 w-full gap-2 cursor-pointer", className)}
       onSelect={onClick}
     >
-      {Icon && <Icon className={cn("w-4 opacity-50", className)} />}
+      {Icon && <Icon className={cn("w-4 opacity-50", iconClassName)} />}
       {text}
     </MenubarItem>
   );
