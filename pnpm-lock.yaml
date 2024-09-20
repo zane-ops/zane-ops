@@ -119,6 +119,9 @@ importers:
       lucide-react:
         specifier: ^0.417.0
         version: 0.417.0(react@18.3.0-canary-47beb96cc-20240222)
+      next-themes:
+        specifier: ^0.3.0
+        version: 0.3.0(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
       openapi-fetch:
         specifier: ^0.9.2
         version: 0.9.8
@@ -134,6 +137,9 @@ importers:
       shadcn-ui:
         specifier: ^0.8.0
         version: 0.8.0(typescript@5.5.3)
+      sonner:
+        specifier: ^1.5.0
+        version: 1.5.0(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
       tailwind-merge:
         specifier: ^2.2.1
         version: 2.4.0
@@ -6480,6 +6486,16 @@ packages:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
 
+  /next-themes@0.3.0(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222):
+    resolution: {integrity: sha512-/QHIrsYpd6Kfk7xakK4svpDI5mmXP0gfvCoJdGpZQ2TOrQZmsW0QxjaiLn8wbIKjtm4BTSqLoix4lxYYOnLJ/w==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18
+      react-dom: ^16.8 || ^17 || ^18
+    dependencies:
+      react: 18.3.0-canary-47beb96cc-20240222
+      react-dom: 18.3.0-canary-47beb96cc-20240222(react@18.3.0-canary-47beb96cc-20240222)
+    dev: false
+
   /nlcst-to-string@4.0.0:
     resolution: {integrity: sha512-YKLBCcUYKAg0FNlOBT6aI91qFmSiFKiluk655WzPF+DDMA02qIyy8uiRqI8QXtcFpEvll12LpL5MXqEmAZ+dcA==}
     dependencies:
@@ -7532,6 +7548,16 @@ packages:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
     dev: true
+
+  /sonner@1.5.0(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222):
+    resolution: {integrity: sha512-FBjhG/gnnbN6FY0jaNnqZOMmB73R+5IiyYAw8yBj7L54ER7HB3fOSE5OFiQiE2iXWxeXKvg6fIP4LtVppHEdJA==}
+    peerDependencies:
+      react: ^18.0.0
+      react-dom: ^18.0.0
+    dependencies:
+      react: 18.3.0-canary-47beb96cc-20240222
+      react-dom: 18.3.0-canary-47beb96cc-20240222(react@18.3.0-canary-47beb96cc-20240222)
+    dev: false
 
   /source-map-js@1.2.0:
     resolution: {integrity: sha512-itJW8lvSA0TXEphiRoawsCksnlf8SyvmFzIhltqAHluXd88pkCd+cXJVHTDwdCr0IzwptSm035IHQktUu1QUMg==}
