@@ -547,36 +547,34 @@ function DeploymentCard({
               <MenubarContentItem
                 icon={Eye}
                 text="Details"
-                onClick={() => {
+                onClick={() =>
                   navigate({
                     to: `deployments/${hash}/details`
-                  });
-                }}
+                  })
+                }
               />
               <MenubarContentItem
                 icon={ScrollText}
                 text="View logs"
-                onClick={() => {
+                onClick={() =>
                   navigate({
                     to: `deployments/${hash}`
-                  });
-                }}
+                  })
+                }
               />
               {!is_current_production && finished_at && (
                 <MenubarContentItem
-                  icon={isRedeploying ? LoaderIcon : Redo2}
-                  iconClassName={isRedeploying ? "animate-spin" : ""}
+                  icon={Redo2}
                   text="Redeploy"
-                  onClick={() => redeploy()}
+                  onClick={redeploy}
                 />
               )}
               {!finished_at && (
                 <MenubarContentItem
                   className="text-red-500"
-                  icon={isCancelling ? LoaderIcon : Ban}
-                  iconClassName={isCancelling ? "animate-spin" : ""}
+                  icon={Ban}
                   text="Cancel"
-                  onClick={() => cancel()}
+                  onClick={cancel}
                 />
               )}
             </MenubarContent>

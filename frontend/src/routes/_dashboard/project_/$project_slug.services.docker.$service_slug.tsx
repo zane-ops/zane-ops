@@ -109,7 +109,7 @@ function ServiceDetailsLayout() {
       ) : (
         <>
           <MetaTitle title={service.slug} />
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
             <div className="mt-10">
               <h1 className="text-2xl">{service.slug}</h1>
               <p className="flex gap-1 items-center">
@@ -169,9 +169,9 @@ function ServiceDetailsLayout() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {service.unapplied_changes.length > 0 && (
-                <Button variant="warning">
+                <Button variant="warning" className="flex-1 md:flex-auto">
                   <TriangleAlert size={15} />
                   <span className="mx-1">
                     {service.unapplied_changes.length}{" "}
@@ -183,8 +183,15 @@ function ServiceDetailsLayout() {
                 </Button>
               )}
 
-              <form action={() => deploy({})}>
-                <SubmitButton isPending={isDeploying} variant="secondary">
+              <form
+                action={() => deploy({})}
+                className="flex flex-1 md:flex-auto"
+              >
+                <SubmitButton
+                  isPending={isDeploying}
+                  variant="secondary"
+                  className="w-full"
+                >
                   {isDeploying ? (
                     <>
                       <span>Deploying</span>
