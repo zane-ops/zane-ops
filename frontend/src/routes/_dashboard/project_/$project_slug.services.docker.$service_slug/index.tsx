@@ -11,6 +11,7 @@ import {
   Hash,
   LoaderIcon,
   Redo2,
+  RotateCw,
   ScrollText,
   Timer
 } from "lucide-react";
@@ -237,6 +238,7 @@ function ServiceDetails() {
                             commit_message={deployment.commit_message}
                             hash={deployment.hash}
                             status={deployment.status}
+                            redeploy_hash={deployment.redeploy_hash}
                             image={deployment.service_snapshot.image}
                             queued_at={new Date(deployment.queued_at)}
                             started_at={
@@ -262,6 +264,7 @@ function ServiceDetails() {
                       commit_message={
                         currentProductionDeployment.commit_message
                       }
+                      redeploy_hash={currentProductionDeployment.redeploy_hash}
                       hash={currentProductionDeployment.hash}
                       status={currentProductionDeployment.status}
                       image={currentProductionDeployment.service_snapshot.image}
@@ -294,6 +297,7 @@ function ServiceDetails() {
                             status={deployment.status}
                             image={deployment.service_snapshot.image}
                             queued_at={new Date(deployment.queued_at)}
+                            redeploy_hash={deployment.redeploy_hash}
                             started_at={
                               deployment.started_at
                                 ? new Date(deployment.started_at)
@@ -363,6 +367,7 @@ type DeploymentCardProps = {
   image: string;
   hash: string;
   is_current_production?: boolean;
+  redeploy_hash: string | null;
 };
 
 function DeploymentCard({
@@ -373,6 +378,7 @@ function DeploymentCard({
   commit_message,
   image,
   hash,
+  redeploy_hash,
   is_current_production = false
 }: DeploymentCardProps) {
   const now = new Date();
@@ -406,7 +412,7 @@ function DeploymentCard({
   return (
     <div
       className={cn(
-        "flex border group  px-3 py-4 rounded-md  bg-opacity-10 justify-between items-center relative",
+        "flex flex-col md:flex-row items-start gap-4 md:gap-0 border group  px-3 py-4 rounded-md  bg-opacity-10 justify-between md:items-center relative",
         {
           "border-blue-600 bg-blue-600":
             status === "STARTING" ||
@@ -423,7 +429,7 @@ function DeploymentCard({
         }
       )}
     >
-      <div className="flex ">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-0">
         {/* Status name */}
         <div className="w-[160px]">
           <h3 className="flex items-center gap-1 capitalize">
@@ -448,24 +454,33 @@ function DeploymentCard({
               <LoaderIcon className="animate-spin" size={15} />
             )}
           </h3>
-          <p className="text-sm text-gray-400 text-nowrap">
+          <p className="text-sm text-gray-500/80 dark:text-gray-400 text-nowrap">
             {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
           </p>
         </div>
 
         {/* Commit message & timer */}
         <div className="flex flex-col items-start gap-1">
-          <h3>
+          <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
               className="after:absolute after:inset-0"
               to={`./deployments/${hash}`}
             >
               {capitalizeText(commit_message)}
             </Link>
+            &nbsp;
+            {redeploy_hash && (
+              <small>
+                <code className="rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 whitespace-nowrap inline-flex items-center gap-1">
+                  <RotateCw size={12} className="flex-none" />
+                  <span>Redeploy of {redeploy_hash}</span>
+                </code>
+              </small>
+            )}
           </h3>
-          <div className="flex text-gray-400 gap-2.5 text-sm w-full items-center">
+          <div className="flex text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
-              <Timer size={15} />
+              <Timer size={15} className="flex-none" />
               {started_at && !finished_at ? (
                 <span>{formatElapsedTime(timeElapsed)}</span>
               ) : started_at && finished_at ? (
@@ -481,11 +496,11 @@ function DeploymentCard({
               )}
             </div>
             <div className="gap-1 inline-flex items-center">
-              <Container size={15} />
+              <Container size={15} className="flex-none" />
               <span>{image}</span>
             </div>
             <div className="inline-flex items-center gap-0.5 right-1">
-              <Hash size={15} />
+              <Hash size={15} className="flex-none" />
               <span>{hash}</span>
             </div>
           </div>
@@ -504,7 +519,7 @@ function DeploymentCard({
               status === "PREPARING",
             "border-green-600": status === "HEALTHY",
             "border-red-600": status === "UNHEALTHY" || status === "FAILED",
-            "border-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
+            "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
               status === "REMOVED" ||
               status === "CANCELLED" ||
               status === "QUEUED",
