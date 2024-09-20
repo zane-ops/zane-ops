@@ -119,9 +119,6 @@ importers:
       lucide-react:
         specifier: ^0.417.0
         version: 0.417.0(react@18.3.0-canary-47beb96cc-20240222)
-      next-themes:
-        specifier: ^0.3.0
-        version: 0.3.0(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222)
       openapi-fetch:
         specifier: ^0.9.2
         version: 0.9.8
@@ -6485,16 +6482,6 @@ packages:
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
-
-  /next-themes@0.3.0(react-dom@18.3.0-canary-47beb96cc-20240222)(react@18.3.0-canary-47beb96cc-20240222):
-    resolution: {integrity: sha512-/QHIrsYpd6Kfk7xakK4svpDI5mmXP0gfvCoJdGpZQ2TOrQZmsW0QxjaiLn8wbIKjtm4BTSqLoix4lxYYOnLJ/w==}
-    peerDependencies:
-      react: ^16.8 || ^17 || ^18
-      react-dom: ^16.8 || ^17 || ^18
-    dependencies:
-      react: 18.3.0-canary-47beb96cc-20240222
-      react-dom: 18.3.0-canary-47beb96cc-20240222(react@18.3.0-canary-47beb96cc-20240222)
-    dev: false
 
   /nlcst-to-string@4.0.0:
     resolution: {integrity: sha512-YKLBCcUYKAg0FNlOBT6aI91qFmSiFKiluk655WzPF+DDMA02qIyy8uiRqI8QXtcFpEvll12LpL5MXqEmAZ+dcA==}

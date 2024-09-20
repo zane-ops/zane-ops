@@ -37,7 +37,6 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.417.0",
-    "next-themes": "^0.3.0",
     "openapi-fetch": "^0.9.2",
     "react": "18.3.0-canary-47beb96cc-20240222",
     "react-day-picker": "8.10.1",
