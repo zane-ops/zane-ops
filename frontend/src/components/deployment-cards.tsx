@@ -13,6 +13,7 @@ import {
   Timer
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
   Menubar,
@@ -68,10 +69,16 @@ export function DockerDeploymentCard({
   is_current_production = false
 }: DockerDeploymentCardProps) {
   const now = new Date();
-  const { mutate: redeploy, isPending: isRedeploying } =
-    useRedeployDockerServiceMutation(project_slug, service_slug, hash);
-  const { mutate: cancel, isPending: isCancelling } =
-    useCancelDockerServiceDeploymentMutation(project_slug, service_slug, hash);
+  const { mutateAsync: redeploy } = useRedeployDockerServiceMutation(
+    project_slug,
+    service_slug,
+    hash
+  );
+  const { mutateAsync: cancel } = useCancelDockerServiceDeploymentMutation(
+    project_slug,
+    service_slug,
+    hash
+  );
   const [timeElapsed, setTimeElapsed] = React.useState(
     started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
   );
@@ -254,7 +261,20 @@ export function DockerDeploymentCard({
                 <MenubarContentItem
                   icon={Redo2}
                   text="Redeploy"
-                  onClick={redeploy}
+                  onClick={() =>
+                    toast.promise(redeploy(), {
+                      loading: `Queuing redeployment for #${hash}...`,
+                      success: "Success",
+                      error: "Error",
+                      closeButton: true,
+                      description(data) {
+                        if (data instanceof Error) {
+                          return data.message;
+                        }
+                        return "Redeployment queued succesfully.";
+                      }
+                    })
+                  }
                 />
               )}
               {!finished_at && (
@@ -262,7 +282,20 @@ export function DockerDeploymentCard({
                   className="text-red-500"
                   icon={Ban}
                   text="Cancel"
-                  onClick={cancel}
+                  onClick={() =>
+                    toast.promise(cancel(), {
+                      loading: `Requesting cancellation for deployment #${hash}...`,
+                      success: "Success",
+                      error: "Error",
+                      closeButton: true,
+                      description: (data) => {
+                        if (data instanceof Error) {
+                          return data.message;
+                        }
+                        return "Deployment cancel request sent.";
+                      }
+                    })
+                  }
                 />
               )}
             </MenubarContent>

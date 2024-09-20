@@ -28,7 +28,13 @@ export function useCancelDockerServiceDeploymentMutation(
         }
       );
 
-      if (error) return error;
+      if (error) {
+        const fullErrorMessage = error.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
+      }
       if (data) {
         await queryClient.invalidateQueries({
           queryKey: serviceKeys.single(project_slug, service_slug, "docker")
