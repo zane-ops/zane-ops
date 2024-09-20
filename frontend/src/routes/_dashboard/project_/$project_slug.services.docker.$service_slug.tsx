@@ -27,6 +27,11 @@ import {
 } from "~/components/ui/tooltip";
 
 import { Loader } from "~/components/loader";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
@@ -119,7 +124,7 @@ function ServiceDetailsLayout() {
                 </span>
               </p>
               {service.urls.length > 0 && (
-                <div className="flex gap-3 items-center">
+                <div className="flex gap-3 items-center flex-wrap">
                   <a
                     href={formatURL(service.urls[0])}
                     target="_blank"
@@ -127,43 +132,43 @@ function ServiceDetailsLayout() {
                   >
                     {formatURL(service.urls[0])}
                   </a>
-                  {service.urls.length > 1 && (
-                    <TooltipProvider>
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild>
-                          <span>
-                            <StatusBadge
-                              className="relative top-0.5 text-xs"
-                              color="gray"
-                              isPing={false}
-                            >
-                              <span>
-                                {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}
-                              </span>
-                            </StatusBadge>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          align="end"
-                          side="right"
-                          className="px-4 py-3"
-                        >
-                          <ul>
-                            {extraServiceUrls.map((url) => (
-                              <li key={url.id}>
-                                <a
-                                  href={formatURL(url)}
-                                  target="_blank"
-                                  className="underline text-link text-sm"
-                                >
+                  {extraServiceUrls.length > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button>
+                          <StatusBadge
+                            className="relative top-0.5 text-xs"
+                            color="gray"
+                            isPing={false}
+                          >
+                            <span>
+                              {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}
+                            </span>
+                          </StatusBadge>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        side="top"
+                        className="px-4 py-3"
+                      >
+                        <ul>
+                          {extraServiceUrls.map((url) => (
+                            <li key={url.id}>
+                              <a
+                                href={formatURL(url)}
+                                target="_blank"
+                                className="underline text-link text-sm"
+                              >
+                                <p className="whitespace-nowrap">
                                   {formatURL(url)}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                                </p>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
               )}
