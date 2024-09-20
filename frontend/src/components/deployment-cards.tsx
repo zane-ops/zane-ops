@@ -1,11 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   Ban,
   Container,
   EllipsisVertical,
   Eye,
   Hash,
-  Link,
   LoaderIcon,
   Redo2,
   RotateCw,
@@ -193,7 +193,7 @@ export function DockerDeploymentCard({
       </div>
 
       {/* View logs button & triple dot */}
-      <div className="flex items-center gap-2 relative z-10">
+      <div className="flex items-center gap-2 absolute right-4 z-10 md:relative md:right-auto">
         <Button
           asChild
           variant="ghost"
@@ -217,7 +217,7 @@ export function DockerDeploymentCard({
           <Link to={`deployments/${hash}`}>View logs</Link>
         </Button>
 
-        <Menubar className="border-none h-auto md:block hidden w-fit">
+        <Menubar className="border-none h-auto w-fit">
           <MenubarMenu>
             <MenubarTrigger
               className="flex justify-center items-center gap-2"
