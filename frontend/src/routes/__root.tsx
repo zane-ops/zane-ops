@@ -5,11 +5,13 @@ import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
 import { Button } from "~/components/ui/button";
+import { Toaster } from "~/components/ui/toaster";
 
 export const Route = createRootRoute({
   component: () => (
     <div className="bg-background">
       <Outlet />
+      <Toaster />
       {!import.meta.env.PROD && (
         <>
           <ReactQueryDevtools />
