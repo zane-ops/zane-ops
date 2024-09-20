@@ -378,6 +378,8 @@ function DeploymentCard({
     started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
   );
 
+  const navigate = useNavigate();
+
   React.useEffect(() => {
     if (started_at && !finished_at) {
       const timer = setInterval(() => {
@@ -502,7 +504,7 @@ function DeploymentCard({
             "border-yellow-600": status === "SLEEPING"
           })}
         >
-          <Link to={`deployments/${hash}/logs`}>View logs</Link>
+          <Link to={`deployments/${hash}`}>View logs</Link>
         </Button>
 
         <Menubar className="border-none h-auto md:block hidden w-fit">
@@ -520,8 +522,24 @@ function DeploymentCard({
               align="start"
               className="border min-w-0 mx-9 border-border"
             >
-              <MenubarContentItem icon={Eye} text="Details" />
-              <MenubarContentItem icon={ScrollText} text="View logs" />
+              <MenubarContentItem
+                icon={Eye}
+                text="Details"
+                onClick={() => {
+                  navigate({
+                    to: `deployments/${hash}/details`
+                  });
+                }}
+              />
+              <MenubarContentItem
+                icon={ScrollText}
+                text="View logs"
+                onClick={() => {
+                  navigate({
+                    to: `deployments/${hash}`
+                  });
+                }}
+              />
               {!is_current_production && finished_at && (
                 <MenubarContentItem icon={Redo2} text="Redeploy" />
               )}
