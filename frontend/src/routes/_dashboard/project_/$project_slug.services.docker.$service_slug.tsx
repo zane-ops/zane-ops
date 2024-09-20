@@ -1,5 +1,6 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import {
+  ChevronRight,
   Container,
   KeyRound,
   LoaderIcon,
@@ -137,30 +138,31 @@ function ServiceDetailsLayout() {
                       <PopoverTrigger asChild>
                         <button>
                           <StatusBadge
-                            className="relative top-0.5 text-xs"
+                            className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
                             color="gray"
                             isPing={false}
                           >
                             <span>
                               {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}
                             </span>
+                            <ChevronRight size={15} className="flex-none" />
                           </StatusBadge>
                         </button>
                       </PopoverTrigger>
                       <PopoverContent
                         align="start"
                         side="top"
-                        className="px-4 py-3"
+                        className="px-4 pt-3 pb-2 max-w-[300px] md:max-w-[500px] lg:max-w-[600px] w-auto"
                       >
-                        <ul>
+                        <ul className="w-full">
                           {extraServiceUrls.map((url) => (
-                            <li key={url.id}>
+                            <li key={url.id} className="w-full">
                               <a
                                 href={formatURL(url)}
                                 target="_blank"
-                                className="underline text-link text-sm"
+                                className="underline text-link text-sm inline-block w-full"
                               >
-                                <p className="whitespace-nowrap">
+                                <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
                                   {formatURL(url)}
                                 </p>
                               </a>
