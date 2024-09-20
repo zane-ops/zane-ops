@@ -512,19 +512,22 @@ function DeploymentCard({
         <Button
           asChild
           variant="ghost"
-          className={cn("border hover:bg-inherit focus:opacity-100", {
-            "border-blue-600":
-              status === "STARTING" ||
-              status === "RESTARTING" ||
-              status === "PREPARING",
-            "border-green-600": status === "HEALTHY",
-            "border-red-600": status === "UNHEALTHY" || status === "FAILED",
-            "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
-              status === "REMOVED" ||
-              status === "CANCELLED" ||
-              status === "QUEUED",
-            "border-yellow-600": status === "SLEEPING"
-          })}
+          className={cn(
+            "border hover:bg-inherit focus:opacity-100 hidden lg:inline-flex",
+            {
+              "border-blue-600":
+                status === "STARTING" ||
+                status === "RESTARTING" ||
+                status === "PREPARING",
+              "border-green-600": status === "HEALTHY",
+              "border-red-600": status === "UNHEALTHY" || status === "FAILED",
+              "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
+                status === "REMOVED" ||
+                status === "CANCELLED" ||
+                status === "QUEUED",
+              "border-yellow-600": status === "SLEEPING"
+            }
+          )}
         >
           <Link to={`deployments/${hash}`}>View logs</Link>
         </Button>
