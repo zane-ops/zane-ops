@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
   Ban,
@@ -67,6 +67,7 @@ export const Route = createFileRoute(
 function ServiceDetails() {
   const { project_slug, service_slug } = Route.useParams();
   const searchParams = Route.useSearch();
+  const navigate = useNavigate();
 
   const filters = {
     page: searchParams.page ?? 1,
@@ -86,19 +87,14 @@ function ServiceDetails() {
   const { isPending: isDeploying, mutate: deploy } =
     useDeployDockerServiceMutation(project_slug, service_slug);
 
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined
-  });
-
-  const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>(
-    DEPLOYMENT_STATUSES as unknown as string[]
-  );
-
   if (deploymentListQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
 
+  const date: DateRange = {
+    from: filters.queued_at_after,
+    to: filters.queued_at_before
+  };
   // I wanted to make a function called `isObjectEmpty` to check that no search params have been done,
   // But TS keeps giving me stupid errors and I don't want to deal with it
   const noFilters =
@@ -180,7 +176,16 @@ function ServiceDetails() {
                   mode="range"
                   defaultMonth={date?.from}
                   selected={date}
-                  onSelect={setDate}
+                  onSelect={(range) =>
+                    navigate({
+                      search: {
+                        ...filters,
+                        queued_at_before: range?.to,
+                        queued_at_after: range?.from
+                      },
+                      replace: true
+                    })
+                  }
                   numberOfMonths={2}
                 />
               </PopoverContent>
@@ -188,8 +193,16 @@ function ServiceDetails() {
             <div className="w-fit">
               <DeploymentStatusesMultiSelect
                 options={DEPLOYMENT_STATUSES as unknown as string[]}
-                onValueChange={setSelectedStatuses}
-                defaultValue={selectedStatuses}
+                onValueChange={(values) =>
+                  navigate({
+                    search: {
+                      ...filters,
+                      status: values
+                    },
+                    replace: true
+                  })
+                }
+                value={filters.status}
                 placeholder="Status"
                 variant="inverted"
                 animation={2}
@@ -299,30 +312,26 @@ function ServiceDetails() {
             )}
           </div>
           {!noDeploymentsYet && !noResultsFound && (
-            <div
-              className={cn("my-4 block", {
-                // "opacity-40 pointer-events-none": slug !== debouncedValue
-              })}
-            >
+            <div className="my-4 block">
               <Pagination
                 totalPages={totalPages}
                 currentPage={filters.page}
                 perPage={filters.per_page}
                 onChangePage={(newPage) => {
-                  // navigate({
-                  //   search: { ...filters, page: newPage },
-                  //   replace: true
-                  // });
+                  navigate({
+                    search: { ...filters, page: newPage },
+                    replace: true
+                  });
                 }}
                 onChangePerPage={(newPerPage) => {
-                  // navigate({
-                  //   search: {
-                  //     ...filters,
-                  //     page: 1,
-                  //     per_page: newPerPage
-                  //   },
-                  //   replace: true
-                  // });
+                  navigate({
+                    search: {
+                      ...filters,
+                      page: 1,
+                      per_page: newPerPage
+                    },
+                    replace: true
+                  });
                 }}
               />
             </div>
@@ -569,9 +578,6 @@ interface MultiSelectProps
    */
   onValueChange: (value: string[]) => void;
 
-  /** The default selected values when the component mounts. */
-  defaultValue: string[];
-
   /**
    * Placeholder text to be displayed when no values are selected.
    * Optional, defaults to "Select options".
@@ -608,6 +614,7 @@ interface MultiSelectProps
    * Optional, can be used to add custom styles.
    */
   className?: string;
+  value: string[];
 }
 const DeploymentStatusesMultiSelect = React.forwardRef<
   HTMLButtonElement,
@@ -618,7 +625,7 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
       options,
       onValueChange,
       variant,
-      defaultValue = [],
+      value = [],
       placeholder = "Select options",
       animation = 0,
       maxCount = 3,
@@ -629,15 +636,15 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
     },
     ref
   ) => {
-    const [selectedValues, setSelectedValues] =
-      React.useState<string[]>(defaultValue);
+    // const [selectedValues, setSelectedValues] =
+    //   React.useState<string[]>(defaultValue);
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
-    React.useEffect(() => {
-      if (JSON.stringify(selectedValues) !== JSON.stringify(defaultValue)) {
-        setSelectedValues(selectedValues);
-      }
-    }, [defaultValue, selectedValues]);
+    // React.useEffect(() => {
+    //   if (JSON.stringify(selectedValues) !== JSON.stringify(defaultValue)) {
+    //     setSelectedValues(selectedValues);
+    //   }
+    // }, [defaultValue, selectedValues]);
 
     const handleInputKeyDown = (
       event: React.KeyboardEvent<HTMLInputElement>
@@ -645,23 +652,23 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
       if (event.key === "Enter") {
         setIsPopoverOpen(true);
       } else if (event.key === "Backspace" && !event.currentTarget.value) {
-        const newSelectedValues = [...selectedValues];
-        newSelectedValues.pop();
-        setSelectedValues(newSelectedValues);
-        onValueChange(newSelectedValues);
+        // const newSelectedValues = [...selectedValues];
+        // newSelectedValues.pop();
+        // setSelectedValues(newSelectedValues);
+        // onValueChange(newSelectedValues);
       }
     };
 
-    const toggleOption = (value: string) => {
-      const newSelectedValues = selectedValues.includes(value)
-        ? selectedValues.filter((v) => v !== value)
-        : [...selectedValues, value];
-      setSelectedValues(newSelectedValues);
+    const toggleOption = (option: string) => {
+      const newSelectedValues = value.includes(option)
+        ? value.filter((v) => v !== option)
+        : [...value, option];
+      // onValueChange(newSelectedValues);
       onValueChange(newSelectedValues);
     };
 
     const handleClear = () => {
-      setSelectedValues([]);
+      // setSelectedValues([]);
       onValueChange([]);
     };
 
@@ -670,10 +677,10 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
     };
 
     const toggleAll = () => {
-      if (selectedValues.length === options.length) {
+      if (value.length === options.length) {
         handleClear();
       } else {
-        setSelectedValues(options);
+        // setSelectedValues(options);
         onValueChange(options);
       }
     };
@@ -701,8 +708,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border border-border rounded-full",
                       {
-                        "bg-gray-400": selectedValues.includes("QUEUED"),
-                        "bg-background": !selectedValues.includes("QUEUED")
+                        "bg-gray-400": value.includes("QUEUED"),
+                        "bg-background": !value.includes("QUEUED")
                       }
                     )}
                   />
@@ -711,8 +718,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
                       {
-                        "bg-gray-400": selectedValues.includes("CANCELLED"),
-                        "bg-background": !selectedValues.includes("CANCELLED")
+                        "bg-gray-400": value.includes("CANCELLED"),
+                        "bg-background": !value.includes("CANCELLED")
                       }
                     )}
                   />
@@ -721,8 +728,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none relative -left-2 h-3 border border-border rounded-full",
                       {
-                        "bg-red-400": selectedValues.includes("FAILED"),
-                        "bg-background": !selectedValues.includes("FAILED")
+                        "bg-red-400": value.includes("FAILED"),
+                        "bg-background": !value.includes("FAILED")
                       }
                     )}
                   />
@@ -731,8 +738,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 relative -left-3 border border-border rounded-full",
                       {
-                        "bg-blue-400": selectedValues.includes("PREPARING"),
-                        "bg-background": !selectedValues.includes("PREPARING")
+                        "bg-blue-400": value.includes("PREPARING"),
+                        "bg-background": !value.includes("PREPARING")
                       }
                     )}
                   />
@@ -741,8 +748,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 relative -left-4 border border-border rounded-full",
                       {
-                        "bg-green-400": selectedValues.includes("HEALTHY"),
-                        "bg-background": !selectedValues.includes("HEALTHY")
+                        "bg-green-400": value.includes("HEALTHY"),
+                        "bg-background": !value.includes("HEALTHY")
                       }
                     )}
                   />
@@ -751,8 +758,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border relative -left-5 border-border rounded-full",
                       {
-                        "bg-red-400": selectedValues.includes("UNHEALTHY"),
-                        "bg-background": !selectedValues.includes("UNHEALTHY")
+                        "bg-red-400": value.includes("UNHEALTHY"),
+                        "bg-background": !value.includes("UNHEALTHY")
                       }
                     )}
                   />
@@ -761,8 +768,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border relative -left-6 border-border rounded-full",
                       {
-                        "bg-blue-400": selectedValues.includes("STARTING"),
-                        "bg-background": !selectedValues.includes("STARTING")
+                        "bg-blue-400": value.includes("STARTING"),
+                        "bg-background": !value.includes("STARTING")
                       }
                     )}
                   />
@@ -771,8 +778,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border relative -left-7 border-border rounded-full",
                       {
-                        "bg-blue-400": selectedValues.includes("RESTARTING"),
-                        "bg-background": !selectedValues.includes("RESTARTING")
+                        "bg-blue-400": value.includes("RESTARTING"),
+                        "bg-background": !value.includes("RESTARTING")
                       }
                     )}
                   />
@@ -781,8 +788,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border relative -left-8 border-border rounded-full",
                       {
-                        "bg-gray-400": selectedValues.includes("REMOVED"),
-                        "bg-background": !selectedValues.includes("REMOVED")
+                        "bg-gray-400": value.includes("REMOVED"),
+                        "bg-background": !value.includes("REMOVED")
                       }
                     )}
                   />
@@ -791,8 +798,8 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                     className={cn(
                       "w-3 flex-none h-3 border relative -left-9 border-border rounded-full",
                       {
-                        "bg-orange-400": selectedValues.includes("SLEEPING"),
-                        "bg-background": !selectedValues.includes("SLEEPING")
+                        "bg-orange-400": value.includes("SLEEPING"),
+                        "bg-background": !value.includes("SLEEPING")
                       }
                     )}
                   />
@@ -827,7 +834,7 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                   <div
                     className={cn(
                       "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                      selectedValues.length === options.length
+                      value.length === options.length
                         ? "bg-primary text-primary-foreground"
                         : "opacity-50 [&_svg]:invisible"
                     )}
@@ -840,7 +847,7 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                   </div>
                 </CommandItem>
                 {options.map((option) => {
-                  const isSelected = selectedValues.includes(option);
+                  const isSelected = value.includes(option);
                   return (
                     <CommandItem
                       key={option}

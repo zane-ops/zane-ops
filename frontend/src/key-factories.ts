@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
+import type { Writeable } from "~/lib/types";
 export const userKeys = {
   authedUser: ["AUTHED_USER"] as const
 };
@@ -49,9 +50,12 @@ export type ProjectServiceListSearch = z.infer<
 export const serviceDeploymentListFilters = z.object({
   page: z.number().optional().catch(1).optional(),
   per_page: z.number().optional().catch(10).optional(),
-  status: z.array(z.enum(DEPLOYMENT_STATUSES)).optional(),
-  queued_at_before: z.coerce.date().optional(),
-  queued_at_after: z.coerce.date().optional()
+  status: z
+    .array(z.enum(DEPLOYMENT_STATUSES))
+    .optional()
+    .catch(DEPLOYMENT_STATUSES as Writeable<typeof DEPLOYMENT_STATUSES>),
+  queued_at_before: z.coerce.date().optional().catch(undefined),
+  queued_at_after: z.coerce.date().optional().catch(undefined)
 });
 
 export type ServiceDeploymentListFilters = z.infer<
