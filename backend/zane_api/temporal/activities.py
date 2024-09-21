@@ -897,6 +897,14 @@ class DockerSwarmActivities:
                 await deployment.service.deployments.filter(
                     ~Q(hash=healthcheck_result.deployment_hash)
                 ).aupdate(is_current_production=False)
+                await deployment.service.deployments.filter(
+                    ~Q(hash=healthcheck_result.deployment_hash)
+                    & Q(finished_at__isnull=True),
+                ).aupdate(finished_at=timezone.now())
+                await deployment.service.deployments.filter(
+                    ~Q(hash=healthcheck_result.deployment_hash)
+                    & ~Q(status=DockerDeployment.DeploymentStatus.REMOVED),
+                ).aupdate(status=DockerDeployment.DeploymentStatus.REMOVED)
         except DockerDeployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
