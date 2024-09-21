@@ -64,7 +64,7 @@ function ProjectDetail() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage className="capitalize">{slug}</BreadcrumbPage>
+            <BreadcrumbPage>{slug}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
