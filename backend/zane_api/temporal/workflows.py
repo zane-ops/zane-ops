@@ -434,6 +434,13 @@ class DeployDockerServiceWorkflow:
                 "Cannot cancel a deployment that already finished", non_retryable=True
             )
 
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.toggle_cancelling_status,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=self.retry_policy,
+        )
+
         if last_completed_step >= DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.remove_changed_urls_in_deployment,
@@ -625,6 +632,7 @@ def get_workflows_and_activities():
             ToggleDockerServiceWorkflow,
         ],
         activities=[
+            swarm_activities.toggle_cancelling_status,
             swarm_activities.save_cancelled_deployment,
             swarm_activities.close_faulty_db_connections,
             monitor_activities.monitor_close_faulty_db_connections,

@@ -836,6 +836,16 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
+    async def toggle_cancelling_status(self, deployment: DockerDeploymentDetails):
+        await deployment_log(
+            deployment,
+            f"Handling cancellation request for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+        )
+        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
+            status=DockerDeployment.DeploymentStatus.CANCELLING,
+        )
+
+    @activity.defn
     async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
         await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
             status=DockerDeployment.DeploymentStatus.CANCELLED,
