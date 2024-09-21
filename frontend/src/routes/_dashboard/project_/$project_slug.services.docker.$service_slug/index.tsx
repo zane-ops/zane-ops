@@ -86,10 +86,24 @@ function ServiceDetails() {
     (dpl) => dpl.is_current_production
   );
 
-  const newDeployments = deploymentList.filter((dpl) => !dpl.finished_at);
+  // all deployments that match these filters are considered `new`
+  const newDeploymentsStatuses = [
+    "QUEUED",
+    "PREPARING",
+    "STARTING",
+    "RESTARTING"
+  ];
+
+  const newDeployments = deploymentList.filter(
+    (dpl) =>
+      dpl.hash !== currentProductionDeployment?.hash &&
+      newDeploymentsStatuses.includes(dpl.status)
+  );
 
   const previousDeployments = deploymentList.filter(
-    (dpl) => dpl.finished_at && dpl.hash !== currentProductionDeployment?.hash
+    (dpl) =>
+      dpl.hash !== currentProductionDeployment?.hash &&
+      !newDeploymentsStatuses.includes(dpl.status)
   );
 
   const noDeploymentsYet = deploymentList.length === 0 && noFilters;
