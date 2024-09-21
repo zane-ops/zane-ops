@@ -185,7 +185,7 @@ export function DockerDeploymentCard({
                   )}
                 </span>
               ) : (
-                !started_at && <span>-</span>
+                <span>-</span>
               )}
             </div>
             <div className="gap-1 inline-flex items-center">
