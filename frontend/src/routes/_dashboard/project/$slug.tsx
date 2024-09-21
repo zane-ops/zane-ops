@@ -105,8 +105,8 @@ function ProjectDetail() {
                 </Link>
               </Button>
             </div>
-            <div className="flex my-3 flex-wrap  w-full justify-end items-center md:gap-3 gap-1">
-              <div className="flex md:my-5 lg:w-1/3 md:w-1/2 w-full items-center">
+            <div className="flex my-3 flex-wrap w-full md:w-auto  justify-end items-center md:gap-3 gap-1">
+              <div className="flex md:my-5 lg:w-2/3 md:w-3/5 w-full items-center">
                 <Search size={20} className="relative left-5" />
                 <Input
                   onChange={(e) => {
