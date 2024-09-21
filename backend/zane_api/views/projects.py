@@ -353,6 +353,7 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
                 DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
+                DockerDeployment.DeploymentStatus.CANCELLING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
             }
