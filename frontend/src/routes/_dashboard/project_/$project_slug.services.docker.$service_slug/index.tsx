@@ -312,8 +312,8 @@ function ServiceDetails() {
               </>
             )}
           </div>
-          {!noDeploymentsYet && !noResultsFound && (
-            <div className="my-4 block">
+          <div className="my-4 block">
+            {!noDeploymentsYet && !noResultsFound && totalDeployments > 10 && (
               <Pagination
                 totalPages={totalPages}
                 currentPage={filters.page}
@@ -335,8 +335,8 @@ function ServiceDetails() {
                   });
                 }}
               />
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
     </>
