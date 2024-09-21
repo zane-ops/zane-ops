@@ -93,12 +93,25 @@ export function DockerDeploymentCard({
   }
 
   // all deployments statuse that match these filters can be cancelled
-  const cancellableDeploymentsStatuses = [
+  const cancellableDeploymentsStatuses: Array<typeof status> = [
     "QUEUED",
     "PREPARING",
     "STARTING",
     "RESTARTING"
   ];
+
+  const runningDeploymentsStatuses: Array<typeof status> = [
+    "QUEUED",
+    "PREPARING",
+    "STARTING",
+    "RESTARTING",
+    "CANCELLING"
+  ];
+
+  const isCancellable = cancellableDeploymentsStatuses.includes(status);
+  const isRedeployable =
+    !is_current_production &&
+    (finished_at || !runningDeploymentsStatuses.includes(status));
 
   return (
     <div
@@ -259,7 +272,7 @@ export function DockerDeploymentCard({
                   })
                 }
               />
-              {!is_current_production && finished_at && (
+              {isRedeployable && (
                 <MenubarContentItem
                   icon={Redo2}
                   text="Redeploy"
@@ -279,7 +292,7 @@ export function DockerDeploymentCard({
                   }
                 />
               )}
-              {cancellableDeploymentsStatuses.includes(status) && (
+              {isCancellable && (
                 <MenubarContentItem
                   className="text-red-500"
                   icon={Ban}
