@@ -340,12 +340,12 @@ export function ProjectList() {
           </TableBody>
         </Table>
 
-        {!noResults && !empty && (
-          <div
-            className={cn("my-4 block", {
-              "opacity-40 pointer-events-none": slug !== debouncedValue
-            })}
-          >
+        <div
+          className={cn("my-4 block", {
+            "opacity-40 pointer-events-none": slug !== debouncedValue
+          })}
+        >
+          {!noResults && !empty && totalProjects > 10 && (
             <Pagination
               totalPages={totalPages}
               currentPage={page}
@@ -367,8 +367,8 @@ export function ProjectList() {
                 });
               }}
             />
-          </div>
-        )}
+          )}
+        </div>
       </section>
     </main>
   );
