@@ -3448,9 +3448,6 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(
             DockerDeployment.DeploymentStatus.FAILED, second_deployment.status
         )
-        # self.assertIsNone(
-        #     self.fake_docker_client.get_deployment_service(second_deployment)
-        # )
 
         third_deployment = await (
             DockerDeployment.objects.filter(hash=third_deployment.hash)
