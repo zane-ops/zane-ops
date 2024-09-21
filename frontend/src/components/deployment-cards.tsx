@@ -92,6 +92,14 @@ export function DockerDeploymentCard({
     image += ":latest";
   }
 
+  // all deployments statuse that match these filters can be cancelled
+  const cancellableDeploymentsStatuses = [
+    "QUEUED",
+    "PREPARING",
+    "STARTING",
+    "RESTARTING"
+  ];
+
   return (
     <div
       className={cn(
@@ -177,7 +185,7 @@ export function DockerDeploymentCard({
                   )}
                 </span>
               ) : (
-                !started_at && !finished_at && <span>-</span>
+                !started_at && <span>-</span>
               )}
             </div>
             <div className="gap-1 inline-flex items-center">
@@ -271,7 +279,7 @@ export function DockerDeploymentCard({
                   }
                 />
               )}
-              {!finished_at && (
+              {cancellableDeploymentsStatuses.includes(status) && (
                 <MenubarContentItem
                   className="text-red-500"
                   icon={Ban}
