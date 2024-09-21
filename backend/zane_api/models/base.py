@@ -556,6 +556,7 @@ class DockerDeployment(BaseDeployment):
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
         CANCELLED = "CANCELLED", _("Cancelled")
+        CANCELLING = "CANCELLING", _("Cancelling")
         FAILED = "FAILED", _("Failed")
         PREPARING = "PREPARING", _("Preparing")
         STARTING = "STARTING", _("Starting")
