@@ -683,7 +683,10 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             DockerDeployment.DeploymentStatus.STARTING,
             DockerDeployment.DeploymentStatus.RESTARTING,
         ]:
-            raise ResourceConflict(detail="Cannot cancel already finished deployment.")
+            raise ResourceConflict(
+                detail="This deployment cannot be cancelled as it has already finished "
+                       "or is in the process of cancelling."
+            )
 
         if deployment.started_at is None:
             deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
