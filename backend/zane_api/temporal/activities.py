@@ -38,7 +38,7 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from django.utils import timezone
     from time import monotonic
-    from django.db.models import Q, QuerySet
+    from django.db.models import Q, QuerySet, Case, When, Value, F
     from ..utils import (
         strip_slash_if_exists,
         find_item_in_list,
@@ -906,9 +906,16 @@ class DockerSwarmActivities:
                             DockerDeployment.DeploymentStatus.RESTARTING,
                         ]
                     )
-                    & Q(finished_at__isnull=True),
+                    & (Q(started_at__isnull=True) | Q(finished_at__isnull=True)),
                 ).aupdate(
-                    finished_at=timezone.now(),
+                    finished_at=Case(
+                        When(finished_at__isnull=True, then=Value(timezone.now())),
+                        default=F("finished_at"),
+                    ),
+                    started_at=Case(
+                        When(started_at__isnull=True, then=Value(timezone.now())),
+                        default=F("started_at"),
+                    ),
                     status=DockerDeployment.DeploymentStatus.REMOVED,
                 )
         except DockerDeployment.DoesNotExist:

@@ -677,8 +677,16 @@ class CancelDockerServiceDeploymentAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        if deployment.finished_at is not None:
-            raise ResourceConflict(detail="Cannot cancel already finished deployment.")
+        if deployment.finished_at is not None or deployment.status not in [
+            DockerDeployment.DeploymentStatus.QUEUED,
+            DockerDeployment.DeploymentStatus.PREPARING,
+            DockerDeployment.DeploymentStatus.STARTING,
+            DockerDeployment.DeploymentStatus.RESTARTING,
+        ]:
+            raise ResourceConflict(
+                detail="This deployment cannot be cancelled as it has already finished "
+                       "or is in the process of cancelling."
+            )
 
         if deployment.started_at is None:
             deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
