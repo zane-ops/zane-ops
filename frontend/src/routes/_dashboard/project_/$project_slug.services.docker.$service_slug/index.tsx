@@ -91,7 +91,8 @@ function ServiceDetails() {
     "QUEUED",
     "PREPARING",
     "STARTING",
-    "RESTARTING"
+    "RESTARTING",
+    "CANCELLING"
   ];
 
   const newDeployments = deploymentList.filter(
@@ -439,26 +440,13 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
     },
     ref
   ) => {
-    // const [selectedValues, setSelectedValues] =
-    //   React.useState<string[]>(defaultValue);
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
-
-    // React.useEffect(() => {
-    //   if (JSON.stringify(selectedValues) !== JSON.stringify(defaultValue)) {
-    //     setSelectedValues(selectedValues);
-    //   }
-    // }, [defaultValue, selectedValues]);
 
     const handleInputKeyDown = (
       event: React.KeyboardEvent<HTMLInputElement>
     ) => {
       if (event.key === "Enter") {
         setIsPopoverOpen(true);
-      } else if (event.key === "Backspace" && !event.currentTarget.value) {
-        // const newSelectedValues = [...selectedValues];
-        // newSelectedValues.pop();
-        // setSelectedValues(newSelectedValues);
-        // onValueChange(newSelectedValues);
       }
     };
 
@@ -466,12 +454,10 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
       const newSelectedValues = value.includes(option)
         ? value.filter((v) => v !== option)
         : [...value, option];
-      // onValueChange(newSelectedValues);
       onValueChange(newSelectedValues);
     };
 
     const handleClear = () => {
-      // setSelectedValues([]);
       onValueChange([]);
     };
 
@@ -483,7 +469,6 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
       if (value.length === options.length) {
         handleClear();
       } else {
-        // setSelectedValues(options);
         onValueChange(options);
       }
     };
@@ -506,7 +491,7 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
           >
             <div className="flex items-center justify-between w-full mx-auto">
               <div className="flex items-center">
-                <div className="mx-2 flex items-center w-20 overflow-visible">
+                <div className="mx-2 flex items-center w-24 overflow-visible">
                   <div
                     className={cn(
                       "w-3 flex-none h-3 border border-border rounded-full",
@@ -523,6 +508,16 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                       {
                         "bg-gray-400": value.includes("CANCELLED"),
                         "bg-background": !value.includes("CANCELLED")
+                      }
+                    )}
+                  />
+
+                  <div
+                    className={cn(
+                      "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
+                      {
+                        "bg-blue-400": value.includes("CANCELLING"),
+                        "bg-background": !value.includes("CANCELLING")
                       }
                     )}
                   />
@@ -677,6 +672,7 @@ const DeploymentStatusesMultiSelect = React.forwardRef<
                               "bg-blue-400":
                                 option === "STARTING" ||
                                 option === "RESTARTING" ||
+                                option === "CANCELLING" ||
                                 option === "PREPARING",
                               "bg-green-600": option === "HEALTHY",
                               "bg-red-400":

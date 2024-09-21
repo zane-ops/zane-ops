@@ -603,6 +603,7 @@ export interface components {
     /**
      * @description * `QUEUED` - Queued
      * * `CANCELLED` - Cancelled
+     * * `CANCELLING` - Cancelling
      * * `FAILED` - Failed
      * * `PREPARING` - Preparing
      * * `STARTING` - Starting
@@ -613,7 +614,7 @@ export interface components {
      * * `SLEEPING` - Sleeping
      * @enum {string}
      */
-    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
      * @description * `env_variables` - env_variables
      * @enum {string}
@@ -2731,6 +2732,7 @@ export interface operations {
         /**
          * @description * `QUEUED` - Queued
          * * `CANCELLED` - Cancelled
+         * * `CANCELLING` - Cancelling
          * * `FAILED` - Failed
          * * `PREPARING` - Preparing
          * * `STARTING` - Starting
@@ -2740,7 +2742,7 @@ export interface operations {
          * * `REMOVED` - Removed
          * * `SLEEPING` - Sleeping
          */
-        status?: ("CANCELLED" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
+        status?: ("CANCELLED" | "CANCELLING" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
       };
       path: {
         project_slug: string;

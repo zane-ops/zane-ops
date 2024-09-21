@@ -100,7 +100,8 @@ export function DockerDeploymentCard({
           "border-blue-600 bg-blue-600":
             status === "STARTING" ||
             status === "RESTARTING" ||
-            status === "PREPARING",
+            status === "PREPARING" ||
+            status === "CANCELLING",
           "border-green-600 bg-green-600": status === "HEALTHY",
           "border-red-600 bg-red-600":
             status === "UNHEALTHY" || status === "FAILED",
@@ -121,7 +122,8 @@ export function DockerDeploymentCard({
                 "text-blue-500":
                   status === "STARTING" ||
                   status === "RESTARTING" ||
-                  status === "PREPARING",
+                  status === "PREPARING" ||
+                  status === "CANCELLING",
                 "text-green-500": status === "HEALTHY",
                 "text-red-500": status === "UNHEALTHY" || status === "FAILED",
                 "text-gray-500 dark:text-gray-400":
@@ -201,6 +203,7 @@ export function DockerDeploymentCard({
               "border-blue-600":
                 status === "STARTING" ||
                 status === "RESTARTING" ||
+                status === "CANCELLING" ||
                 status === "PREPARING",
               "border-green-600": status === "HEALTHY",
               "border-red-600": status === "UNHEALTHY" || status === "FAILED",
