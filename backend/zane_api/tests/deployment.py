@@ -4859,6 +4859,29 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(new_deployment.status_reason)
 
+    async def test_cannot_cancel_non_cancelleable_deployment(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        new_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
+            service=service, status=DockerDeployment.DeploymentStatus.REMOVED
+        )
+        new_deployment.service_snapshot = await sync_to_async(
+            lambda: DockerServiceSerializer(service).data
+        )()
+        await new_deployment.asave()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.cancel_deployment",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": new_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
     async def test_cannot_cancel_already_finished_deployment(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
