@@ -32,7 +32,7 @@ import {
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import { projectKeys } from "~/key-factories";
-import { useSearchDockerHub } from "~/lib/hooks/use-search-docker-hub";
+import { useSearchDockerHubQuery } from "~/lib/hooks/use-search-docker-hub-query";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -126,7 +126,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
 
   const [debouncedValue] = useDebounce(imageSearchQuery, 300);
-  const { data: imageListData } = useSearchDockerHub(debouncedValue);
+  const { data: imageListData } = useSearchDockerHubQuery(debouncedValue);
 
   const { isPending, mutate, data } = useMutation({
     onSuccess: (data) => {
@@ -334,7 +334,7 @@ function StepServiceCreated({
         onSuccess(data.data.hash);
         queryClient.invalidateQueries({
           predicate(query) {
-            const [prefix] = projectKeys.detail(slug, {});
+            const [prefix] = projectKeys.serviceList(slug, {});
             return query.queryKey[0] === prefix && query.queryKey[1] === slug;
           }
         });

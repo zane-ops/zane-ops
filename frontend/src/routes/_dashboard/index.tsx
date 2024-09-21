@@ -44,10 +44,10 @@ import {
 import { projectSearchSchema } from "~/key-factories";
 import {
   useArchivedProjectList,
-  useProjectList
-} from "~/lib/hooks/use-project-list";
+  useProjectListQuery
+} from "~/lib/hooks/use-project-list-query";
 import { cn } from "~/lib/utils";
-import { formattedDate } from "~/utils";
+import { formattedDate, pluralize } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/")({
   validateSearch: (search) => projectSearchSchema.parse(search),
@@ -74,7 +74,7 @@ export function ProjectList() {
     status
   };
 
-  const projectActiveQuery = useProjectList(filters);
+  const projectActiveQuery = useProjectListQuery(filters);
   const projectArchivedQuery = useArchivedProjectList(filters);
 
   const query = status === "active" ? projectActiveQuery : projectArchivedQuery;
@@ -322,7 +322,7 @@ export function ProjectList() {
                       >
                         <p>
                           {project.healthy_services}/
-                          {`${project.total_services} Services Up`}
+                          {`${project.total_services} ${pluralize("Service", project.total_services)} healthy`}
                         </p>
                       </StatusBadge>
                     </TableCell>

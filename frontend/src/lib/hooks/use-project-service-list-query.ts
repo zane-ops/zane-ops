@@ -1,12 +1,14 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
-import { type ProjectDetailsSearch, projectKeys } from "~/key-factories";
+import { type ProjectServiceListSearch, projectKeys } from "~/key-factories";
+import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
-const FIVE_SECONDS = 5 * 1000;
-
-export function useProjectDetails(slug: string, filters: ProjectDetailsSearch) {
+export function useProjectServiceListQuery(
+  slug: string,
+  filters: ProjectServiceListSearch
+) {
   return useQuery({
-    queryKey: projectKeys.detail(slug, filters),
+    queryKey: projectKeys.serviceList(slug, filters),
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/projects/{slug}/service-list/", {
         params: {
@@ -20,10 +22,9 @@ export function useProjectDetails(slug: string, filters: ProjectDetailsSearch) {
         signal
       });
     },
-    placeholderData: keepPreviousData,
     refetchInterval: (query) => {
       if (query.state.data?.data) {
-        return FIVE_SECONDS;
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       }
       return false;
     }

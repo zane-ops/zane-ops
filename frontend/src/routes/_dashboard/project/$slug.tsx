@@ -1,4 +1,9 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Link,
+  createFileRoute,
+  notFound,
+  useNavigate
+} from "@tanstack/react-router";
 import { ChevronsUpDown, PlusIcon, Rocket, Search, Trash } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -24,12 +29,13 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
-import { projectDetailsSearchSchema } from "~/key-factories";
-import { useProjectDetails } from "~/lib/hooks/use-project-details";
+import { projectServiceListSearchSchema } from "~/key-factories";
+import { useProjectServiceListQuery } from "~/lib/hooks/use-project-service-list-query";
+import { useProjectSingleQuery } from "~/lib/hooks/use-project-single-query";
 import { timeAgoFormatter } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
-  validateSearch: (search) => projectDetailsSearchSchema.parse(search),
+  validateSearch: (search) => projectServiceListSearchSchema.parse(search),
   component: withAuthRedirect(ProjectDetail)
 });
 
@@ -40,10 +46,12 @@ function ProjectDetail() {
 
   const navigate = useNavigate();
 
-  const projectDetailsQuery = useProjectDetails(slug, {
+  const projectServiceListQuery = useProjectServiceListQuery(slug, {
     query: debouncedValue
   });
-  const serviceList = projectDetailsQuery.data?.data;
+  const projectSingleQuery = useProjectSingleQuery(slug);
+  const serviceList = projectServiceListQuery.data?.data;
+  const project = projectSingleQuery.data?.data;
 
   return (
     <main>
@@ -56,17 +64,17 @@ function ProjectDetail() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage className="capitalize">{slug}</BreadcrumbPage>
+            <BreadcrumbPage>{slug}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      {projectDetailsQuery.isLoading ? (
+      {projectSingleQuery.isLoading || projectServiceListQuery.isLoading ? (
         <>
           <div className="col-span-full">
             <Loader className="h-[70vh]" />
           </div>
         </>
-      ) : !projectDetailsQuery.isLoading && serviceList === undefined ? (
+      ) : project === undefined ? (
         <>
           <section className="col-span-full ">
             <MetaTitle title="404 - Project does not exist" />
@@ -86,17 +94,19 @@ function ProjectDetail() {
           <MetaTitle title="Project Detail" />
 
           <div className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap  gap-3 justify-between ">
-            <div className="flex items-center gap-4 ">
-              <h1 className="text-3xl capitalize font-medium">{slug}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl capitalize font-medium">
+                {project.slug}
+              </h1>
 
-              <Button asChild variant={"secondary"} className="flex gap-2">
-                <Link to={`create-service`}>
+              <Button asChild variant="secondary" className="flex gap-2">
+                <Link to="create-service">
                   New Service <PlusIcon size={18} />
                 </Link>
               </Button>
             </div>
-            <div className="flex my-3 flex-wrap  w-full justify-end items-center md:gap-3 gap-1">
-              <div className="flex md:my-5 lg:w-1/3 md:w-1/2 w-full items-center">
+            <div className="flex my-3 flex-wrap w-full md:w-auto  justify-end items-center md:gap-3 gap-1">
+              <div className="flex md:my-5 lg:w-2/3 md:w-3/5 w-full items-center">
                 <Search size={20} className="relative left-5" />
                 <Input
                   onChange={(e) => {
@@ -135,7 +145,7 @@ function ProjectDetail() {
               <section className="flex gap-3 h-96 col-span-full flex-col items-center justify-center flex-grow py-20">
                 <div className="text-center">
                   {debouncedValue.length > 0 ? (
-                    <>
+                    <div className="flex flex-col gap-2 items-center">
                       <h2 className="text-2xl font-medium">
                         No services match the filter criteria
                       </h2>
@@ -143,7 +153,10 @@ function ProjectDetail() {
                         Your search for`{debouncedValue}` did not return any
                         results.
                       </h3>
-                    </>
+                      <Button asChild variant="outline">
+                        <Link href=".">Clear filters</Link>
+                      </Button>
+                    </div>
                   ) : (
                     <>
                       <div>

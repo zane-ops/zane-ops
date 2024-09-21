@@ -34,7 +34,9 @@ export function Pagination({
   return (
     <div className={cn("flex items-center justify-end px-2", className)}>
       <div className="flex items-center space-x-2">
-        <p className="text-sm font-medium">Rows per page</p>
+        <p className="text-sm font-medium">
+          <span className="sr-only sm:not-sr-only">Rows</span> per page
+        </p>
         <Select
           value={perPage.toString()}
           onValueChange={(value) => onChangePerPage(Number(value))}

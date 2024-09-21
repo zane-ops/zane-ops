@@ -1,0 +1,15 @@
+export const DEPLOYMENT_STATUSES = [
+  "QUEUED",
+  "CANCELLED",
+  "CANCELLING",
+  "FAILED",
+  "PREPARING",
+  "HEALTHY",
+  "UNHEALTHY",
+  "STARTING",
+  "RESTARTING",
+  "REMOVED",
+  "SLEEPING"
+] as const;
+
+export const DEFAULT_QUERY_REFETCH_INTERVAL = 5 * 1000; // 5 seconds

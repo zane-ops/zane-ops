@@ -1,10 +1,9 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { type ProjectSearch, projectKeys } from "~/key-factories";
+import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
-const FIVE_SECONDS = 5 * 1000;
-
-export function useProjectList(filters: ProjectSearch) {
+export function useProjectListQuery(filters: ProjectSearch) {
   return useQuery({
     queryKey: projectKeys.list(filters),
     queryFn: ({ signal }) => {
@@ -21,11 +20,10 @@ export function useProjectList(filters: ProjectSearch) {
         signal
       });
     },
-    placeholderData: keepPreviousData,
     enabled: filters.status !== "archived",
     refetchInterval: (query) => {
-      if (query.state.data?.data?.results) {
-        return FIVE_SECONDS;
+      if (query.state.data?.data) {
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       }
       return false;
     }
@@ -49,7 +47,6 @@ export function useArchivedProjectList(filters: ProjectSearch) {
         signal
       });
     },
-    placeholderData: keepPreviousData,
     enabled: filters.status === "archived"
   });
 }
