@@ -22,6 +22,7 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { MenubarContentItem } from "~/components/ui/menubar";
+import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { useCancelDockerServiceDeploymentMutation } from "~/lib/hooks/use-cancel-docker-service-deployment-mutation";
 import { useRedeployDockerServiceMutation } from "~/lib/hooks/use-redeploy-docker-service-mutation";
 import { cn } from "~/lib/utils";
@@ -32,17 +33,7 @@ import {
 } from "~/utils";
 
 export type DockerDeploymentCardProps = {
-  status:
-    | "QUEUED"
-    | "PREPARING"
-    | "STARTING"
-    | "RESTARTING"
-    | "HEALTHY"
-    | "UNHEALTHY"
-    | "SLEEPING"
-    | "FAILED"
-    | "REMOVED"
-    | "CANCELLED";
+  status: (typeof DEPLOYMENT_STATUSES)[number];
   started_at?: Date;
   finished_at?: Date;
   queued_at: Date;
@@ -134,10 +125,10 @@ export function DockerDeploymentCard({
                 "text-green-500": status === "HEALTHY",
                 "text-red-500": status === "UNHEALTHY" || status === "FAILED",
                 "text-gray-500 dark:text-gray-400":
-                  status === "REMOVED" ||
-                  status === "CANCELLED" ||
-                  status === "QUEUED",
-                "text-yellow-500": status === "SLEEPING"
+                  status === "REMOVED" || status === "QUEUED",
+                "text-yellow-500": status === "SLEEPING",
+                "text-card-foreground rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1":
+                  status === "CANCELLED"
               })}
             >
               {capitalizeText(status)}
