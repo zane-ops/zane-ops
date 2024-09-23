@@ -19,5 +19,9 @@
   },
   "[html]": {
     "editor.defaultFormatter": "vscode.html-language-features"
-  }
+  },
+  "github-actions.workflows.pinned.workflows": [
+    ".github/workflows/build-push-images-dev.yaml",
+    ".github/workflows/codeql.yml"
+  ]
 }
