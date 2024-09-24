@@ -222,12 +222,12 @@ const socialLinksIconWidth = 15;
 const socialLinks = [
   {
     name: "Feedback",
-    url: " https://github.com/zane-ops/zane-ops/discussions",
+    url: "https://github.com/zane-ops/zane-ops/discussions",
     icon: <Send width={socialLinksIconWidth} />
   },
   {
     name: "Docs",
-    url: "https://github.com/zane-ops/zane-ops/blob/main/docs.md",
+    url: "https://zane.fredkiss.dev/docs",
     icon: <BookOpen width={socialLinksIconWidth} />
   },
   {
