@@ -27,6 +27,12 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import { wait } from "~/utils";
 
@@ -175,41 +181,56 @@ function EnVariableRow({
           ) : (
             <span className="relative top-1">*********</span>
           )}
-          <Button
-            variant="ghost"
-            onClick={() => setIsOpen(!isOpen)}
-            className="px-2.5 py-0.5 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-          >
-            {isOpen ? (
-              <EyeOffIcon size={15} className="flex-none" />
-            ) : (
-              <Eye size={15} className="flex-none" />
-            )}
-            <span className="sr-only">
-              {isOpen ? "Hide" : "Reveal"} variable value
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={cn(
-              "px-2.5 py-0.5",
-              "focus-visible:opacity-100 group-hover:opacity-100",
-              hasCopied ? "opacity-100" : "opacity-0"
-            )}
-            onClick={() => {
-              navigator.clipboard.writeText(value).then(() => {
-                // show pending state (which is success state), until the user has stopped clicking the button
-                startTransition(() => wait(1000));
-              });
-            }}
-          >
-            {hasCopied ? (
-              <Check size={15} className="flex-none" />
-            ) : (
-              <Copy size={15} className="flex-none" />
-            )}
-            <span className="sr-only">Copy variable value</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="px-2.5 py-0.5 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  {isOpen ? (
+                    <EyeOffIcon size={15} className="flex-none" />
+                  ) : (
+                    <Eye size={15} className="flex-none" />
+                  )}
+                  <span className="sr-only">
+                    {isOpen ? "Hide" : "Reveal"} variable value
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isOpen ? "Hide" : "Reveal"} variable value
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "px-2.5 py-0.5",
+                    "focus-visible:opacity-100 group-hover:opacity-100",
+                    hasCopied ? "opacity-100" : "opacity-0"
+                  )}
+                  onClick={() => {
+                    navigator.clipboard.writeText(value).then(() => {
+                      // show pending state (which is success state), until the user has stopped clicking the button
+                      startTransition(() => wait(1000));
+                    });
+                  }}
+                >
+                  {hasCopied ? (
+                    <Check size={15} className="flex-none" />
+                  ) : (
+                    <Copy size={15} className="flex-none" />
+                  )}
+                  <span className="sr-only">Copy variable value</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy variable value</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
 
