@@ -142,3 +142,8 @@ export function formatURL({
 export function pluralize(word: string, item_count: number) {
   return word + (item_count > 1 ? "s" : "");
 }
+
+export function wait(ms: number): Promise<void> {
+  // Wait for the specified amount of time
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
