@@ -64,31 +64,31 @@ function EnvVariablesPage() {
                   name="ZANE"
                   value="1"
                   isLocked
-                  description="Is the service deployed on zaneops?"
+                  comment="Is the service deployed on zaneops?"
                 />
                 <EnVariableRow
                   name="ZANE_PRIVATE_DOMAIN"
                   value="nginx-demo.zaneops.internal"
-                  description="The domain used to reach this service on the same project"
+                  comment="The domain used to reach this service on the same project"
                   isLocked
                 />
                 <EnVariableRow
                   name="ZANE_DEPLOYMENT_TYPE"
                   value="docker"
-                  description="The type of the service"
+                  comment="The type of the service"
                   isLocked
                 />
                 <EnVariableRow
                   name="ZANE_SERVICE_ID"
                   value="abc123"
                   isLocked
-                  description="The service ID"
+                  comment="The service ID"
                 />
                 <EnVariableRow
                   name="ZANE_PROJECT_ID"
                   value="def123"
                   isLocked
-                  description="The project ID"
+                  comment="The project ID"
                 />
               </div>
             </AccordionContent>
@@ -99,11 +99,7 @@ function EnvVariablesPage() {
         <div>
           <EnVariableRow name="POSTGRES_USER" value="postgres" />
           <EnVariableRow name="POSTGRES_DB" value="postgres" />
-          <EnVariableRow
-            name="POSTGRES_PASSWORD"
-            value="password"
-            description="database url"
-          />
+          <EnVariableRow name="POSTGRES_PASSWORD" value="password" />
           <EnVariableRow
             name="DATABASE_URL"
             value="postgresql://postgres:password@localhost:5433/gh_next"
@@ -122,7 +118,7 @@ type EnVariableRowProps = {
   isLocked?: boolean;
   name: string;
   value: string;
-  description?: string;
+  comment?: string;
   isNotValidated?: boolean;
 };
 
@@ -130,7 +126,7 @@ function EnVariableRow({
   isLocked = false,
   name,
   value,
-  description,
+  comment,
   isNotValidated = false
 }: EnVariableRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -147,9 +143,7 @@ function EnVariableRow({
     >
       <div className="col-span-3 md:col-span-2 flex flex-col">
         <span className="font-mono">{name}</span>
-        {description && (
-          <small className="text-muted-foreground">{description}</small>
-        )}
+        {comment && <small className="text-muted-foreground">{comment}</small>}
       </div>
       {isEditing ? (
         <form
