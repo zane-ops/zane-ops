@@ -46,7 +46,7 @@ function EnvVariablesPage() {
   return (
     <div className="my-6 flex flex-col gap-4">
       <section>
-        <h1 className="text-lg">4 User defined service variables</h1>
+        <h2 className="text-lg">4 User defined service variables</h2>
       </section>
       <section>
         <Accordion type="single" collapsible className="border-y border-border">
@@ -110,6 +110,8 @@ function EnvVariablesPage() {
             isNotValidated
           />
         </div>
+        <hr className="border-border" />
+        <h3 className="text-lg">Add new variable</h3>
         <NewEnvVariableForm />
       </section>
     </div>
@@ -138,44 +140,49 @@ function EnVariableRow({
   return (
     <div
       className={cn(
-        "grid items-center gap-4 grid-cols-7 group pl-4 py-2",
+        "grid items-center gap-4 md:grid-cols-7 grid-cols-3 group pl-4 py-2",
         isNotValidated &&
           "dark:bg-secondary-foreground bg-secondary/60 rounded-md"
       )}
     >
-      <div className="col-span-2 flex flex-col">
+      <div className="col-span-3 md:col-span-2 flex flex-col">
         <span className="font-mono">{name}</span>
         {description && (
           <small className="text-muted-foreground">{description}</small>
         )}
       </div>
       {isEditing ? (
-        <form className="col-span-5 flex items-center gap-3" action={() => {}}>
+        <form
+          className="col-span-3 md:col-span-5 flex md:items-center gap-3 md:flex-row flex-col pr-4"
+          action={() => {}}
+        >
           <Input
             placeholder="value"
             defaultValue={value}
             name="value"
             className="font-mono"
           />
-          <SubmitButton
-            isPending={false}
-            variant="ghost"
-            className="bg-inherit"
-          >
-            <Check size={15} className="flex-none" />
-            <span className="sr-only">Update variable value</span>
-          </SubmitButton>
-          <Button
-            onClick={() => setIsEditing(false)}
-            variant="ghost"
-            className="bg-inherit"
-          >
-            <X size={15} className="flex-none" />
-            <span className="sr-only">Cancel</span>
-          </Button>
+          <div className="flex gap-3">
+            <SubmitButton
+              isPending={false}
+              variant="outline"
+              className="bg-inherit"
+            >
+              <Check size={15} className="flex-none" />
+              <span className="sr-only">Update variable value</span>
+            </SubmitButton>
+            <Button
+              onClick={() => setIsEditing(false)}
+              variant="outline"
+              className="bg-inherit"
+            >
+              <X size={15} className="flex-none" />
+              <span className="sr-only">Cancel</span>
+            </Button>
+          </div>
         </form>
       ) : (
-        <div className="font-mono flex items-center gap-2 col-span-4">
+        <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
           {isOpen ? (
             <p className="whitespace-nowrap overflow-x-auto">{value}</p>
           ) : (
@@ -187,7 +194,7 @@ function EnVariableRow({
                 <Button
                   variant="ghost"
                   onClick={() => setIsOpen(!isOpen)}
-                  className="px-2.5 py-0.5 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                 >
                   {isOpen ? (
                     <EyeOffIcon size={15} className="flex-none" />
@@ -211,7 +218,7 @@ function EnVariableRow({
                   className={cn(
                     "px-2.5 py-0.5",
                     "focus-visible:opacity-100 group-hover:opacity-100",
-                    hasCopied ? "opacity-100" : "opacity-0"
+                    hasCopied ? "opacity-100" : "md:opacity-0"
                   )}
                   onClick={() => {
                     navigator.clipboard.writeText(value).then(() => {
@@ -276,20 +283,25 @@ function EnVariableRow({
 
 function NewEnvVariableForm() {
   return (
-    <form action={() => {}} className="flex items-center gap-3">
+    <form
+      action={() => {}}
+      className="flex md:items-center gap-3 md:flex-row flex-col items-stretch"
+    >
       <Input placeholder="VARIABLE_NAME" name="name" className="font-mono" />
       <Input placeholder="value" name="value" className="font-mono" />
-      <SubmitButton
-        isPending={false}
-        variant="secondary"
-        className="inline-flex gap-1"
-      >
-        <span>Add</span>
-        <Plus size={15} />
-      </SubmitButton>
-      <Button variant="outline" type="reset">
-        Cancel
-      </Button>
+      <div className="flex gap-3 items-center w-full md:w-auto">
+        <SubmitButton
+          isPending={false}
+          variant="secondary"
+          className="inline-flex gap-1 flex-1"
+        >
+          <span>Add</span>
+          <Plus size={15} />
+        </SubmitButton>
+        <Button variant="outline" type="reset" className="flex-1">
+          Cancel
+        </Button>
+      </div>
     </form>
   );
 }
