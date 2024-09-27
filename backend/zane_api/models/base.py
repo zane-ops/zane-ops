@@ -57,6 +57,7 @@ class URL(models.Model):
     domain = models.CharField(max_length=1000, validators=[validate_url_domain])
     base_path = models.CharField(default="/", validators=[validate_url_path])
     strip_prefix = models.BooleanField(default=True)
+    redirect_to = models.JSONField(max_length=2000, null=True)
 
     @classmethod
     def create_default_url(cls, service: "BaseService"):
@@ -389,6 +390,7 @@ class DockerRegistryService(BaseService):
                                 domain=change.new_value.get("domain"),
                                 base_path=change.new_value.get("base_path"),
                                 strip_prefix=change.new_value.get("strip_prefix"),
+                                redirect_to=change.new_value.get("redirect_to"),
                             )
                         )
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
@@ -398,6 +400,7 @@ class DockerRegistryService(BaseService):
                         url.domain = change.new_value.get("domain")
                         url.base_path = change.new_value.get("base_path")
                         url.strip_prefix = change.new_value.get("strip_prefix")
+                        url.redirect_to = change.new_value.get("redirect_to")
                         url.save()
                 case DockerDeploymentChange.ChangeField.PORTS:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:

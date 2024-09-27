@@ -5008,6 +5008,9 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueDomainErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBasePathErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueStripPrefixErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToUrlErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesFieldErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNameErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContainerPathErrorComponent'
@@ -5037,6 +5040,9 @@ components:
           new_value.domain: '#/components/schemas/RequestDeploymentChangesNewValueDomainErrorComponent'
           new_value.base_path: '#/components/schemas/RequestDeploymentChangesNewValueBasePathErrorComponent'
           new_value.strip_prefix: '#/components/schemas/RequestDeploymentChangesNewValueStripPrefixErrorComponent'
+          new_value.redirect_to.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent'
+          new_value.redirect_to.url: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToUrlErrorComponent'
+          new_value.redirect_to.permanent: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent'
           field: '#/components/schemas/RequestDeploymentChangesFieldErrorComponent'
           new_value.name: '#/components/schemas/RequestDeploymentChangesNewValueNameErrorComponent'
           new_value.container_path: '#/components/schemas/RequestDeploymentChangesNewValueContainerPathErrorComponent'
@@ -5581,6 +5587,80 @@ components:
       - attr
       - code
       - detail
+    RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.redirect_to.non_field_errors
+          type: string
+          description: '* `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.redirect_to.permanent
+          type: string
+          description: '* `new_value.redirect_to.permanent` - new_value.redirect_to.permanent'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueRedirectToUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.redirect_to.url
+          type: string
+          description: '* `new_value.redirect_to.url` - new_value.redirect_to.url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestDeploymentChangesNewValueStripPrefixErrorComponent:
       type: object
       properties:
@@ -5971,11 +6051,40 @@ components:
           default: /
         strip_prefix:
           type: boolean
+        redirect_to:
+          allOf:
+          - $ref: '#/components/schemas/URLRedirect'
+          nullable: true
       required:
       - base_path
       - domain
       - id
+      - redirect_to
       - strip_prefix
+    URLRedirect:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        permanent:
+          type: boolean
+          default: false
+      required:
+      - permanent
+      - url
+    URLRedirectRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+        permanent:
+          type: boolean
+          default: false
+      required:
+      - url
     URLRequestRequest:
       type: object
       properties:
@@ -5989,6 +6098,8 @@ components:
         strip_prefix:
           type: boolean
           default: true
+        redirect_to:
+          $ref: '#/components/schemas/URLRedirectRequest'
       required:
       - domain
     UnitEnum:
