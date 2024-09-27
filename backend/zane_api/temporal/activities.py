@@ -430,7 +430,7 @@ class ZaneProxyClient:
                 "response": {
                     "add": {
                         "server": ["zaneops"],
-                        "x-request-id": ["{http.request.uuid}"],
+                        "x-zane-request-id": ["{http.request.uuid}"],
                     },
                 },
                 "request": {
@@ -452,10 +452,67 @@ class ZaneProxyClient:
             )
 
         thirty_seconds_in_nano_seconds = 30_000_000_000
+
+        blue_upstream = f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+        green_upstream = f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
         proxy_handlers.append(
             {
-                "flush_interval": -1,
                 "handler": "reverse_proxy",
+                "handle_response": [
+                    {
+                        "routes": [
+                            {
+                                "handle": [
+                                    {
+                                        "handler": "headers",
+                                        "response": {
+                                            "set": {
+                                                "x-zane-dpl-hash": [blue_hash or ""],
+                                                "x-zane-dpl-slot": ["blue"],
+                                            }
+                                        },
+                                    }
+                                ],
+                                "match": [
+                                    {
+                                        "expression": {
+                                            "expr": f'{{http.reverse_proxy.upstream.hostport}} == "{blue_upstream}"',
+                                            "name": "blue",
+                                        }
+                                    }
+                                ],
+                            },
+                            {
+                                "handle": [
+                                    {
+                                        "handler": "headers",
+                                        "response": {
+                                            "set": {
+                                                "x-zane-dpl-slot": ["green"],
+                                                "x-zane-dpl-hash": [green_hash or ""],
+                                            }
+                                        },
+                                    }
+                                ],
+                                "match": [
+                                    {
+                                        "expression": {
+                                            "expr": f'{{http.reverse_proxy.upstream.hostport}} == "{green_upstream}"',
+                                            "name": "green",
+                                        }
+                                    }
+                                ],
+                            },
+                            {
+                                "handle": [
+                                    {"handler": "copy_response_headers"},
+                                    {"handler": "copy_response"},
+                                ]
+                            },
+                        ]
+                    }
+                ],
+                "flush_interval": -1,
                 "health_checks": {
                     "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
                 },
