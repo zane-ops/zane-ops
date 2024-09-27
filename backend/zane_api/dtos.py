@@ -16,11 +16,18 @@ class VolumeDto:
 
 
 @dataclass
+class URLRedirectToDto:
+    url: str
+    permanent: bool = False
+
+
+@dataclass
 class URLDto:
     domain: str
     base_path: str
     strip_prefix: bool
     id: Optional[str] = None
+    redirect_to: Optional[URLRedirectToDto] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
