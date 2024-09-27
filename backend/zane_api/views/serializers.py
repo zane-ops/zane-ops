@@ -86,16 +86,10 @@ class VolumeRequestSerializer(serializers.Serializer):
         return attrs
 
 
-class URLRedirectSerializer(serializers.Serializer):
-    url = serializers.URLField(required=True)
-    permanent = serializers.BooleanField(default=False)
-
-
 class URLRequestSerializer(serializers.Serializer):
     domain = serializers.URLDomainField(required=True)
     base_path = serializers.URLPathField(required=False, default="/")
     strip_prefix = serializers.BooleanField(required=False, default=True)
-    redirect_to = URLRedirectSerializer(required=False)
 
     def validate(self, url: dict[str, str]):
         service: DockerRegistryService = self.context.get("service")

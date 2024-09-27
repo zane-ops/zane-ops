@@ -81,17 +81,10 @@ class VolumeSerializer(ModelSerializer):
         ]
 
 
-class URLRedirectSerializer(serializers.Serializer):
-    url = serializers.URLField()
-    permanent = serializers.BooleanField(default=False)
-
-
 class URLModelSerializer(ModelSerializer):
-    redirect_to = URLRedirectSerializer(allow_null=True)
-
     class Meta:
         model = models.URL
-        fields = ["id", "domain", "base_path", "strip_prefix", "redirect_to"]
+        fields = ["id", "domain", "base_path", "strip_prefix"]
 
 
 class DockerEnvVariableSerializer(ModelSerializer):

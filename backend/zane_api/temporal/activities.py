@@ -452,43 +452,27 @@ class ZaneProxyClient:
             )
 
         thirty_seconds_in_nano_seconds = 30_000_000_000
-
-        if url.redirect_to is not None:
-            proxy_handlers.append(
-                {
-                    "handler": "static_response",
-                    "headers": {
-                        "Location": [f"{url.redirect_to.url}{{http.request.uri}}"]
+        proxy_handlers.append(
+            {
+                "flush_interval": -1,
+                "handler": "reverse_proxy",
+                "health_checks": {
+                    "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
+                },
+                "load_balancing": {
+                    "retries": 3,
+                    "selection_policy": {"policy": "first"},
+                },
+                "upstreams": [
+                    {
+                        "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
                     },
-                    "status_code": (
-                        status.HTTP_308_PERMANENT_REDIRECT
-                        if url.redirect_to.permanent
-                        else status.HTTP_307_TEMPORARY_REDIRECT
-                    ),
-                }
-            )
-        else:
-            proxy_handlers.append(
-                {
-                    "handler": "reverse_proxy",
-                    "flush_interval": -1,
-                    "health_checks": {
-                        "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
+                    {
+                        "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
                     },
-                    "load_balancing": {
-                        "retries": 3,
-                        "selection_policy": {"policy": "first"},
-                    },
-                    "upstreams": [
-                        {
-                            "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
-                        },
-                        {
-                            "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
-                        },
-                    ],
-                }
-            )
+                ],
+            }
+        )
         return {
             "@id": cls._get_id_for_service_url(service.id, url),
             "handle": [

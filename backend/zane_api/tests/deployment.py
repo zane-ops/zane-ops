@@ -3047,32 +3047,6 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         "strip_prefix": True,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "web-server2.fred.kiss",
-                        "base_path": "/",
-                        "strip_prefix": True,
-                        "redirect_to": {
-                            "url": "https://web-server.fred.kiss",
-                            "permanent": True,
-                        },
-                    },
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "web-server3.fred.kiss",
-                        "base_path": "/",
-                        "strip_prefix": True,
-                        "redirect_to": {
-                            "url": "https://web-server.fred.kiss",
-                            "permanent": False,
-                        },
-                    },
-                ),
             ]
         )
 
