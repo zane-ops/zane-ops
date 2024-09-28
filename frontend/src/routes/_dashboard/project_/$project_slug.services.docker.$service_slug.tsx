@@ -1,4 +1,9 @@
-import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  createFileRoute,
+  useRouterState
+} from "@tanstack/react-router";
 import {
   ChevronRight,
   Container,
@@ -30,6 +35,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
+import type { ValueOf } from "~/lib/types";
 import { formatURL, pluralize } from "~/utils";
 
 export const Route = createFileRoute(
@@ -38,14 +44,30 @@ export const Route = createFileRoute(
   component: withAuthRedirect(ServiceDetailsLayout)
 });
 
+const TABS = {
+  DEPLOYMENTS: "deployments",
+  ENV_VARIABLES: "envVariables",
+  SETTINGS: "settings"
+} as const;
+
 function ServiceDetailsLayout() {
   const { project_slug, service_slug } = Route.useParams();
+  const location = useRouterState({ select: (s) => s.location });
+  const navigate = Route.useNavigate();
+
   const serviceSingleQuery = useDockerServiceSingleQuery(
     project_slug,
     service_slug
   );
   const { isPending: isDeploying, mutate: deploy } =
     useDeployDockerServiceMutation(project_slug, service_slug);
+
+  let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
+  if (location.pathname.endsWith("env-variables")) {
+    currentSelectedTab = TABS.ENV_VARIABLES;
+  } else if (location.pathname.endsWith("settings")) {
+    currentSelectedTab = TABS.SETTINGS;
+  }
 
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
   const service = serviceSingleQuery.data?.data;
@@ -205,41 +227,68 @@ function ServiceDetailsLayout() {
               </form>
             </div>
           </div>
-          <Tabs defaultValue="deployment" className="w-full mt-5">
+          <Tabs
+            value={currentSelectedTab}
+            className="w-full mt-5"
+            onValueChange={(value) => {
+              switch (value) {
+                case TABS.DEPLOYMENTS:
+                  navigate({
+                    from: baseUrl,
+                    to: "."
+                  });
+                  break;
+                case TABS.ENV_VARIABLES:
+                  navigate({
+                    from: baseUrl,
+                    to: "./env-variables"
+                  });
+                  break;
+                case TABS.SETTINGS:
+                  navigate({
+                    from: baseUrl,
+                    to: "./settings"
+                  });
+                  break;
+                default:
+                  break;
+              }
+            }}
+          >
             <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
-              <TabsTrigger value="deployment" asChild>
-                <Link className="flex gap-2 items-center" to={baseUrl}>
-                  Deployments <Rocket size={15} />
-                </Link>
+              <TabsTrigger
+                value={TABS.DEPLOYMENTS}
+                className="flex gap-2 items-center"
+              >
+                <span>Deployments</span>
+                <Rocket size={15} className="flex-none" />
               </TabsTrigger>
 
-              <TabsTrigger value="envVariable">
-                <Link
-                  className="flex gap-2 items-center"
-                  to={`${baseUrl}/env-variables`}
-                >
-                  Env Variables <KeyRound size={15} />
-                </Link>
+              <TabsTrigger
+                value={TABS.ENV_VARIABLES}
+                className="flex gap-2 items-center"
+              >
+                <span>Env Variables</span>
+                <KeyRound size={15} className="flex-none" />
               </TabsTrigger>
 
-              <TabsTrigger value="settings">
-                <Link
-                  className="flex gap-2 items-center"
-                  to={`${baseUrl}/settings`}
-                >
-                  Settings <Settings size={15} />
-                </Link>
+              <TabsTrigger
+                value={TABS.SETTINGS}
+                className="flex gap-2 items-center"
+              >
+                <span>Settings</span>
+                <Settings size={15} className="flex-none" />
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="deployment">
+            <TabsContent value={TABS.DEPLOYMENTS}>
               <Outlet />
             </TabsContent>
 
-            <TabsContent value="envVariable">
+            <TabsContent value={TABS.ENV_VARIABLES}>
               <Outlet />
             </TabsContent>
-            <TabsContent value="settings">
+            <TabsContent value={TABS.SETTINGS}>
               <Outlet />
             </TabsContent>
           </Tabs>

@@ -1,5 +1,6 @@
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
+import { ScrollRestoration } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
@@ -10,6 +11,7 @@ import { Toaster } from "~/components/ui/sonner";
 export const Route = createRootRoute({
   component: () => (
     <div className="bg-background">
+      <ScrollRestoration />
       <Outlet />
       <Toaster />
       {!import.meta.env.PROD && (

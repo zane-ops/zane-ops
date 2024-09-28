@@ -1243,7 +1243,7 @@ export interface components {
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -1560,6 +1560,52 @@ export interface components {
       code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.redirect_to.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent: {
+      /**
+       * @description * `new_value.redirect_to.permanent` - new_value.redirect_to.permanent
+       * @enum {string}
+       */
+      attr: "new_value.redirect_to.permanent";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueRedirectToUrlErrorComponent: {
+      /**
+       * @description * `new_value.redirect_to.url` - new_value.redirect_to.url
+       * @enum {string}
+       */
+      attr: "new_value.redirect_to.url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RequestDeploymentChangesNewValueStripPrefixErrorComponent: {
       /**
        * @description * `new_value.strip_prefix` - new_value.strip_prefix
@@ -1771,6 +1817,19 @@ export interface components {
       /** @default / */
       base_path: string;
       strip_prefix: boolean;
+      redirect_to: components["schemas"]["URLRedirect"] | null;
+    };
+    URLRedirect: {
+      /** Format: uri */
+      url: string;
+      /** @default false */
+      permanent: boolean;
+    };
+    URLRedirectRequest: {
+      /** Format: uri */
+      url: string;
+      /** @default false */
+      permanent?: boolean;
     };
     URLRequestRequest: {
       domain: string;
@@ -1778,6 +1837,7 @@ export interface components {
       base_path?: string;
       /** @default true */
       strip_prefix?: boolean;
+      redirect_to?: components["schemas"]["URLRedirectRequest"];
     };
     /**
      * @description * `BYTES` - bytes

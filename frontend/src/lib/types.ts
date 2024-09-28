@@ -44,3 +44,5 @@ export type EventFor<
   : never;
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export type ValueOf<T> = T[keyof T];
