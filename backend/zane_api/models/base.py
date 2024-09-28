@@ -244,6 +244,56 @@ class DockerRegistryService(BaseService):
         )
 
     @property
+    def system_env_variables(self) -> list[dict[str, str]]:
+        return [
+            {
+                "key": "ZANE",
+                "value": "1",
+                "comment": "Is the service deployed on zaneops?",
+            },
+            {
+                "key": "ZANE_PRIVATE_DOMAIN",
+                "value": f"{self.network_alias}.{settings.ZANE_INTERNAL_DOMAIN}",
+                "comment": "The domain used to reach this service on the same project",
+            },
+            {
+                "key": "ZANE_DEPLOYMENT_TYPE",
+                "value": "docker",
+                "comment": "The type of the service",
+            },
+            {
+                "key": "ZANE_SERVICE_ID",
+                "value": self.id,
+                "comment": "The service ID",
+            },
+            {
+                "key": "ZANE_SERVICE_NAME",
+                "value": self.slug,
+                "comment": "The name of this service",
+            },
+            {
+                "key": "ZANE_PROJECT_ID",
+                "value": self.project_id,
+                "comment": "The id for the project this service belongs to",
+            },
+            {
+                "key": "ZANE_DEPLOYMENT_SLOT",
+                "value": "{{deployment.slot}}",
+                "comment": "The slot for each deployment it can be `blue` or `green`, this is also sent as the header `x-zane-dpl-slot`",
+            },
+            {
+                "key": "ZANE_DEPLOYMENT_HASH",
+                "value": "{{deployment.hash}}",
+                "comment": "The hash of each deployment, this is also sent as a header `x-zane-dpl-hash`",
+            },
+            {
+                "key": "ZANE_DEPLOYMENT_URL",
+                "value": "{{deployment.url}}",
+                "comment": "The url of each deployment, this is empty for services that don't have any url.",
+            },
+        ]
+
+    @property
     def latest_production_deployment(self) -> Union["DockerDeployment", None]:
         return (
             self.deployments.filter(is_current_production=True)

@@ -1286,7 +1286,7 @@ class DockerSwarmActivities:
                 [
                     f"ZANE=1",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
-                    f"ZANE_DEPLOYMENT_HASH={deployment.unprefixed_hash}",
+                    f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
                     f"ZANE_DEPLOYMENT_TYPE=docker",
                     f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
                     f"ZANE_SERVICE_ID={service.id}",
