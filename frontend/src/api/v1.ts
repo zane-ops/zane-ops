@@ -443,6 +443,8 @@ export interface components {
       network_alias: string | null;
       unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
+      /** @default [] */
+      system_env_variables: components["schemas"]["SystemEnvVariables"][];
     };
     /**
      * @description * `command` - command
@@ -551,6 +553,8 @@ export interface components {
       network_alias: string | null;
       unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
+      /** @default [] */
+      system_env_variables: components["schemas"]["SystemEnvVariables"][];
     };
     DockerServiceCard: {
       /** Format: date-time */
@@ -1799,6 +1803,11 @@ export interface components {
      * @enum {string}
      */
     SourceEnum: "SYSTEM" | "PROXY" | "SERVICE";
+    SystemEnvVariables: {
+      key: string;
+      value: string;
+      comment: string;
+    };
     ToggleDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `urls` - urls

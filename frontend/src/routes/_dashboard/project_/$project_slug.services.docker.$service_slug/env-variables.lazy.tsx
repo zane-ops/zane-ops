@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
+import { Loader } from "~/components/loader";
 import {
   Accordion,
   AccordionContent,
@@ -33,8 +34,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
 import { cn } from "~/lib/utils";
-import { wait } from "~/utils";
+import { pluralize, wait } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/env-variables"
@@ -43,70 +45,80 @@ export const Route = createLazyFileRoute(
 });
 
 function EnvVariablesPage() {
+  const { project_slug, service_slug } = Route.useParams();
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  if (serviceSingleQuery.isLoading) {
+    return <Loader className="h-[50vh]" />;
+  }
+
+  const env_variables = serviceSingleQuery.data?.data?.env_variables ?? [];
+  const system_env_variables =
+    serviceSingleQuery.data?.data?.system_env_variables ?? [];
+
   return (
     <div className="my-6 flex flex-col gap-4">
       <section>
-        <h2 className="text-lg">4 User defined service variables</h2>
+        <h2 className="text-lg">
+          {env_variables.length > 0 ? (
+            <span>
+              {env_variables.length} User defined service&nbsp;
+              {pluralize("variable", env_variables.length)}
+            </span>
+          ) : (
+            <span>No user defined variables</span>
+          )}
+        </h2>
       </section>
       <section>
         <Accordion type="single" collapsible className="border-y border-border">
           <AccordionItem value="system">
             <AccordionTrigger className="text-muted-foreground font-normal text-sm">
-              5 System env variables
+              {system_env_variables.length} System env&nbsp;
+              {pluralize("variable", system_env_variables.length)}
             </AccordionTrigger>
             <AccordionContent className="flex flex-col gap-2">
               <p className="text-muted-foreground py-4 border-y border-border">
                 ZaneOps provides additional system environment variables to all
-                builds and deployments.
+                builds and deployments. variables marked with&nbsp;
+                <code>&#123;&#123;&#125;&#125;</code> are specific to each
+                deployment.
               </p>
               <div className="flex flex-col gap-2">
-                <EnVariableRow
-                  name="ZANE"
-                  value="1"
-                  isLocked
-                  comment="Is the service deployed on zaneops?"
-                />
-                <EnVariableRow
-                  name="ZANE_PRIVATE_DOMAIN"
-                  value="nginx-demo.zaneops.internal"
-                  comment="The domain used to reach this service on the same project"
-                  isLocked
-                />
-                <EnVariableRow
-                  name="ZANE_DEPLOYMENT_TYPE"
-                  value="docker"
-                  comment="The type of the service"
-                  isLocked
-                />
-                <EnVariableRow
-                  name="ZANE_SERVICE_ID"
-                  value="abc123"
-                  isLocked
-                  comment="The service ID"
-                />
-                <EnVariableRow
-                  name="ZANE_PROJECT_ID"
-                  value="def123"
-                  isLocked
-                  comment="The project ID"
-                />
+                {system_env_variables.map((env) => (
+                  <EnVariableRow
+                    name={env.key}
+                    key={env.key}
+                    value={env.value}
+                    isLocked
+                    comment={env.comment}
+                  />
+                ))}
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
       </section>
       <section className="flex flex-col gap-4">
-        <div>
-          <EnVariableRow name="POSTGRES_USER" value="postgres" />
-          <EnVariableRow name="POSTGRES_DB" value="postgres" />
-          <EnVariableRow name="POSTGRES_PASSWORD" value="password" />
-          <EnVariableRow
-            name="DATABASE_URL"
-            value="postgresql://postgres:password@localhost:5433/gh_next"
-            isNotValidated
-          />
-        </div>
-        <hr className="border-border" />
+        {env_variables.length > 0 && (
+          <>
+            <ul>
+              {env_variables.map((env) => (
+                <li>
+                  <EnVariableRow
+                    name={env.key}
+                    value={env.value}
+                    key={env.id}
+                  />
+                </li>
+              ))}
+            </ul>
+            <hr className="border-border" />
+          </>
+        )}
         <h3 className="text-lg">Add new variable</h3>
         <NewEnvVariableForm />
       </section>
