@@ -3172,6 +3172,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
           nullable: true
+        system_env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEnvVariables'
+          default: []
       required:
       - command
       - created_at
@@ -3186,6 +3191,7 @@ components:
       - project_id
       - resource_limits
       - slug
+      - system_env_variables
       - unapplied_changes
       - updated_at
       - urls
@@ -3454,6 +3460,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
           nullable: true
+        system_env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEnvVariables'
+          default: []
       required:
       - command
       - created_at
@@ -3468,6 +3479,7 @@ components:
       - project_id
       - resource_limits
       - slug
+      - system_env_variables
       - unapplied_changes
       - updated_at
       - urls
@@ -6009,6 +6021,19 @@ components:
         * `SYSTEM` - System Logs
         * `PROXY` - Proxy Logs
         * `SERVICE` - Service Logs
+    SystemEnvVariables:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+        comment:
+          type: string
+      required:
+      - comment
+      - key
+      - value
     ToggleDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

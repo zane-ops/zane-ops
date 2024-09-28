@@ -147,6 +147,12 @@ class ResourceLimitsSerializer(serializers.Serializer):
     memory = MemoryLimitSerializer(required=True, allow_null=True)
 
 
+class SystemEnvVariablesSerializer(serializers.Serializer):
+    key = serializers.CharField(allow_null=False)
+    value = serializers.CharField(allow_null=False)
+    comment = serializers.CharField(allow_null=False)
+
+
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
@@ -159,6 +165,9 @@ class DockerServiceSerializer(ModelSerializer):
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
+    system_env_variables = SystemEnvVariablesSerializer(
+        allow_null=False, many=True, default=[]
+    )
 
     class Meta:
         model = models.DockerRegistryService
@@ -180,6 +189,7 @@ class DockerServiceSerializer(ModelSerializer):
             "network_alias",
             "unapplied_changes",
             "resource_limits",
+            "system_env_variables",
         ]
 
 
