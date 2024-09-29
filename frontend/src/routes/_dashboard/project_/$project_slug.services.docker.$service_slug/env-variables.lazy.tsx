@@ -271,10 +271,8 @@ function EnVariableRow({
     }
   });
 
-  const { mutate: removeVariable } = useMutation({
-    mutationFn: async (input: {
-      id: string;
-    }) => {
+  const { mutateAsync: removeVariable } = useMutation({
+    mutationFn: async (id: string) => {
       const { error, data } = await apiClient.PUT(
         "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
         {
@@ -289,13 +287,17 @@ function EnVariableRow({
           },
           body: {
             type: "DELETE",
-            item_id: input.id,
+            item_id: id,
             field: "env_variables"
           }
         }
       );
       if (error) {
-        return error;
+        const fullErrorMessage = error.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
       }
 
       if (data) {
@@ -500,19 +502,34 @@ function EnVariableRow({
                     />
                   </>
                 ) : (
-                  <>
-                    <MenubarContentItem
-                      icon={Edit}
-                      text="Edit"
-                      onClick={() => setIsEditing(true)}
-                    />
-                    <MenubarContentItem
-                      icon={Trash2}
-                      text="Remove"
-                      className="text-red-400"
-                      onClick={() => {}}
-                    />
-                  </>
+                  id && (
+                    <>
+                      <MenubarContentItem
+                        icon={Edit}
+                        text="Edit"
+                        onClick={() => setIsEditing(true)}
+                      />
+                      <MenubarContentItem
+                        icon={Trash2}
+                        text="Remove"
+                        className="text-red-400"
+                        onClick={() =>
+                          toast.promise(removeVariable(id), {
+                            loading: `Sending change request...`,
+                            success: "Success",
+                            error: "Error",
+                            closeButton: true,
+                            description(data) {
+                              if (data instanceof Error) {
+                                return data.message;
+                              }
+                              return "Done.";
+                            }
+                          })
+                        }
+                      />
+                    </>
+                  )
                 )}
               </MenubarContent>
             </MenubarMenu>
