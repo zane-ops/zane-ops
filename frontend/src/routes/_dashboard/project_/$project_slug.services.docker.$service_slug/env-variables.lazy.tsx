@@ -223,56 +223,100 @@ function EnVariableRow({
     }
   });
 
-  const { mutate: editEnvVariable, isPending: isEditingVariable } = useMutation(
-    {
-      mutationFn: async (input: {
-        new_value: string;
-        id: string;
-      }) => {
-        const { error, data } = await apiClient.PUT(
-          "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-          {
-            headers: {
-              ...(await getCsrfTokenHeader())
-            },
-            params: {
-              path: {
-                project_slug,
-                service_slug
-              }
-            },
-            body: {
-              type: "UPDATE",
-              item_id: input.id,
-              field: "env_variables",
-              new_value: {
-                key: name,
-                value: input.new_value
-              }
+  const {
+    mutate: editEnvVariable,
+    isPending: isUpdatingVariableValue,
+    data: editVariableData,
+    reset: resetEditionState
+  } = useMutation({
+    mutationFn: async (input: {
+      new_value: string;
+      id: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "UPDATE",
+            item_id: input.id,
+            field: "env_variables",
+            new_value: {
+              key: name,
+              value: input.new_value
             }
           }
-        );
-        if (error) {
-          return error;
         }
+      );
+      if (error) {
+        return error;
+      }
 
-        if (data) {
-          await queryClient.invalidateQueries({
-            queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-            exact: true
-          });
-          setIsEditing(false);
-          return;
-        }
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsEditing(false);
+        return;
       }
     }
-  );
+  });
+
+  const { mutate: removeVariable } = useMutation({
+    mutationFn: async (input: {
+      id: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "DELETE",
+            item_id: input.id,
+            field: "env_variables"
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsEditing(false);
+        return;
+      }
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(editVariableData);
 
   return (
     <div
       className={cn(
-        "grid items-center gap-4 md:grid-cols-7 grid-cols-3 group pl-4 pt-2 md:py-1",
+        "grid gap-4 items-center md:grid-cols-7 grid-cols-3 group pl-4 pt-2 md:py-1",
         {
+          "items-start": isEditing,
           "dark:bg-secondary-foreground bg-secondary/60 rounded-md":
             change_type === "UPDATE",
           "dark:bg-primary-foreground bg-primary/60 rounded-md":
@@ -282,13 +326,18 @@ function EnVariableRow({
         }
       )}
     >
-      <div className="col-span-3 md:col-span-2 flex flex-col">
+      <div
+        className={cn(
+          "col-span-3 md:col-span-2 flex flex-col",
+          isEditing && "relative top-3"
+        )}
+      >
         <span className="font-mono">{name}</span>
         {comment && <small className="text-muted-foreground">{comment}</small>}
       </div>
       {isEditing && id ? (
-        <form
-          className="col-span-3 md:col-span-5 flex md:items-center gap-3 md:flex-row flex-col pr-4"
+        <Form.Root
+          className="col-span-3 md:col-span-5 flex md:items-start gap-3 md:flex-row flex-col pr-4"
           action={(formData) => {
             editEnvVariable({
               id,
@@ -296,31 +345,58 @@ function EnVariableRow({
             });
           }}
         >
-          <Input
-            placeholder="value"
-            defaultValue={value}
+          <Form.Field
             name="value"
-            className="font-mono"
-          />
+            className="flex-1 inline-flex flex-col gap-1"
+          >
+            <Form.Label className="sr-only">variable value</Form.Label>
+            <Form.Control asChild>
+              <Input
+                placeholder="value"
+                defaultValue={value}
+                name="value"
+                className="font-mono"
+              />
+            </Form.Control>
+            {errors.new_value?.value && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value?.value}
+              </Form.Message>
+            )}
+          </Form.Field>
+
           <div className="flex gap-3">
             <SubmitButton
-              isPending={isEditingVariable}
+              isPending={isUpdatingVariableValue}
               variant="outline"
               className="bg-inherit"
             >
-              <Check size={15} className="flex-none" />
-              <span className="sr-only">Update variable value</span>
+              {isUpdatingVariableValue ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span className="sr-only">Updating variable value...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={15} className="flex-none" />
+                  <span className="sr-only">Update variable value</span>
+                </>
+              )}
             </SubmitButton>
             <Button
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setIsEditing(false);
+                resetEditionState();
+              }}
               variant="outline"
               className="bg-inherit"
+              type="button"
             >
               <X size={15} className="flex-none" />
               <span className="sr-only">Cancel</span>
             </Button>
           </div>
-        </form>
+        </Form.Root>
       ) : (
         <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
           {isOpen ? (
