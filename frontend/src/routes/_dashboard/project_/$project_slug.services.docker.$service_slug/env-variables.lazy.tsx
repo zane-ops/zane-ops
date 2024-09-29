@@ -12,6 +12,7 @@ import {
   LoaderIcon,
   Plus,
   Trash2,
+  Undo2,
   X
 } from "lucide-react";
 import * as React from "react";
@@ -53,6 +54,7 @@ export const Route = createLazyFileRoute(
 
 type EnvVariableUI = {
   change_id?: string;
+  id?: string | null;
   name: string;
   value: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
@@ -69,26 +71,27 @@ function EnvVariablesPage() {
     return <Loader className="h-[50vh]" />;
   }
 
-  const env_variables: Array<EnvVariableUI> =
-    serviceSingleQuery.data?.data?.unapplied_changes
-      .filter((ch) => ch.field === "env_variables")
-      .map((ch) => {
-        const keyValue = (ch.new_value ?? ch.old_value) as {
-          key: string;
-          value: string;
-        };
-        return {
-          change_id: ch.id,
-          name: keyValue.key,
-          value: keyValue.value,
-          change_type: ch.type
-        };
-      }) ?? [];
-
+  const env_variables: Map<string, EnvVariableUI> = new Map();
   for (const env of serviceSingleQuery.data?.data?.env_variables ?? []) {
-    env_variables.push({
+    env_variables.set(env.key, {
+      id: env.id,
       name: env.key,
       value: env.value
+    });
+  }
+  for (const ch of (
+    serviceSingleQuery.data?.data?.unapplied_changes ?? []
+  ).filter((ch) => ch.field === "env_variables")) {
+    const keyValue = (ch.new_value ?? ch.old_value) as {
+      key: string;
+      value: string;
+    };
+    env_variables.set(keyValue.key, {
+      change_id: ch.id,
+      id: ch.item_id,
+      name: keyValue.key,
+      value: keyValue.value,
+      change_type: ch.type
     });
   }
 
@@ -99,10 +102,10 @@ function EnvVariablesPage() {
     <div className="my-6 flex flex-col gap-4">
       <section>
         <h2 className="text-lg">
-          {env_variables.length > 0 ? (
+          {env_variables.size > 0 ? (
             <span>
-              {env_variables.length} User defined service&nbsp;
-              {pluralize("variable", env_variables.length)}
+              {env_variables.size} User defined service&nbsp;
+              {pluralize("variable", env_variables.size)}
             </span>
           ) : (
             <span>No user defined variables</span>
@@ -139,15 +142,15 @@ function EnvVariablesPage() {
         </Accordion>
       </section>
       <section className="flex flex-col gap-4">
-        {env_variables.length > 0 && (
+        {env_variables.size > 0 && (
           <>
             <ul className="flex flex-col gap-1">
-              {env_variables.map((env) => (
-                <li>
+              {[...env_variables.entries()].map(([, env]) => (
+                <li key={env.name}>
                   <EnVariableRow
                     name={env.name}
                     value={env.value}
-                    key={env.name}
+                    id={env.id}
                     change_id={env.change_id}
                     change_type={env.change_type}
                   />
@@ -175,7 +178,8 @@ function EnVariableRow({
   value,
   comment,
   change_type,
-  change_id
+  change_id,
+  id
 }: EnVariableRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -184,7 +188,7 @@ function EnVariableRow({
   const queryClient = useQueryClient();
   const { project_slug, service_slug } = Route.useParams();
 
-  const { mutateAsync: cancelChange } = useMutation({
+  const { mutateAsync: cancelEnvChange } = useMutation({
     mutationFn: async (change_id: string) => {
       const { error, data } = await apiClient.DELETE(
         "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
@@ -219,6 +223,51 @@ function EnVariableRow({
     }
   });
 
+  const { mutate: editEnvVariable, isPending: isEditingVariable } = useMutation(
+    {
+      mutationFn: async (input: {
+        new_value: string;
+        id: string;
+      }) => {
+        const { error, data } = await apiClient.PUT(
+          "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+          {
+            headers: {
+              ...(await getCsrfTokenHeader())
+            },
+            params: {
+              path: {
+                project_slug,
+                service_slug
+              }
+            },
+            body: {
+              type: "UPDATE",
+              item_id: input.id,
+              field: "env_variables",
+              new_value: {
+                key: name,
+                value: input.new_value
+              }
+            }
+          }
+        );
+        if (error) {
+          return error;
+        }
+
+        if (data) {
+          await queryClient.invalidateQueries({
+            queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+            exact: true
+          });
+          setIsEditing(false);
+          return;
+        }
+      }
+    }
+  );
+
   return (
     <div
       className={cn(
@@ -237,10 +286,15 @@ function EnVariableRow({
         <span className="font-mono">{name}</span>
         {comment && <small className="text-muted-foreground">{comment}</small>}
       </div>
-      {isEditing ? (
+      {isEditing && id ? (
         <form
           className="col-span-3 md:col-span-5 flex md:items-center gap-3 md:flex-row flex-col pr-4"
-          action={() => {}}
+          action={(formData) => {
+            editEnvVariable({
+              id,
+              new_value: formData.get("value")?.toString() ?? ""
+            });
+          }}
         >
           <Input
             placeholder="value"
@@ -250,7 +304,7 @@ function EnVariableRow({
           />
           <div className="flex gap-3">
             <SubmitButton
-              isPending={false}
+              isPending={isEditingVariable}
               variant="outline"
               className="bg-inherit"
             >
@@ -350,11 +404,11 @@ function EnVariableRow({
                 {change_id !== undefined ? (
                   <>
                     <MenubarContentItem
-                      icon={Ban}
-                      text="Cancel change"
+                      icon={Undo2}
+                      text="Revert change"
                       className="text-red-400"
                       onClick={() =>
-                        toast.promise(cancelChange(change_id), {
+                        toast.promise(cancelEnvChange(change_id), {
                           loading: `Cancelling env variable change...`,
                           success: "Success",
                           error: "Error",
