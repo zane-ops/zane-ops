@@ -1,17 +1,25 @@
+import * as Form from "@radix-ui/react-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
+  Ban,
   Check,
   Copy,
   Edit,
   EllipsisVertical,
   Eye,
   EyeOffIcon,
+  LoaderIcon,
   Plus,
   Trash2,
+  Undo2,
   X
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
+import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
+import { Loader } from "~/components/loader";
 import {
   Accordion,
   AccordionContent,
@@ -33,8 +41,10 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
-import { wait } from "~/utils";
+import { serviceKeys } from "~/key-factories";
+import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/env-variables"
@@ -42,71 +52,114 @@ export const Route = createLazyFileRoute(
   component: withAuthRedirect(EnvVariablesPage)
 });
 
+type EnvVariableUI = {
+  change_id?: string;
+  id?: string | null;
+  name: string;
+  value: string;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+};
+
 function EnvVariablesPage() {
+  const { project_slug, service_slug } = Route.useParams();
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  if (serviceSingleQuery.isLoading) {
+    return <Loader className="h-[50vh]" />;
+  }
+
+  const env_variables: Map<string, EnvVariableUI> = new Map();
+  for (const env of serviceSingleQuery.data?.data?.env_variables ?? []) {
+    env_variables.set(env.key, {
+      id: env.id,
+      name: env.key,
+      value: env.value
+    });
+  }
+  for (const ch of (
+    serviceSingleQuery.data?.data?.unapplied_changes ?? []
+  ).filter((ch) => ch.field === "env_variables")) {
+    const keyValue = (ch.new_value ?? ch.old_value) as {
+      key: string;
+      value: string;
+    };
+    env_variables.set(keyValue.key, {
+      change_id: ch.id,
+      id: ch.item_id,
+      name: keyValue.key,
+      value: keyValue.value,
+      change_type: ch.type
+    });
+  }
+
+  const system_env_variables =
+    serviceSingleQuery.data?.data?.system_env_variables ?? [];
+
   return (
     <div className="my-6 flex flex-col gap-4">
       <section>
-        <h2 className="text-lg">4 User defined service variables</h2>
+        <h2 className="text-lg">
+          {env_variables.size > 0 ? (
+            <span>
+              {env_variables.size} User defined service&nbsp;
+              {pluralize("variable", env_variables.size)}
+            </span>
+          ) : (
+            <span>No user defined variables</span>
+          )}
+        </h2>
       </section>
       <section>
         <Accordion type="single" collapsible className="border-y border-border">
           <AccordionItem value="system">
             <AccordionTrigger className="text-muted-foreground font-normal text-sm">
-              5 System env variables
+              {system_env_variables.length} System env&nbsp;
+              {pluralize("variable", system_env_variables.length)}
             </AccordionTrigger>
             <AccordionContent className="flex flex-col gap-2">
               <p className="text-muted-foreground py-4 border-y border-border">
                 ZaneOps provides additional system environment variables to all
-                builds and deployments.
+                builds and deployments. variables marked with&nbsp;
+                <code>&#123;&#123;&#125;&#125;</code> are specific to each
+                deployment.
               </p>
               <div className="flex flex-col gap-2">
-                <EnVariableRow
-                  name="ZANE"
-                  value="1"
-                  isLocked
-                  comment="Is the service deployed on zaneops?"
-                />
-                <EnVariableRow
-                  name="ZANE_PRIVATE_DOMAIN"
-                  value="nginx-demo.zaneops.internal"
-                  comment="The domain used to reach this service on the same project"
-                  isLocked
-                />
-                <EnVariableRow
-                  name="ZANE_DEPLOYMENT_TYPE"
-                  value="docker"
-                  comment="The type of the service"
-                  isLocked
-                />
-                <EnVariableRow
-                  name="ZANE_SERVICE_ID"
-                  value="abc123"
-                  isLocked
-                  comment="The service ID"
-                />
-                <EnVariableRow
-                  name="ZANE_PROJECT_ID"
-                  value="def123"
-                  isLocked
-                  comment="The project ID"
-                />
+                {system_env_variables.map((env) => (
+                  <EnVariableRow
+                    name={env.key}
+                    key={env.key}
+                    value={env.value}
+                    isLocked
+                    comment={env.comment}
+                  />
+                ))}
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
       </section>
       <section className="flex flex-col gap-4">
-        <div>
-          <EnVariableRow name="POSTGRES_USER" value="postgres" />
-          <EnVariableRow name="POSTGRES_DB" value="postgres" />
-          <EnVariableRow name="POSTGRES_PASSWORD" value="password" />
-          <EnVariableRow
-            name="DATABASE_URL"
-            value="postgresql://postgres:password@localhost:5433/gh_next"
-            isNotValidated
-          />
-        </div>
-        <hr className="border-border" />
+        {env_variables.size > 0 && (
+          <>
+            <ul className="flex flex-col gap-1">
+              {[...env_variables.entries()].map(([, env]) => (
+                <li key={env.name}>
+                  <EnVariableRow
+                    name={env.name}
+                    value={env.value}
+                    id={env.id}
+                    change_id={env.change_id}
+                    change_type={env.change_type}
+                  />
+                </li>
+              ))}
+            </ul>
+            <hr className="border-border" />
+          </>
+        )}
         <h3 className="text-lg">Add new variable</h3>
         <NewEnvVariableForm />
       </section>
@@ -114,12 +167,9 @@ function EnvVariablesPage() {
   );
 }
 
-type EnVariableRowProps = {
+type EnVariableRowProps = EnvVariableUI & {
   isLocked?: boolean;
-  name: string;
-  value: string;
   comment?: string;
-  isNotValidated?: boolean;
 };
 
 function EnVariableRow({
@@ -127,54 +177,228 @@ function EnVariableRow({
   name,
   value,
   comment,
-  isNotValidated = false
+  change_type,
+  change_id,
+  id
 }: EnVariableRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
 
+  const queryClient = useQueryClient();
+  const { project_slug, service_slug } = Route.useParams();
+
+  const { mutateAsync: cancelEnvChange } = useMutation({
+    mutationFn: async (change_id: string) => {
+      const { error, data } = await apiClient.DELETE(
+        "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug,
+              change_id
+            }
+          }
+        }
+      );
+      if (error) {
+        const fullErrorMessage = error.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
+  const {
+    mutate: editEnvVariable,
+    isPending: isUpdatingVariableValue,
+    data: editVariableData,
+    reset: resetEditionState
+  } = useMutation({
+    mutationFn: async (input: {
+      new_value: string;
+      id: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "UPDATE",
+            item_id: input.id,
+            field: "env_variables",
+            new_value: {
+              key: name,
+              value: input.new_value
+            }
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsEditing(false);
+        return;
+      }
+    }
+  });
+
+  const { mutateAsync: removeVariable } = useMutation({
+    mutationFn: async (id: string) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "DELETE",
+            item_id: id,
+            field: "env_variables"
+          }
+        }
+      );
+      if (error) {
+        const fullErrorMessage = error.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsEditing(false);
+        return;
+      }
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(editVariableData);
+
   return (
     <div
       className={cn(
-        "grid items-center gap-4 md:grid-cols-7 grid-cols-3 group pl-4 py-2",
-        isNotValidated &&
-          "dark:bg-secondary-foreground bg-secondary/60 rounded-md"
+        "grid gap-4 items-center md:grid-cols-7 grid-cols-3 group pl-4 pt-2 md:py-1",
+        {
+          "items-start": isEditing,
+          "dark:bg-secondary-foreground bg-secondary/60 rounded-md":
+            change_type === "UPDATE",
+          "dark:bg-primary-foreground bg-primary/60 rounded-md":
+            change_type === "ADD",
+          "dark:bg-red-500/30 bg-red-400/60 rounded-md":
+            change_type === "DELETE"
+        }
       )}
     >
-      <div className="col-span-3 md:col-span-2 flex flex-col">
+      <div
+        className={cn(
+          "col-span-3 md:col-span-2 flex flex-col",
+          isEditing && "md:relative md:top-3"
+        )}
+      >
         <span className="font-mono">{name}</span>
         {comment && <small className="text-muted-foreground">{comment}</small>}
       </div>
-      {isEditing ? (
-        <form
-          className="col-span-3 md:col-span-5 flex md:items-center gap-3 md:flex-row flex-col pr-4"
-          action={() => {}}
+      {isEditing && id ? (
+        <Form.Root
+          className="col-span-3 md:col-span-5 flex md:items-start gap-3 md:flex-row flex-col pr-4"
+          action={(formData) => {
+            editEnvVariable({
+              id,
+              new_value: formData.get("value")?.toString() ?? ""
+            });
+          }}
         >
-          <Input
-            placeholder="value"
-            defaultValue={value}
+          <Form.Field
             name="value"
-            className="font-mono"
-          />
+            className="flex-1 inline-flex flex-col gap-1"
+          >
+            <Form.Label className="sr-only">variable value</Form.Label>
+            <Form.Control asChild>
+              <Input
+                placeholder="value"
+                defaultValue={value}
+                name="value"
+                className="font-mono"
+              />
+            </Form.Control>
+            {errors.new_value?.value && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value?.value}
+              </Form.Message>
+            )}
+          </Form.Field>
+
           <div className="flex gap-3">
             <SubmitButton
-              isPending={false}
+              isPending={isUpdatingVariableValue}
               variant="outline"
               className="bg-inherit"
             >
-              <Check size={15} className="flex-none" />
-              <span className="sr-only">Update variable value</span>
+              {isUpdatingVariableValue ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span className="sr-only">Updating variable value...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={15} className="flex-none" />
+                  <span className="sr-only">Update variable value</span>
+                </>
+              )}
             </SubmitButton>
             <Button
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setIsEditing(false);
+                resetEditionState();
+              }}
               variant="outline"
               className="bg-inherit"
+              type="button"
             >
               <X size={15} className="flex-none" />
               <span className="sr-only">Cancel</span>
             </Button>
           </div>
-        </form>
+        </Form.Root>
       ) : (
         <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
           {isOpen ? (
@@ -255,17 +479,58 @@ function EnVariableRow({
                 align="start"
                 className="border min-w-0 mx-9 border-border"
               >
-                <MenubarContentItem
-                  icon={Edit}
-                  text="Edit"
-                  onClick={() => setIsEditing(true)}
-                />
-                <MenubarContentItem
-                  icon={Trash2}
-                  text="Remove"
-                  className="text-red-400"
-                  onClick={() => {}}
-                />
+                {change_id !== undefined ? (
+                  <>
+                    <MenubarContentItem
+                      icon={Undo2}
+                      text="Revert change"
+                      className="text-red-400"
+                      onClick={() =>
+                        toast.promise(cancelEnvChange(change_id), {
+                          loading: `Cancelling env variable change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        })
+                      }
+                    />
+                  </>
+                ) : (
+                  id && (
+                    <>
+                      <MenubarContentItem
+                        icon={Edit}
+                        text="Edit"
+                        onClick={() => setIsEditing(true)}
+                      />
+                      <MenubarContentItem
+                        icon={Trash2}
+                        text="Remove"
+                        className="text-red-400"
+                        onClick={() =>
+                          toast.promise(removeVariable(id), {
+                            loading: `Sending change request...`,
+                            success: "Success",
+                            error: "Error",
+                            closeButton: true,
+                            description(data) {
+                              if (data instanceof Error) {
+                                return data.message;
+                              }
+                              return "Done.";
+                            }
+                          })
+                        }
+                      />
+                    </>
+                  )
+                )}
               </MenubarContent>
             </MenubarMenu>
           </Menubar>
@@ -276,26 +541,107 @@ function EnVariableRow({
 }
 
 function NewEnvVariableForm() {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data } = useMutation({
+    mutationFn: async (input: {
+      key: string;
+      value: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "ADD",
+            field: "env_variables",
+            new_value: input
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        formRef.current?.reset();
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+
   return (
-    <form
-      action={() => {}}
-      className="flex md:items-center gap-3 md:flex-row flex-col items-stretch"
+    <Form.Root
+      action={(formData) => {
+        mutate({
+          key: (formData.get("key") ?? "").toString(),
+          value: (formData.get("value") ?? "").toString()
+        });
+      }}
+      ref={formRef}
+      className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >
-      <Input placeholder="VARIABLE_NAME" name="name" className="font-mono" />
-      <Input placeholder="value" name="value" className="font-mono" />
+      <Form.Field name="key" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="sr-only">variable name</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="VARIABLE_NAME" className="font-mono" />
+        </Form.Control>
+        {errors.new_value?.key && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value?.key}
+          </Form.Message>
+        )}
+      </Form.Field>
+      <Form.Field name="value" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="sr-only">variable value</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="value" name="value" className="font-mono" />
+        </Form.Control>
+        {errors.new_value?.value && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value?.value}
+          </Form.Message>
+        )}
+      </Form.Field>
+
       <div className="flex gap-3 items-center w-full md:w-auto">
         <SubmitButton
-          isPending={false}
+          isPending={isPending}
           variant="secondary"
           className="inline-flex gap-1 flex-1"
         >
-          <span>Add</span>
-          <Plus size={15} />
+          {isPending ? (
+            <>
+              <span>Adding...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              <span>Add</span>
+              <Plus size={15} />
+            </>
+          )}
         </SubmitButton>
         <Button variant="outline" type="reset" className="flex-1">
           Cancel
         </Button>
       </div>
-    </form>
+    </Form.Root>
   );
 }
