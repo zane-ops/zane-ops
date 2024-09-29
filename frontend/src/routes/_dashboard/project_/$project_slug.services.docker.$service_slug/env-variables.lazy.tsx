@@ -331,7 +331,7 @@ function EnVariableRow({
       <div
         className={cn(
           "col-span-3 md:col-span-2 flex flex-col",
-          isEditing && "relative top-3"
+          isEditing && "md:relative md:top-3"
         )}
       >
         <span className="font-mono">{name}</span>
