@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
@@ -173,16 +174,55 @@ function EnVariableRow({
   name,
   value,
   comment,
-  change_type
+  change_type,
+  change_id
 }: EnVariableRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
 
+  const queryClient = useQueryClient();
+  const { project_slug, service_slug } = Route.useParams();
+
+  const { mutateAsync: cancelChange } = useMutation({
+    mutationFn: async (change_id: string) => {
+      const { error, data } = await apiClient.DELETE(
+        "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug,
+              change_id
+            }
+          }
+        }
+      );
+      if (error) {
+        const fullErrorMessage = error.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
   return (
     <div
       className={cn(
-        "grid items-center gap-4 md:grid-cols-7 grid-cols-3 group pl-4 py-2",
+        "grid items-center gap-4 md:grid-cols-7 grid-cols-3 group pl-4 pt-2 md:py-1",
         {
           "dark:bg-secondary-foreground bg-secondary/60 rounded-md":
             change_type === "UPDATE",
@@ -307,13 +347,26 @@ function EnVariableRow({
                 align="start"
                 className="border min-w-0 mx-9 border-border"
               >
-                {Boolean(change_type) ? (
+                {change_id !== undefined ? (
                   <>
                     <MenubarContentItem
                       icon={Ban}
                       text="Cancel change"
                       className="text-red-400"
-                      onClick={() => {}}
+                      onClick={() =>
+                        toast.promise(cancelChange(change_id), {
+                          loading: `Cancelling env variable change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        })
+                      }
                     />
                   </>
                 ) : (
