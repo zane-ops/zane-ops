@@ -72,11 +72,11 @@ ALLOWED_HOSTS = (
     if ENVIRONMENT != PRODUCTION_ENV
     else [f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
 )
-SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
+SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}" if ENVIRONMENT == PRODUCTION_ENV else None
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
-    [f"https://{ZANE_APP_DOMAIN}", f"http://{ZANE_APP_DOMAIN}"]
+    [f"https://{ZANE_APP_DOMAIN}", f"http://{ZANE_APP_DOMAIN}", "http://localhost:5678"]
     if ENVIRONMENT != PRODUCTION_ENV
     else [f"https://{ZANE_APP_DOMAIN}"]
 )
