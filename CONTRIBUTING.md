@@ -57,7 +57,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     pnpm run  --filter='!backend' --recursive --parallel dev
     ```
 
-   Wait until you see `Server launched at http://app.127-0-0-1.sslip.io` in the terminal . Then, start the development server for the API:
+   Wait until you see `Server launched at http://localhost:5678` in the terminal . Then, start the development server for the API:
     ```shell
     make dev-api
     # or
@@ -72,7 +72,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 5. Open the source code and start working :
 
-   The app should be available at http://app.127-0-0-1.sslip.io
+   The app should be available at http://localhost:5678
 
 ## Debugging
 
