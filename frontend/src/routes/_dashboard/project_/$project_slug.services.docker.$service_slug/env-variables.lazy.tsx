@@ -1,16 +1,21 @@
+import * as Form from "@radix-ui/react-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
+  Ban,
   Check,
   Copy,
   Edit,
   EllipsisVertical,
   Eye,
   EyeOffIcon,
+  LoaderIcon,
   Plus,
   Trash2,
   X
 } from "lucide-react";
 import * as React from "react";
+import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import {
@@ -34,15 +39,23 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { serviceKeys } from "~/key-factories";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
-import { cn } from "~/lib/utils";
-import { pluralize, wait } from "~/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/env-variables"
 )({
   component: withAuthRedirect(EnvVariablesPage)
 });
+
+type EnvVariableUI = {
+  change_id?: string;
+  name: string;
+  value: string;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+};
 
 function EnvVariablesPage() {
   const { project_slug, service_slug } = Route.useParams();
@@ -55,7 +68,29 @@ function EnvVariablesPage() {
     return <Loader className="h-[50vh]" />;
   }
 
-  const env_variables = serviceSingleQuery.data?.data?.env_variables ?? [];
+  const env_variables: Array<EnvVariableUI> =
+    serviceSingleQuery.data?.data?.unapplied_changes
+      .filter((ch) => ch.field === "env_variables")
+      .map((ch) => {
+        const keyValue = (ch.new_value ?? ch.old_value) as {
+          key: string;
+          value: string;
+        };
+        return {
+          change_id: ch.id,
+          name: keyValue.key,
+          value: keyValue.value,
+          change_type: ch.type
+        };
+      }) ?? [];
+
+  for (const env of serviceSingleQuery.data?.data?.env_variables ?? []) {
+    env_variables.push({
+      name: env.key,
+      value: env.value
+    });
+  }
+
   const system_env_variables =
     serviceSingleQuery.data?.data?.system_env_variables ?? [];
 
@@ -105,13 +140,15 @@ function EnvVariablesPage() {
       <section className="flex flex-col gap-4">
         {env_variables.length > 0 && (
           <>
-            <ul>
+            <ul className="flex flex-col gap-1">
               {env_variables.map((env) => (
                 <li>
                   <EnVariableRow
-                    name={env.key}
+                    name={env.name}
                     value={env.value}
-                    key={env.id}
+                    key={env.name}
+                    change_id={env.change_id}
+                    change_type={env.change_type}
                   />
                 </li>
               ))}
@@ -126,12 +163,9 @@ function EnvVariablesPage() {
   );
 }
 
-type EnVariableRowProps = {
+type EnVariableRowProps = EnvVariableUI & {
   isLocked?: boolean;
-  name: string;
-  value: string;
   comment?: string;
-  isNotValidated?: boolean;
 };
 
 function EnVariableRow({
@@ -139,7 +173,7 @@ function EnVariableRow({
   name,
   value,
   comment,
-  isNotValidated = false
+  change_type
 }: EnVariableRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -149,8 +183,14 @@ function EnVariableRow({
     <div
       className={cn(
         "grid items-center gap-4 md:grid-cols-7 grid-cols-3 group pl-4 py-2",
-        isNotValidated &&
-          "dark:bg-secondary-foreground bg-secondary/60 rounded-md"
+        {
+          "dark:bg-secondary-foreground bg-secondary/60 rounded-md":
+            change_type === "UPDATE",
+          "dark:bg-primary-foreground bg-primary/60 rounded-md":
+            change_type === "ADD",
+          "dark:bg-red-500/30 bg-red-400/60 rounded-md":
+            change_type === "DELETE"
+        }
       )}
     >
       <div className="col-span-3 md:col-span-2 flex flex-col">
@@ -267,17 +307,30 @@ function EnVariableRow({
                 align="start"
                 className="border min-w-0 mx-9 border-border"
               >
-                <MenubarContentItem
-                  icon={Edit}
-                  text="Edit"
-                  onClick={() => setIsEditing(true)}
-                />
-                <MenubarContentItem
-                  icon={Trash2}
-                  text="Remove"
-                  className="text-red-400"
-                  onClick={() => {}}
-                />
+                {Boolean(change_type) ? (
+                  <>
+                    <MenubarContentItem
+                      icon={Ban}
+                      text="Cancel change"
+                      className="text-red-400"
+                      onClick={() => {}}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <MenubarContentItem
+                      icon={Edit}
+                      text="Edit"
+                      onClick={() => setIsEditing(true)}
+                    />
+                    <MenubarContentItem
+                      icon={Trash2}
+                      text="Remove"
+                      className="text-red-400"
+                      onClick={() => {}}
+                    />
+                  </>
+                )}
               </MenubarContent>
             </MenubarMenu>
           </Menubar>
@@ -288,26 +341,107 @@ function EnVariableRow({
 }
 
 function NewEnvVariableForm() {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data } = useMutation({
+    mutationFn: async (input: {
+      key: string;
+      value: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "ADD",
+            field: "env_variables",
+            new_value: input
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        formRef.current?.reset();
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+
   return (
-    <form
-      action={() => {}}
-      className="flex md:items-center gap-3 md:flex-row flex-col items-stretch"
+    <Form.Root
+      action={(formData) => {
+        mutate({
+          key: (formData.get("key") ?? "").toString(),
+          value: (formData.get("value") ?? "").toString()
+        });
+      }}
+      ref={formRef}
+      className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >
-      <Input placeholder="VARIABLE_NAME" name="name" className="font-mono" />
-      <Input placeholder="value" name="value" className="font-mono" />
+      <Form.Field name="key" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="sr-only">variable name</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="VARIABLE_NAME" className="font-mono" />
+        </Form.Control>
+        {errors.new_value?.key && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value?.key}
+          </Form.Message>
+        )}
+      </Form.Field>
+      <Form.Field name="value" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="sr-only">variable value</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="value" name="value" className="font-mono" />
+        </Form.Control>
+        {errors.new_value?.value && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value?.value}
+          </Form.Message>
+        )}
+      </Form.Field>
+
       <div className="flex gap-3 items-center w-full md:w-auto">
         <SubmitButton
-          isPending={false}
+          isPending={isPending}
           variant="secondary"
           className="inline-flex gap-1 flex-1"
         >
-          <span>Add</span>
-          <Plus size={15} />
+          {isPending ? (
+            <>
+              <span>Adding...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              <span>Add</span>
+              <Plus size={15} />
+            </>
+          )}
         </SubmitButton>
         <Button variant="outline" type="reset" className="flex-1">
           Cancel
         </Button>
       </div>
-    </form>
+    </Form.Root>
   );
 }
