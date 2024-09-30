@@ -260,9 +260,9 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
         </Form.Field>
 
         <div className="flex flex-col gap-3">
-          <h1 className="text-lg">
+          <h2 className="text-lg">
             Credentials <span className="text-gray-400">(optional)</span>
-          </h1>
+          </h2>
           <p className="text-gray-400">
             If your image is on a private registry, please provide these
             information below.

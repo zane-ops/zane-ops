@@ -136,9 +136,7 @@ function ServiceDetailsLayout() {
               <h1 className="text-2xl">{service.slug}</h1>
               <p className="flex gap-1 items-center">
                 <Container size={15} />
-                <span className="text-gray-500 dark:text-gray-400 text-sm">
-                  {serviceImage}
-                </span>
+                <span className="text-grey text-sm">{serviceImage}</span>
               </p>
               {service.urls.length > 0 && (
                 <div className="flex gap-3 items-center flex-wrap">
