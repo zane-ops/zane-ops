@@ -64,7 +64,7 @@ function SettingsPage() {
 
           <div className="w-full flex flex-col gap-5 pt-1 pb-8">
             <h2 className="text-lg text-grey">Details</h2>
-            <ServiceSlugForm className="w-full max-w-2xl" />
+            <ServiceSlugForm className="w-full max-w-4xl" />
           </div>
         </section>
 
@@ -76,10 +76,10 @@ function SettingsPage() {
             <div className="h-full border border-grey/50"></div>
           </div>
 
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Source</h2>
-            <ServiceImageForm className="w-full max-w-2xl" />
-            <ServiceImageCredentialsForm className="w-full max-w-2xl" />
+            <ServiceImageForm className="w-full max-w-4xl" />
+            <ServiceImageCredentialsForm className="w-full max-w-4xl" />
           </div>
         </section>
 
@@ -90,9 +90,9 @@ function SettingsPage() {
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Networking</h2>
-            <ServicePortsForm className="w-full max-w-2xl" />
+            <ServicePortsForm className="w-full max-w-4xl" />
           </div>
         </section>
 
@@ -103,7 +103,7 @@ function SettingsPage() {
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
           </div>
         </section>
@@ -115,7 +115,7 @@ function SettingsPage() {
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Volumes</h2>
           </div>
         </section>
@@ -126,9 +126,9 @@ function SettingsPage() {
               <FlameIcon size={15} className="flex-none text-red-500" />
             </div>
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-red-400">Danger Zone</h2>
-            <ServiceDangerZoneForm className="w-full max-w-2xl" />
+            <ServiceDangerZoneForm className="w-full max-w-4xl" />
           </div>
         </section>
       </div>
