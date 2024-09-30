@@ -264,7 +264,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
             Credentials <span className="text-gray-400">(optional)</span>
           </h2>
           <p className="text-gray-400">
-            If your image is on a private registry, please provide these
+            If your image is on a private registry, please provide the
             information below.
           </p>
         </div>
