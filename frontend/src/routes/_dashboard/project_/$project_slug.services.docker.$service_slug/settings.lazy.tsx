@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOffIcon,
   FlameIcon,
+  GlobeLockIcon,
   HammerIcon,
   HardDrive,
   InfoIcon,
@@ -27,6 +28,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
+import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import {
   Accordion,
@@ -105,6 +107,8 @@ function SettingsPage() {
             <ServicePortsForm className="w-full max-w-4xl" />
             <hr className="w-full max-w-4xl border-border" />
             <ServiceURLsForm className="w-full max-w-4xl" />
+            <hr className="w-full max-w-4xl border-border" />
+            <NetworkAliasesGroup className="w-full max-w-4xl border-border" />
           </div>
         </section>
 
@@ -419,17 +423,10 @@ function ServicePortsForm({ className }: ServiceFormProps) {
         <p className="text-gray-400">
           This makes the service reachable externally via the ports defined
           in&nbsp;
-          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
-            host port
-          </code>
-          . Using&nbsp;
-          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
-            80
-          </code>
+          <Code>host port</Code>. Using&nbsp;
+          <Code>80</Code>
           &nbsp;or&nbsp;
-          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
-            443
-          </code>
+          <Code>443</Code>
           &nbsp;will create a default URL for the service.
         </p>
 
@@ -632,13 +629,9 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
         <p className="text-gray-400">
           The domains and base path which are associated to this service. A port
           with a host value of&nbsp;
-          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
-            80
-          </code>
+          <Code>80</Code>
           &nbsp;or&nbsp;
-          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
-            443
-          </code>
+          <Code>443</Code>
           &nbsp; is required to be able to add URLs to this service.
         </p>
       </div>
@@ -891,6 +884,44 @@ function ServiceURLFormItem({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+    </div>
+  );
+}
+
+function NewServiceURLForm({ className }: ServiceFormProps) {
+  return <></>;
+}
+
+function NetworkAliasesGroup({ className }: ServiceFormProps) {
+  return (
+    <div className={cn("flex flex-col gap-5", className)}>
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg">Network alias</h3>
+        <p className="text-gray-400">
+          You can reach this service from within the same project using this
+          value
+        </p>
+      </div>
+      <div className="border border-border p-4 rounded-md flex items-center gap-4 group">
+        <GlobeLockIcon className="text-grey" size={20} />
+        <div className="flex flex-col gap-0.5">
+          <div className="flex gap-2 items-center">
+            <span className="text-lg">
+              nginx-demo-npUHRTJ7SvQ.zaneops.internal
+            </span>
+            <Button
+              variant="ghost"
+              className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              <CopyIcon size={15} className="flex-none" />
+              <span className="sr-only">Copy url</span>
+            </Button>
+          </div>
+          <small className="text-grey">
+            You can also simply use <Code>nginx-demo-npUHRTJ7SvQ</Code>
+          </small>
+        </div>
+      </div>
     </div>
   );
 }
