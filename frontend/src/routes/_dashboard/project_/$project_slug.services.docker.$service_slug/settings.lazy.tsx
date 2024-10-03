@@ -1,10 +1,8 @@
 import * as Form from "@radix-ui/react-form";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import {
-  ArrowRight,
   ArrowRightIcon,
   CableIcon,
-  Check,
   CheckIcon,
   ContainerIcon,
   CopyIcon,
@@ -21,6 +19,7 @@ import {
   LoaderIcon,
   PencilLineIcon,
   Plus,
+  PlusIcon,
   Trash2,
   Trash2Icon,
   TriangleAlertIcon,
@@ -47,7 +46,6 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { Switch } from "~/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -95,14 +93,14 @@ function SettingsPage() {
           </div>
         </section>
 
-        <section id="networking" className="flex gap-1 scroll-mt-22">
+        <section id="networking" className="flex gap-1 scroll-mt-20">
           <div className="w-16 flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <CableIcon size={15} className="flex-none text-grey" />
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-8 pt-1 pb-14">
+          <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <h2 className="text-lg text-grey">Networking</h2>
             <ServicePortsForm className="w-full max-w-4xl" />
             <hr className="w-full max-w-4xl border-border" />
@@ -112,7 +110,7 @@ function SettingsPage() {
           </div>
         </section>
 
-        <section id="deploy" className="flex gap-1 scroll-mt-22">
+        <section id="deploy" className="flex gap-1 scroll-mt-20">
           <div className="w-16 flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HammerIcon size={15} className="flex-none text-grey" />
@@ -124,7 +122,7 @@ function SettingsPage() {
           </div>
         </section>
 
-        <section id="volumes" className="flex gap-1 scroll-mt-22">
+        <section id="volumes" className="flex gap-1 scroll-mt-20">
           <div className="w-16 flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HardDrive size={15} className="flex-none text-grey" />
@@ -136,7 +134,7 @@ function SettingsPage() {
           </div>
         </section>
 
-        <section id="danger-zone" className="flex gap-1 scroll-mt-22">
+        <section id="danger-zone" className="flex gap-1 scroll-mt-20">
           <div className="w-16 flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
               <FlameIcon size={15} className="flex-none text-red-500" />
@@ -211,7 +209,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
                </>
              ) : ( */}
             <>
-              <Check size={15} className="flex-none" />
+              <CheckIcon size={15} className="flex-none" />
               <span className="sr-only">Update variable value</span>
             </>
             {/* )} */}
@@ -290,7 +288,7 @@ function ServiceImageForm({ className }: ServiceFormProps) {
                </>
              ) : ( */}
             <>
-              <Check size={15} className="flex-none" />
+              <CheckIcon size={15} className="flex-none" />
               <span className="sr-only">Update variable value</span>
             </>
             {/* )} */}
@@ -406,7 +404,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
                </>
              ) : ( */}
         <>
-          <Check size={15} className="flex-none" />
+          <CheckIcon size={15} className="flex-none" />
           <span>Update</span>
         </>
         {/* )} */}
@@ -657,6 +655,9 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
           />
         </li>
       </ul>
+      <hr className="border-border" />
+      <h3 className="text-lg">Add new url</h3>
+      <NewServiceURLForm />
     </div>
   );
 }
@@ -852,7 +853,7 @@ function ServiceURLFormItem({
                     </Form.Control>
 
                     <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                      permenant redirect
+                      permanent redirect
                       <TooltipProvider>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
@@ -888,8 +889,122 @@ function ServiceURLFormItem({
   );
 }
 
-function NewServiceURLForm({ className }: ServiceFormProps) {
-  return <></>;
+function NewServiceURLForm() {
+  const [isRedirect, setIsRedirect] = React.useState(false);
+  return (
+    <Form.Root
+      action={() => {}}
+      className="flex flex-col gap-4 border border-border p-4 rounded-md"
+    >
+      <Form.Field name="domain" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="text-gray-400">domain</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: www.mysupersaas.co" />
+        </Form.Control>
+      </Form.Field>
+      <Form.Field
+        name="base_path"
+        className="flex-1 inline-flex flex-col gap-1"
+      >
+        <Form.Label className="text-gray-400">base path</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: /" defaultValue={"/"} />
+        </Form.Control>
+      </Form.Field>
+
+      <Form.Field
+        name="strip_prefix"
+        className="flex-1 inline-flex gap-2 items-center"
+      >
+        <Form.Control asChild>
+          <Checkbox />
+        </Form.Control>
+
+        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+          strip path prefix ?
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger>
+                <InfoIcon size={15} />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-48">
+                Wether or not to omit the base path when passing the request to
+                your service.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Form.Label>
+      </Form.Field>
+
+      <Form.Field
+        name="is_redirect"
+        className="flex-1 inline-flex gap-2 items-center"
+      >
+        <Form.Control asChild>
+          <Checkbox
+            defaultChecked={isRedirect}
+            onCheckedChange={(state) => setIsRedirect(Boolean(state))}
+          />
+        </Form.Control>
+
+        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+          is redirect ?
+        </Form.Label>
+      </Form.Field>
+
+      {isRedirect && (
+        <div className="flex flex-col gap-4 pl-4">
+          <Form.Field
+            name="redirect_to_url"
+            className="flex-1 inline-flex flex-col gap-1"
+          >
+            <Form.Label className="text-gray-400">redirect to url</Form.Label>
+            <Form.Control asChild>
+              <Input placeholder="ex: https://mysupersaas.co/" />
+            </Form.Control>
+          </Form.Field>
+
+          <Form.Field
+            name="redirect_to_permanent"
+            className="flex-1 inline-flex gap-2 items-center"
+          >
+            <Form.Control asChild>
+              <Checkbox />
+            </Form.Control>
+
+            <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+              permanent redirect
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger>
+                    <InfoIcon size={15} />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-64 text-balance">
+                    If checked, ZaneoOps will redirect with a 308 status code;
+                    otherwise, it will redirect with a 307 status code.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Form.Label>
+          </Form.Field>
+        </div>
+      )}
+
+      <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
+        <SubmitButton
+          variant="secondary"
+          isPending={false}
+          className="inline-flex gap-1"
+        >
+          Add
+          <PlusIcon size={15} />
+        </SubmitButton>
+        <Button variant="outline" type="reset">
+          Cancel
+        </Button>
+      </div>
+    </Form.Root>
+  );
 }
 
 function NetworkAliasesGroup({ className }: ServiceFormProps) {
