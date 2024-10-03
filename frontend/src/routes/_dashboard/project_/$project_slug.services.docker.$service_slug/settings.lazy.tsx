@@ -5,7 +5,9 @@ import {
   ArrowRightIcon,
   CableIcon,
   Check,
+  CheckIcon,
   ContainerIcon,
+  CopyIcon,
   EditIcon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
@@ -26,8 +28,15 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -36,6 +45,7 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
+import { Switch } from "~/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -90,9 +100,11 @@ function SettingsPage() {
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+          <div className="w-full flex flex-col gap-8 pt-1 pb-14">
             <h2 className="text-lg text-grey">Networking</h2>
             <ServicePortsForm className="w-full max-w-4xl" />
+            <hr className="w-full max-w-4xl border-border" />
+            <ServiceURLsForm className="w-full max-w-4xl" />
           </div>
         </section>
 
@@ -167,13 +179,11 @@ type ServiceFormProps = {
 
 function ServiceSlugForm({ className }: ServiceFormProps) {
   const [isEditing, setIsEditing] = React.useState(false);
-  const [hasChanged, setHasChanged] = React.useState(false);
   return (
     <div className={className}>
       {isEditing ? (
         <Form.Root
           action={() => {
-            setHasChanged(true);
             setIsEditing(false);
           }}
           className="flex gap-2 w-full items-end"
@@ -220,9 +230,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
           <div
             className={cn(
               "w-full rounded-md flex justify-between items-center gap-2 py-1 pl-4 pr-2",
-              hasChanged
-                ? "dark:bg-secondary-foreground bg-secondary/60"
-                : "bg-muted"
+              "bg-muted"
             )}
           >
             <span>nginx-demo</span>
@@ -438,21 +446,27 @@ function ServicePortsForm({ className }: ServiceFormProps) {
         </Alert>
       </div>
       <hr className="border-border" />
-      <ul>
-        <li className="flex flex-col gap-1">
+      <ul className="flex flex-col gap-1">
+        <li>
           <ServicePortItem host={81} forwarded={8080} />
+        </li>
+        <li>
           <ServicePortItem
             host={82}
             forwarded={8080}
             change_type="UPDATE"
             change_id="1"
           />
+        </li>
+        <li>
           <ServicePortItem
             host={83}
             forwarded={8080}
             change_type="DELETE"
             change_id="1"
           />
+        </li>
+        <li>
           <ServicePortItem
             host={84}
             forwarded={8080}
@@ -607,6 +621,277 @@ function NewServicePortForm() {
         </Button>
       </div>
     </Form.Root>
+  );
+}
+
+function ServiceURLsForm({ className }: ServiceFormProps) {
+  return (
+    <div className={cn("flex flex-col gap-5", className)}>
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg">URLs</h3>
+        <p className="text-gray-400">
+          The domains and base path which are associated to this service. A port
+          with a host value of&nbsp;
+          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
+            80
+          </code>
+          &nbsp;or&nbsp;
+          <code className="font-mono rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 text-card-foreground">
+            443
+          </code>
+          &nbsp; is required to be able to add URLs to this service.
+        </p>
+      </div>
+      <hr className="border-border" />
+      <ul className="flex flex-col gap-1">
+        <li>
+          <ServiceURLFormItem domain="nginx-demo.127-0-0-1.sslip.io" />
+        </li>
+        <li>
+          <ServiceURLFormItem
+            domain="nginx-demo2.127-0-0-1.sslip.io"
+            redirect_to={{ url: "https://nginx-demo.127-0-0-1.sslip.io" }}
+            change_type="UPDATE"
+            change_id="1"
+          />
+        </li>
+        <li>
+          <ServiceURLFormItem
+            domain="nginx-demo3.127-0-0-1.sslip.io"
+            base_path="/api"
+            change_type="ADD"
+            change_id="1"
+          />
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+type ServiceURLFormItemProps = {
+  domain: string;
+  redirect_to?: {
+    url: string;
+    permanent?: boolean;
+  };
+  base_path?: string;
+  strip_prefix?: boolean;
+  change_id?: string;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+};
+
+function ServiceURLFormItem({
+  domain,
+  redirect_to,
+  base_path,
+  change_id,
+  change_type,
+  strip_prefix
+}: ServiceURLFormItemProps) {
+  const [isRedirect, setIsRedirect] = React.useState(Boolean(redirect_to));
+
+  return (
+    <div className="relative group">
+      <div
+        className="absolute top-2 right-2 inline-flex gap-1 items-center"
+        role="none"
+      >
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+              >
+                <CopyIcon size={15} className="flex-none" />
+                <span className="sr-only">Copy url</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copy url</TooltipContent>
+          </Tooltip>
+          {change_id !== undefined ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span className="sr-only">Revert change</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Revert change</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <Trash2Icon size={15} className="flex-none text-red-400" />
+                  <span className="sr-only">Delete url</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete url</TooltipContent>
+            </Tooltip>
+          )}
+        </TooltipProvider>
+      </div>
+
+      <Accordion type="single" collapsible>
+        <AccordionItem
+          value={`${domain}/${base_path}`}
+          className="border-none"
+          disabled={!!change_id}
+        >
+          <AccordionTrigger
+            className={cn(
+              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
+              "[&[data-state=open]]:rounded-b-none",
+              {
+                "dark:bg-secondary-foreground bg-secondary/60 ":
+                  change_type === "UPDATE",
+                "dark:bg-primary-foreground bg-primary/60":
+                  change_type === "ADD",
+                "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+              }
+            )}
+          >
+            <p>
+              {domain}
+              <span className="text-grey">{base_path ?? "/"}</span>
+            </p>
+            {redirect_to && (
+              <div className="inline-flex gap-2 items-center">
+                <ArrowRightIcon size={15} className="text-grey flex-none" />
+                <span className="text-grey">{redirect_to.url}</span>
+              </div>
+            )}
+          </AccordionTrigger>
+          <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+            <Form.Root action={() => {}} className="flex flex-col gap-4">
+              <Form.Field
+                name="domain"
+                className="flex-1 inline-flex flex-col gap-1"
+              >
+                <Form.Label className="text-gray-400">domain</Form.Label>
+                <Form.Control asChild>
+                  <Input
+                    placeholder="ex: www.mysupersaas.co"
+                    defaultValue={domain}
+                  />
+                </Form.Control>
+              </Form.Field>
+              <Form.Field
+                name="base_path"
+                className="flex-1 inline-flex flex-col gap-1"
+              >
+                <Form.Label className="text-gray-400">base path</Form.Label>
+                <Form.Control asChild>
+                  <Input placeholder="ex: /" defaultValue={base_path ?? "/"} />
+                </Form.Control>
+              </Form.Field>
+
+              <Form.Field
+                name="strip_prefix"
+                className="flex-1 inline-flex gap-2 items-center"
+              >
+                <Form.Control asChild>
+                  <Checkbox defaultChecked={strip_prefix} />
+                </Form.Control>
+
+                <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                  strip path prefix ?
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-48">
+                        Wether or not to omit the base path when passing the
+                        request to your service.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Form.Label>
+              </Form.Field>
+
+              <Form.Field
+                name="is_redirect"
+                className="flex-1 inline-flex gap-2 items-center"
+              >
+                <Form.Control asChild>
+                  <Checkbox
+                    defaultChecked={isRedirect}
+                    onCheckedChange={(state) => setIsRedirect(Boolean(state))}
+                  />
+                </Form.Control>
+
+                <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                  is redirect ?
+                </Form.Label>
+              </Form.Field>
+
+              {isRedirect && (
+                <div className="flex flex-col gap-4 pl-4">
+                  <Form.Field
+                    name="redirect_to_url"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">
+                      redirect to url
+                    </Form.Label>
+                    <Form.Control asChild>
+                      <Input
+                        placeholder="ex: https://mysupersaas.co/"
+                        defaultValue={redirect_to?.url}
+                      />
+                    </Form.Control>
+                  </Form.Field>
+
+                  <Form.Field
+                    name="redirect_to_permanent"
+                    className="flex-1 inline-flex gap-2 items-center"
+                  >
+                    <Form.Control asChild>
+                      <Checkbox defaultChecked={redirect_to?.permanent} />
+                    </Form.Control>
+
+                    <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                      permenant redirect
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger>
+                            <InfoIcon size={15} />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-64 text-balance">
+                            If checked, ZaneoOps will redirect with a 308 status
+                            code; otherwise, it will redirect with a 307 status
+                            code.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Form.Label>
+                  </Form.Field>
+                </div>
+              )}
+
+              <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
+                <SubmitButton
+                  variant="secondary"
+                  isPending={false}
+                  className="inline-flex gap-1"
+                >
+                  Update
+                  <CheckIcon size={15} />
+                </SubmitButton>
+              </div>
+            </Form.Root>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </div>
   );
 }
 

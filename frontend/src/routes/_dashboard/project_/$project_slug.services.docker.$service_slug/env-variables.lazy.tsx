@@ -4,6 +4,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import {
   Ban,
   Check,
+  ChevronRight,
   Copy,
   Edit,
   EllipsisVertical,
@@ -115,7 +116,8 @@ function EnvVariablesPage() {
       <section>
         <Accordion type="single" collapsible className="border-y border-border">
           <AccordionItem value="system">
-            <AccordionTrigger className="text-muted-foreground font-normal text-sm">
+            <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
+              <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
               {system_env_variables.length} System env&nbsp;
               {pluralize("variable", system_env_variables.length)}
             </AccordionTrigger>
