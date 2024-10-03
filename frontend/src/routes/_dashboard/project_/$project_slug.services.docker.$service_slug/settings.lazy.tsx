@@ -17,9 +17,13 @@ import {
   HardDrive,
   InfoIcon,
   LoaderIcon,
+  MoonIcon,
   PencilLineIcon,
   Plus,
   PlusIcon,
+  SunIcon,
+  SunriseIcon,
+  SunsetIcon,
   Trash2,
   Trash2Icon,
   TriangleAlertIcon,
@@ -1075,19 +1079,42 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
 
 function ServiceDangerZoneForm({ className }: ServiceFormProps) {
   return (
-    <div className={cn("flex flex-col gap-2 items-start", className)}>
-      <p className="text-red-400 ">
-        Archive this service will permanently delete all its deployments and
-        remove it, This cannot be undone.
-      </p>
+    <div className={cn("flex flex-col gap-4 items-start", className)}>
+      <form action={() => {}}>
+        <SubmitButton
+          isPending={false}
+          variant="warning"
+          className=" inline-flex gap-1 items-center"
+        >
+          <SunsetIcon size={15} className="flex-none" />
+          <span>Put service to sleep</span>
+        </SubmitButton>
+        &nbsp;
+        <SubmitButton
+          isPending={false}
+          variant="default"
+          className="inline-flex gap-1 items-center"
+        >
+          <SunriseIcon size={15} className="flex-none" />
+          <span>Wake up service</span>
+        </SubmitButton>
+      </form>
 
-      <Button
-        variant="destructive"
-        className="bg-red-500 inline-flex gap-1 items-center"
-      >
-        <Trash2Icon size={15} className="flex-none" />
-        <span>Archive service</span>
-      </Button>
+      <hr className="w-full border-border" />
+      <div className="flex flex-col gap-2 items-start">
+        <p className="text-red-400 ">
+          Archiving this service will permanently delete all its deployments,
+          This cannot be undone.
+        </p>
+
+        <Button
+          variant="destructive"
+          className="bg-red-500 inline-flex gap-1 items-center"
+        >
+          <Trash2Icon size={15} className="flex-none" />
+          <span>Archive service</span>
+        </Button>
+      </div>
     </div>
   );
 }
