@@ -1,6 +1,6 @@
 import { cn } from "~/lib/utils";
 
-export type CodeProps = React.HTMLAttributes<HTMLDivElement>;
+export type CodeProps = Omit<React.HTMLAttributes<HTMLDivElement>, "ref">;
 
 export function Code({ className, ...props }: CodeProps) {
   return (
