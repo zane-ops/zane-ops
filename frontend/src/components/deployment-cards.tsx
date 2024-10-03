@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+import { Code } from "~/components/code";
 import { Button } from "~/components/ui/button";
 import {
   Menubar,
@@ -177,10 +178,10 @@ export function DockerDeploymentCard({
             &nbsp;
             {redeploy_hash && (
               <small>
-                <code className="rounded-md bg-gray-400/40 dark:bg-gray-500/60 px-1 py-0.5 whitespace-nowrap inline-flex items-center gap-1">
+                <Code className="whitespace-nowrap inline-flex items-center gap-1">
                   <RotateCw size={12} className="flex-none" />
                   <span>Redeploy of {redeploy_hash}</span>
-                </code>
+                </Code>
               </small>
             )}
           </h3>

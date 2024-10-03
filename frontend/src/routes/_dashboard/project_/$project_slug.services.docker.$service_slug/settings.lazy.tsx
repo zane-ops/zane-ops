@@ -18,6 +18,7 @@ import {
   InfoIcon,
   LoaderIcon,
   MoonIcon,
+  PaintbrushIcon,
   PencilLineIcon,
   Plus,
   PlusIcon,
@@ -50,6 +51,13 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -121,9 +129,10 @@ function SettingsPage() {
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+          <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
             <ServiceCommandForm className="w-full max-w-4xl border-border" />
+            <ServiceHealthcheckForm className="w-full max-w-4xl border-border" />
           </div>
         </section>
 
@@ -1077,9 +1086,92 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
   );
 }
 
+function ServiceHealthcheckForm({ className }: ServiceFormProps) {
+  return (
+    <Form.Root
+      action={() => {}}
+      className={cn("flex flex-col gap-4 w-full items-start", className)}
+    >
+      <fieldset className="w-full flex flex-col gap-5">
+        <legend className="text-lg">Healthcheck</legend>
+        <p className="text-gray-400">
+          ZaneOps uses this to verify if your app is running correctly for new
+          deployments and ensures the deployment is successful before switching.
+          This value will also be used to continously monitor your app.
+        </p>
+
+        <div className="flex items-center gap-2">
+          <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
+            <Form.Label className="text-muted-foreground">Type</Form.Label>
+            <Form.Control asChild>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PATH">Path</SelectItem>
+                  <SelectItem value="COMMAND">Command</SelectItem>
+                </SelectContent>
+              </Select>
+            </Form.Control>
+          </Form.Field>
+          <Form.Field name="value" className="flex flex-col gap-1.5 flex-1">
+            <Form.Label className="text-muted-foreground">Value</Form.Label>
+            <Form.Control asChild>
+              <Input placeholder="ex: redis-cli ping" />
+            </Form.Control>
+          </Form.Field>
+        </div>
+        <Form.Field
+          name="interval_seconds"
+          className="flex flex-col gap-1.5 flex-1"
+        >
+          <Form.Label className="text-muted-foreground">
+            Interval (in seconds)
+          </Form.Label>
+          <Form.Control asChild>
+            <Input placeholder="ex: 30" />
+          </Form.Control>
+        </Form.Field>
+        <Form.Field
+          name="timeout_seconds"
+          className="flex flex-col gap-1.5 flex-1"
+        >
+          <Form.Label className="text-muted-foreground">
+            Timeout (in seconds)
+          </Form.Label>
+          <Form.Control asChild>
+            <Input placeholder="ex: 30" />
+          </Form.Control>
+        </Form.Field>
+      </fieldset>
+
+      <div className="flex items-center gap-2">
+        <SubmitButton isPending={false} variant="secondary">
+          <>
+            <CheckIcon size={15} className="flex-none" />
+            <span>Update</span>
+          </>
+        </SubmitButton>
+        <Button
+          type="button"
+          variant="outline"
+          className="inline-flex gap-1 items-center"
+        >
+          <>
+            <PaintbrushIcon size={15} className="flex-none" />
+            <span>Remove healthcheck</span>
+          </>
+        </Button>
+      </div>
+    </Form.Root>
+  );
+}
+
 function ServiceDangerZoneForm({ className }: ServiceFormProps) {
   return (
     <div className={cn("flex flex-col gap-4 items-start", className)}>
+      <h3 className="text-lg">Toggle service state</h3>
       <form action={() => {}}>
         <SubmitButton
           isPending={false}
@@ -1101,6 +1193,7 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
       </form>
 
       <hr className="w-full border-border" />
+      <h3 className="text-lg text-red-400">Archive this service</h3>
       <div className="flex flex-col gap-2 items-start">
         <p className="text-red-400 ">
           Archiving this service will permanently delete all its deployments,
