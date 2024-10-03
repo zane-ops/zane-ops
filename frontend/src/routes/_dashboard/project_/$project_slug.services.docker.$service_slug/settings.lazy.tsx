@@ -119,6 +119,7 @@ function SettingsPage() {
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
+            <ServiceCommandForm className="w-full max-w-4xl border-border" />
           </div>
         </section>
 
@@ -769,7 +770,7 @@ function ServiceURLFormItem({
                 name="domain"
                 className="flex-1 inline-flex flex-col gap-1"
               >
-                <Form.Label className="text-gray-400">domain</Form.Label>
+                <Form.Label className="text-gray-400">Domain</Form.Label>
                 <Form.Control asChild>
                   <Input
                     placeholder="ex: www.mysupersaas.co"
@@ -781,7 +782,7 @@ function ServiceURLFormItem({
                 name="base_path"
                 className="flex-1 inline-flex flex-col gap-1"
               >
-                <Form.Label className="text-gray-400">base path</Form.Label>
+                <Form.Label className="text-gray-400">Base path</Form.Label>
                 <Form.Control asChild>
                   <Input placeholder="ex: /" defaultValue={base_path ?? "/"} />
                 </Form.Control>
@@ -796,7 +797,7 @@ function ServiceURLFormItem({
                 </Form.Control>
 
                 <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                  strip path prefix ?
+                  Strip path prefix ?
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
                       <TooltipTrigger>
@@ -823,7 +824,7 @@ function ServiceURLFormItem({
                 </Form.Control>
 
                 <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                  is redirect ?
+                  Is redirect ?
                 </Form.Label>
               </Form.Field>
 
@@ -834,7 +835,7 @@ function ServiceURLFormItem({
                     className="flex-1 inline-flex flex-col gap-1"
                   >
                     <Form.Label className="text-gray-400">
-                      redirect to url
+                      Redirect to url
                     </Form.Label>
                     <Form.Control asChild>
                       <Input
@@ -853,7 +854,7 @@ function ServiceURLFormItem({
                     </Form.Control>
 
                     <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                      permanent redirect
+                      Permanent redirect
                       <TooltipProvider>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
@@ -897,7 +898,7 @@ function NewServiceURLForm() {
       className="flex flex-col gap-4 border border-border p-4 rounded-md"
     >
       <Form.Field name="domain" className="flex-1 inline-flex flex-col gap-1">
-        <Form.Label className="text-gray-400">domain</Form.Label>
+        <Form.Label className="text-gray-400">Domain</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: www.mysupersaas.co" />
         </Form.Control>
@@ -906,7 +907,7 @@ function NewServiceURLForm() {
         name="base_path"
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <Form.Label className="text-gray-400">base path</Form.Label>
+        <Form.Label className="text-gray-400">Base path</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: /" defaultValue={"/"} />
         </Form.Control>
@@ -921,7 +922,7 @@ function NewServiceURLForm() {
         </Form.Control>
 
         <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-          strip path prefix ?
+          Strip path prefix ?
           <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger>
@@ -948,7 +949,7 @@ function NewServiceURLForm() {
         </Form.Control>
 
         <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-          is redirect ?
+          Is redirect ?
         </Form.Label>
       </Form.Field>
 
@@ -958,7 +959,7 @@ function NewServiceURLForm() {
             name="redirect_to_url"
             className="flex-1 inline-flex flex-col gap-1"
           >
-            <Form.Label className="text-gray-400">redirect to url</Form.Label>
+            <Form.Label className="text-gray-400">Redirect to url</Form.Label>
             <Form.Control asChild>
               <Input placeholder="ex: https://mysupersaas.co/" />
             </Form.Control>
@@ -973,7 +974,7 @@ function NewServiceURLForm() {
             </Form.Control>
 
             <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-              permanent redirect
+              Permanent redirect
               <TooltipProvider>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger>
@@ -1038,6 +1039,37 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ServiceCommandForm({ className }: ServiceFormProps) {
+  return (
+    <Form.Root
+      action={() => {}}
+      className={cn("flex flex-col gap-4 w-full items-start", className)}
+    >
+      <fieldset className="w-full flex flex-col gap-4">
+        <legend className="text-lg">Custom start command</legend>
+        <p className="text-gray-400">
+          Command executed at the start of each new deployment.
+        </p>
+        <Form.Field name="command" className="flex flex-col gap-1.5 flex-1">
+          <Form.Label className="text-muted-foreground sr-only">
+            Value
+          </Form.Label>
+          <Form.Control asChild>
+            <Input placeholder="ex: npm run start" />
+          </Form.Control>
+        </Form.Field>
+      </fieldset>
+
+      <SubmitButton isPending={false} variant="secondary">
+        <>
+          <CheckIcon size={15} className="flex-none" />
+          <span>Update</span>
+        </>
+      </SubmitButton>
+    </Form.Root>
   );
 }
 
