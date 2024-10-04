@@ -1376,15 +1376,14 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
           <SunsetIcon size={15} className="flex-none" />
           <span>Put service to sleep</span>
         </SubmitButton>
-        &nbsp;
-        <SubmitButton
+        {/* <SubmitButton
           isPending={false}
           variant="default"
           className="inline-flex gap-1 items-center"
         >
           <SunriseIcon size={15} className="flex-none" />
           <span>Wake up service</span>
-        </SubmitButton>
+        </SubmitButton> */}
       </form>
 
       <hr className="w-full border-border" />
