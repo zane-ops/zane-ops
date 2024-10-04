@@ -72,8 +72,8 @@ export const Route = createLazyFileRoute(
 
 function SettingsPage() {
   return (
-    <div className="my-6 grid grid-cols-12 gap-10 relative">
-      <div className="col-span-10 flex flex-col">
+    <div className="my-6 grid md:grid-cols-12 gap-10 relative">
+      <div className="md:col-span-10 flex flex-col">
         <section id="details" className="flex gap-1 scroll-mt-20">
           <div className="w-16 flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -160,7 +160,7 @@ function SettingsPage() {
         </section>
       </div>
 
-      <aside className="col-span-2 flex flex-col h-full">
+      <aside className="col-span-2 hidden md:flex flex-col h-full">
         <nav className="sticky top-20">
           <ul className="flex flex-col gap-2 text-grey">
             <li>
