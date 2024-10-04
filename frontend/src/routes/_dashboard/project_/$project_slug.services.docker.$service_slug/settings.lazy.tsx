@@ -31,6 +31,7 @@ import {
 import * as React from "react";
 import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
+import { StatusBadge } from "~/components/status-badge";
 import {
   Accordion,
   AccordionContent,
@@ -142,6 +143,7 @@ function SettingsPage() {
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Volumes</h2>
+            <ServiceVolumesForm />
           </div>
         </section>
 
@@ -1159,6 +1161,202 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             <PaintRollerIcon size={15} className="flex-none" />
             <span>Remove healthcheck</span>
           </>
+        </Button>
+      </div>
+    </Form.Root>
+  );
+}
+
+function ServiceVolumesForm({ className }: ServiceFormProps) {
+  return (
+    <div className={cn("flex flex-col gap-5", className)}>
+      <div className="flex flex-col gap-3">
+        <p className="text-gray-400">
+          Used for persisting the data from your services.
+        </p>
+
+        <Alert variant="warning">
+          <TriangleAlertIcon size={15} />
+          <AlertTitle>Warning</AlertTitle>
+          <AlertDescription>
+            Adding volumes will disable&nbsp;
+            <a href="#" className="underline inline-flex gap-1 items-center">
+              zero-downtime deployments <ExternalLinkIcon size={12} />
+            </a>
+            .
+          </AlertDescription>
+        </Alert>
+      </div>
+      <hr className="border-border" />
+      <ul className="flex flex-col gap-2">
+        <li>
+          <ServiceVolumeItem
+            name="redis"
+            container_path="/data"
+            mode="READ_WRITE"
+          />
+        </li>
+        <li>
+          <ServiceVolumeItem
+            name="localtime"
+            container_path="/etc/localtime"
+            host_path="/etc/localtime"
+            change_id="1"
+            change_type="UPDATE"
+            mode="READ_ONLY"
+          />
+        </li>
+      </ul>
+      <hr className="border-border" />
+      <h3 className="text-lg">Add new volume</h3>
+      <NewServiceVolumeForm />
+    </div>
+  );
+}
+
+type ServiceVolumeItemProps = {
+  name: string;
+  container_path: string;
+  mode: "READ_ONLY" | "READ_WRITE";
+  host_path?: string;
+  change_id?: string;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+};
+
+function ServiceVolumeItem({
+  name,
+  container_path,
+  host_path,
+  change_type,
+  mode,
+  change_id
+}: ServiceVolumeItemProps) {
+  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read write";
+  return (
+    <div
+      className={cn(
+        "rounded-md p-4 flex items-start gap-2 group relative bg-muted",
+        {
+          "dark:bg-secondary-foreground bg-secondary/60 ":
+            change_type === "UPDATE",
+          "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
+          "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+        }
+      )}
+    >
+      <HardDrive size={20} className="text-grey relative top-1.5" />
+      <div className="flex flex-col gap-2">
+        <h3 className="text-lg inline-flex gap-1 items-center">
+          <span>{name}</span>
+        </h3>
+        <small className="text-card-foreground inline-flex gap-1 items-center">
+          {host_path && (
+            <>
+              <span>{host_path}</span>
+              <ArrowRightIcon size={15} className="text-grey" />
+            </>
+          )}
+          <span className="text-grey">{container_path}</span>
+          <Code>{modeSuffix}</Code>
+        </small>
+      </div>
+      <div className="absolute top-4 right-4 flex gap-2 items-center">
+        <TooltipProvider>
+          {change_id !== undefined ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span className="sr-only">Revert change</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Revert change</TooltipContent>
+            </Tooltip>
+          ) : (
+            <>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <EditIcon size={15} className="flex-none" />
+                    <span className="sr-only">Edit volume</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit volume</TooltipContent>
+              </Tooltip>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <Trash2Icon size={15} className="flex-none text-red-400" />
+                    <span className="sr-only">Delete volume</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete volume</TooltipContent>
+              </Tooltip>
+            </>
+          )}
+        </TooltipProvider>
+      </div>
+    </div>
+  );
+}
+
+function NewServiceVolumeForm() {
+  return (
+    <Form.Root
+      action={() => {}}
+      className={cn(
+        "flex flex-col gap-4 w-full border border-border rounded-md p-4"
+      )}
+    >
+      <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
+        <Form.Label className="text-muted-foreground">Mode</Form.Label>
+        <Form.Control asChild>
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a volume mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="READ_ONLY">Read only</SelectItem>
+              <SelectItem value="READ_WRITE">Read & Write</SelectItem>
+            </SelectContent>
+          </Select>
+        </Form.Control>
+      </Form.Field>
+      <Form.Field
+        name="container_path"
+        className="flex flex-col gap-1.5 flex-1"
+      >
+        <Form.Label className="text-muted-foreground">
+          Container path
+        </Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: /data" />
+        </Form.Control>
+      </Form.Field>
+      <Form.Field name="host_path" className="flex flex-col gap-1.5 flex-1">
+        <Form.Label className="text-muted-foreground">Host path</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: /etc/localtime" />
+        </Form.Control>
+      </Form.Field>
+
+      <hr className="-mx-4 border-border" />
+      <div className="flex justify-end items-center gap-2">
+        <SubmitButton isPending={false} variant="secondary">
+          <span>Add</span>
+          <PlusIcon size={15} className="flex-none" />
+        </SubmitButton>
+        <Button variant="outline" type="reset">
+          Cancel
         </Button>
       </div>
     </Form.Root>
