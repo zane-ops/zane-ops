@@ -352,6 +352,15 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
 
 
 # ==============================
+#       service Update         #
+# ==============================
+
+
+class DockerServiceUpdateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255, required=True)
+
+
+# ==============================
 #    Docker services changes   #
 # ==============================
 

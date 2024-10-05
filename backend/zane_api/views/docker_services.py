@@ -33,6 +33,7 @@ from .helpers import (
 from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
+    DockerServiceUpdateRequestSerializer,
     VolumeItemChangeSerializer,
     DockerCommandFieldChangeSerializer,
     DockerImageFieldChangeSerializer,
@@ -685,7 +686,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
         ]:
             raise ResourceConflict(
                 detail="This deployment cannot be cancelled as it has already finished "
-                       "or is in the process of cancelling."
+                "or is in the process of cancelling."
             )
 
         if deployment.started_at is None:
@@ -706,8 +707,48 @@ class CancelDockerServiceDeploymentAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class GetDockerServiceAPIView(APIView):
+class DockerServiceDetailsAPIView(APIView):
     serializer_class = DockerServiceSerializer
+
+    @extend_schema(
+        request=DockerServiceUpdateRequestSerializer,
+        operation_id="updateService",
+        summary="Update a service",
+    )
+    def patch(self, request: Request, project_slug: str, service_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project")
+            .prefetch_related("volumes", "ports", "urls", "env_variables")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        form = DockerServiceUpdateRequestSerializer(data=request.data)
+        if form.is_valid(raise_exception=True):
+            try:
+                service.slug = form.data.get("slug", project.slug)
+                service.save()
+            except IntegrityError:
+                raise ResourceConflict(
+                    detail=f"The slug `{service_slug}` is already used by another service."
+                )
+            else:
+                response = DockerServiceSerializer(service)
+                return Response(response.data)
 
     @extend_schema(
         operation_id="getDockerService",
