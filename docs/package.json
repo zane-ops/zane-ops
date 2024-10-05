@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev --port 3000 --host",
+    "dev": "cp ../openapi/schema.yml ./public/openapi.yaml && astro dev --port 3000 --host",
     "start": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
