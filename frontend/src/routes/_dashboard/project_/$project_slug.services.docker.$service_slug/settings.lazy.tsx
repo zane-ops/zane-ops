@@ -1006,12 +1006,12 @@ function NewServiceURLForm() {
         <SubmitButton
           variant="secondary"
           isPending={false}
-          className="inline-flex gap-1 flex-1 md:flex-auto"
+          className="inline-flex gap-1 flex-1 md:flex-none"
         >
           Add
           <PlusIcon size={15} />
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1 md:flex-auto">
+        <Button variant="outline" type="reset" className="flex-1 md:flex-none">
           Cancel
         </Button>
       </div>
@@ -1356,12 +1356,12 @@ function NewServiceVolumeForm() {
         <SubmitButton
           isPending={false}
           variant="secondary"
-          className="flex-1 md:flex-auto"
+          className="flex-1 md:flex-none"
         >
           <span>Add</span>
           <PlusIcon size={15} className="flex-none" />
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1 md:flex-auto">
+        <Button variant="outline" type="reset" className="flex-1 md:flex-none">
           Cancel
         </Button>
       </div>

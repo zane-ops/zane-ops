@@ -336,7 +336,7 @@ function EnVariableRow({
           isEditing && "md:relative md:top-3"
         )}
       >
-        <span className="font-mono">{name}</span>
+        <span className="font-mono break-all">{name}</span>
         {comment && <small className="text-muted-foreground">{comment}</small>}
       </div>
       {isEditing && id ? (
