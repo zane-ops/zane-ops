@@ -63,9 +63,9 @@ function ServiceDetailsLayout() {
     useDeployDockerServiceMutation(project_slug, service_slug);
 
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
-  if (location.pathname.endsWith("env-variables")) {
+  if (location.pathname.match(/env\-variables\/?$/)) {
     currentSelectedTab = TABS.ENV_VARIABLES;
-  } else if (location.pathname.endsWith("settings")) {
+  } else if (location.pathname.match(/settings\/?$/)) {
     currentSelectedTab = TABS.SETTINGS;
   }
 
