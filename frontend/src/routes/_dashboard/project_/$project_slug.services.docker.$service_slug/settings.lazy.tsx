@@ -805,7 +805,7 @@ function ServiceURLFormItem({
                 className="flex-1 inline-flex gap-2 items-center"
               >
                 <Form.Control asChild>
-                  <Checkbox defaultChecked={strip_prefix} />
+                  <Checkbox defaultChecked={strip_prefix ?? true} />
                 </Form.Control>
 
                 <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
@@ -1099,7 +1099,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
           This value will also be used to continously monitor your app.
         </p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-muted-foreground">Type</Form.Label>
             <Form.Control asChild>
@@ -1122,22 +1122,22 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
           </Form.Field>
         </div>
         <Form.Field
-          name="interval_seconds"
+          name="timeout_seconds"
           className="flex flex-col gap-1.5 flex-1"
         >
           <Form.Label className="text-muted-foreground">
-            Interval (in seconds)
+            Timeout (in seconds)
           </Form.Label>
           <Form.Control asChild>
             <Input placeholder="ex: 30" />
           </Form.Control>
         </Form.Field>
         <Form.Field
-          name="timeout_seconds"
+          name="interval_seconds"
           className="flex flex-col gap-1.5 flex-1"
         >
           <Form.Label className="text-muted-foreground">
-            Timeout (in seconds)
+            Interval (in seconds)
           </Form.Label>
           <Form.Control asChild>
             <Input placeholder="ex: 30" />
