@@ -1,5 +1,5 @@
 ---
-title: Install ZaneOps on a server or locally
+title: Installing ZaneOps
 description: 'Guide to setting up and installing ZaneOps'
 ---
 
@@ -116,4 +116,11 @@ make delete-resources
 ### Installing Locally 
 
 ZaneOps can be installed locally with minimal configuration changes. 
-To do this, keep the `ZANE_APP_DOMAIN` and `ROOT_DOMAIN` environment variables set to http://127-0-0-1.sslip.io.
+To do this :
+- keep the `ZANE_APP_DOMAIN` and `ROOT_DOMAIN` environment variables set to http://127-0-0-1.sslip.io.
+- add the `__DANGEROUS_ALLOW_HTTP_SESSION` environment variable to `.env` and set its value to `true`
+
+<Aside type="caution" title="Important">
+You can enable the `__DANGEROUS_ALLOW_HTTP_SESSION` environment variable in production to access your ZaneOps instance over HTTP.
+However, this is strongly discouraged, as it exposes your application to potential security vulnerabilities, including man-in-the-middle attacks.
+</Aside>

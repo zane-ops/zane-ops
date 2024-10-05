@@ -46,19 +46,24 @@ TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
 BACKEND_COMPONENT = os.environ.get("BACKEND_COMPONENT", "API")
+__DANGEROUS_ALLOW_HTTP_SESSION = (
+    os.environ.get("__DANGEROUS_ALLOW_HTTP_SESSION") == "true"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT != PRODUCTION_ENV
 # SECURE_SSL_REDIRECT = ENVIRONMENT == PRODUCTION_ENV
-CSRF_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
-SESSION_COOKIE_SECURE = ENVIRONMENT == PRODUCTION_ENV
+CSRF_COOKIE_SECURE = __DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT == PRODUCTION_ENV
+SESSION_COOKIE_SECURE = __DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT == PRODUCTION_ENV
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
-SECURE_HSTS_SECONDS = 0 if ENVIRONMENT != PRODUCTION_ENV else 60
+SECURE_HSTS_SECONDS = (
+    0 if (__DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT != PRODUCTION_ENV) else 60
+)
 
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
-ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "app.127-0-0-1.sslip.io")
+ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 
 ALLOWED_HOSTS = (
