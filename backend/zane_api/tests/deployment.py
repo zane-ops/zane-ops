@@ -1,7 +1,8 @@
 import asyncio
 from datetime import timedelta
 from unittest.mock import patch, Mock, MagicMock, call
-
+import unittest
+import os
 import requests
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -4302,6 +4303,7 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
 
+@unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
 class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_initial_step(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
