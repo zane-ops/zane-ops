@@ -12,7 +12,18 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "    ⚒️  INITIAL SETUP OF ZANEOPS ⚒️"
 	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
 	@echo "Step 1️⃣ : initiating docker swarm..."
-	@docker swarm init || true
+	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "active"; then \
+		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -q "true"; then \
+			echo "Swarm is enabled and this node is a manager"; \
+		else \
+			echo "ERROR: Swarm is enabled, but this node is not a manager." >&2; \
+			echo "To promote this node to a manager, run: docker node promote <node_name>" >&2; \
+			echo "You can check the node name by running: docker node ls" >&2; \
+			exit 1; \
+		fi \
+	else \
+		docker swarm init; \
+	fi
 	@echo "Step 1️⃣ Done ✅"
 	@echo "Step 2️⃣: Preparing the current folder..."
 	@mkdir -p .fluentd
@@ -34,16 +45,20 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
 	@if [ ! -f ".env" ]; then \
-  	curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.template > ./.env; \
-  	sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
-	sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
-	sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
-	sed -i'.bak' "s#{{ZANE_DJANGO_SECRET_KEY}}#\"$(django_secret)\"#g" ./.env; \
-  	rm .env.bak; \
+		curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.template > ./.env; \
+		sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
+		sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
+		sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
+		sed -i'.bak' "s#{{ZANE_DJANGO_SECRET_KEY}}#\"$(django_secret)\"#g" ./.env; \
+		rm .env.bak; \
   	fi
 	@echo "Step 4️⃣ Done ✅"
 	@echo "Step 5️⃣: Create docker network for zaneops..."
-	@docker network create --attachable --driver overlay --label zane.stack=true zane || true
+	@if docker network ls | grep -q "zane"; then \
+    	echo "Zane network already exists, skipping"; \
+	else \
+    	docker network create --attachable --driver overlay --label zane.stack=true zane; \
+	fi
 	@echo "Step 5️⃣ Done ✅"
 	@echo "Setup finished 🏁"
 
@@ -53,9 +68,9 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
 	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
-	set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
+		set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 	else \
-	set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
+		set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
 	fi
 	@. ./attach-proxy-networks.sh
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
