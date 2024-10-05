@@ -55,7 +55,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export type SubmitButtonProps = Omit<ButtonProps, "disabled" | "asChild"> & {
+export type SubmitButtonProps = Omit<
+  ButtonProps,
+  "disabled" | "asChild" | "type"
+> & {
   isPending: boolean;
 };
 
@@ -74,6 +77,7 @@ const SubmitButton = React.forwardRef<HTMLButtonElement, SubmitButtonProps>(
         onClick={(e: EventFor<"button", "onClick">) => {
           if (isPending) e.preventDefault();
         }}
+        type="submit"
       />
     );
   }

@@ -59,8 +59,9 @@
     --status-error: #fecaca;
     --status-warning: #fef08a ;
     --link: #2563eb;
+    --grey: 220 8.94% 46.08%;
   }
-
+  
   @media (prefers-color-scheme: dark) {
     :root {
       --background: 226 19% 13%;
@@ -85,6 +86,7 @@
       --ring: 164 61% 70%;
       --loader: white;
       --link: #60a5fa;
+      --grey: 217.89 10.61% 64.9%;
     }
   }
 

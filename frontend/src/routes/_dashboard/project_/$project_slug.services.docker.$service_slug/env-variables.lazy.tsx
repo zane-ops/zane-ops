@@ -4,6 +4,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import {
   Ban,
   Check,
+  ChevronRight,
   Copy,
   Edit,
   EllipsisVertical,
@@ -115,7 +116,8 @@ function EnvVariablesPage() {
       <section>
         <Accordion type="single" collapsible className="border-y border-border">
           <AccordionItem value="system">
-            <AccordionTrigger className="text-muted-foreground font-normal text-sm">
+            <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
+              <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
               {system_env_variables.length} System env&nbsp;
               {pluralize("variable", system_env_variables.length)}
             </AccordionTrigger>
@@ -181,7 +183,7 @@ function EnVariableRow({
   change_id,
   id
 }: EnVariableRowProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isEnvValueShown, setIsEnvValueShown] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
 
@@ -401,7 +403,7 @@ function EnVariableRow({
         </Form.Root>
       ) : (
         <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
-          {isOpen ? (
+          {isEnvValueShown ? (
             <p className="whitespace-nowrap overflow-x-auto">{value}</p>
           ) : (
             <span className="relative top-1">*********</span>
@@ -411,21 +413,21 @@ function EnVariableRow({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  onClick={() => setIsOpen(!isOpen)}
+                  onClick={() => setIsEnvValueShown(!isEnvValueShown)}
                   className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                 >
-                  {isOpen ? (
+                  {isEnvValueShown ? (
                     <EyeOffIcon size={15} className="flex-none" />
                   ) : (
                     <Eye size={15} className="flex-none" />
                   )}
                   <span className="sr-only">
-                    {isOpen ? "Hide" : "Reveal"} variable value
+                    {isEnvValueShown ? "Hide" : "Reveal"} variable value
                   </span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {isOpen ? "Hide" : "Reveal"} variable value
+                {isEnvValueShown ? "Hide" : "Reveal"} variable value
               </TooltipContent>
             </Tooltip>
 
