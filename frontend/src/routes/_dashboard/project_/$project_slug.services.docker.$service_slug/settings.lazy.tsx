@@ -31,7 +31,6 @@ import {
 import * as React from "react";
 import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
-import { StatusBadge } from "~/components/status-badge";
 import {
   Accordion,
   AccordionContent,
@@ -75,7 +74,7 @@ function SettingsPage() {
     <div className="my-6 grid md:grid-cols-12 gap-10 relative">
       <div className="md:col-span-10 flex flex-col">
         <section id="details" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 flex flex-col items-center">
+          <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <InfoIcon size={15} className="flex-none text-grey" />
             </div>
@@ -89,7 +88,7 @@ function SettingsPage() {
         </section>
 
         <section id="source" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 flex flex-col items-center">
+          <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <ContainerIcon size={15} className="flex-none text-grey" />
             </div>
@@ -104,7 +103,7 @@ function SettingsPage() {
         </section>
 
         <section id="networking" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 flex flex-col items-center">
+          <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <CableIcon size={15} className="flex-none text-grey" />
             </div>
@@ -121,7 +120,7 @@ function SettingsPage() {
         </section>
 
         <section id="deploy" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 flex flex-col items-center">
+          <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HammerIcon size={15} className="flex-none text-grey" />
             </div>
@@ -135,7 +134,7 @@ function SettingsPage() {
         </section>
 
         <section id="volumes" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 flex flex-col items-center">
+          <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HardDrive size={15} className="flex-none text-grey" />
             </div>
@@ -148,7 +147,7 @@ function SettingsPage() {
         </section>
 
         <section id="danger-zone" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 flex flex-col items-center">
+          <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
               <FlameIcon size={15} className="flex-none text-red-500" />
             </div>
@@ -647,7 +646,7 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
         </p>
       </div>
       <hr className="border-border" />
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-col gap-2">
         <li>
           <ServiceURLFormItem domain="nginx-demo.127-0-0-1.sslip.io" />
         </li>
@@ -1007,12 +1006,12 @@ function NewServiceURLForm() {
         <SubmitButton
           variant="secondary"
           isPending={false}
-          className="inline-flex gap-1"
+          className="inline-flex gap-1 flex-1 md:flex-auto"
         >
           Add
           <PlusIcon size={15} />
         </SubmitButton>
-        <Button variant="outline" type="reset">
+        <Button variant="outline" type="reset" className="flex-1 md:flex-auto">
           Cancel
         </Button>
       </div>
@@ -1030,11 +1029,14 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
           value
         </p>
       </div>
-      <div className="border border-border p-4 rounded-md flex items-center gap-4 group">
-        <GlobeLockIcon className="text-grey" size={20} />
+      <div className="border border-border px-4 pb-4 pt-1 rounded-md flex items-center gap-4 group">
+        <GlobeLockIcon
+          className="text-grey flex-none hidden md:block"
+          size={20}
+        />
         <div className="flex flex-col gap-0.5">
           <div className="flex gap-2 items-center">
-            <span className="text-lg">
+            <span className="text-lg break-all">
               nginx-demo-npUHRTJ7SvQ.zaneops.internal
             </span>
             <Button
@@ -1099,7 +1101,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
           This value will also be used to continously monitor your app.
         </p>
 
-        <div className="flex items-start gap-2">
+        <div className="flex flex-col md:flex-row md:items-start gap-2">
           <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-muted-foreground">Type</Form.Label>
             <Form.Control asChild>
@@ -1351,11 +1353,15 @@ function NewServiceVolumeForm() {
 
       <hr className="-mx-4 border-border" />
       <div className="flex justify-end items-center gap-2">
-        <SubmitButton isPending={false} variant="secondary">
+        <SubmitButton
+          isPending={false}
+          variant="secondary"
+          className="flex-1 md:flex-auto"
+        >
           <span>Add</span>
           <PlusIcon size={15} className="flex-none" />
         </SubmitButton>
-        <Button variant="outline" type="reset">
+        <Button variant="outline" type="reset" className="flex-1 md:flex-auto">
           Cancel
         </Button>
       </div>
