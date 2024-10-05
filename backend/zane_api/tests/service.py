@@ -555,6 +555,100 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
 
+class DockerServiceUpdateViewTest(AuthAPITestCase):
+    def test_sucessfully_update_service_slug(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+
+        previous_service = DockerRegistryService.objects.create(
+            slug="cache-db", project=p
+        )
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": previous_service.slug},
+            ),
+            data={
+                "slug": "cache",
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service: DockerRegistryService = DockerRegistryService.objects.filter(
+            slug="cache"
+        ).first()
+        self.assertIsNotNone(updated_service)
+        self.assertEqual("cache", updated_service.slug)
+        self.assertNotEquals(previous_service.updated_at, updated_service.updated_at)
+
+    def test_update_service_bad_request(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        service = DockerRegistryService.objects.create(slug="cache-db", project=p)
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data={
+                "slug": "cache db",
+            },
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_update_service_non_existent(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": "zane-ops"},
+            ),
+            data={"slug": "zenops"},
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_already_existing_slug(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="sandbox", owner=owner)
+        DockerRegistryService.objects.bulk_create(
+            [
+                DockerRegistryService(slug="gh-clone", project=p),
+                DockerRegistryService(slug="zane-ops", project=p),
+            ]
+        )
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": "zane-ops"},
+            ),
+            data={"slug": "gh-clone"},
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_can_rename_to_self(self):
+        owner = self.loginUser()
+        owner = self.loginUser()
+        p = Project.objects.create(slug="sandbox", owner=owner)
+        DockerRegistryService.objects.bulk_create(
+            [
+                DockerRegistryService(slug="gh-clone", project=p),
+                DockerRegistryService(slug="zane-ops", project=p),
+            ]
+        )
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": "zane-ops"},
+            ),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+
 class DockerServiceArchiveViewTest(AuthAPITestCase):
     async def test_archive_simple_service(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
