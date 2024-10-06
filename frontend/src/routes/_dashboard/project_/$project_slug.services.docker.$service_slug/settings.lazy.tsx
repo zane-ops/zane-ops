@@ -65,6 +65,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { serviceKeys } from "~/key-factories";
+import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
+import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -345,81 +347,173 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
 }
 
 function ServiceImageForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = React.useState(false);
-  const [hasChanged, setHasChanged] = React.useState(false);
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+  const cancelImageChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const updateImageMutation = useMutation({
+    mutationFn: async (new_image: string) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "UPDATE",
+            new_value: new_image,
+            field: "image"
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsEditing(false);
+        return;
+      }
+    }
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const serviceImageChange = service?.unapplied_changes.find(
+    (change) => change.field === "image"
+  );
+
+  const serviceImage =
+    (serviceImageChange?.new_value as string) ?? service?.image;
+
+  const imageParts = serviceImage.split(":");
+
+  const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
+  const image = imageParts.join(":");
+
+  const errors = getFormErrorsFromResponseData(updateImageMutation.data);
+
   return (
     <div className={className}>
       {isEditing ? (
         <Form.Root
-          action={() => {
-            setHasChanged(true);
-            setIsEditing(false);
+          action={(formData) => {
+            updateImageMutation.mutate(formData.get("image")?.toString() ?? "");
           }}
-          className="flex gap-2 w-full items-end"
+          className="flex flex-col md:flex-row  gap-2 w-full"
         >
           <Form.Field name="image" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-lg">Source image</Form.Label>
             <Form.Control asChild>
-              <Input
-                placeholder="service slug"
-                defaultValue="nginxdemos/hello"
-              />
+              <Input placeholder="service slug" defaultValue={serviceImage} />
             </Form.Control>
+            {errors.new_value && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value}
+              </Form.Message>
+            )}
           </Form.Field>
 
-          <SubmitButton
-            isPending={false}
-            variant="outline"
-            className="bg-inherit"
-          >
-            {/* {isUpdatingVariableValue ? (
-               <>
-                 <LoaderIcon className="animate-spin" size={15} />
-                 <span className="sr-only">Updating variable value...</span>
-               </>
-             ) : ( */}
-            <>
-              <CheckIcon size={15} className="flex-none" />
-              <span className="sr-only">Update variable value</span>
-            </>
-            {/* )} */}
-          </SubmitButton>
-          <Button
-            onClick={() => {
-              setIsEditing(false);
-            }}
-            variant="outline"
-            className="bg-inherit"
-            type="button"
-          >
-            <XIcon size={15} className="flex-none" />
-            <span className="sr-only">Cancel</span>
-          </Button>
+          <div className="flex gap-2 md:relative top-8">
+            <SubmitButton
+              isPending={updateImageMutation.isPending}
+              variant="outline"
+              className="bg-inherit"
+            >
+              {updateImageMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span className="sr-only">Updating service image...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span className="sr-only">Update service image</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              onClick={() => {
+                setIsEditing(false);
+                updateImageMutation.reset();
+              }}
+              variant="outline"
+              className="bg-inherit"
+              type="button"
+            >
+              <XIcon size={15} className="flex-none" />
+              <span className="sr-only">Cancel</span>
+            </Button>
+          </div>
         </Form.Root>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 flex-wrap">
           <h3 className="text-lg">Source image</h3>
           <div
             className={cn(
               "w-full rounded-md flex justify-between items-center gap-2 py-1 pl-4 pr-2",
-              hasChanged
+              serviceImageChange !== undefined
                 ? "dark:bg-secondary-foreground bg-secondary/60"
                 : "bg-muted"
             )}
           >
             <span>
-              nginxdemos/hello<span className="text-grey">:latest</span>
+              {image}
+              <span className="text-grey">:{tag}</span>
             </span>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditing(true);
-              }}
-              className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-            >
-              <span>Edit</span>
-              <PencilLineIcon size={15} />
-            </Button>
+            {serviceImageChange !== undefined ? (
+              <form
+                action={() =>
+                  cancelImageChangeMutation.mutate(serviceImageChange.id)
+                }
+              >
+                <SubmitButton
+                  isPending={cancelImageChangeMutation.isPending}
+                  variant="outline"
+                  className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                >
+                  {cancelImageChangeMutation.isPending ? (
+                    <>
+                      <span>Reverting change...</span>
+                      <LoaderIcon className="animate-spin" size={15} />
+                    </>
+                  ) : (
+                    <>
+                      <span>Revert change</span>
+                      <Undo2Icon size={15} />
+                    </>
+                  )}
+                </SubmitButton>
+              </form>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(true);
+                }}
+                className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+              >
+                <span>Edit</span>
+                <PencilLineIcon size={15} />
+              </Button>
+            )}
           </div>
         </div>
       )}
