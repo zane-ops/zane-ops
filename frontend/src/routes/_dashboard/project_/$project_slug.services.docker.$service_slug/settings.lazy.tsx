@@ -571,6 +571,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
           exact: true
         });
+        setIsPasswordShown(false);
         return;
       }
     }
@@ -617,17 +618,10 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
             }
           });
         } else {
-          updateCredentialsMutation.mutate(
-            {
-              username: formData.get("username")?.toString(),
-              password: formData.get("password")?.toString()
-            },
-            {
-              onSuccess() {
-                setIsPasswordShown(false);
-              }
-            }
-          );
+          updateCredentialsMutation.mutate({
+            username: formData.get("username")?.toString(),
+            password: formData.get("password")?.toString()
+          });
         }
       }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
