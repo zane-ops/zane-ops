@@ -23,7 +23,6 @@ import {
   PencilLineIcon,
   Plus,
   PlusIcon,
-  SunriseIcon,
   SunsetIcon,
   Trash2,
   Trash2Icon,
@@ -72,7 +71,7 @@ import {
   useDockerServiceSingleQuery
 } from "~/lib/hooks/use-docker-service-single-query";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, wait } from "~/utils";
+import { getCsrfTokenHeader } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/settings"
