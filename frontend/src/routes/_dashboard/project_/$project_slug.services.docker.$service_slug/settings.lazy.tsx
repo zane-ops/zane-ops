@@ -1,5 +1,6 @@
 import * as Form from "@radix-ui/react-form";
-import { Link, createLazyFileRoute } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRightIcon,
   CableIcon,
@@ -16,6 +17,7 @@ import {
   HammerIcon,
   HardDrive,
   InfoIcon,
+  LoaderIcon,
   PaintRollerIcon,
   PencilLineIcon,
   Plus,
@@ -29,6 +31,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import {
@@ -61,7 +64,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
+import { serviceKeys } from "~/key-factories";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { getCsrfTokenHeader } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/settings"
@@ -192,51 +197,125 @@ type ServiceFormProps = {
 };
 
 function ServiceSlugForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { mutate, isPending, data, reset } = useMutation({
+    mutationFn: async (
+      input: Required<
+        RequestInput<
+          "patch",
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/"
+        >
+      >
+    ) => {
+      await queryClient.cancelQueries({
+        queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+        exact: true
+      });
+
+      const { error, data } = await apiClient.PATCH(
+        "/api/projects/{project_slug}/service-details/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: input
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        queryClient.setQueryData(
+          serviceKeys.single(project_slug, input.slug, "docker"),
+          () => ({
+            data
+          })
+        );
+
+        await navigate({
+          to: `/project/${project_slug}/services/docker/${input.slug}/settings`,
+          replace: true
+        });
+        return;
+      }
+    },
+    onSettled: async (error) => {
+      if (!error) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker")
+        });
+        setIsEditing(false);
+      }
+    }
+  });
+
   const [isEditing, setIsEditing] = React.useState(false);
+
+  const errors = getFormErrorsFromResponseData(data);
+
   return (
     <div className={className}>
       {isEditing ? (
         <Form.Root
-          action={() => {
-            setIsEditing(false);
+          action={(formData) => {
+            mutate({
+              slug: formData.get("slug")?.toString() ?? ""
+            });
           }}
-          className="flex gap-2 w-full items-end"
+          className="flex flex-col md:flex-row gap-2 w-full"
         >
           <Form.Field name="slug" className="flex flex-col gap-1.5 flex-1">
             <Form.Label>Service slug</Form.Label>
             <Form.Control asChild>
-              <Input placeholder="service slug" defaultValue="nginx-demo" />
+              <Input placeholder="service slug" defaultValue={service_slug} />
             </Form.Control>
+            {errors.slug && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.slug}
+              </Form.Message>
+            )}
           </Form.Field>
 
-          <SubmitButton
-            isPending={false}
-            variant="outline"
-            className="bg-inherit"
-          >
-            {/* {isUpdatingVariableValue ? (
-               <>
-                 <LoaderIcon className="animate-spin" size={15} />
-                 <span className="sr-only">Updating variable value...</span>
-               </>
-             ) : ( */}
-            <>
-              <CheckIcon size={15} className="flex-none" />
-              <span className="sr-only">Update variable value</span>
-            </>
-            {/* )} */}
-          </SubmitButton>
-          <Button
-            onClick={() => {
-              setIsEditing(false);
-            }}
-            variant="outline"
-            className="bg-inherit"
-            type="button"
-          >
-            <XIcon size={15} className="flex-none" />
-            <span className="sr-only">Cancel</span>
-          </Button>
+          <div className="flex gap-2 md:relative top-8">
+            <SubmitButton
+              isPending={isPending}
+              variant="outline"
+              className="bg-inherit"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span className="sr-only">Updating service slug...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span className="sr-only">Update service slug</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              onClick={() => {
+                setIsEditing(false);
+                reset();
+              }}
+              variant="outline"
+              className="bg-inherit"
+              type="button"
+            >
+              <XIcon size={15} className="flex-none" />
+              <span className="sr-only">Cancel</span>
+            </Button>
+          </div>
         </Form.Root>
       ) : (
         <div className="flex flex-col gap-1.5">
@@ -247,7 +326,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
               "bg-muted"
             )}
           >
-            <span>nginx-demo</span>
+            <span>{service_slug}</span>
             <Button
               variant="outline"
               onClick={() => {

@@ -127,6 +127,8 @@ export interface paths {
      * @description See all the details of a service.
      */
     get: operations["getDockerService"];
+    /** Update a service */
+    patch: operations["updateService"];
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/": {
     /**
@@ -1011,6 +1013,9 @@ export interface components {
     ParseErrorResponse: {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
+    };
+    PatchedDockerServiceUpdateRequestRequest: {
+      slug?: string;
     };
     PatchedProjectUpdateRequestRequest: {
       slug?: string;
@@ -1910,6 +1915,44 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["UpdateProjectError"][];
     };
+    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"];
+    UpdateServiceErrorResponse400: components["schemas"]["UpdateServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateServiceSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    UpdateServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateServiceError"][];
+    };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -2766,6 +2809,49 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update a service */
+  updateService: {
+    parameters: {
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedDockerServiceUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedDockerServiceUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedDockerServiceUpdateRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerService"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateServiceErrorResponse400"];
         };
       };
       401: {
