@@ -2,6 +2,7 @@ import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircleIcon,
   ArrowRightIcon,
   CableIcon,
   CheckIcon,
@@ -22,7 +23,6 @@ import {
   PencilLineIcon,
   Plus,
   PlusIcon,
-  SunriseIcon,
   SunsetIcon,
   Trash2,
   Trash2Icon,
@@ -65,6 +65,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { serviceKeys } from "~/key-factories";
+import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
+import {
+  type DockerService,
+  useDockerServiceSingleQuery
+} from "~/lib/hooks/use-docker-service-single-query";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -345,81 +350,173 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
 }
 
 function ServiceImageForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = React.useState(false);
-  const [hasChanged, setHasChanged] = React.useState(false);
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+  const cancelImageChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const updateImageMutation = useMutation({
+    mutationFn: async (new_image: string) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "UPDATE",
+            new_value: new_image,
+            field: "image"
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsEditing(false);
+        return;
+      }
+    }
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const serviceImageChange = service?.unapplied_changes.find(
+    (change) => change.field === "image"
+  );
+
+  const serviceImage =
+    (serviceImageChange?.new_value as string) ?? service?.image;
+
+  const imageParts = serviceImage.split(":");
+
+  const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
+  const image = imageParts.join(":");
+
+  const errors = getFormErrorsFromResponseData(updateImageMutation.data);
+
   return (
     <div className={className}>
       {isEditing ? (
         <Form.Root
-          action={() => {
-            setHasChanged(true);
-            setIsEditing(false);
+          action={(formData) => {
+            updateImageMutation.mutate(formData.get("image")?.toString() ?? "");
           }}
-          className="flex gap-2 w-full items-end"
+          className="flex flex-col md:flex-row  gap-2 w-full"
         >
           <Form.Field name="image" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-lg">Source image</Form.Label>
             <Form.Control asChild>
-              <Input
-                placeholder="service slug"
-                defaultValue="nginxdemos/hello"
-              />
+              <Input placeholder="service slug" defaultValue={serviceImage} />
             </Form.Control>
+            {errors.new_value && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value}
+              </Form.Message>
+            )}
           </Form.Field>
 
-          <SubmitButton
-            isPending={false}
-            variant="outline"
-            className="bg-inherit"
-          >
-            {/* {isUpdatingVariableValue ? (
-               <>
-                 <LoaderIcon className="animate-spin" size={15} />
-                 <span className="sr-only">Updating variable value...</span>
-               </>
-             ) : ( */}
-            <>
-              <CheckIcon size={15} className="flex-none" />
-              <span className="sr-only">Update variable value</span>
-            </>
-            {/* )} */}
-          </SubmitButton>
-          <Button
-            onClick={() => {
-              setIsEditing(false);
-            }}
-            variant="outline"
-            className="bg-inherit"
-            type="button"
-          >
-            <XIcon size={15} className="flex-none" />
-            <span className="sr-only">Cancel</span>
-          </Button>
+          <div className="flex gap-2 md:relative top-8">
+            <SubmitButton
+              isPending={updateImageMutation.isPending}
+              variant="outline"
+              className="bg-inherit"
+            >
+              {updateImageMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span className="sr-only">Updating service image...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span className="sr-only">Update service image</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              onClick={() => {
+                setIsEditing(false);
+                updateImageMutation.reset();
+              }}
+              variant="outline"
+              className="bg-inherit"
+              type="button"
+            >
+              <XIcon size={15} className="flex-none" />
+              <span className="sr-only">Cancel</span>
+            </Button>
+          </div>
         </Form.Root>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 flex-wrap">
           <h3 className="text-lg">Source image</h3>
           <div
             className={cn(
               "w-full rounded-md flex justify-between items-center gap-2 py-1 pl-4 pr-2",
-              hasChanged
+              serviceImageChange !== undefined
                 ? "dark:bg-secondary-foreground bg-secondary/60"
                 : "bg-muted"
             )}
           >
             <span>
-              nginxdemos/hello<span className="text-grey">:latest</span>
+              {image}
+              <span className="text-grey">:{tag}</span>
             </span>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditing(true);
-              }}
-              className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-            >
-              <span>Edit</span>
-              <PencilLineIcon size={15} />
-            </Button>
+            {serviceImageChange !== undefined ? (
+              <form
+                action={() =>
+                  cancelImageChangeMutation.mutate(serviceImageChange.id)
+                }
+              >
+                <SubmitButton
+                  isPending={cancelImageChangeMutation.isPending}
+                  variant="outline"
+                  className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                >
+                  {cancelImageChangeMutation.isPending ? (
+                    <>
+                      <span>Reverting change...</span>
+                      <LoaderIcon className="animate-spin" size={15} />
+                    </>
+                  ) : (
+                    <>
+                      <span>Revert change</span>
+                      <Undo2Icon size={15} />
+                    </>
+                  )}
+                </SubmitButton>
+              </form>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(true);
+                }}
+                className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+              >
+                <span>Edit</span>
+                <PencilLineIcon size={15} />
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -428,10 +525,105 @@ function ServiceImageForm({ className }: ServiceFormProps) {
 }
 
 function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const cancelCredentialsChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const updateCredentialsMutation = useMutation({
+    mutationFn: async (input: {
+      username?: string;
+      password?: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "UPDATE",
+            new_value: input,
+            field: "credentials"
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        setIsPasswordShown(false);
+        return;
+      }
+    }
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const serviceCredentialsChange = service?.unapplied_changes.find(
+    (change) => change.field === "credentials"
+  );
+  const credentials =
+    (serviceCredentialsChange?.new_value as DockerService["credentials"]) ??
+    service?.credentials;
+
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
+
+  const errors = getFormErrorsFromResponseData(updateCredentialsMutation.data);
+
+  let non_field_errors: string[] = [];
+  if (errors.non_field_errors) {
+    non_field_errors = non_field_errors.concat(errors.non_field_errors);
+  }
+  if (Array.isArray(errors.new_value)) {
+    non_field_errors = non_field_errors.concat(errors.new_value);
+  }
+
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const newCredentialsValue =
+    serviceCredentialsChange?.new_value as DockerService["credentials"];
+
+  const isEmptyChange =
+    serviceCredentialsChange !== undefined &&
+    (newCredentialsValue === null ||
+      (newCredentialsValue?.username.trim() === "" &&
+        newCredentialsValue?.password.trim() === ""));
+
   return (
     <Form.Root
-      action={() => {}}
+      ref={formRef}
+      action={(formData) => {
+        if (serviceCredentialsChange !== undefined) {
+          cancelCredentialsChangeMutation.mutate(serviceCredentialsChange.id, {
+            onSuccess() {
+              formRef.current?.reset();
+            }
+          });
+        } else {
+          updateCredentialsMutation.mutate({
+            username: formData.get("username")?.toString(),
+            password: formData.get("password")?.toString()
+          });
+        }
+      }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
       <fieldset className="w-full flex flex-col gap-4">
@@ -440,13 +632,35 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           If your image is on a private registry, please provide the information
           below.
         </p>
+
+        {non_field_errors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{non_field_errors}</AlertDescription>
+          </Alert>
+        )}
         <Form.Field name="username" className="flex flex-col gap-1.5 flex-1">
           <Form.Label className="text-muted-foreground">
             Username for registry
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="username" defaultValue="fredkiss" />
+            <Input
+              placeholder={isEmptyChange ? "<empty>" : "username"}
+              disabled={serviceCredentialsChange !== undefined}
+              defaultValue={credentials?.username}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+            />
           </Form.Control>
+          {errors.new_value?.username && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.username}
+            </Form.Message>
+          )}
         </Form.Field>
         <Form.Field name="password" className="flex flex-col gap-1.5 flex-1">
           <Form.Label className="text-muted-foreground">
@@ -455,9 +669,15 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           <div className="flex gap-2">
             <Form.Control asChild>
               <Input
-                placeholder="service slug"
+                placeholder={isEmptyChange ? "<empty>" : "*******"}
+                disabled={serviceCredentialsChange !== undefined}
                 type={isPasswordShown ? "text" : "password"}
-                defaultValue="password"
+                defaultValue={credentials?.password}
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
               />
             </Form.Control>
             <TooltipProvider>
@@ -465,6 +685,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
+                    type="button"
                     onClick={() => setIsPasswordShown(!isPasswordShown)}
                     className="p-4"
                   >
@@ -484,22 +705,49 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
+          {errors.new_value?.password && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.password}
+            </Form.Message>
+          )}
         </Form.Field>
       </fieldset>
 
-      <SubmitButton isPending={false} variant="secondary">
-        {/* {isUpdatingVariableValue ? (
-               <>
-                 <LoaderIcon className="animate-spin" size={15} />
-                 <span className="sr-only">Updating variable value...</span>
-               </>
-             ) : ( */}
-        <>
-          <CheckIcon size={15} className="flex-none" />
-          <span>Update</span>
-        </>
-        {/* )} */}
-      </SubmitButton>
+      {serviceCredentialsChange !== undefined ? (
+        <SubmitButton
+          isPending={cancelCredentialsChangeMutation.isPending}
+          variant="outline"
+        >
+          {cancelCredentialsChangeMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Reverting...</span>
+            </>
+          ) : (
+            <>
+              <Undo2Icon size={15} className="flex-none" />
+              <span>Revert change</span>
+            </>
+          )}
+        </SubmitButton>
+      ) : (
+        <SubmitButton
+          isPending={updateCredentialsMutation.isPending}
+          variant="secondary"
+        >
+          {updateCredentialsMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating ...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span>Update</span>
+            </>
+          )}
+        </SubmitButton>
+      )}
     </Form.Root>
   );
 }
