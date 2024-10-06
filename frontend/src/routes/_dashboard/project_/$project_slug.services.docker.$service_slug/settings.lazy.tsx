@@ -2,6 +2,7 @@ import * as Form from "@radix-ui/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircleIcon,
   ArrowRightIcon,
   CableIcon,
   CheckIcon,
@@ -66,9 +67,12 @@ import {
 } from "~/components/ui/tooltip";
 import { serviceKeys } from "~/key-factories";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
-import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
+import {
+  type DockerService,
+  useDockerServiceSingleQuery
+} from "~/lib/hooks/use-docker-service-single-query";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader, wait } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/settings"
@@ -522,10 +526,111 @@ function ServiceImageForm({ className }: ServiceFormProps) {
 }
 
 function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const cancelCredentialsChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const updateCredentialsMutation = useMutation({
+    mutationFn: async (input: {
+      username?: string;
+      password?: string;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "UPDATE",
+            new_value: input,
+            field: "credentials"
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const serviceCredentialsChange = service?.unapplied_changes.find(
+    (change) => change.field === "credentials"
+  );
+  const credentials =
+    (serviceCredentialsChange?.new_value as DockerService["credentials"]) ??
+    service?.credentials;
+
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
+
+  const errors = getFormErrorsFromResponseData(updateCredentialsMutation.data);
+
+  let non_field_errors: string[] = [];
+  if (errors.non_field_errors) {
+    non_field_errors = non_field_errors.concat(errors.non_field_errors);
+  }
+  if (Array.isArray(errors.new_value)) {
+    non_field_errors = non_field_errors.concat(errors.new_value);
+  }
+
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const newCredentialsValue =
+    serviceCredentialsChange?.new_value as DockerService["credentials"];
+
+  const isEmptyChange =
+    serviceCredentialsChange !== undefined &&
+    (newCredentialsValue === null ||
+      (newCredentialsValue?.username.trim() === "" &&
+        newCredentialsValue?.password.trim() === ""));
+
   return (
     <Form.Root
-      action={() => {}}
+      ref={formRef}
+      action={(formData) => {
+        if (serviceCredentialsChange !== undefined) {
+          cancelCredentialsChangeMutation.mutate(serviceCredentialsChange.id, {
+            onSuccess() {
+              formRef.current?.reset();
+            }
+          });
+        } else {
+          updateCredentialsMutation.mutate(
+            {
+              username: formData.get("username")?.toString(),
+              password: formData.get("password")?.toString()
+            },
+            {
+              onSuccess() {
+                setIsPasswordShown(false);
+              }
+            }
+          );
+        }
+      }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
       <fieldset className="w-full flex flex-col gap-4">
@@ -534,13 +639,35 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           If your image is on a private registry, please provide the information
           below.
         </p>
+
+        {non_field_errors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{non_field_errors}</AlertDescription>
+          </Alert>
+        )}
         <Form.Field name="username" className="flex flex-col gap-1.5 flex-1">
           <Form.Label className="text-muted-foreground">
             Username for registry
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="username" defaultValue="fredkiss" />
+            <Input
+              placeholder={isEmptyChange ? "<empty>" : "username"}
+              disabled={serviceCredentialsChange !== undefined}
+              defaultValue={credentials?.username}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+            />
           </Form.Control>
+          {errors.new_value?.username && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.username}
+            </Form.Message>
+          )}
         </Form.Field>
         <Form.Field name="password" className="flex flex-col gap-1.5 flex-1">
           <Form.Label className="text-muted-foreground">
@@ -549,9 +676,15 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           <div className="flex gap-2">
             <Form.Control asChild>
               <Input
-                placeholder="service slug"
+                placeholder={isEmptyChange ? "<empty>" : "*******"}
+                disabled={serviceCredentialsChange !== undefined}
                 type={isPasswordShown ? "text" : "password"}
-                defaultValue="password"
+                defaultValue={credentials?.password}
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
               />
             </Form.Control>
             <TooltipProvider>
@@ -559,6 +692,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
+                    type="button"
                     onClick={() => setIsPasswordShown(!isPasswordShown)}
                     className="p-4"
                   >
@@ -578,22 +712,49 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
+          {errors.new_value?.password && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.password}
+            </Form.Message>
+          )}
         </Form.Field>
       </fieldset>
 
-      <SubmitButton isPending={false} variant="secondary">
-        {/* {isUpdatingVariableValue ? (
-               <>
-                 <LoaderIcon className="animate-spin" size={15} />
-                 <span className="sr-only">Updating variable value...</span>
-               </>
-             ) : ( */}
-        <>
-          <CheckIcon size={15} className="flex-none" />
-          <span>Update</span>
-        </>
-        {/* )} */}
-      </SubmitButton>
+      {serviceCredentialsChange !== undefined ? (
+        <SubmitButton
+          isPending={cancelCredentialsChangeMutation.isPending}
+          variant="outline"
+        >
+          {cancelCredentialsChangeMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Reverting...</span>
+            </>
+          ) : (
+            <>
+              <Undo2Icon size={15} className="flex-none" />
+              <span>Revert change</span>
+            </>
+          )}
+        </SubmitButton>
+      ) : (
+        <SubmitButton
+          isPending={updateCredentialsMutation.isPending}
+          variant="secondary"
+        >
+          {updateCredentialsMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating ...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span>Update</span>
+            </>
+          )}
+        </SubmitButton>
+      )}
     </Form.Root>
   );
 }

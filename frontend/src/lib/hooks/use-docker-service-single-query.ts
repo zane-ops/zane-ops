@@ -31,3 +31,11 @@ export function useDockerServiceSingleQuery(
     }
   });
 }
+
+export type DockerService = Exclude<
+  Exclude<
+    ReturnType<typeof useDockerServiceSingleQuery>["data"],
+    undefined
+  >["data"],
+  undefined
+>;
