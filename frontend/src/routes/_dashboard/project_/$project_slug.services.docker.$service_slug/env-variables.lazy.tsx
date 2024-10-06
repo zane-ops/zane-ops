@@ -43,6 +43,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { serviceKeys } from "~/key-factories";
+import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
@@ -190,40 +191,10 @@ function EnVariableRow({
   const queryClient = useQueryClient();
   const { project_slug, service_slug } = Route.useParams();
 
-  const { mutateAsync: cancelEnvChange } = useMutation({
-    mutationFn: async (change_id: string) => {
-      const { error, data } = await apiClient.DELETE(
-        "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug,
-              change_id
-            }
-          }
-        }
-      );
-      if (error) {
-        const fullErrorMessage = error.errors
-          .map((err) => err.detail)
-          .join(" ");
-
-        throw new Error(fullErrorMessage);
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        return;
-      }
-    }
-  });
+  const cancelEnvChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
 
   const {
     mutate: editEnvVariable,
@@ -488,18 +459,21 @@ function EnVariableRow({
                       text="Revert change"
                       className="text-red-400"
                       onClick={() =>
-                        toast.promise(cancelEnvChange(change_id), {
-                          loading: `Cancelling env variable change...`,
-                          success: "Success",
-                          error: "Error",
-                          closeButton: true,
-                          description(data) {
-                            if (data instanceof Error) {
-                              return data.message;
+                        toast.promise(
+                          cancelEnvChangeMutation.mutateAsync(change_id),
+                          {
+                            loading: `Cancelling env variable change...`,
+                            success: "Success",
+                            error: "Error",
+                            closeButton: true,
+                            description(data) {
+                              if (data instanceof Error) {
+                                return data.message;
+                              }
+                              return "Done.";
                             }
-                            return "Done.";
                           }
-                        })
+                        )
                       }
                     />
                   </>
