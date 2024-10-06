@@ -271,7 +271,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
               slug: formData.get("slug")?.toString() ?? ""
             });
           }}
-          className={cn("flex flex-col md:flex-row gap-2 w-full")}
+          className="flex flex-col md:flex-row gap-2 w-full"
         >
           <Form.Field name="slug" className="flex flex-col gap-1.5 flex-1">
             <Form.Label>Service slug</Form.Label>
