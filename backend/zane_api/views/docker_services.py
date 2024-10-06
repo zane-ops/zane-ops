@@ -456,7 +456,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             )
             if snapshot.image is None:
                 raise ResourceConflict(
-                    detail="Cannot delete this change because it would remove the image of the service."
+                    detail="Cannot revert this change because it would remove the image of the service."
                 )
 
             if found_change.field == "ports" or found_change.field == "urls":
@@ -469,7 +469,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
                 )
                 if is_healthcheck_path and service_is_not_exposed_to_http:
                     raise ResourceConflict(
-                        f"Cannot delete this change because there is a healthcheck of type `path` attached to the service"
+                        f"Cannot revert this change because there is a healthcheck of type `path` attached to the service"
                         f" and the service is not exposed to the public through an URL or another HTTP port"
                     )
 
