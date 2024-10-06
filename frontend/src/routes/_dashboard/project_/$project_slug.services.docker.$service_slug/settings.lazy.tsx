@@ -31,6 +31,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -483,9 +484,16 @@ function ServiceImageForm({ className }: ServiceFormProps) {
             </span>
             {serviceImageChange !== undefined ? (
               <form
-                action={() =>
-                  cancelImageChangeMutation.mutate(serviceImageChange.id)
-                }
+                action={() => {
+                  cancelImageChangeMutation.mutate(serviceImageChange.id, {
+                    onError(error) {
+                      toast.error("Error", {
+                        closeButton: true,
+                        description: error.message
+                      });
+                    }
+                  });
+                }}
               >
                 <SubmitButton
                   isPending={cancelImageChangeMutation.isPending}
@@ -615,6 +623,12 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           cancelCredentialsChangeMutation.mutate(serviceCredentialsChange.id, {
             onSuccess() {
               formRef.current?.reset();
+            },
+            onError(error) {
+              toast.error("Error", {
+                closeButton: true,
+                description: error.message
+              });
             }
           });
         } else {
