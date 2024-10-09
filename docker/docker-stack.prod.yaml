@@ -12,6 +12,7 @@ x-backend-vars: &env-vars
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
+  __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
 
 services:
   proxy:
