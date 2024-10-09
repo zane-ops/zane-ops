@@ -11,12 +11,12 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
 	@echo "    ⚒️  INITIAL SETUP OF ZANEOPS ⚒️"
 	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
-	@echo "Step 1️⃣ : initiating docker swarm..."
+	@echo "Step 1️⃣ : initializing docker swarm..."
 	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "active"; then \
 		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -q "true"; then \
-			echo "Swarm is enabled and this node is a manager"; \
+			echo "Swarm is enabled and this node is a manager, skipping swarm initialization 👍"; \
 		else \
-			echo "ERROR: Swarm is enabled, but this node is not a manager. ZaneOps needs be installed on a docker swarm manager." >&2; \
+			echo "❌ ERROR: Swarm is enabled, but this node is not a manager. ZaneOps needs be installed on a docker swarm manager. ❌" >&2; \
 			echo "To promote this node to a manager, run: docker node promote <node_name>" >&2; \
 			echo "You can check the node name by running: docker node ls" >&2; \
 			exit 1; \
