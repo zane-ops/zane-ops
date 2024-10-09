@@ -87,7 +87,7 @@ Ensure you have [Docker](https://docs.docker.com/engine/install/) installed and 
     make create-user
     ```
 
-7. Log in to the dashboard by connecting to the domain specified in `ZANE_APP_DOMAIN`. If hosted locally, you can use http://127-0-0-1.sslip.io.
+7. Log in to the dashboard by connecting to the domain specified in `ZANE_APP_DOMAIN`. If hosted locally ([see instructions below](#installing-locally)), you can use http://127-0-0-1.sslip.io.
 </Steps>
 
 
@@ -119,6 +119,10 @@ ZaneOps can be installed locally with minimal configuration changes.
 To do this :
 - keep the `ZANE_APP_DOMAIN` and `ROOT_DOMAIN` environment variables set to http://127-0-0-1.sslip.io.
 - add the `__DANGEROUS_ALLOW_HTTP_SESSION` environment variable to `.env` and set its value to `true`
+- run the deploy command with http enabled, either by accepting the prompt with `Y` when running `make deploy` or using this shortcut : 
+  ```shell
+  yes | make deploy
+  ```
 
 <Aside type="caution" title="Important">
 You can enable the `__DANGEROUS_ALLOW_HTTP_SESSION` environment variable in production to access your ZaneOps instance over HTTP.
