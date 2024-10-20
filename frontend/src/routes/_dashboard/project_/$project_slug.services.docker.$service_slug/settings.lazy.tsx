@@ -766,7 +766,45 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   );
 }
 
+type PortItem = {
+  change_id?: string;
+  id?: string | null;
+  host: number;
+  forwarded: number;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+};
+
 function ServicePortsForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const ports: Map<number, PortItem> = new Map();
+  for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
+    ports.set(port.host ?? 80, {
+      id: port.id,
+      host: port.host ?? 80,
+      forwarded: port.forwarded
+    });
+  }
+  for (const ch of (
+    serviceSingleQuery.data?.data?.unapplied_changes ?? []
+  ).filter((ch) => ch.field === "ports")) {
+    const hostForwarded = (ch.new_value ?? ch.old_value) as {
+      host: number;
+      forwarded: number;
+    };
+    ports.set(hostForwarded.host, {
+      change_id: ch.id,
+      id: ch.item_id,
+      host: hostForwarded.host,
+      forwarded: hostForwarded.forwarded,
+      change_type: ch.type
+    });
+  }
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -793,36 +831,24 @@ function ServicePortsForm({ className }: ServiceFormProps) {
           </AlertDescription>
         </Alert>
       </div>
-      <hr className="border-border" />
-      <ul className="flex flex-col gap-1">
-        <li>
-          <ServicePortItem host={81} forwarded={8080} />
-        </li>
-        <li>
-          <ServicePortItem
-            host={82}
-            forwarded={8080}
-            change_type="UPDATE"
-            change_id="1"
-          />
-        </li>
-        <li>
-          <ServicePortItem
-            host={83}
-            forwarded={8080}
-            change_type="DELETE"
-            change_id="1"
-          />
-        </li>
-        <li>
-          <ServicePortItem
-            host={84}
-            forwarded={8080}
-            change_type="ADD"
-            change_id="1"
-          />
-        </li>
-      </ul>
+
+      {ports.size > 0 && (
+        <>
+          <hr className="border-border" />
+          <ul className="flex flex-col gap-1">
+            {[...ports.entries()].map(([key, value]) => (
+              <li key={key}>
+                <ServicePortItem
+                  host={value.host}
+                  forwarded={value.forwarded}
+                  change_type={value.change_type}
+                  change_id={value.change_id}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <hr className="border-border" />
       <h3 className="text-lg">Add new port</h3>
       <NewServicePortForm />
@@ -860,7 +886,7 @@ function ServicePortItem({
       <div className="flex gap-2 items-center">
         <span>{host}</span>
         <ArrowRightIcon size={15} className="text-grey" />
-        <span>{forwarded}</span>
+        <span className="text-grey">{forwarded}</span>
       </div>
       <Menubar className="border-none h-auto w-fit">
         <MenubarMenu>
@@ -913,23 +939,70 @@ function ServicePortItem({
 }
 
 function NewServicePortForm() {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data, reset } = useMutation({
+    mutationFn: async (input: {
+      host: number;
+      forwarded: number;
+    }) => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          },
+          body: {
+            type: "ADD",
+            field: "ports",
+            new_value: input
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        formRef.current?.reset();
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
   return (
     <Form.Root
       action={(formData) => {
-        // ...
+        mutate({
+          host: Number(formData.get("host") ?? ""),
+          forwarded: Number(formData.get("forwarded") ?? "")
+        });
       }}
-      className="flex md:items-end  gap-3 md:flex-row flex-col items-stretch"
+      className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >
       <Form.Field name="host" className="flex-1 inline-flex flex-col gap-1">
         <Form.Label className="text-gray-400">Host port</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: 80" />
         </Form.Control>
-        {/* {errors.new_value?.key && (
+        {errors.new_value?.host && (
           <Form.Message className="text-red-500 text-sm">
-            {errors.new_value?.key}
+            {errors.new_value?.host}
           </Form.Message>
-        )} */}
+        )}
       </Form.Field>
       <Form.Field
         name="forwarded"
@@ -939,32 +1012,37 @@ function NewServicePortForm() {
         <Form.Control asChild>
           <Input placeholder="ex: 8080" />
         </Form.Control>
-        {/* {errors.new_value?.value && (
+        {errors.new_value?.forwarded && (
           <Form.Message className="text-red-500 text-sm">
-            {errors.new_value?.value}
+            {errors.new_value?.forwarded}
           </Form.Message>
-        )} */}
+        )}
       </Form.Field>
 
-      <div className="flex gap-3 items-center w-full md:w-auto">
+      <div className="flex gap-3 items-center pt-7 w-full md:w-auto">
         <SubmitButton
           isPending={false}
           variant="secondary"
           className="inline-flex gap-1 flex-1"
         >
-          {/* {isPending ? (
+          {isPending ? (
             <>
               <span>Adding...</span>
               <LoaderIcon className="animate-spin" size={15} />
             </>
-          ) : ( */}
-          <>
-            <span>Add</span>
-            <Plus size={15} />
-          </>
-          {/* )} */}
+          ) : (
+            <>
+              <span>Add</span>
+              <Plus size={15} />
+            </>
+          )}
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1">
+        <Button
+          onClick={reset}
+          variant="outline"
+          type="reset"
+          className="flex-1"
+        >
           Cancel
         </Button>
       </div>
