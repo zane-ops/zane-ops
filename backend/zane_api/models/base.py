@@ -909,7 +909,9 @@ class HttpLog(Log):
     request_headers = models.JSONField()
     response_headers = models.JSONField()
     request_protocol = models.CharField(
-        max_length=10, choices=RequestProtocols, default=RequestProtocols.HTTP_1_1
+        max_length=10,
+        choices=RequestProtocols.choices,
+        default=RequestProtocols.HTTP_1_1,
     )
     request_host = models.URLField(max_length=1000)
     request_path = models.CharField(max_length=2000)
