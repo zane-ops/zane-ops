@@ -71,6 +71,7 @@ import {
   type DockerService,
   useDockerServiceSingleQuery
 } from "~/lib/hooks/use-docker-service-single-query";
+import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -352,7 +353,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
 
 function ServiceImageForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const queryClient = useQueryClient();
+
   const [isEditing, setIsEditing] = React.useState(false);
   const serviceSingleQuery = useDockerServiceSingleQuery(
     project_slug,
@@ -363,39 +364,12 @@ function ServiceImageForm({ className }: ServiceFormProps) {
     service_slug
   );
 
-  const updateImageMutation = useMutation({
-    mutationFn: async (new_image: string) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "UPDATE",
-            new_value: new_image,
-            field: "image"
-          }
-        }
-      );
-      if (error) {
-        return error;
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        setIsEditing(false);
-        return;
-      }
+  const updateImageMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "image",
+    onSuccess() {
+      setIsEditing(false);
     }
   });
 
@@ -419,7 +393,10 @@ function ServiceImageForm({ className }: ServiceFormProps) {
       {isEditing ? (
         <Form.Root
           action={(formData) => {
-            updateImageMutation.mutate(formData.get("image")?.toString() ?? "");
+            updateImageMutation.mutate({
+              type: "UPDATE",
+              new_value: formData.get("image")?.toString() ?? ""
+            });
           }}
           className="flex flex-col md:flex-row  gap-2 w-full"
         >
@@ -534,7 +511,6 @@ function ServiceImageForm({ className }: ServiceFormProps) {
 
 function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const queryClient = useQueryClient();
 
   const serviceSingleQuery = useDockerServiceSingleQuery(
     project_slug,
@@ -546,42 +522,12 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
     service_slug
   );
 
-  const updateCredentialsMutation = useMutation({
-    mutationFn: async (input: {
-      username?: string;
-      password?: string;
-    }) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "UPDATE",
-            new_value: input,
-            field: "credentials"
-          }
-        }
-      );
-      if (error) {
-        return error;
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        setIsPasswordShown(false);
-        return;
-      }
+  const updateCredentialsMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "credentials",
+    onSuccess() {
+      setIsPasswordShown(false);
     }
   });
 
@@ -633,8 +579,11 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           });
         } else {
           updateCredentialsMutation.mutate({
-            username: formData.get("username")?.toString(),
-            password: formData.get("password")?.toString()
+            type: "UPDATE",
+            new_value: {
+              username: formData.get("username")?.toString(),
+              password: formData.get("password")?.toString()
+            }
           });
         }
       }}
@@ -917,7 +866,6 @@ function ServicePortItem({
               </>
             ) : (
               <>
-                {" "}
                 <MenubarContentItem
                   icon={EditIcon}
                   text="Edit"
@@ -940,56 +888,32 @@ function ServicePortItem({
 
 function NewServicePortForm() {
   const { project_slug, service_slug } = Route.useParams();
-  const queryClient = useQueryClient();
   const formRef = React.useRef<React.ElementRef<"form">>(null);
 
-  const { mutate, isPending, data, reset } = useMutation({
-    mutationFn: async (input: {
-      host: number;
-      forwarded: number;
-    }) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "ADD",
-            field: "ports",
-            new_value: input
-          }
-        }
-      );
-      if (error) {
-        return error;
-      }
-
-      if (data) {
-        formRef.current?.reset();
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        return;
-      }
-    }
+  const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "ports"
   });
-
   const errors = getFormErrorsFromResponseData(data);
   return (
     <Form.Root
+      ref={formRef}
       action={(formData) => {
-        mutate({
-          host: Number(formData.get("host") ?? ""),
-          forwarded: Number(formData.get("forwarded") ?? "")
-        });
+        mutate(
+          {
+            type: "ADD",
+            new_value: {
+              host: Number(formData.get("host") ?? ""),
+              forwarded: Number(formData.get("forwarded") ?? "")
+            }
+          },
+          {
+            onSuccess(data, variables, context) {
+              formRef.current?.reset();
+            }
+          }
+        );
       }}
       className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >

@@ -213,10 +213,7 @@ function EnVariableRow({
   const { mutateAsync: removeVariable } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "env_variables",
-    onSuccess() {
-      setIsEditing(false);
-    }
+    field: "env_variables"
   });
 
   const errors = getFormErrorsFromResponseData(editVariableData);
