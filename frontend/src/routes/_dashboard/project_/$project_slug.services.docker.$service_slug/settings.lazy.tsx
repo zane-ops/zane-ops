@@ -730,9 +730,9 @@ function ServicePortsForm({ className }: ServiceFormProps) {
     service_slug
   );
 
-  const ports: Map<number, PortItem> = new Map();
+  const ports: Map<string, PortItem> = new Map();
   for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
-    ports.set(port.host ?? 80, {
+    ports.set(port.id, {
       id: port.id,
       host: port.host ?? 80,
       forwarded: port.forwarded
@@ -745,7 +745,7 @@ function ServicePortsForm({ className }: ServiceFormProps) {
       host: number;
       forwarded: number;
     };
-    ports.set(hostForwarded.host, {
+    ports.set(ch.item_id ?? ch.id, {
       change_id: ch.id,
       id: ch.item_id,
       host: hostForwarded.host,
@@ -830,52 +830,39 @@ function ServicePortItem({
   const { mutateAsync: removeExposedPort } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "ports"
+    field: "ports",
+    onSuccess() {
+      setAccordionValue("");
+    }
   });
 
-  return (
-    <div
-      className={cn(
-        "w-full rounded-md flex justify-between items-center gap-2 py-1 pl-4 pr-2 bg-muted",
-        {
-          "dark:bg-secondary-foreground bg-secondary/60 rounded-md":
-            change_type === "UPDATE",
-          "dark:bg-primary-foreground bg-primary/60 rounded-md":
-            change_type === "ADD",
-          "dark:bg-red-500/30 bg-red-400/60 rounded-md":
-            change_type === "DELETE"
-        }
-      )}
-    >
-      <div className="flex gap-2 items-center">
-        <span>{host}</span>
-        <ArrowRightIcon size={15} className="text-grey" />
-        <span className="text-grey">{forwarded}</span>
-      </div>
-      <Menubar className="border-none h-auto w-fit">
-        <MenubarMenu>
-          <MenubarTrigger
-            className="flex justify-center items-center gap-2"
-            asChild
-          >
-            <Button variant="ghost" className="px-2.5 py-0.5 hover:bg-inherit">
-              <EllipsisVerticalIcon size={15} />
-            </Button>
-          </MenubarTrigger>
+  const {
+    mutate: editExposedPort,
+    isPending: isUpdatingExposedPort,
+    data,
+    reset
+  } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "ports",
+    onSuccess() {
+      setAccordionValue("");
+    }
+  });
 
-          <MenubarContent
-            side="bottom"
-            align="start"
-            sideOffset={0}
-            alignOffset={0}
-            className="border min-w-0 mx-9 border-border"
-          >
-            {change_id !== undefined ? (
-              <>
-                <MenubarContentItem
-                  icon={Undo2Icon}
-                  text="Revert change"
-                  className="text-red-400"
+  const errors = getFormErrorsFromResponseData(data);
+  const [accordionValue, setAccordionValue] = React.useState("");
+
+  return (
+    <div className="relative group">
+      <div className="absolute top-1 right-2">
+        <TooltipProvider>
+          {change_id !== undefined ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-focus:opacity-100"
                   onClick={() =>
                     toast.promise(
                       cancelPortChangeMutation.mutateAsync(change_id),
@@ -893,20 +880,20 @@ function ServicePortItem({
                       }
                     )
                   }
-                />
-              </>
-            ) : (
-              id && (
-                <>
-                  <MenubarContentItem
-                    icon={EditIcon}
-                    text="Edit"
-                    onClick={() => {}}
-                  />
-                  <MenubarContentItem
-                    icon={Trash2}
-                    text="Remove"
-                    className="text-red-400"
+                >
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span className="sr-only">Revert change</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Revert change</TooltipContent>
+            </Tooltip>
+          ) : (
+            id && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                     onClick={() =>
                       toast.promise(
                         removeExposedPort({
@@ -927,13 +914,123 @@ function ServicePortItem({
                         }
                       )
                     }
-                  />
-                </>
-              )
+                  >
+                    <Trash2Icon size={15} className="flex-none text-red-400" />
+                    <span className="sr-only">Delete exposed port</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete exposed port</TooltipContent>
+              </Tooltip>
+            )
+          )}
+        </TooltipProvider>
+      </div>
+
+      <Accordion
+        type="single"
+        collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
+      >
+        <AccordionItem
+          value={`${host}:${forwarded}`}
+          className="border-none"
+          disabled={!!change_id}
+        >
+          <AccordionTrigger
+            className={cn(
+              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
+              "[&[data-state=open]]:rounded-b-none",
+              {
+                "dark:bg-secondary-foreground bg-secondary/60 ":
+                  change_type === "UPDATE",
+                "dark:bg-primary-foreground bg-primary/60":
+                  change_type === "ADD",
+                "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+              }
             )}
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
+          >
+            <span>{host}</span>
+            <ArrowRightIcon size={15} className="text-grey" />
+            <span className="text-grey">{forwarded}</span>
+          </AccordionTrigger>
+          {id && (
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <Form.Root
+                action={(formData) => {
+                  editExposedPort({
+                    type: "UPDATE",
+                    item_id: id,
+                    new_value: {
+                      host: Number(formData.get("host") ?? ""),
+                      forwarded: Number(formData.get("forwarded") ?? "")
+                    }
+                  });
+                }}
+                className="flex flex-col gap-4"
+              >
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <Form.Field
+                    name="host"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">Host port</Form.Label>
+                    <Form.Control asChild>
+                      <Input placeholder="ex: 80" defaultValue={host} />
+                    </Form.Control>
+                    {errors.new_value?.host && (
+                      <Form.Message className="text-red-500 text-sm">
+                        {errors.new_value?.host}
+                      </Form.Message>
+                    )}
+                  </Form.Field>
+                  <Form.Field
+                    name="forwarded"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">
+                      Forwarded port
+                    </Form.Label>
+                    <Form.Control asChild>
+                      <Input placeholder="ex: 8080" defaultValue={forwarded} />
+                    </Form.Control>
+                    {errors.new_value?.forwarded && (
+                      <Form.Message className="text-red-500 text-sm">
+                        {errors.new_value?.forwarded}
+                      </Form.Message>
+                    )}
+                  </Form.Field>
+                </div>
+
+                <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
+                  <SubmitButton
+                    variant="secondary"
+                    isPending={isUpdatingExposedPort}
+                    className="inline-flex gap-1"
+                  >
+                    {isUpdatingExposedPort ? (
+                      <>
+                        <span>Updating...</span>
+                        <LoaderIcon className="animate-spin" size={15} />
+                      </>
+                    ) : (
+                      <>
+                        Update
+                        <CheckIcon size={15} />
+                      </>
+                    )}
+                  </SubmitButton>
+                  <Button onClick={reset} variant="outline" type="reset">
+                    Cancel
+                  </Button>
+                </div>
+              </Form.Root>
+            </AccordionContent>
+          )}
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
