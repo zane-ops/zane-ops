@@ -45,6 +45,7 @@ import {
 import { serviceKeys } from "~/key-factories";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
 import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
+import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 
@@ -188,7 +189,6 @@ function EnVariableRow({
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
 
-  const queryClient = useQueryClient();
   const { project_slug, service_slug } = Route.useParams();
 
   const cancelEnvChangeMutation = useCancelDockerServiceChangeMutation(
@@ -201,86 +201,21 @@ function EnVariableRow({
     isPending: isUpdatingVariableValue,
     data: editVariableData,
     reset: resetEditionState
-  } = useMutation({
-    mutationFn: async (input: {
-      new_value: string;
-      id: string;
-    }) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "UPDATE",
-            item_id: input.id,
-            field: "env_variables",
-            new_value: {
-              key: name,
-              value: input.new_value
-            }
-          }
-        }
-      );
-      if (error) {
-        return error;
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        setIsEditing(false);
-        return;
-      }
+  } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "env_variables",
+    onSuccess() {
+      setIsEditing(false);
     }
   });
 
-  const { mutateAsync: removeVariable } = useMutation({
-    mutationFn: async (id: string) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "DELETE",
-            item_id: id,
-            field: "env_variables"
-          }
-        }
-      );
-      if (error) {
-        const fullErrorMessage = error.errors
-          .map((err) => err.detail)
-          .join(" ");
-
-        throw new Error(fullErrorMessage);
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        setIsEditing(false);
-        return;
-      }
+  const { mutateAsync: removeVariable } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "env_variables",
+    onSuccess() {
+      setIsEditing(false);
     }
   });
 
@@ -315,8 +250,12 @@ function EnVariableRow({
           className="col-span-3 md:col-span-5 flex md:items-start gap-3 md:flex-row flex-col pr-4"
           action={(formData) => {
             editEnvVariable({
-              id,
-              new_value: formData.get("value")?.toString() ?? ""
+              type: "UPDATE",
+              new_value: {
+                value: formData.get("value")?.toString() ?? "",
+                key: name
+              },
+              item_id: id
             });
           }}
         >
@@ -490,18 +429,24 @@ function EnVariableRow({
                         text="Remove"
                         className="text-red-400"
                         onClick={() =>
-                          toast.promise(removeVariable(id), {
-                            loading: `Sending change request...`,
-                            success: "Success",
-                            error: "Error",
-                            closeButton: true,
-                            description(data) {
-                              if (data instanceof Error) {
-                                return data.message;
+                          toast.promise(
+                            removeVariable({
+                              type: "DELETE",
+                              item_id: id
+                            }),
+                            {
+                              loading: `Sending change request...`,
+                              success: "Success",
+                              error: "Error",
+                              closeButton: true,
+                              description(data) {
+                                if (data instanceof Error) {
+                                  return data.message;
+                                }
+                                return "Done.";
                               }
-                              return "Done.";
                             }
-                          })
+                          )
                         }
                       />
                     </>
