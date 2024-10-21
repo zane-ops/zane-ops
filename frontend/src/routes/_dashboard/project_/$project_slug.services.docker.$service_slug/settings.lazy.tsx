@@ -792,6 +792,7 @@ function ServicePortsForm({ className }: ServiceFormProps) {
                   forwarded={value.forwarded}
                   change_type={value.change_type}
                   change_id={value.change_id}
+                  id={value.id}
                 />
               </li>
             ))}
@@ -809,6 +810,7 @@ type ServicePortItemProps = {
   host: number;
   forwarded: number;
   change_id?: string;
+  id?: string | null;
   change_type?: "UPDATE" | "DELETE" | "ADD";
 };
 
@@ -816,8 +818,21 @@ function ServicePortItem({
   host,
   forwarded,
   change_id,
+  id,
   change_type
 }: ServicePortItemProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const cancelPortChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const { mutateAsync: removeExposedPort } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "ports"
+  });
+
   return (
     <div
       className={cn(
@@ -861,23 +876,60 @@ function ServicePortItem({
                   icon={Undo2Icon}
                   text="Revert change"
                   className="text-red-400"
-                  onClick={() => {}}
+                  onClick={() =>
+                    toast.promise(
+                      cancelPortChangeMutation.mutateAsync(change_id),
+                      {
+                        loading: `Cancelling exposed port change...`,
+                        success: "Success",
+                        error: "Error",
+                        closeButton: true,
+                        description(data) {
+                          if (data instanceof Error) {
+                            return data.message;
+                          }
+                          return "Done.";
+                        }
+                      }
+                    )
+                  }
                 />
               </>
             ) : (
-              <>
-                <MenubarContentItem
-                  icon={EditIcon}
-                  text="Edit"
-                  onClick={() => {}}
-                />
-                <MenubarContentItem
-                  icon={Trash2}
-                  text="Remove"
-                  className="text-red-400"
-                  onClick={() => {}}
-                />
-              </>
+              id && (
+                <>
+                  <MenubarContentItem
+                    icon={EditIcon}
+                    text="Edit"
+                    onClick={() => {}}
+                  />
+                  <MenubarContentItem
+                    icon={Trash2}
+                    text="Remove"
+                    className="text-red-400"
+                    onClick={() =>
+                      toast.promise(
+                        removeExposedPort({
+                          type: "DELETE",
+                          item_id: id
+                        }),
+                        {
+                          loading: `Requesting change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        }
+                      )
+                    }
+                  />
+                </>
+              )
             )}
           </MenubarContent>
         </MenubarMenu>
@@ -909,8 +961,10 @@ function NewServicePortForm() {
             }
           },
           {
-            onSuccess(data, variables, context) {
-              formRef.current?.reset();
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              }
             }
           }
         );
