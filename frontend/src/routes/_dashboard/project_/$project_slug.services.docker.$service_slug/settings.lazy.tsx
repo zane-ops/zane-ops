@@ -71,6 +71,7 @@ import {
   type DockerService,
   useDockerServiceSingleQuery
 } from "~/lib/hooks/use-docker-service-single-query";
+import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -352,7 +353,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
 
 function ServiceImageForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const queryClient = useQueryClient();
+
   const [isEditing, setIsEditing] = React.useState(false);
   const serviceSingleQuery = useDockerServiceSingleQuery(
     project_slug,
@@ -363,39 +364,12 @@ function ServiceImageForm({ className }: ServiceFormProps) {
     service_slug
   );
 
-  const updateImageMutation = useMutation({
-    mutationFn: async (new_image: string) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "UPDATE",
-            new_value: new_image,
-            field: "image"
-          }
-        }
-      );
-      if (error) {
-        return error;
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        setIsEditing(false);
-        return;
-      }
+  const updateImageMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "image",
+    onSuccess() {
+      setIsEditing(false);
     }
   });
 
@@ -419,7 +393,10 @@ function ServiceImageForm({ className }: ServiceFormProps) {
       {isEditing ? (
         <Form.Root
           action={(formData) => {
-            updateImageMutation.mutate(formData.get("image")?.toString() ?? "");
+            updateImageMutation.mutate({
+              type: "UPDATE",
+              new_value: formData.get("image")?.toString() ?? ""
+            });
           }}
           className="flex flex-col md:flex-row  gap-2 w-full"
         >
@@ -534,7 +511,6 @@ function ServiceImageForm({ className }: ServiceFormProps) {
 
 function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const queryClient = useQueryClient();
 
   const serviceSingleQuery = useDockerServiceSingleQuery(
     project_slug,
@@ -546,42 +522,12 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
     service_slug
   );
 
-  const updateCredentialsMutation = useMutation({
-    mutationFn: async (input: {
-      username?: string;
-      password?: string;
-    }) => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug,
-              service_slug
-            }
-          },
-          body: {
-            type: "UPDATE",
-            new_value: input,
-            field: "credentials"
-          }
-        }
-      );
-      if (error) {
-        return error;
-      }
-
-      if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
-        });
-        setIsPasswordShown(false);
-        return;
-      }
+  const updateCredentialsMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "credentials",
+    onSuccess() {
+      setIsPasswordShown(false);
     }
   });
 
@@ -633,8 +579,11 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
           });
         } else {
           updateCredentialsMutation.mutate({
-            username: formData.get("username")?.toString(),
-            password: formData.get("password")?.toString()
+            type: "UPDATE",
+            new_value: {
+              username: formData.get("username")?.toString(),
+              password: formData.get("password")?.toString()
+            }
           });
         }
       }}
@@ -766,7 +715,45 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   );
 }
 
+type PortItem = {
+  change_id?: string;
+  id?: string | null;
+  host: number;
+  forwarded: number;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+};
+
 function ServicePortsForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const ports: Map<string, PortItem> = new Map();
+  for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
+    ports.set(port.id, {
+      id: port.id,
+      host: port.host ?? 80,
+      forwarded: port.forwarded
+    });
+  }
+  for (const ch of (
+    serviceSingleQuery.data?.data?.unapplied_changes ?? []
+  ).filter((ch) => ch.field === "ports")) {
+    const hostForwarded = (ch.new_value ?? ch.old_value) as {
+      host: number;
+      forwarded: number;
+    };
+    ports.set(ch.item_id ?? ch.id, {
+      change_id: ch.id,
+      id: ch.item_id,
+      host: hostForwarded.host,
+      forwarded: hostForwarded.forwarded,
+      change_type: ch.type
+    });
+  }
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -793,36 +780,25 @@ function ServicePortsForm({ className }: ServiceFormProps) {
           </AlertDescription>
         </Alert>
       </div>
-      <hr className="border-border" />
-      <ul className="flex flex-col gap-1">
-        <li>
-          <ServicePortItem host={81} forwarded={8080} />
-        </li>
-        <li>
-          <ServicePortItem
-            host={82}
-            forwarded={8080}
-            change_type="UPDATE"
-            change_id="1"
-          />
-        </li>
-        <li>
-          <ServicePortItem
-            host={83}
-            forwarded={8080}
-            change_type="DELETE"
-            change_id="1"
-          />
-        </li>
-        <li>
-          <ServicePortItem
-            host={84}
-            forwarded={8080}
-            change_type="ADD"
-            change_id="1"
-          />
-        </li>
-      </ul>
+
+      {ports.size > 0 && (
+        <>
+          <hr className="border-border" />
+          <ul className="flex flex-col gap-1">
+            {[...ports.entries()].map(([key, value]) => (
+              <li key={key}>
+                <ServicePortItem
+                  host={value.host}
+                  forwarded={value.forwarded}
+                  change_type={value.change_type}
+                  change_id={value.change_id}
+                  id={value.id}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <hr className="border-border" />
       <h3 className="text-lg">Add new port</h3>
       <NewServicePortForm />
@@ -834,6 +810,7 @@ type ServicePortItemProps = {
   host: number;
   forwarded: number;
   change_id?: string;
+  id?: string | null;
   change_type?: "UPDATE" | "DELETE" | "ADD";
 };
 
@@ -841,95 +818,266 @@ function ServicePortItem({
   host,
   forwarded,
   change_id,
+  id,
   change_type
 }: ServicePortItemProps) {
-  return (
-    <div
-      className={cn(
-        "w-full rounded-md flex justify-between items-center gap-2 py-1 pl-4 pr-2 bg-muted",
-        {
-          "dark:bg-secondary-foreground bg-secondary/60 rounded-md":
-            change_type === "UPDATE",
-          "dark:bg-primary-foreground bg-primary/60 rounded-md":
-            change_type === "ADD",
-          "dark:bg-red-500/30 bg-red-400/60 rounded-md":
-            change_type === "DELETE"
-        }
-      )}
-    >
-      <div className="flex gap-2 items-center">
-        <span>{host}</span>
-        <ArrowRightIcon size={15} className="text-grey" />
-        <span>{forwarded}</span>
-      </div>
-      <Menubar className="border-none h-auto w-fit">
-        <MenubarMenu>
-          <MenubarTrigger
-            className="flex justify-center items-center gap-2"
-            asChild
-          >
-            <Button variant="ghost" className="px-2.5 py-0.5 hover:bg-inherit">
-              <EllipsisVerticalIcon size={15} />
-            </Button>
-          </MenubarTrigger>
+  const { project_slug, service_slug } = Route.useParams();
+  const cancelPortChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
 
-          <MenubarContent
-            side="bottom"
-            align="start"
-            sideOffset={0}
-            alignOffset={0}
-            className="border min-w-0 mx-9 border-border"
-          >
-            {change_id !== undefined ? (
-              <>
-                <MenubarContentItem
-                  icon={Undo2Icon}
-                  text="Revert change"
-                  className="text-red-400"
-                  onClick={() => {}}
-                />
-              </>
-            ) : (
-              <>
-                {" "}
-                <MenubarContentItem
-                  icon={EditIcon}
-                  text="Edit"
-                  onClick={() => {}}
-                />
-                <MenubarContentItem
-                  icon={Trash2}
-                  text="Remove"
-                  className="text-red-400"
-                  onClick={() => {}}
-                />
-              </>
+  const { mutateAsync: removeExposedPort } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "ports",
+    onSuccess() {
+      setAccordionValue("");
+    }
+  });
+
+  const {
+    mutate: editExposedPort,
+    isPending: isUpdatingExposedPort,
+    data,
+    reset
+  } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "ports",
+    onSuccess() {
+      setAccordionValue("");
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+  const [accordionValue, setAccordionValue] = React.useState("");
+
+  return (
+    <div className="relative group">
+      <div className="absolute top-1 right-2">
+        <TooltipProvider>
+          {change_id !== undefined ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-focus:opacity-100"
+                  onClick={() =>
+                    toast.promise(
+                      cancelPortChangeMutation.mutateAsync(change_id),
+                      {
+                        loading: `Cancelling exposed port change...`,
+                        success: "Success",
+                        error: "Error",
+                        closeButton: true,
+                        description(data) {
+                          if (data instanceof Error) {
+                            return data.message;
+                          }
+                          return "Done.";
+                        }
+                      }
+                    )
+                  }
+                >
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span className="sr-only">Revert change</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Revert change</TooltipContent>
+            </Tooltip>
+          ) : (
+            id && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() =>
+                      toast.promise(
+                        removeExposedPort({
+                          type: "DELETE",
+                          item_id: id
+                        }),
+                        {
+                          loading: `Requesting change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        }
+                      )
+                    }
+                  >
+                    <Trash2Icon size={15} className="flex-none text-red-400" />
+                    <span className="sr-only">Delete exposed port</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete exposed port</TooltipContent>
+              </Tooltip>
+            )
+          )}
+        </TooltipProvider>
+      </div>
+
+      <Accordion
+        type="single"
+        collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
+      >
+        <AccordionItem
+          value={`${host}:${forwarded}`}
+          className="border-none"
+          disabled={!!change_id}
+        >
+          <AccordionTrigger
+            className={cn(
+              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
+              "[&[data-state=open]]:rounded-b-none",
+              {
+                "dark:bg-secondary-foreground bg-secondary/60 ":
+                  change_type === "UPDATE",
+                "dark:bg-primary-foreground bg-primary/60":
+                  change_type === "ADD",
+                "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+              }
             )}
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
+          >
+            <span>{host}</span>
+            <ArrowRightIcon size={15} className="text-grey" />
+            <span className="text-grey">{forwarded}</span>
+          </AccordionTrigger>
+          {id && (
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <Form.Root
+                action={(formData) => {
+                  editExposedPort({
+                    type: "UPDATE",
+                    item_id: id,
+                    new_value: {
+                      host: Number(formData.get("host") ?? ""),
+                      forwarded: Number(formData.get("forwarded") ?? "")
+                    }
+                  });
+                }}
+                className="flex flex-col gap-4"
+              >
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <Form.Field
+                    name="host"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">Host port</Form.Label>
+                    <Form.Control asChild>
+                      <Input placeholder="ex: 80" defaultValue={host} />
+                    </Form.Control>
+                    {errors.new_value?.host && (
+                      <Form.Message className="text-red-500 text-sm">
+                        {errors.new_value?.host}
+                      </Form.Message>
+                    )}
+                  </Form.Field>
+                  <Form.Field
+                    name="forwarded"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">
+                      Forwarded port
+                    </Form.Label>
+                    <Form.Control asChild>
+                      <Input placeholder="ex: 8080" defaultValue={forwarded} />
+                    </Form.Control>
+                    {errors.new_value?.forwarded && (
+                      <Form.Message className="text-red-500 text-sm">
+                        {errors.new_value?.forwarded}
+                      </Form.Message>
+                    )}
+                  </Form.Field>
+                </div>
+
+                <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
+                  <SubmitButton
+                    variant="secondary"
+                    isPending={isUpdatingExposedPort}
+                    className="inline-flex gap-1"
+                  >
+                    {isUpdatingExposedPort ? (
+                      <>
+                        <span>Updating...</span>
+                        <LoaderIcon className="animate-spin" size={15} />
+                      </>
+                    ) : (
+                      <>
+                        Update
+                        <CheckIcon size={15} />
+                      </>
+                    )}
+                  </SubmitButton>
+                  <Button onClick={reset} variant="outline" type="reset">
+                    Cancel
+                  </Button>
+                </div>
+              </Form.Root>
+            </AccordionContent>
+          )}
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
 
 function NewServicePortForm() {
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "ports"
+  });
+  const errors = getFormErrorsFromResponseData(data);
   return (
     <Form.Root
+      ref={formRef}
       action={(formData) => {
-        // ...
+        mutate(
+          {
+            type: "ADD",
+            new_value: {
+              host: Number(formData.get("host") ?? ""),
+              forwarded: Number(formData.get("forwarded") ?? "")
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              }
+            }
+          }
+        );
       }}
-      className="flex md:items-end  gap-3 md:flex-row flex-col items-stretch"
+      className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >
       <Form.Field name="host" className="flex-1 inline-flex flex-col gap-1">
         <Form.Label className="text-gray-400">Host port</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: 80" />
         </Form.Control>
-        {/* {errors.new_value?.key && (
+        {errors.new_value?.host && (
           <Form.Message className="text-red-500 text-sm">
-            {errors.new_value?.key}
+            {errors.new_value?.host}
           </Form.Message>
-        )} */}
+        )}
       </Form.Field>
       <Form.Field
         name="forwarded"
@@ -939,32 +1087,37 @@ function NewServicePortForm() {
         <Form.Control asChild>
           <Input placeholder="ex: 8080" />
         </Form.Control>
-        {/* {errors.new_value?.value && (
+        {errors.new_value?.forwarded && (
           <Form.Message className="text-red-500 text-sm">
-            {errors.new_value?.value}
+            {errors.new_value?.forwarded}
           </Form.Message>
-        )} */}
+        )}
       </Form.Field>
 
-      <div className="flex gap-3 items-center w-full md:w-auto">
+      <div className="flex gap-3 items-center pt-7 w-full md:w-auto">
         <SubmitButton
           isPending={false}
           variant="secondary"
           className="inline-flex gap-1 flex-1"
         >
-          {/* {isPending ? (
+          {isPending ? (
             <>
               <span>Adding...</span>
               <LoaderIcon className="animate-spin" size={15} />
             </>
-          ) : ( */}
-          <>
-            <span>Add</span>
-            <Plus size={15} />
-          </>
-          {/* )} */}
+          ) : (
+            <>
+              <span>Add</span>
+              <Plus size={15} />
+            </>
+          )}
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1">
+        <Button
+          onClick={reset}
+          variant="outline"
+          type="reset"
+          className="flex-1"
+        >
           Cancel
         </Button>
       </div>
