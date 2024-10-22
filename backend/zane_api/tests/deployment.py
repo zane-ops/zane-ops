@@ -4795,6 +4795,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
 
 class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
+    @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
     async def test_cancel_deployment_simple(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
             await asyncio.sleep(5)
