@@ -524,7 +524,6 @@ class ZaneProxyClient:
                                 },
                                 {
                                     "handle": [
-                                        {"handler": "copy_response_headers"},
                                         {"handler": "copy_response"},
                                     ]
                                 },
