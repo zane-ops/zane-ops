@@ -53,16 +53,28 @@ export function getFormErrorsFromResponseData<T extends Input>(
           }
           errors[key].push(error.detail);
         } else {
-          const [prefix, suffix] = keys;
-          if (!errors[prefix]) {
-            errors[prefix] = {
-              [suffix]: []
-            };
+          let prefix = keys.shift();
+          let root: Record<string, any> | null = null;
+          if (prefix !== undefined) {
+            if (!errors[prefix]) {
+              errors[prefix] = {};
+            }
+            root = errors[prefix];
           }
-          errors[prefix] = {
-            ...errors[prefix],
-            [suffix]: [...(errors[prefix][suffix] ?? []), error.detail]
-          };
+          while (prefix !== undefined && root !== null) {
+            prefix = keys.shift();
+
+            if (prefix !== undefined) {
+              if (keys.length > 0) {
+                if (!root[prefix]) {
+                  root[prefix] = {};
+                }
+                root = root[prefix];
+              } else {
+                root[prefix] = [...(root[prefix] ?? []), error.detail];
+              }
+            }
+          }
         }
       }
     }

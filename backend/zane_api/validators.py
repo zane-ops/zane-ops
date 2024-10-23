@@ -20,7 +20,7 @@ def validate_url_domain(value: str):
         if not parsed.netloc == value:
             raise ValidationError("Invalid domain")
     except ValidationError:
-        raise ValidationError("Should be a domain without the scheme.")
+        raise ValidationError("Should be a domain without the scheme or pathname.")
     except Exception:
         raise ValidationError("Invalid domain")
 
@@ -34,7 +34,7 @@ def validate_url_path(value: str):
             raise ValidationError("Invalid Path")
     except ValidationError:
         raise ValidationError(
-            "should be a valid url route path starting with `/` and not containing `..` or `*`"
+            "should be a valid url pathname starting with `/` and not containing query parameters, `..` or `*`"
         )
 
 

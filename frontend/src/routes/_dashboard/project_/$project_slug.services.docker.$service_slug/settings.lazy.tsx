@@ -9,7 +9,6 @@ import {
   ContainerIcon,
   CopyIcon,
   EditIcon,
-  EllipsisVerticalIcon,
   ExternalLinkIcon,
   Eye,
   EyeOffIcon,
@@ -24,7 +23,6 @@ import {
   Plus,
   PlusIcon,
   SunsetIcon,
-  Trash2,
   Trash2Icon,
   TriangleAlertIcon,
   Undo2Icon,
@@ -73,7 +71,7 @@ import {
 } from "~/lib/hooks/use-docker-service-single-query";
 import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader, wait } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/settings"
@@ -718,10 +716,8 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
 type PortItem = {
   change_id?: string;
   id?: string | null;
-  host: number;
-  forwarded: number;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-};
+} & Omit<DockerService["ports"][number], "id">;
 
 function ServicePortsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
@@ -734,7 +730,7 @@ function ServicePortsForm({ className }: ServiceFormProps) {
   for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
     ports.set(port.id, {
       id: port.id,
-      host: port.host ?? 80,
+      host: port.host,
       forwarded: port.forwarded
     });
   }
@@ -807,12 +803,10 @@ function ServicePortsForm({ className }: ServiceFormProps) {
 }
 
 type ServicePortItemProps = {
-  host: number;
-  forwarded: number;
   change_id?: string;
   id?: string | null;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-};
+} & Omit<DockerService["ports"][number], "id">;
 
 function ServicePortItem({
   host,
@@ -978,7 +972,7 @@ function ServicePortItem({
                   >
                     <Form.Label className="text-gray-400">Host port</Form.Label>
                     <Form.Control asChild>
-                      <Input placeholder="ex: 80" defaultValue={host} />
+                      <Input placeholder="ex: 80" defaultValue={host ?? 80} />
                     </Form.Control>
                     {errors.new_value?.host && (
                       <Form.Message className="text-red-500 text-sm">
@@ -1023,7 +1017,7 @@ function ServicePortItem({
                     )}
                   </SubmitButton>
                   <Button onClick={reset} variant="outline" type="reset">
-                    Cancel
+                    Reset
                   </Button>
                 </div>
               </Form.Root>
@@ -1118,14 +1112,48 @@ function NewServicePortForm() {
           type="reset"
           className="flex-1"
         >
-          Cancel
+          Reset
         </Button>
       </div>
     </Form.Root>
   );
 }
 
+type UrlItem = {
+  change_id?: string;
+  id?: string | null;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+} & Omit<DockerService["urls"][number], "id">;
+
 function ServiceURLsForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const urls: Map<string, UrlItem> = new Map();
+  for (const url of serviceSingleQuery.data?.data?.urls ?? []) {
+    urls.set(url.id, {
+      ...url,
+      id: url.id
+    });
+  }
+  for (const ch of (
+    serviceSingleQuery.data?.data?.unapplied_changes ?? []
+  ).filter((ch) => ch.field === "urls")) {
+    const newUrl = (ch.new_value ?? ch.old_value) as Omit<
+      DockerService["urls"][number],
+      "id"
+    >;
+    urls.set(ch.item_id ?? ch.id, {
+      ...newUrl,
+      change_id: ch.id,
+      id: ch.item_id,
+      change_type: ch.type
+    });
+  }
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -1139,28 +1167,18 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
           &nbsp; is required to be able to add URLs to this service.
         </p>
       </div>
-      <hr className="border-border" />
-      <ul className="flex flex-col gap-2">
-        <li>
-          <ServiceURLFormItem domain="nginx-demo.127-0-0-1.sslip.io" />
-        </li>
-        <li>
-          <ServiceURLFormItem
-            domain="nginx-demo2.127-0-0-1.sslip.io"
-            redirect_to={{ url: "https://nginx-demo.127-0-0-1.sslip.io" }}
-            change_type="UPDATE"
-            change_id="1"
-          />
-        </li>
-        <li>
-          <ServiceURLFormItem
-            domain="nginx-demo3.127-0-0-1.sslip.io"
-            base_path="/api"
-            change_type="ADD"
-            change_id="1"
-          />
-        </li>
-      </ul>
+      {urls.size > 0 && (
+        <>
+          <hr className="border-border" />
+          <ul className="flex flex-col gap-2">
+            {[...urls.entries()].map(([key, value]) => (
+              <li key={key}>
+                <ServiceURLFormItem {...value} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <hr className="border-border" />
       <h3 className="text-lg">Add new url</h3>
       <NewServiceURLForm />
@@ -1169,16 +1187,10 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
 }
 
 type ServiceURLFormItemProps = {
-  domain: string;
-  redirect_to?: {
-    url: string;
-    permanent?: boolean;
-  };
-  base_path?: string;
-  strip_prefix?: boolean;
+  id?: string | null;
   change_id?: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-};
+} & Omit<DockerService["urls"][number], "id">;
 
 function ServiceURLFormItem({
   domain,
@@ -1186,9 +1198,42 @@ function ServiceURLFormItem({
   base_path,
   change_id,
   change_type,
-  strip_prefix
+  strip_prefix,
+  id
 }: ServiceURLFormItemProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const cancelUrlChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
   const [isRedirect, setIsRedirect] = React.useState(Boolean(redirect_to));
+  const [hasCopied, startTransition] = React.useTransition();
+
+  const { mutateAsync: removeUrl } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "urls",
+    onSuccess() {
+      setAccordionValue("");
+    }
+  });
+
+  const {
+    mutate: editUrl,
+    isPending: isUpdatingUrl,
+    data,
+    reset
+  } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "urls",
+    onSuccess() {
+      setAccordionValue("");
+    }
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+  const [accordionValue, setAccordionValue] = React.useState("");
 
   return (
     <div className="relative group">
@@ -1201,9 +1246,24 @@ function ServiceURLFormItem({
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                className={cn(
+                  "px-2.5 py-0.5 focus-visible:opacity-100 group-hover:opacity-100",
+                  hasCopied ? "opacity-100" : "md:opacity-0"
+                )}
+                onClick={() => {
+                  navigator.clipboard
+                    .writeText(`${domain}${base_path}`)
+                    .then(() => {
+                      // show pending state (which is success state), until the user has stopped clicking the button
+                      startTransition(() => wait(1000));
+                    });
+                }}
               >
-                <CopyIcon size={15} className="flex-none" />
+                {hasCopied ? (
+                  <CheckIcon size={15} className="flex-none" />
+                ) : (
+                  <CopyIcon size={15} className="flex-none" />
+                )}
                 <span className="sr-only">Copy url</span>
               </Button>
             </TooltipTrigger>
@@ -1215,6 +1275,23 @@ function ServiceURLFormItem({
                 <Button
                   variant="ghost"
                   className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  onClick={() =>
+                    toast.promise(
+                      cancelUrlChangeMutation.mutateAsync(change_id),
+                      {
+                        loading: `Cancelling url change...`,
+                        success: "Success",
+                        error: "Error",
+                        closeButton: true,
+                        description(data) {
+                          if (data instanceof Error) {
+                            return data.message;
+                          }
+                          return "Done.";
+                        }
+                      }
+                    )
+                  }
                 >
                   <Undo2Icon size={15} className="flex-none" />
                   <span className="sr-only">Revert change</span>
@@ -1223,23 +1300,52 @@ function ServiceURLFormItem({
               <TooltipContent>Revert change</TooltipContent>
             </Tooltip>
           ) : (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                >
-                  <Trash2Icon size={15} className="flex-none text-red-400" />
-                  <span className="sr-only">Delete url</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Delete url</TooltipContent>
-            </Tooltip>
+            id && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() =>
+                      toast.promise(
+                        removeUrl({
+                          type: "DELETE",
+                          item_id: id
+                        }),
+                        {
+                          loading: `Requesting change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        }
+                      )
+                    }
+                  >
+                    <Trash2Icon size={15} className="flex-none text-red-400" />
+                    <span className="sr-only">Delete url</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete url</TooltipContent>
+              </Tooltip>
+            )
           )}
         </TooltipProvider>
       </div>
 
-      <Accordion type="single" collapsible>
+      <Accordion
+        type="single"
+        collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
+      >
         <AccordionItem
           value={`${domain}/${base_path}`}
           className="border-none"
@@ -1248,7 +1354,7 @@ function ServiceURLFormItem({
           <AccordionTrigger
             className={cn(
               "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
-              "[&[data-state=open]]:rounded-b-none",
+              "[&[data-state=open]]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
                   change_type === "UPDATE",
@@ -1269,126 +1375,215 @@ function ServiceURLFormItem({
               </div>
             )}
           </AccordionTrigger>
-          <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
-            <Form.Root action={() => {}} className="flex flex-col gap-4">
-              <Form.Field
-                name="domain"
-                className="flex-1 inline-flex flex-col gap-1"
+          {id && (
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <Form.Root
+                action={(formData) => {
+                  editUrl({
+                    type: "UPDATE",
+                    item_id: id,
+                    new_value: {
+                      domain: formData.get("domain")?.toString() ?? "",
+                      base_path: formData.get("base_path")?.toString(),
+                      strip_prefix:
+                        formData.get("strip_prefix")?.toString() === "on",
+                      redirect_to: !isRedirect
+                        ? undefined
+                        : {
+                            url:
+                              formData.get("redirect_to_url")?.toString() ?? "",
+                            permanent:
+                              formData
+                                .get("redirect_to_permanent")
+                                ?.toString() === "on"
+                          }
+                    }
+                  });
+                }}
+                className="flex flex-col gap-4"
               >
-                <Form.Label className="text-gray-400">Domain</Form.Label>
-                <Form.Control asChild>
-                  <Input
-                    placeholder="ex: www.mysupersaas.co"
-                    defaultValue={domain}
-                  />
-                </Form.Control>
-              </Form.Field>
-              <Form.Field
-                name="base_path"
-                className="flex-1 inline-flex flex-col gap-1"
-              >
-                <Form.Label className="text-gray-400">Base path</Form.Label>
-                <Form.Control asChild>
-                  <Input placeholder="ex: /" defaultValue={base_path ?? "/"} />
-                </Form.Control>
-              </Form.Field>
+                {errors.new_value?.non_field_errors && (
+                  <Alert variant="destructive">
+                    <AlertCircleIcon className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                      {errors.new_value.non_field_errors}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-              <Form.Field
-                name="strip_prefix"
-                className="flex-1 inline-flex gap-2 items-center"
-              >
-                <Form.Control asChild>
-                  <Checkbox defaultChecked={strip_prefix ?? true} />
-                </Form.Control>
+                <Form.Field
+                  name="domain"
+                  className="flex-1 inline-flex flex-col gap-1"
+                >
+                  <Form.Label className="text-gray-400">Domain</Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: www.mysupersaas.co"
+                      defaultValue={domain}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.domain && (
+                    <Form.Message className="text-red-500 text-sm">
+                      {errors.new_value?.domain}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+                <Form.Field
+                  name="base_path"
+                  className="flex-1 inline-flex flex-col gap-1"
+                >
+                  <Form.Label className="text-gray-400">Base path</Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: /"
+                      defaultValue={base_path ?? "/"}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.base_path && (
+                    <Form.Message className="text-red-500 text-sm">
+                      {errors.new_value?.base_path}
+                    </Form.Message>
+                  )}
+                </Form.Field>
 
-                <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                  Strip path prefix ?
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger>
-                        <InfoIcon size={15} />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-48">
-                        Wether or not to omit the base path when passing the
-                        request to your service.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Form.Label>
-              </Form.Field>
-
-              <Form.Field
-                name="is_redirect"
-                className="flex-1 inline-flex gap-2 items-center"
-              >
-                <Form.Control asChild>
-                  <Checkbox
-                    defaultChecked={isRedirect}
-                    onCheckedChange={(state) => setIsRedirect(Boolean(state))}
-                  />
-                </Form.Control>
-
-                <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                  Is redirect ?
-                </Form.Label>
-              </Form.Field>
-
-              {isRedirect && (
-                <div className="flex flex-col gap-4 pl-4">
-                  <Form.Field
-                    name="redirect_to_url"
-                    className="flex-1 inline-flex flex-col gap-1"
-                  >
-                    <Form.Label className="text-gray-400">
-                      Redirect to url
-                    </Form.Label>
+                <Form.Field
+                  name="strip_prefix"
+                  className="flex-1 inline-flex gap-2 flex-col"
+                >
+                  <div className="inline-flex gap-2 items-center">
                     <Form.Control asChild>
-                      <Input
-                        placeholder="ex: https://mysupersaas.co/"
-                        defaultValue={redirect_to?.url}
-                      />
-                    </Form.Control>
-                  </Form.Field>
-
-                  <Form.Field
-                    name="redirect_to_permanent"
-                    className="flex-1 inline-flex gap-2 items-center"
-                  >
-                    <Form.Control asChild>
-                      <Checkbox defaultChecked={redirect_to?.permanent} />
+                      <Checkbox defaultChecked={strip_prefix} />
                     </Form.Control>
 
                     <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-                      Permanent redirect
+                      Strip path prefix ?
                       <TooltipProvider>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
                             <InfoIcon size={15} />
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-64 text-balance">
-                            If checked, ZaneoOps will redirect with a 308 status
-                            code; otherwise, it will redirect with a 307 status
-                            code.
+                          <TooltipContent className="max-w-48">
+                            Wether or not to omit the base path when passing the
+                            request to your service.
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </Form.Label>
-                  </Form.Field>
-                </div>
-              )}
+                  </div>
+                  {errors.new_value?.strip_prefix && (
+                    <Form.Message className="text-red-500 text-sm relative left-6">
+                      {errors.new_value.strip_prefix}
+                    </Form.Message>
+                  )}
+                </Form.Field>
 
-              <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
-                <SubmitButton
-                  variant="secondary"
-                  isPending={false}
-                  className="inline-flex gap-1"
+                <Form.Field
+                  name="is_redirect"
+                  className="flex-1 inline-flex gap-2 flex-col"
                 >
-                  Update
-                  <CheckIcon size={15} />
-                </SubmitButton>
-              </div>
-            </Form.Root>
-          </AccordionContent>
+                  <div className="inline-flex gap-2 items-center">
+                    <Form.Control asChild>
+                      <Checkbox
+                        defaultChecked={isRedirect}
+                        onCheckedChange={(state) =>
+                          setIsRedirect(Boolean(state))
+                        }
+                      />
+                    </Form.Control>
+
+                    <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                      Is redirect ?
+                    </Form.Label>
+                  </div>
+                  {errors.new_value?.redirect_to?.non_field_errors && (
+                    <Form.Message className="text-red-500 text-sm relative left-6">
+                      {errors.new_value.redirect_to.non_field_errors}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+
+                {isRedirect && (
+                  <div className="flex flex-col gap-4 pl-4">
+                    <Form.Field
+                      name="redirect_to_url"
+                      className="flex-1 inline-flex flex-col gap-1"
+                    >
+                      <Form.Label className="text-gray-400">
+                        Redirect to url
+                      </Form.Label>
+                      <Form.Control asChild>
+                        <Input
+                          placeholder="ex: https://mysupersaas.co/"
+                          defaultValue={redirect_to?.url}
+                        />
+                      </Form.Control>
+                      {errors.new_value?.redirect_to?.url && (
+                        <Form.Message className="text-red-500 text-sm">
+                          {errors.new_value.redirect_to.url}
+                        </Form.Message>
+                      )}
+                    </Form.Field>
+
+                    <Form.Field
+                      name="redirect_to_permanent"
+                      className="flex-1 inline-flex gap-2 flex-col"
+                    >
+                      <div className="inline-flex items-center gap-2">
+                        <Form.Control asChild>
+                          <Checkbox defaultChecked={redirect_to?.permanent} />
+                        </Form.Control>
+
+                        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                          Permanent redirect
+                          <TooltipProvider>
+                            <Tooltip delayDuration={0}>
+                              <TooltipTrigger>
+                                <InfoIcon size={15} />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-64 text-balance">
+                                If checked, ZaneoOps will redirect with a 308
+                                status code; otherwise, it will redirect with a
+                                307 status code.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Form.Label>
+                      </div>
+                      {errors.new_value?.redirect_to?.permanent && (
+                        <Form.Message className="text-red-500 text-sm ">
+                          {errors.new_value.redirect_to.permanent}
+                        </Form.Message>
+                      )}
+                    </Form.Field>
+                  </div>
+                )}
+                <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
+                  <SubmitButton
+                    variant="secondary"
+                    isPending={isUpdatingUrl}
+                    className="inline-flex gap-1"
+                  >
+                    {isUpdatingUrl ? (
+                      <>
+                        <span>Updating...</span>
+                        <LoaderIcon className="animate-spin" size={15} />
+                      </>
+                    ) : (
+                      <>
+                        Update
+                        <CheckIcon size={15} />
+                      </>
+                    )}
+                  </SubmitButton>
+
+                  <Button onClick={reset} variant="outline" type="reset">
+                    Reset
+                  </Button>
+                </div>
+              </Form.Root>
+            </AccordionContent>
+          )}
         </AccordionItem>
       </Accordion>
     </div>
@@ -1397,16 +1592,71 @@ function ServiceURLFormItem({
 
 function NewServiceURLForm() {
   const [isRedirect, setIsRedirect] = React.useState(false);
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "urls"
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+
   return (
     <Form.Root
-      action={() => {}}
+      action={(formData) => {
+        mutate(
+          {
+            type: "ADD",
+            new_value: {
+              domain: formData.get("domain")?.toString() ?? "",
+              base_path: formData.get("base_path")?.toString(),
+              strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+              redirect_to: !isRedirect
+                ? undefined
+                : {
+                    url: formData.get("redirect_to_url")?.toString() ?? "",
+                    permanent:
+                      formData.get("redirect_to_permanent")?.toString() === "on"
+                  }
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              } else {
+                console.log({
+                  errors
+                });
+              }
+            }
+          }
+        );
+      }}
       className="flex flex-col gap-4 border border-border p-4 rounded-md"
+      ref={formRef}
     >
+      {errors.new_value?.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {errors.new_value.non_field_errors}
+          </AlertDescription>
+        </Alert>
+      )}
       <Form.Field name="domain" className="flex-1 inline-flex flex-col gap-1">
         <Form.Label className="text-gray-400">Domain</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: www.mysupersaas.co" />
         </Form.Control>
+        {errors.new_value?.domain && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value.domain}
+          </Form.Message>
+        )}
       </Form.Field>
       <Form.Field
         name="base_path"
@@ -1414,48 +1664,67 @@ function NewServiceURLForm() {
       >
         <Form.Label className="text-gray-400">Base path</Form.Label>
         <Form.Control asChild>
-          <Input placeholder="ex: /" defaultValue={"/"} />
+          <Input placeholder="ex: /api" defaultValue="/" />
         </Form.Control>
+        {errors.new_value?.base_path && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value.base_path}
+          </Form.Message>
+        )}
       </Form.Field>
 
       <Form.Field
         name="strip_prefix"
-        className="flex-1 inline-flex gap-2 items-center"
+        className="flex-1 inline-flex gap-2 flex-col"
       >
-        <Form.Control asChild>
-          <Checkbox />
-        </Form.Control>
+        <div className="inline-flex gap-2 items-center">
+          <Form.Control asChild>
+            <Checkbox defaultChecked />
+          </Form.Control>
 
-        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-          Strip path prefix ?
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <InfoIcon size={15} />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-48">
-                Wether or not to omit the base path when passing the request to
-                your service.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </Form.Label>
+          <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+            Strip path prefix ?
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger>
+                  <InfoIcon size={15} />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-48">
+                  Wether or not to omit the base path when passing the request
+                  to your service.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </Form.Label>
+        </div>
+        {errors.new_value?.strip_prefix && (
+          <Form.Message className="text-red-500 text-sm relative left-6">
+            {errors.new_value.strip_prefix}
+          </Form.Message>
+        )}
       </Form.Field>
 
       <Form.Field
         name="is_redirect"
-        className="flex-1 inline-flex gap-2 items-center"
+        className="flex-1 inline-flex gap-2 flex-col"
       >
-        <Form.Control asChild>
-          <Checkbox
-            defaultChecked={isRedirect}
-            onCheckedChange={(state) => setIsRedirect(Boolean(state))}
-          />
-        </Form.Control>
+        <div className="inline-flex gap-2 items-center">
+          <Form.Control asChild>
+            <Checkbox
+              defaultChecked={isRedirect}
+              onCheckedChange={(state) => setIsRedirect(Boolean(state))}
+            />
+          </Form.Control>
 
-        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-          Is redirect ?
-        </Form.Label>
+          <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+            Is redirect ?
+          </Form.Label>
+        </div>
+        {errors.new_value?.redirect_to?.non_field_errors && (
+          <Form.Message className="text-red-500 text-sm relative left-6">
+            {errors.new_value.redirect_to.non_field_errors}
+          </Form.Message>
+        )}
       </Form.Field>
 
       {isRedirect && (
@@ -1468,30 +1737,42 @@ function NewServiceURLForm() {
             <Form.Control asChild>
               <Input placeholder="ex: https://mysupersaas.co/" />
             </Form.Control>
+            {errors.new_value?.redirect_to?.url && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.redirect_to.url}
+              </Form.Message>
+            )}
           </Form.Field>
 
           <Form.Field
             name="redirect_to_permanent"
-            className="flex-1 inline-flex gap-2 items-center"
+            className="flex-1 inline-flex gap-2 flex-col"
           >
-            <Form.Control asChild>
-              <Checkbox />
-            </Form.Control>
+            <div className="inline-flex items-center gap-2">
+              <Form.Control asChild>
+                <Checkbox />
+              </Form.Control>
 
-            <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-              Permanent redirect
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger>
-                    <InfoIcon size={15} />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64 text-balance">
-                    If checked, ZaneoOps will redirect with a 308 status code;
-                    otherwise, it will redirect with a 307 status code.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Form.Label>
+              <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                Permanent redirect
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64 text-balance">
+                      If checked, ZaneoOps will redirect with a 308 status code;
+                      otherwise, it will redirect with a 307 status code.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Form.Label>
+            </div>
+            {errors.new_value?.redirect_to?.permanent && (
+              <Form.Message className="text-red-500 text-sm ">
+                {errors.new_value.redirect_to.permanent}
+              </Form.Message>
+            )}
           </Form.Field>
         </div>
       )}
@@ -1499,14 +1780,28 @@ function NewServiceURLForm() {
       <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
         <SubmitButton
           variant="secondary"
-          isPending={false}
+          isPending={isPending}
           className="inline-flex gap-1 flex-1 md:flex-none"
         >
-          Add
-          <PlusIcon size={15} />
+          {isPending ? (
+            <>
+              <span>Adding...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              <span>Add</span>
+              <Plus size={15} />
+            </>
+          )}
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1 md:flex-none">
-          Cancel
+        <Button
+          variant="outline"
+          type="reset"
+          className="flex-1 md:flex-none"
+          onClick={reset}
+        >
+          Reset
         </Button>
       </div>
     </Form.Root>
@@ -1514,6 +1809,16 @@ function NewServiceURLForm() {
 }
 
 function NetworkAliasesGroup({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const singleServiceQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+  const [hasCopied, startTransition] = React.useTransition();
+  const service = singleServiceQuery.data?.data;
+
+  if (!service) return null;
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -1531,18 +1836,40 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
         <div className="flex flex-col gap-0.5">
           <div className="flex gap-2 items-center">
             <span className="text-lg break-all">
-              nginx-demo-npUHRTJ7SvQ.zaneops.internal
+              {service.network_aliases[0]}
             </span>
-            <Button
-              variant="ghost"
-              className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-            >
-              <CopyIcon size={15} className="flex-none" />
-              <span className="sr-only">Copy url</span>
-            </Button>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "px-2.5 py-0.5 focus-visible:opacity-100 group-hover:opacity-100",
+                      hasCopied ? "opacity-100" : "md:opacity-0"
+                    )}
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(service.network_aliases[0])
+                        .then(() => {
+                          // show pending state (which is success state), until the user has stopped clicking the button
+                          startTransition(() => wait(1000));
+                        });
+                    }}
+                  >
+                    {hasCopied ? (
+                      <CheckIcon size={15} className="flex-none" />
+                    ) : (
+                      <CopyIcon size={15} className="flex-none" />
+                    )}
+                    <span className="sr-only">Copy network alias</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy network alias</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <small className="text-grey">
-            You can also simply use <Code>nginx-demo-npUHRTJ7SvQ</Code>
+            You can also simply use <Code>{service.network_alias}</Code>
           </small>
         </div>
       </div>
