@@ -746,14 +746,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host": "Duplicate `host` port values are not allowed."
-                        + "\nthese ports conflicts :\n"
-                        + "\n".join(
-                            [
-                                json.dumps(port, indent=2, cls=EnhancedJSONEncoder)
-                                for port in ports_with_same_host
-                            ]
-                        )
+                        "host": "Duplicate `host` port values for the service are not allowed."
                     }
                 }
             )
