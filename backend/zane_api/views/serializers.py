@@ -507,14 +507,9 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
         if len(same_urls) >= 2:
             raise serializers.ValidationError(
                 {
-                    "new_value": "Duplicate urls values for the service are not allowed."
-                    + "\nthese urls conflicts :\n"
-                    + "\n".join(
-                        [
-                            json.dumps(url, indent=2, cls=EnhancedJSONEncoder)
-                            for url in same_urls
-                        ]
-                    )
+                    "new_value": {
+                        "non_field_errors": "Duplicate urls values for the service are not allowed."
+                    }
                 }
             )
 
@@ -524,7 +519,9 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                 if port.host not in http_ports:
                     raise serializers.ValidationError(
                         {
-                            "new_value": f"Cannot specify both a custom URL and a port with `host` other than a HTTP port (80/443)"
+                            "new_value": {
+                                "non_field_errors": f"Cannot specify both a custom URL and a port with `host` other than a HTTP port (80/443)"
+                            }
                         }
                     )
 
@@ -536,15 +533,19 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
             if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
                 raise serializers.ValidationError(
                     {
-                        "new_value": f"Cannot delete an URL if there is a path healthcheck attached to it"
-                        f" and the service is not exposed to the public through a port with a HTTP `host` (80/443)"
+                        "new_value": {
+                            "non_field_errors": f"Cannot delete an URL if there is a path healthcheck attached to it"
+                            f" and the service is not exposed to the public through a port with a HTTP `host` (80/443)"
+                        }
                     }
                 )
 
         if change_type == "ADD" and len(snapshot.http_ports) == 0:
             raise serializers.ValidationError(
                 {
-                    "new_value": f"adding an URL requires that one port with a HTTP `host` (80/443) is set in the service."
+                    "new_value": {
+                        "non_field_errors": f"adding an URL requires that one port with a HTTP `host` (80/443) is set in the service."
+                    }
                 }
             )
 

@@ -718,10 +718,8 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
 type PortItem = {
   change_id?: string;
   id?: string | null;
-  host: number;
-  forwarded: number;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-};
+} & Omit<DockerService["ports"][number], "id">;
 
 function ServicePortsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
@@ -734,7 +732,7 @@ function ServicePortsForm({ className }: ServiceFormProps) {
   for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
     ports.set(port.id, {
       id: port.id,
-      host: port.host ?? 80,
+      host: port.host,
       forwarded: port.forwarded
     });
   }
@@ -807,12 +805,10 @@ function ServicePortsForm({ className }: ServiceFormProps) {
 }
 
 type ServicePortItemProps = {
-  host: number;
-  forwarded: number;
   change_id?: string;
   id?: string | null;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-};
+} & Omit<DockerService["ports"][number], "id">;
 
 function ServicePortItem({
   host,
@@ -978,7 +974,7 @@ function ServicePortItem({
                   >
                     <Form.Label className="text-gray-400">Host port</Form.Label>
                     <Form.Control asChild>
-                      <Input placeholder="ex: 80" defaultValue={host} />
+                      <Input placeholder="ex: 80" defaultValue={host ?? 80} />
                     </Form.Control>
                     {errors.new_value?.host && (
                       <Form.Message className="text-red-500 text-sm">
@@ -1118,14 +1114,48 @@ function NewServicePortForm() {
           type="reset"
           className="flex-1"
         >
-          Cancel
+          Reset
         </Button>
       </div>
     </Form.Root>
   );
 }
 
+type UrlItem = {
+  change_id?: string;
+  id?: string | null;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+} & Omit<DockerService["urls"][number], "id">;
+
 function ServiceURLsForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const urls: Map<string, UrlItem> = new Map();
+  for (const url of serviceSingleQuery.data?.data?.urls ?? []) {
+    urls.set(url.id, {
+      ...url,
+      id: url.id
+    });
+  }
+  for (const ch of (
+    serviceSingleQuery.data?.data?.unapplied_changes ?? []
+  ).filter((ch) => ch.field === "urls")) {
+    const newUrl = (ch.new_value ?? ch.old_value) as Omit<
+      DockerService["urls"][number],
+      "id"
+    >;
+    urls.set(ch.item_id ?? ch.id, {
+      ...newUrl,
+      change_id: ch.id,
+      id: ch.item_id,
+      change_type: ch.type
+    });
+  }
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -1139,28 +1169,18 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
           &nbsp; is required to be able to add URLs to this service.
         </p>
       </div>
-      <hr className="border-border" />
-      <ul className="flex flex-col gap-2">
-        <li>
-          <ServiceURLFormItem domain="nginx-demo.127-0-0-1.sslip.io" />
-        </li>
-        <li>
-          <ServiceURLFormItem
-            domain="nginx-demo2.127-0-0-1.sslip.io"
-            redirect_to={{ url: "https://nginx-demo.127-0-0-1.sslip.io" }}
-            change_type="UPDATE"
-            change_id="1"
-          />
-        </li>
-        <li>
-          <ServiceURLFormItem
-            domain="nginx-demo3.127-0-0-1.sslip.io"
-            base_path="/api"
-            change_type="ADD"
-            change_id="1"
-          />
-        </li>
-      </ul>
+      {urls.size > 0 && (
+        <>
+          <hr className="border-border" />
+          <ul className="flex flex-col gap-2">
+            {[...urls.entries()].map(([key, value]) => (
+              <li key={key}>
+                <ServiceURLFormItem {...value} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <hr className="border-border" />
       <h3 className="text-lg">Add new url</h3>
       <NewServiceURLForm />
@@ -1169,16 +1189,9 @@ function ServiceURLsForm({ className }: ServiceFormProps) {
 }
 
 type ServiceURLFormItemProps = {
-  domain: string;
-  redirect_to?: {
-    url: string;
-    permanent?: boolean;
-  };
-  base_path?: string;
-  strip_prefix?: boolean;
   change_id?: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-};
+} & Omit<DockerService["urls"][number], "id">;
 
 function ServiceURLFormItem({
   domain,
@@ -1397,16 +1410,71 @@ function ServiceURLFormItem({
 
 function NewServiceURLForm() {
   const [isRedirect, setIsRedirect] = React.useState(false);
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "urls"
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+
   return (
     <Form.Root
-      action={() => {}}
+      action={(formData) => {
+        mutate(
+          {
+            type: "ADD",
+            new_value: {
+              domain: formData.get("domain")?.toString() ?? "",
+              base_path: formData.get("base_path")?.toString(),
+              strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+              redirect_to: !isRedirect
+                ? undefined
+                : {
+                    url: formData.get("redirect_to_url")?.toString() ?? "",
+                    permanent:
+                      formData.get("redirect_to_permanent")?.toString() === "on"
+                  }
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              } else {
+                console.log({
+                  errors
+                });
+              }
+            }
+          }
+        );
+      }}
       className="flex flex-col gap-4 border border-border p-4 rounded-md"
+      ref={formRef}
     >
+      {errors.new_value?.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {errors.new_value.non_field_errors}
+          </AlertDescription>
+        </Alert>
+      )}
       <Form.Field name="domain" className="flex-1 inline-flex flex-col gap-1">
         <Form.Label className="text-gray-400">Domain</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: www.mysupersaas.co" />
         </Form.Control>
+        {errors.new_value?.domain && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value.domain}
+          </Form.Message>
+        )}
       </Form.Field>
       <Form.Field
         name="base_path"
@@ -1414,48 +1482,67 @@ function NewServiceURLForm() {
       >
         <Form.Label className="text-gray-400">Base path</Form.Label>
         <Form.Control asChild>
-          <Input placeholder="ex: /" defaultValue={"/"} />
+          <Input placeholder="ex: /api" defaultValue="/" />
         </Form.Control>
+        {errors.new_value?.base_path && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value.base_path}
+          </Form.Message>
+        )}
       </Form.Field>
 
       <Form.Field
         name="strip_prefix"
-        className="flex-1 inline-flex gap-2 items-center"
+        className="flex-1 inline-flex gap-2 flex-col"
       >
-        <Form.Control asChild>
-          <Checkbox />
-        </Form.Control>
+        <div className="inline-flex gap-2 items-center">
+          <Form.Control asChild>
+            <Checkbox defaultChecked />
+          </Form.Control>
 
-        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-          Strip path prefix ?
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <InfoIcon size={15} />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-48">
-                Wether or not to omit the base path when passing the request to
-                your service.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </Form.Label>
+          <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+            Strip path prefix ?
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger>
+                  <InfoIcon size={15} />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-48">
+                  Wether or not to omit the base path when passing the request
+                  to your service.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </Form.Label>
+        </div>
+        {errors.new_value?.strip_prefix && (
+          <Form.Message className="text-red-500 text-sm relative left-6">
+            {errors.new_value.strip_prefix}
+          </Form.Message>
+        )}
       </Form.Field>
 
       <Form.Field
         name="is_redirect"
-        className="flex-1 inline-flex gap-2 items-center"
+        className="flex-1 inline-flex gap-2 flex-col"
       >
-        <Form.Control asChild>
-          <Checkbox
-            defaultChecked={isRedirect}
-            onCheckedChange={(state) => setIsRedirect(Boolean(state))}
-          />
-        </Form.Control>
+        <div className="inline-flex gap-2 items-center">
+          <Form.Control asChild>
+            <Checkbox
+              defaultChecked={isRedirect}
+              onCheckedChange={(state) => setIsRedirect(Boolean(state))}
+            />
+          </Form.Control>
 
-        <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-          Is redirect ?
-        </Form.Label>
+          <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+            Is redirect ?
+          </Form.Label>
+        </div>
+        {errors.new_value?.redirect_to?.non_field_errors && (
+          <Form.Message className="text-red-500 text-sm relative left-6">
+            {errors.new_value.redirect_to.non_field_errors}
+          </Form.Message>
+        )}
       </Form.Field>
 
       {isRedirect && (
@@ -1468,30 +1555,42 @@ function NewServiceURLForm() {
             <Form.Control asChild>
               <Input placeholder="ex: https://mysupersaas.co/" />
             </Form.Control>
+            {errors.new_value?.redirect_to?.url && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.redirect_to.url}
+              </Form.Message>
+            )}
           </Form.Field>
 
           <Form.Field
             name="redirect_to_permanent"
-            className="flex-1 inline-flex gap-2 items-center"
+            className="flex-1 inline-flex gap-2 flex-col"
           >
-            <Form.Control asChild>
-              <Checkbox />
-            </Form.Control>
+            <div className="inline-flex items-center gap-2">
+              <Form.Control asChild>
+                <Checkbox />
+              </Form.Control>
 
-            <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
-              Permanent redirect
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger>
-                    <InfoIcon size={15} />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64 text-balance">
-                    If checked, ZaneoOps will redirect with a 308 status code;
-                    otherwise, it will redirect with a 307 status code.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Form.Label>
+              <Form.Label className="text-gray-400 inline-flex gap-1 items-center">
+                Permanent redirect
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64 text-balance">
+                      If checked, ZaneoOps will redirect with a 308 status code;
+                      otherwise, it will redirect with a 307 status code.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Form.Label>
+            </div>
+            {errors.new_value?.redirect_to?.permanent && (
+              <Form.Message className="text-red-500 text-sm ">
+                {errors.new_value.redirect_to.permanent}
+              </Form.Message>
+            )}
           </Form.Field>
         </div>
       )}
@@ -1499,14 +1598,28 @@ function NewServiceURLForm() {
       <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
         <SubmitButton
           variant="secondary"
-          isPending={false}
+          isPending={isPending}
           className="inline-flex gap-1 flex-1 md:flex-none"
         >
-          Add
-          <PlusIcon size={15} />
+          {isPending ? (
+            <>
+              <span>Adding...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              <span>Add</span>
+              <Plus size={15} />
+            </>
+          )}
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1 md:flex-none">
-          Cancel
+        <Button
+          variant="outline"
+          type="reset"
+          className="flex-1 md:flex-none"
+          onClick={reset}
+        >
+          Reset
         </Button>
       </div>
     </Form.Root>
