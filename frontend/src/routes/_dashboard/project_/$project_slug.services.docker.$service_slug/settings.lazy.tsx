@@ -1908,7 +1908,9 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
     <Form.Root
       ref={formRef}
       action={(formData) => {
-        if (startingCommandChange !== undefined) {
+        const revertChange =
+          formData.get("revert_change")?.toString() === "true";
+        if (revertChange && startingCommandChange !== undefined) {
           cancelStartingCommandChangeMutation.mutate(startingCommandChange.id, {
             onError(error) {
               toast.error("Error", {
@@ -1920,21 +1922,21 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
               formRef.current?.reset();
             }
           });
-        } else {
-          updateStartingCommandMutation.mutate(
-            {
-              type: "UPDATE",
-              new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
-            },
-            {
-              onSuccess(errors) {
-                if (!errors) {
-                  formRef.current?.reset();
-                }
+          return;
+        }
+        updateStartingCommandMutation.mutate(
+          {
+            type: "UPDATE",
+            new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
               }
             }
-          );
-        }
+          }
+        );
       }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
@@ -1972,6 +1974,8 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
           <SubmitButton
             isPending={cancelStartingCommandChangeMutation.isPending}
             variant="outline"
+            name="revert_change"
+            value="true"
           >
             {cancelStartingCommandChangeMutation.isPending ? (
               <>
@@ -2140,6 +2144,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             <Form.Control asChild>
               <Select
                 name="type"
+                disabled={healthcheckChange !== undefined}
                 value={healthcheckType}
                 onValueChange={(value) =>
                   setHealthCheckType(
@@ -2149,8 +2154,8 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               >
                 <SelectTrigger
                   className={cn(
-                    healthcheckChange &&
-                      "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent",
+                    "data-[disabled]:bg-secondary/60 data-[disabled]:dark:bg-secondary-foreground",
+                    "data-[disabled]:opacity-100 data-[disabled]:border-transparent",
                     healthcheckType === "none" && "text-muted-foreground"
                   )}
                 >
@@ -2175,6 +2180,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             <Form.Label className="text-muted-foreground">Value</Form.Label>
             <Form.Control asChild>
               <Input
+                disabled={healthcheckChange !== undefined}
                 placeholder={
                   healthcheckChange && healthcheck === null
                     ? "<empty>"
@@ -2183,8 +2189,9 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
                       : "ex: /healthcheck"
                 }
                 className={cn(
-                  healthcheckChange &&
-                    "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent placeholder-shown:font-mono"
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
                 )}
                 defaultValue={healthcheck?.value}
               />
@@ -2205,6 +2212,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
           </Form.Label>
           <Form.Control asChild>
             <Input
+              disabled={healthcheckChange !== undefined}
               placeholder={
                 healthcheckChange && healthcheck === null ? "<empty>" : "ex: 30"
               }
@@ -2214,8 +2222,9 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
                   : healthcheck?.timeout_seconds
               }
               className={cn(
-                healthcheckChange &&
-                  "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent placeholder-shown:font-mono"
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
               )}
             />
           </Form.Control>
@@ -2237,14 +2246,16 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               placeholder={
                 healthcheckChange && healthcheck === null ? "<empty>" : "ex: 30"
               }
+              disabled={healthcheckChange !== undefined}
               defaultValue={
                 healthcheckChange && healthcheck === null
                   ? ""
                   : healthcheck?.interval_seconds
               }
               className={cn(
-                healthcheckChange &&
-                  "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent placeholder-shown:font-mono"
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
               )}
             />
           </Form.Control>
@@ -2257,47 +2268,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
       </fieldset>
 
       <div className="flex items-center gap-2">
-        <SubmitButton
-          isPending={updateHealthcheckCommandMutation.isPending}
-          variant="secondary"
-        >
-          {updateHealthcheckCommandMutation.isPending ? (
-            <>
-              <LoaderIcon className="animate-spin" size={15} />
-              <span>Updating...</span>
-            </>
-          ) : (
-            <>
-              <CheckIcon size={15} className="flex-none" />
-              <span>Update</span>
-            </>
-          )}
-        </SubmitButton>
-        {service?.healthcheck !== null && healthcheck !== null && (
-          <SubmitButton
-            value="true"
-            name="remove"
-            isPending={removeHealthcheckCommandMutation.isPending}
-            variant="destructive"
-            className="inline-flex gap-1 items-center"
-          >
-            {removeHealthcheckCommandMutation.isPending ? (
-              <>
-                <LoaderIcon className="animate-spin" size={15} />
-                <span>Removing...</span>
-              </>
-            ) : (
-              <>
-                <Trash2Icon size={15} className="flex-none" />
-                <span>Remove healthcheck</span>
-              </>
-            )}
-          </SubmitButton>
-        )}
-
-        <div className="w-px h-8 bg-border" />
-
-        {healthcheckChange && (
+        {healthcheckChange ? (
           <SubmitButton
             isPending={cancelHealthcheckChangeMutation.isPending}
             variant="outline"
@@ -2316,6 +2287,46 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               </>
             )}
           </SubmitButton>
+        ) : (
+          <>
+            <SubmitButton
+              isPending={updateHealthcheckCommandMutation.isPending}
+              variant="secondary"
+            >
+              {updateHealthcheckCommandMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
+            {service?.healthcheck !== null && healthcheck !== null && (
+              <SubmitButton
+                value="true"
+                name="remove"
+                isPending={removeHealthcheckCommandMutation.isPending}
+                variant="destructive"
+                className="inline-flex gap-1 items-center"
+              >
+                {removeHealthcheckCommandMutation.isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin" size={15} />
+                    <span>Removing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2Icon size={15} className="flex-none" />
+                    <span>Remove healthcheck</span>
+                  </>
+                )}
+              </SubmitButton>
+            )}
+          </>
         )}
       </div>
     </Form.Root>
