@@ -40,6 +40,10 @@ class URLDomainField(CharField):
     default_validators = [validate_url_domain]
 
 
+class CustomChoiceField(ChoiceField):
+    default_error_messages = {"invalid_choice": _("Please choose a valid option.")}
+
+
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
