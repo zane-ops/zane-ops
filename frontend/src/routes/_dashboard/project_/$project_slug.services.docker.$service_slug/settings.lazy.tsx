@@ -1903,24 +1903,33 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
     startingCommandChange !== undefined &&
     startingCommandChange.new_value === null;
 
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
   return (
     <Form.Root
+      ref={formRef}
       action={(formData) => {
-        if (startingCommandChange !== undefined) {
+        const revertChange =
+          formData.get("revert_change")?.toString() === "true";
+        if (revertChange && startingCommandChange !== undefined) {
           cancelStartingCommandChangeMutation.mutate(startingCommandChange.id, {
             onError(error) {
               toast.error("Error", {
                 closeButton: true,
                 description: error.message
               });
+            },
+            onSuccess() {
+              formRef.current?.reset();
             }
           });
-        } else {
-          updateStartingCommandMutation.mutate({
-            type: "UPDATE",
-            new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
-          });
+          return;
         }
+
+        updateStartingCommandMutation.mutate({
+          type: "UPDATE",
+          new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
+        });
       }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
@@ -1936,11 +1945,9 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
           <Form.Control asChild>
             <Input
               placeholder={isEmptyChange ? "<empty>" : "ex: npm run start"}
-              disabled={startingCommandChange !== undefined}
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
-                "disabled:border-transparent"
+                startingCommandChange &&
+                  "placeholder-shown:font-mono bg-secondary/60 dark:bg-secondary-foreground border-transparent"
               )}
               defaultValue={command}
             />
@@ -1954,10 +1961,30 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
       </fieldset>
 
       <div className="inline-flex items-center gap-2">
+        <>
+          <SubmitButton
+            isPending={updateStartingCommandMutation.isPending}
+            variant="secondary"
+          >
+            {updateStartingCommandMutation.isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Updating ...</span>
+              </>
+            ) : (
+              <>
+                <CheckIcon size={15} className="flex-none" />
+                <span>Update</span>
+              </>
+            )}
+          </SubmitButton>
+        </>
         {startingCommandChange !== undefined ? (
           <SubmitButton
             isPending={cancelStartingCommandChangeMutation.isPending}
             variant="outline"
+            name="revert_change"
+            value="true"
           >
             {cancelStartingCommandChangeMutation.isPending ? (
               <>
@@ -1972,32 +1999,14 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
             )}
           </SubmitButton>
         ) : (
-          <>
-            <SubmitButton
-              isPending={updateStartingCommandMutation.isPending}
-              variant="secondary"
-            >
-              {updateStartingCommandMutation.isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Updating ...</span>
-                </>
-              ) : (
-                <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span>Update</span>
-                </>
-              )}
-            </SubmitButton>
-            <Button
-              variant="outline"
-              onClick={updateStartingCommandMutation.reset}
-              type="reset"
-              className="flex-1 md:flex-none"
-            >
-              Reset
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            onClick={updateStartingCommandMutation.reset}
+            type="reset"
+            className="flex-1 md:flex-none"
+          >
+            Reset
+          </Button>
         )}
       </div>
     </Form.Root>
