@@ -3,6 +3,17 @@
 @tailwind utilities;
 
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+
 @supports (font-variation-settings: normal) {
   :root {
     font-optical-sizing: auto;
