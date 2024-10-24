@@ -1883,8 +1883,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
   const updateStartingCommandMutation = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "command",
-    onSuccess() {}
+    field: "command"
   });
 
   const service = serviceSingleQuery.data?.data;
@@ -1903,8 +1902,11 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
     startingCommandChange !== undefined &&
     startingCommandChange.new_value === null;
 
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
   return (
     <Form.Root
+      ref={formRef}
       action={(formData) => {
         if (startingCommandChange !== undefined) {
           cancelStartingCommandChangeMutation.mutate(startingCommandChange.id, {
@@ -1913,13 +1915,25 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
                 closeButton: true,
                 description: error.message
               });
+            },
+            onSuccess() {
+              formRef.current?.reset();
             }
           });
         } else {
-          updateStartingCommandMutation.mutate({
-            type: "UPDATE",
-            new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
-          });
+          updateStartingCommandMutation.mutate(
+            {
+              type: "UPDATE",
+              new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
+            },
+            {
+              onSuccess(errors) {
+                if (!errors) {
+                  formRef.current?.reset();
+                }
+              }
+            }
+          );
         }
       }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
