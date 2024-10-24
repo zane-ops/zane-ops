@@ -18,7 +18,6 @@ import {
   HardDrive,
   InfoIcon,
   LoaderIcon,
-  PaintRollerIcon,
   PencilLineIcon,
   Plus,
   PlusIcon,
@@ -2078,7 +2077,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
           className="inline-flex gap-1 items-center"
         >
           <>
-            <PaintRollerIcon size={15} className="flex-none" />
+            <Trash2Icon size={15} className="flex-none" />
             <span>Remove healthcheck</span>
           </>
         </Button>
