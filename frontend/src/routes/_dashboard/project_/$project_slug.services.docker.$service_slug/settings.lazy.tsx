@@ -1871,9 +1871,58 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
 }
 
 function ServiceCommandForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const cancelStartingCommandChangeMutation =
+    useCancelDockerServiceChangeMutation(project_slug, service_slug);
+
+  const updateStartingCommandMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "command",
+    onSuccess() {}
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const startingCommandChange = service?.unapplied_changes.find(
+    (change) => change.field === "command"
+  );
+
+  const command =
+    (startingCommandChange?.new_value as string) ?? service?.command;
+
+  const errors = getFormErrorsFromResponseData(
+    updateStartingCommandMutation.data
+  );
+
+  const isEmptyChange =
+    startingCommandChange !== undefined &&
+    startingCommandChange.new_value === null;
+
   return (
     <Form.Root
-      action={() => {}}
+      action={(formData) => {
+        if (startingCommandChange !== undefined) {
+          cancelStartingCommandChangeMutation.mutate(startingCommandChange.id, {
+            onError(error) {
+              toast.error("Error", {
+                closeButton: true,
+                description: error.message
+              });
+            }
+          });
+        } else {
+          updateStartingCommandMutation.mutate({
+            type: "UPDATE",
+            new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
+          });
+        }
+      }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
       <fieldset className="w-full flex flex-col gap-4">
@@ -1886,17 +1935,72 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
             Value
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="ex: npm run start" />
+            <Input
+              placeholder={isEmptyChange ? "<empty>" : "ex: npm run start"}
+              disabled={startingCommandChange !== undefined}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              defaultValue={command}
+            />
           </Form.Control>
+          {errors.new_value && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value}
+            </Form.Message>
+          )}
         </Form.Field>
       </fieldset>
 
-      <SubmitButton isPending={false} variant="secondary">
-        <>
-          <CheckIcon size={15} className="flex-none" />
-          <span>Update</span>
-        </>
-      </SubmitButton>
+      <div className="inline-flex items-center gap-2">
+        {startingCommandChange !== undefined ? (
+          <SubmitButton
+            isPending={cancelStartingCommandChangeMutation.isPending}
+            variant="outline"
+          >
+            {cancelStartingCommandChangeMutation.isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Reverting...</span>
+              </>
+            ) : (
+              <>
+                <Undo2Icon size={15} className="flex-none" />
+                <span>Revert change</span>
+              </>
+            )}
+          </SubmitButton>
+        ) : (
+          <>
+            <SubmitButton
+              isPending={updateStartingCommandMutation.isPending}
+              variant="secondary"
+            >
+              {updateStartingCommandMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating ...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              variant="outline"
+              onClick={updateStartingCommandMutation.reset}
+              type="reset"
+              className="flex-1 md:flex-none"
+            >
+              Reset
+            </Button>
+          </>
+        )}
+      </div>
     </Form.Root>
   );
 }
