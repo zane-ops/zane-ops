@@ -2070,9 +2070,6 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
     <Form.Root
       ref={formRef}
       action={(formData) => {
-        console.log({
-          formData
-        });
         const remove = formData.get("remove")?.toString() === "true";
         if (remove) {
           removeHealthcheckCommandMutation.mutate(
