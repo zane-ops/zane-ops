@@ -2005,9 +2005,111 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
 }
 
 function ServiceHealthcheckForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const cancelHealthcheckChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const updateHealthcheckCommandMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "healthcheck"
+  });
+
+  const removeHealthcheckCommandMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "healthcheck"
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const healthcheckChange = service?.unapplied_changes.find(
+    (change) => change.field === "healthcheck"
+  );
+
+  const newHealthCheck =
+    healthcheckChange?.new_value as DockerService["healthcheck"];
+  const healthcheck =
+    newHealthCheck === null ? null : newHealthCheck ?? service?.healthcheck;
+
+  const errors = getFormErrorsFromResponseData(
+    updateHealthcheckCommandMutation.data
+  );
+
+  const [healthcheckType, setHealthCheckType] = React.useState<
+    NonNullable<DockerService["healthcheck"]>["type"] | undefined
+  >(healthcheck?.type);
+
   return (
     <Form.Root
-      action={() => {}}
+      ref={formRef}
+      action={(formData) => {
+        console.log({
+          formData
+        });
+        const remove = formData.get("remove")?.toString() === "true";
+        if (remove) {
+          removeHealthcheckCommandMutation.mutate(
+            {
+              type: "UPDATE",
+              new_value: null
+            },
+            {
+              onSuccess(errors) {
+                if (!errors) {
+                  formRef.current?.reset();
+                  setHealthCheckType(undefined);
+                }
+              }
+            }
+          );
+          return;
+        }
+        const revertChange =
+          formData.get("revert_change")?.toString() === "true";
+        if (revertChange && healthcheckChange?.id) {
+          cancelHealthcheckChangeMutation.mutate(healthcheckChange.id, {
+            onSuccess() {
+              formRef.current?.reset();
+              setHealthCheckType(service?.healthcheck?.type);
+            }
+          });
+          return;
+        }
+
+        updateHealthcheckCommandMutation.mutate(
+          {
+            type: "UPDATE",
+            new_value: {
+              type: formData.get("type")?.toString() as NonNullable<
+                DockerService["healthcheck"]
+              >["type"],
+              value: formData.get("value")?.toString() ?? "",
+              timeout_seconds: Number(
+                formData.get("timeout_seconds")?.toString() || 30
+              ),
+              interval_seconds: Number(
+                formData.get("interval_seconds")?.toString() || 30
+              )
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              }
+            }
+          }
+        );
+      }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
       <fieldset className="w-full flex flex-col gap-5">
@@ -2021,23 +2123,55 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
         <div className="flex flex-col md:flex-row md:items-start gap-2">
           <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-muted-foreground">Type</Form.Label>
-            <Form.Control asChild>
-              <Select>
-                <SelectTrigger>
+            <Select
+              name="type"
+              value={healthcheckType}
+              onValueChange={(value) =>
+                setHealthCheckType(
+                  value as NonNullable<DockerService["healthcheck"]>["type"]
+                )
+              }
+            >
+              <Form.Control asChild>
+                <SelectTrigger
+                  className={cn(
+                    healthcheckChange &&
+                      "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent"
+                  )}
+                >
                   <SelectValue placeholder="Select a type" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PATH">Path</SelectItem>
-                  <SelectItem value="COMMAND">Command</SelectItem>
-                </SelectContent>
-              </Select>
-            </Form.Control>
+              </Form.Control>
+              <SelectContent>
+                <SelectItem value="PATH">Path</SelectItem>
+                <SelectItem value="COMMAND">Command</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.new_value?.type && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.type}
+              </Form.Message>
+            )}
           </Form.Field>
           <Form.Field name="value" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-muted-foreground">Value</Form.Label>
             <Form.Control asChild>
-              <Input placeholder="ex: redis-cli ping" />
+              <Input
+                placeholder={
+                  healthcheck === null ? "<empty>" : "ex: redis-cli ping"
+                }
+                className={cn(
+                  healthcheckChange &&
+                    "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent placeholder-shown:font-mono"
+                )}
+                defaultValue={healthcheck?.value}
+              />
             </Form.Control>
+            {errors.new_value?.value && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.value}
+              </Form.Message>
+            )}
           </Form.Field>
         </div>
         <Form.Field
@@ -2048,8 +2182,22 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             Timeout (in seconds)
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="ex: 30" />
+            <Input
+              placeholder={healthcheck === null ? "<empty>" : "ex: 30"}
+              defaultValue={
+                healthcheck === null ? "" : healthcheck?.timeout_seconds ?? 30
+              }
+              className={cn(
+                healthcheckChange &&
+                  "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent placeholder-shown:font-mono"
+              )}
+            />
           </Form.Control>
+          {errors.new_value?.timeout_seconds && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.timeout_seconds}
+            </Form.Message>
+          )}
         </Form.Field>
         <Form.Field
           name="interval_seconds"
@@ -2059,28 +2207,84 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             Interval (in seconds)
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="ex: 30" />
+            <Input
+              placeholder={healthcheck === null ? "<empty>" : "ex: 30"}
+              defaultValue={
+                healthcheck === null ? "" : healthcheck?.interval_seconds ?? 30
+              }
+              className={cn(
+                healthcheckChange &&
+                  "bg-secondary/60 dark:bg-secondary-foreground opacity-100 border-transparent placeholder-shown:font-mono"
+              )}
+            />
           </Form.Control>
+          {errors.new_value?.interval_seconds && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.interval_seconds}
+            </Form.Message>
+          )}
         </Form.Field>
       </fieldset>
 
       <div className="flex items-center gap-2">
-        <SubmitButton isPending={false} variant="secondary">
-          <>
-            <CheckIcon size={15} className="flex-none" />
-            <span>Update</span>
-          </>
+        <SubmitButton
+          isPending={updateHealthcheckCommandMutation.isPending}
+          variant="secondary"
+        >
+          {updateHealthcheckCommandMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span>Update</span>
+            </>
+          )}
         </SubmitButton>
-        <Button
-          type="button"
-          variant="outline"
+        <SubmitButton
+          value="true"
+          name="remove"
+          isPending={removeHealthcheckCommandMutation.isPending}
+          variant="destructive"
           className="inline-flex gap-1 items-center"
         >
-          <>
-            <Trash2Icon size={15} className="flex-none" />
-            <span>Remove healthcheck</span>
-          </>
-        </Button>
+          {removeHealthcheckCommandMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Removing...</span>
+            </>
+          ) : (
+            <>
+              <Trash2Icon size={15} className="flex-none" />
+              <span>Remove healthcheck</span>
+            </>
+          )}
+        </SubmitButton>
+
+        <div className="w-px h-8 bg-border" />
+
+        {healthcheckChange && (
+          <SubmitButton
+            isPending={cancelHealthcheckChangeMutation.isPending}
+            variant="outline"
+            name="revert_change"
+            value="true"
+          >
+            {cancelHealthcheckChangeMutation.isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Reverting...</span>
+              </>
+            ) : (
+              <>
+                <Undo2Icon size={15} className="flex-none" />
+                <span>Revert change</span>
+              </>
+            )}
+          </SubmitButton>
+        )}
       </div>
     </Form.Root>
   );
