@@ -57,6 +57,7 @@ import {
 } from "~/components/ui/tooltip";
 import { serviceKeys } from "~/key-factories";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
+import { useDockerServiceDeploymentListQuery } from "~/lib/hooks/use-docker-service-deployment-list-query";
 import {
   type DockerService,
   useDockerServiceSingleQuery
@@ -345,10 +346,13 @@ function ServiceImageForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
 
   const [isEditing, setIsEditing] = React.useState(false);
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
-    service_slug
-  );
+    service_slug,
+    select(data) {
+      return { image: data.image, unapplied_changes: data.unapplied_changes };
+    }
+  });
   const cancelImageChangeMutation = useCancelDockerServiceChangeMutation(
     project_slug,
     service_slug
@@ -363,7 +367,7 @@ function ServiceImageForm({ className }: ServiceFormProps) {
     }
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const serviceImageChange = service?.unapplied_changes.find(
     (change) => change.field === "image"
   );
@@ -502,10 +506,10 @@ function ServiceImageForm({ className }: ServiceFormProps) {
 function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
 
   const cancelCredentialsChangeMutation = useCancelDockerServiceChangeMutation(
     project_slug,
@@ -521,7 +525,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
     }
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const serviceCredentialsChange = service?.unapplied_changes.find(
     (change) => change.field === "credentials"
   );
@@ -713,22 +717,22 @@ type PortItem = {
 
 function ServicePortsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
 
   const ports: Map<string, PortItem> = new Map();
-  for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
+  for (const port of serviceSingleQuery.data?.ports ?? []) {
     ports.set(port.id, {
       id: port.id,
       host: port.host,
       forwarded: port.forwarded
     });
   }
-  for (const ch of (
-    serviceSingleQuery.data?.data?.unapplied_changes ?? []
-  ).filter((ch) => ch.field === "ports")) {
+  for (const ch of (serviceSingleQuery.data?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "ports"
+  )) {
     const hostForwarded = (ch.new_value ?? ch.old_value) as {
       host: number;
       forwarded: number;
@@ -1119,21 +1123,22 @@ type UrlItem = {
 
 function ServiceURLsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
 
+  const service = serviceSingleQuery.data;
   const urls: Map<string, UrlItem> = new Map();
-  for (const url of serviceSingleQuery.data?.data?.urls ?? []) {
+  for (const url of service?.urls ?? []) {
     urls.set(url.id, {
       ...url,
       id: url.id
     });
   }
-  for (const ch of (
-    serviceSingleQuery.data?.data?.unapplied_changes ?? []
-  ).filter((ch) => ch.field === "urls")) {
+  for (const ch of (service?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "urls"
+  )) {
     const newUrl = (ch.new_value ?? ch.old_value) as Omit<
       DockerService["urls"][number],
       "id"
@@ -1802,12 +1807,12 @@ function NewServiceURLForm() {
 
 function NetworkAliasesGroup({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const singleServiceQuery = useDockerServiceSingleQuery(
+  const singleServiceQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
   const [hasCopied, startTransition] = React.useTransition();
-  const service = singleServiceQuery.data?.data;
+  const service = singleServiceQuery.data;
 
   if (!service) return null;
 
@@ -1872,10 +1877,10 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
 function ServiceCommandForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
 
   const cancelStartingCommandChangeMutation =
     useCancelDockerServiceChangeMutation(project_slug, service_slug);
@@ -1886,7 +1891,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
     field: "command"
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const startingCommandChange = service?.unapplied_changes.find(
     (change) => change.field === "command"
   );
@@ -2026,10 +2031,10 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
   const formRef = React.useRef<React.ElementRef<"form">>(null);
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
 
   const cancelHealthcheckChangeMutation = useCancelDockerServiceChangeMutation(
     project_slug,
@@ -2048,7 +2053,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
     field: "healthcheck"
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const healthcheckChange = service?.unapplied_changes.find(
     (change) => change.field === "healthcheck"
   );
@@ -2543,6 +2548,49 @@ function NewServiceVolumeForm() {
 }
 
 function ServiceDangerZoneForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+  const toggleServiceStateMutation = useMutation({
+    mutationFn: async () => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries({
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          exact: true
+        });
+        return;
+      }
+    }
+  });
+
+  const deploymentListQuery = useDockerServiceDeploymentListQuery(
+    project_slug,
+    service_slug,
+    {}
+  );
+
+  const deploymentList = deploymentListQuery.data?.data?.results ?? [];
+  const currentProductionDeployment = deploymentList.find(
+    (dpl) => dpl.is_current_production
+  );
+
   return (
     <div className={cn("flex flex-col gap-4 items-start", className)}>
       <h3 className="text-lg">Toggle service state</h3>

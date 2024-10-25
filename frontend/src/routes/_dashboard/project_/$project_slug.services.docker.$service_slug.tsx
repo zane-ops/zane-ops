@@ -55,10 +55,10 @@ function ServiceDetailsLayout() {
   const location = useRouterState({ select: (s) => s.location });
   const navigate = Route.useNavigate();
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
-  );
+  const serviceSingleQuery = useDockerServiceSingleQuery({
+    service_slug,
+    project_slug
+  });
   const { isPending: isDeploying, mutate: deploy } =
     useDeployDockerServiceMutation(project_slug, service_slug);
 
@@ -70,7 +70,7 @@ function ServiceDetailsLayout() {
   }
 
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   let serviceImage =
     service?.image ??
     (service?.unapplied_changes.filter((change) => change.field === "image")[0]
