@@ -18,7 +18,6 @@ import {
   HardDrive,
   InfoIcon,
   LoaderIcon,
-  PaintRollerIcon,
   PencilLineIcon,
   Plus,
   PlusIcon,
@@ -43,13 +42,6 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarContentItem,
-  MenubarMenu,
-  MenubarTrigger
-} from "~/components/ui/menubar";
 import {
   Select,
   SelectContent,
@@ -1878,9 +1870,74 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
 }
 
 function ServiceCommandForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const cancelStartingCommandChangeMutation =
+    useCancelDockerServiceChangeMutation(project_slug, service_slug);
+
+  const updateStartingCommandMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "command"
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const startingCommandChange = service?.unapplied_changes.find(
+    (change) => change.field === "command"
+  );
+
+  const command =
+    (startingCommandChange?.new_value as string) ?? service?.command;
+
+  const errors = getFormErrorsFromResponseData(
+    updateStartingCommandMutation.data
+  );
+
+  const isEmptyChange =
+    startingCommandChange !== undefined &&
+    startingCommandChange.new_value === null;
+
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
   return (
     <Form.Root
-      action={() => {}}
+      ref={formRef}
+      action={(formData) => {
+        const revertChange =
+          formData.get("revert_change")?.toString() === "true";
+        if (revertChange && startingCommandChange !== undefined) {
+          cancelStartingCommandChangeMutation.mutate(startingCommandChange.id, {
+            onError(error) {
+              toast.error("Error", {
+                closeButton: true,
+                description: error.message
+              });
+            },
+            onSuccess() {
+              formRef.current?.reset();
+            }
+          });
+          return;
+        }
+        updateStartingCommandMutation.mutate(
+          {
+            type: "UPDATE",
+            new_value: formData.get("command")?.toString().trim() || null // empty should be considered as `null`
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              }
+            }
+          }
+        );
+      }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
       <fieldset className="w-full flex flex-col gap-4">
@@ -1893,25 +1950,181 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
             Value
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="ex: npm run start" />
+            <Input
+              placeholder={isEmptyChange ? "<empty>" : "ex: npm run start"}
+              disabled={startingCommandChange !== undefined}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              defaultValue={command}
+            />
           </Form.Control>
+          {errors.new_value && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value}
+            </Form.Message>
+          )}
         </Form.Field>
       </fieldset>
 
-      <SubmitButton isPending={false} variant="secondary">
-        <>
-          <CheckIcon size={15} className="flex-none" />
-          <span>Update</span>
-        </>
-      </SubmitButton>
+      <div className="inline-flex items-center gap-2">
+        {startingCommandChange !== undefined ? (
+          <SubmitButton
+            isPending={cancelStartingCommandChangeMutation.isPending}
+            variant="outline"
+            name="revert_change"
+            value="true"
+          >
+            {cancelStartingCommandChangeMutation.isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Reverting...</span>
+              </>
+            ) : (
+              <>
+                <Undo2Icon size={15} className="flex-none" />
+                <span>Revert change</span>
+              </>
+            )}
+          </SubmitButton>
+        ) : (
+          <>
+            <SubmitButton
+              isPending={updateStartingCommandMutation.isPending}
+              variant="secondary"
+            >
+              {updateStartingCommandMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating ...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              variant="outline"
+              onClick={updateStartingCommandMutation.reset}
+              type="reset"
+              className="flex-1 md:flex-none"
+            >
+              Reset
+            </Button>
+          </>
+        )}
+      </div>
     </Form.Root>
   );
 }
 
 function ServiceHealthcheckForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const serviceSingleQuery = useDockerServiceSingleQuery(
+    project_slug,
+    service_slug
+  );
+
+  const cancelHealthcheckChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const updateHealthcheckCommandMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "healthcheck"
+  });
+
+  const removeHealthcheckCommandMutation = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "healthcheck"
+  });
+
+  const service = serviceSingleQuery.data?.data;
+  const healthcheckChange = service?.unapplied_changes.find(
+    (change) => change.field === "healthcheck"
+  );
+
+  const newHealthCheck =
+    healthcheckChange?.new_value as DockerService["healthcheck"];
+  const healthcheck =
+    newHealthCheck === null ? null : newHealthCheck ?? service?.healthcheck;
+
+  const errors = getFormErrorsFromResponseData(
+    updateHealthcheckCommandMutation.data
+  );
+
+  const [healthcheckType, setHealthCheckType] = React.useState<
+    NonNullable<DockerService["healthcheck"]>["type"] | "none"
+  >(healthcheck?.type ?? "none");
+
   return (
     <Form.Root
-      action={() => {}}
+      ref={formRef}
+      action={(formData) => {
+        const remove = formData.get("remove")?.toString() === "true";
+        if (remove) {
+          removeHealthcheckCommandMutation.mutate(
+            {
+              type: "UPDATE",
+              new_value: null
+            },
+            {
+              onSuccess(errors) {
+                if (!errors) {
+                  formRef.current?.reset();
+                  setHealthCheckType("none");
+                }
+              }
+            }
+          );
+          return;
+        }
+        const revertChange =
+          formData.get("revert_change")?.toString() === "true";
+        if (revertChange && healthcheckChange?.id) {
+          cancelHealthcheckChangeMutation.mutate(healthcheckChange.id, {
+            onSuccess() {
+              setHealthCheckType(service?.healthcheck?.type ?? "none");
+              formRef.current?.reset();
+            }
+          });
+          return;
+        }
+
+        updateHealthcheckCommandMutation.mutate(
+          {
+            type: "UPDATE",
+            new_value: {
+              type: formData.get("type")?.toString() as NonNullable<
+                DockerService["healthcheck"]
+              >["type"],
+              value: formData.get("value")?.toString() ?? "",
+              timeout_seconds: Number(
+                formData.get("timeout_seconds")?.toString() || 30
+              ),
+              interval_seconds: Number(
+                formData.get("interval_seconds")?.toString() || 30
+              )
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+              }
+            }
+          }
+        );
+      }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
       <fieldset className="w-full flex flex-col gap-5">
@@ -1926,22 +2139,65 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
           <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-muted-foreground">Type</Form.Label>
             <Form.Control asChild>
-              <Select>
-                <SelectTrigger>
+              <Select
+                name="type"
+                disabled={healthcheckChange !== undefined}
+                value={healthcheckType}
+                onValueChange={(value) =>
+                  setHealthCheckType(
+                    value as NonNullable<DockerService["healthcheck"]>["type"]
+                  )
+                }
+              >
+                <SelectTrigger
+                  className={cn(
+                    "data-[disabled]:bg-secondary/60 data-[disabled]:dark:bg-secondary-foreground",
+                    "data-[disabled]:opacity-100 data-[disabled]:border-transparent",
+                    healthcheckType === "none" && "text-muted-foreground"
+                  )}
+                >
                   <SelectValue placeholder="Select a type" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem disabled value="none">
+                    Select a type
+                  </SelectItem>
                   <SelectItem value="PATH">Path</SelectItem>
                   <SelectItem value="COMMAND">Command</SelectItem>
                 </SelectContent>
               </Select>
             </Form.Control>
+            {errors.new_value?.type && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.type}
+              </Form.Message>
+            )}
           </Form.Field>
           <Form.Field name="value" className="flex flex-col gap-1.5 flex-1">
             <Form.Label className="text-muted-foreground">Value</Form.Label>
             <Form.Control asChild>
-              <Input placeholder="ex: redis-cli ping" />
+              <Input
+                disabled={healthcheckChange !== undefined}
+                placeholder={
+                  healthcheckChange && healthcheck === null
+                    ? "<empty>"
+                    : healthcheckType === "COMMAND"
+                      ? "ex: redis-cli ping"
+                      : "ex: /healthcheck"
+                }
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                defaultValue={healthcheck?.value}
+              />
             </Form.Control>
+            {errors.new_value?.value && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.value}
+              </Form.Message>
+            )}
           </Form.Field>
         </div>
         <Form.Field
@@ -1952,8 +2208,28 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             Timeout (in seconds)
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="ex: 30" />
+            <Input
+              disabled={healthcheckChange !== undefined}
+              placeholder={
+                healthcheckChange && healthcheck === null ? "<empty>" : "ex: 30"
+              }
+              defaultValue={
+                healthcheckChange && healthcheck === null
+                  ? ""
+                  : healthcheck?.timeout_seconds
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+            />
           </Form.Control>
+          {errors.new_value?.timeout_seconds && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.timeout_seconds}
+            </Form.Message>
+          )}
         </Form.Field>
         <Form.Field
           name="interval_seconds"
@@ -1963,28 +2239,104 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
             Interval (in seconds)
           </Form.Label>
           <Form.Control asChild>
-            <Input placeholder="ex: 30" />
+            <Input
+              placeholder={
+                healthcheckChange && healthcheck === null ? "<empty>" : "ex: 30"
+              }
+              disabled={healthcheckChange !== undefined}
+              defaultValue={
+                healthcheckChange && healthcheck === null
+                  ? ""
+                  : healthcheck?.interval_seconds
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+            />
           </Form.Control>
+          {errors.new_value?.interval_seconds && (
+            <Form.Message className="text-red-500 text-sm">
+              {errors.new_value.interval_seconds}
+            </Form.Message>
+          )}
         </Form.Field>
       </fieldset>
 
       <div className="flex items-center gap-2">
-        <SubmitButton isPending={false} variant="secondary">
+        {healthcheckChange ? (
+          <SubmitButton
+            isPending={cancelHealthcheckChangeMutation.isPending}
+            variant="outline"
+            name="revert_change"
+            value="true"
+          >
+            {cancelHealthcheckChangeMutation.isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Reverting...</span>
+              </>
+            ) : (
+              <>
+                <Undo2Icon size={15} className="flex-none" />
+                <span>Revert change</span>
+              </>
+            )}
+          </SubmitButton>
+        ) : (
           <>
-            <CheckIcon size={15} className="flex-none" />
-            <span>Update</span>
+            <SubmitButton
+              isPending={updateHealthcheckCommandMutation.isPending}
+              variant="secondary"
+            >
+              {updateHealthcheckCommandMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              variant="outline"
+              onClick={() => {
+                updateHealthcheckCommandMutation.reset();
+                setHealthCheckType(healthcheck?.type ?? "none");
+              }}
+              type="reset"
+              className="flex-1 md:flex-none"
+            >
+              Reset
+            </Button>
+
+            {service?.healthcheck !== null && healthcheck !== null && (
+              <SubmitButton
+                value="true"
+                name="remove"
+                isPending={removeHealthcheckCommandMutation.isPending}
+                variant="destructive"
+                className="inline-flex gap-1 items-center"
+              >
+                {removeHealthcheckCommandMutation.isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin" size={15} />
+                    <span>Removing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2Icon size={15} className="flex-none" />
+                    <span>Remove healthcheck</span>
+                  </>
+                )}
+              </SubmitButton>
+            )}
           </>
-        </SubmitButton>
-        <Button
-          type="button"
-          variant="outline"
-          className="inline-flex gap-1 items-center"
-        >
-          <>
-            <PaintRollerIcon size={15} className="flex-none" />
-            <span>Remove healthcheck</span>
-          </>
-        </Button>
+        )}
       </div>
     </Form.Root>
   );

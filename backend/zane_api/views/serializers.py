@@ -209,7 +209,7 @@ class HealthCheckRequestSerializer(serializers.Serializer):
         ("PATH", _("path")),
         ("COMMAND", _("command")),
     )
-    type = serializers.ChoiceField(required=True, choices=HEALTCHECK_CHOICES)
+    type = serializers.CustomChoiceField(required=True, choices=HEALTCHECK_CHOICES)
     value = serializers.CharField(max_length=255, required=True)
     timeout_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
     interval_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
