@@ -557,7 +557,7 @@ function NewEnvVariableForm() {
           )}
         </SubmitButton>
         <Button variant="outline" type="reset" className="flex-1">
-          Cancel
+          Reset
         </Button>
       </div>
     </Form.Root>
