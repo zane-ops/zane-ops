@@ -2302,6 +2302,18 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
                 </>
               )}
             </SubmitButton>
+            <Button
+              variant="outline"
+              onClick={() => {
+                updateHealthcheckCommandMutation.reset();
+                setHealthCheckType(healthcheck?.type ?? "none");
+              }}
+              type="reset"
+              className="flex-1 md:flex-none"
+            >
+              Reset
+            </Button>
+
             {service?.healthcheck !== null && healthcheck !== null && (
               <SubmitButton
                 value="true"
