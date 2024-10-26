@@ -1669,10 +1669,6 @@ function NewServiceURLForm() {
             onSuccess(errors) {
               if (!errors) {
                 formRef.current?.reset();
-              } else {
-                console.log({
-                  errors
-                });
               }
             }
           }
@@ -2511,6 +2507,8 @@ function ServiceVolumeItem({
 
   const errors = getFormErrorsFromResponseData(data);
   const [accordionValue, setAccordionValue] = React.useState("");
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
 
   return (
     <div className="relative group">
@@ -2596,31 +2594,201 @@ function ServiceVolumeItem({
           )}
         </TooltipProvider>
       </div>
-      <div
-        className={cn("rounded-md p-4 flex items-start gap-2 bg-muted", {
-          "dark:bg-secondary-foreground bg-secondary/60 ":
-            change_type === "UPDATE",
-          "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
-          "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
-        })}
+      <Accordion
+        type="single"
+        collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
       >
-        <HardDrive size={20} className="text-grey relative top-1.5" />
-        <div className="flex flex-col gap-2">
-          <h3 className="text-lg inline-flex gap-1 items-center">
-            <span>{name}</span>
-          </h3>
-          <small className="text-card-foreground inline-flex gap-1 items-center">
-            {host_path && (
-              <>
-                <span>{host_path}</span>
-                <ArrowRightIcon size={15} className="text-grey" />
-              </>
-            )}
-            <span className="text-grey">{container_path}</span>
-            <Code>{modeSuffix}</Code>
-          </small>
-        </div>
-      </div>
+        <AccordionItem
+          value={`${name}`}
+          className="border-none"
+          disabled={!!change_id}
+        >
+          <AccordionTrigger
+            className={cn("rounded-md p-4 flex items-start gap-2 bg-muted", {
+              "dark:bg-secondary-foreground bg-secondary/60 ":
+                change_type === "UPDATE",
+              "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
+              "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+            })}
+          >
+            <HardDrive size={20} className="text-grey relative top-1.5" />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg inline-flex gap-1 items-center">
+                <span>{name}</span>
+              </h3>
+              <small className="text-card-foreground inline-flex gap-1 items-center">
+                {host_path && (
+                  <>
+                    <span>{host_path}</span>
+                    <ArrowRightIcon size={15} className="text-grey" />
+                  </>
+                )}
+                <span className="text-grey">{container_path}</span>
+                <Code>{modeSuffix}</Code>
+              </small>
+            </div>
+          </AccordionTrigger>
+          {id && (
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <Form.Root
+                action={(formData) => {
+                  const hostPath = formData.get("host_path")?.toString();
+                  const name = formData.get("name")?.toString();
+                  editVolume(
+                    {
+                      type: "UPDATE",
+                      item_id: id,
+                      new_value: {
+                        container_path:
+                          formData.get("container_path")?.toString() ?? "",
+                        host_path: !hostPath ? undefined : hostPath,
+                        mode: formData
+                          .get("mode")
+                          ?.toString() as DockerService["volumes"][number]["mode"],
+                        name: !name ? undefined : name
+                      }
+                    },
+                    {
+                      onSuccess(errors) {
+                        if (!errors) {
+                          formRef.current?.reset();
+                          setAccordionValue("");
+                        }
+                      }
+                    }
+                  );
+                }}
+                ref={formRef}
+                className={cn("flex flex-col gap-4 w-full")}
+              >
+                <Form.Field
+                  name="mode"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Mode
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Select
+                      value={changedVolumeMode}
+                      onValueChange={(mode) =>
+                        setChangedVolumeMode(mode as VolumeMode)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a volume mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="READ_WRITE">Read & Write</SelectItem>
+                        <SelectItem value="READ_ONLY">Read only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Form.Control>
+                  {errors.new_value?.mode && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.mode}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+                <Form.Field
+                  name="name"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Name
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: postgresl-data"
+                      defaultValue={name}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.name && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.name}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+
+                <Form.Field
+                  name="container_path"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Container path
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: /data"
+                      defaultValue={container_path}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.container_path && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.container_path}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+                <Form.Field
+                  name="host_path"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Host path
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: /etc/localtime"
+                      defaultValue={host_path ?? ""}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.host_path && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.host_path}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+
+                <hr className="-mx-4 border-border" />
+                <div className="flex justify-end items-center gap-2">
+                  <SubmitButton
+                    isPending={isPending}
+                    variant="secondary"
+                    className="flex-1 md:flex-none"
+                  >
+                    {isPending ? (
+                      <>
+                        <span>Updating...</span>
+                        <LoaderIcon className="animate-spin" size={15} />
+                      </>
+                    ) : (
+                      <>
+                        <span>Update</span>
+                        <PlusIcon size={15} />
+                      </>
+                    )}
+                  </SubmitButton>
+                  <Button
+                    variant="outline"
+                    type="reset"
+                    className="flex-1 md:flex-none"
+                    onClick={() => {
+                      reset();
+                      setChangedVolumeMode(mode);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </Form.Root>
+            </AccordionContent>
+          )}
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
@@ -2662,10 +2830,6 @@ function NewServiceVolumeForm() {
               if (!errors) {
                 formRef.current?.reset();
                 setVolumeMode("READ_WRITE");
-              } else {
-                console.log({
-                  errors
-                });
               }
             }
           }
