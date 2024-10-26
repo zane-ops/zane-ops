@@ -498,8 +498,7 @@ function NewEnvVariableForm() {
       if (data) {
         formRef.current?.reset();
         await queryClient.invalidateQueries({
-          queryKey: serviceQueries.single({ project_slug, service_slug })
-            .queryKey,
+          ...serviceQueries.single({ project_slug, service_slug }),
           exact: true
         });
         return;
