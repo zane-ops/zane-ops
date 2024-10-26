@@ -3,16 +3,12 @@ import { type ApiResponse, apiClient } from "~/api/client";
 import { serviceKeys } from "~/key-factories";
 import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 
-export function useDockerServiceSingleQuery<
-  TSelectReturnType extends Partial<DockerService> = DockerService
->({
+export function useDockerServiceSingleQuery({
   project_slug,
-  service_slug,
-  select
+  service_slug
 }: {
   project_slug: string;
   service_slug: string;
-  select?: (data: DockerService) => TSelectReturnType;
 }) {
   return useQuery({
     queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
@@ -29,12 +25,6 @@ export function useDockerServiceSingleQuery<
           signal
         }
       );
-      return data;
-    },
-    select(data) {
-      if (select && data) {
-        return select(data);
-      }
       return data;
     },
     refetchInterval: (query) => {

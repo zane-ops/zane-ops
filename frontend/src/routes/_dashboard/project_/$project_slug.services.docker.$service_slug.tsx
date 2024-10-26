@@ -34,7 +34,10 @@ import {
 } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
-import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
+import {
+  type DockerService,
+  useDockerServiceSingleQuery
+} from "~/lib/hooks/use-docker-service-single-query";
 import type { ValueOf } from "~/lib/types";
 import { formatURL, pluralize } from "~/utils";
 
@@ -79,7 +82,7 @@ function ServiceDetailsLayout() {
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
   }
-  let extraServiceUrls: NonNullable<typeof service>["urls"] = [];
+  let extraServiceUrls: DockerService["urls"] = [];
   let _;
   if (service && service.urls.length > 1) {
     [_, ...extraServiceUrls] = service.urls;

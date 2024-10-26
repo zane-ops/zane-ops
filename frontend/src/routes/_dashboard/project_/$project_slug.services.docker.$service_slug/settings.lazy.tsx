@@ -348,10 +348,7 @@ function ServiceImageForm({ className }: ServiceFormProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
-    service_slug,
-    select(data) {
-      return { image: data.image, unapplied_changes: data.unapplied_changes };
-    }
+    service_slug
   });
   const cancelImageChangeMutation = useCancelDockerServiceChangeMutation(
     project_slug,

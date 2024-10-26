@@ -65,26 +65,27 @@ type EnvVariableUI = {
 
 function EnvVariablesPage() {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingleQuery(
+  const serviceSingleQuery = useDockerServiceSingleQuery({
     project_slug,
     service_slug
-  );
+  });
 
   if (serviceSingleQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
 
+  const service = serviceSingleQuery.data;
   const env_variables: Map<string, EnvVariableUI> = new Map();
-  for (const env of serviceSingleQuery.data?.data?.env_variables ?? []) {
+  for (const env of service?.env_variables ?? []) {
     env_variables.set(env.key, {
       id: env.id,
       name: env.key,
       value: env.value
     });
   }
-  for (const ch of (
-    serviceSingleQuery.data?.data?.unapplied_changes ?? []
-  ).filter((ch) => ch.field === "env_variables")) {
+  for (const ch of (service?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "env_variables"
+  )) {
     const keyValue = (ch.new_value ?? ch.old_value) as {
       key: string;
       value: string;
@@ -98,8 +99,7 @@ function EnvVariablesPage() {
     });
   }
 
-  const system_env_variables =
-    serviceSingleQuery.data?.data?.system_env_variables ?? [];
+  const system_env_variables = service?.system_env_variables ?? [];
 
   return (
     <div className="my-6 flex flex-col gap-4">
