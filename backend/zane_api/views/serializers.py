@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import time
 from typing import Any, OrderedDict
 
 import django_filters
@@ -8,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
+from faker import Faker
 from rest_framework import pagination
 
 from .helpers import (
@@ -58,8 +60,8 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
-    host = serializers.IntegerField(required=False, default=80)
-    forwarded = serializers.IntegerField(required=True)
+    host = serializers.IntegerField(required=False, default=80, min_value=1)
+    forwarded = serializers.IntegerField(required=True, min_value=1)
 
 
 class VolumeRequestSerializer(serializers.Serializer):
@@ -81,8 +83,16 @@ class VolumeRequestSerializer(serializers.Serializer):
         else:
             if attrs.get("host_path") is not None and attrs.get("mode") != "READ_ONLY":
                 raise serializers.ValidationError(
-                    {"mode": [f"Host volumes can only be mounted in `READ_ONLY` mode."]}
+                    {
+                        "mode": [
+                            f"Volumes with a host path can only be mounted in `read only` mode."
+                        ]
+                    }
                 )
+        if attrs.get("name") is None:
+            fake = Faker()
+            Faker.seed(time.monotonic())
+            attrs["name"] = fake.slug().lower()
         return attrs
 
 

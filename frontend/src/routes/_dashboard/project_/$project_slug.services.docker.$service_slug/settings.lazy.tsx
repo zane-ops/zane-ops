@@ -166,19 +166,19 @@ function SettingsPage() {
         <nav className="sticky top-20">
           <ul className="flex flex-col gap-2 text-grey">
             <li>
-              <Link to="#details">Details</Link>
+              <Link to="./#details">Details</Link>
             </li>
             <li>
-              <Link to="#source">Source</Link>
+              <Link to="./#source">Source</Link>
             </li>
             <li>
-              <Link to="#networking">Networking</Link>
+              <Link to="./#networking">Networking</Link>
             </li>
             <li>
-              <Link to="#deploy">Deploy</Link>
+              <Link to="./#deploy">Deploy</Link>
             </li>
             <li>
-              <Link to="#volumes">Volumes</Link>
+              <Link to="./#volumes">Volumes</Link>
             </li>
             <li className="text-red-400">
               <a href="#danger-zone">Danger Zone</a>
@@ -994,20 +994,6 @@ function ServicePortItem({
               >
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <Form.Field
-                    name="host"
-                    className="flex-1 inline-flex flex-col gap-1"
-                  >
-                    <Form.Label className="text-gray-400">Host port</Form.Label>
-                    <Form.Control asChild>
-                      <Input placeholder="ex: 80" defaultValue={host ?? 80} />
-                    </Form.Control>
-                    {errors.new_value?.host && (
-                      <Form.Message className="text-red-500 text-sm">
-                        {errors.new_value?.host}
-                      </Form.Message>
-                    )}
-                  </Form.Field>
-                  <Form.Field
                     name="forwarded"
                     className="flex-1 inline-flex flex-col gap-1"
                   >
@@ -1020,6 +1006,20 @@ function ServicePortItem({
                     {errors.new_value?.forwarded && (
                       <Form.Message className="text-red-500 text-sm">
                         {errors.new_value?.forwarded}
+                      </Form.Message>
+                    )}
+                  </Form.Field>
+                  <Form.Field
+                    name="host"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">Host port</Form.Label>
+                    <Form.Control asChild>
+                      <Input placeholder="ex: 80" defaultValue={host ?? 80} />
+                    </Form.Control>
+                    {errors.new_value?.host && (
+                      <Form.Message className="text-red-500 text-sm">
+                        {errors.new_value?.host}
                       </Form.Message>
                     )}
                   </Form.Field>
@@ -1070,12 +1070,16 @@ function NewServicePortForm() {
     <Form.Root
       ref={formRef}
       action={(formData) => {
+        const hostPort =
+          (formData.get("host")?.toString() ?? "").trim() === ""
+            ? 80
+            : formData.get("host")?.toString().trim();
         mutate(
           {
             type: "ADD",
             new_value: {
-              host: Number(formData.get("host") ?? ""),
-              forwarded: Number(formData.get("forwarded") ?? "")
+              forwarded: Number(formData.get("forwarded") ?? ""),
+              host: isNaN(Number(hostPort)) ? 80 : Number(hostPort)
             }
           },
           {
@@ -1089,17 +1093,6 @@ function NewServicePortForm() {
       }}
       className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >
-      <Form.Field name="host" className="flex-1 inline-flex flex-col gap-1">
-        <Form.Label className="text-gray-400">Host port</Form.Label>
-        <Form.Control asChild>
-          <Input placeholder="ex: 80" />
-        </Form.Control>
-        {errors.new_value?.host && (
-          <Form.Message className="text-red-500 text-sm">
-            {errors.new_value?.host}
-          </Form.Message>
-        )}
-      </Form.Field>
       <Form.Field
         name="forwarded"
         className="flex-1 inline-flex flex-col gap-1"
@@ -1111,6 +1104,17 @@ function NewServicePortForm() {
         {errors.new_value?.forwarded && (
           <Form.Message className="text-red-500 text-sm">
             {errors.new_value?.forwarded}
+          </Form.Message>
+        )}
+      </Form.Field>
+      <Form.Field name="host" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="text-gray-400">Host port</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: 80" defaultValue={80} />
+        </Form.Control>
+        {errors.new_value?.host && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value?.host}
           </Form.Message>
         )}
       </Form.Field>
@@ -1669,10 +1673,6 @@ function NewServiceURLForm() {
             onSuccess(errors) {
               if (!errors) {
                 formRef.current?.reset();
-              } else {
-                console.log({
-                  errors
-                });
               }
             }
           }
@@ -2398,7 +2398,45 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
   );
 }
 
+type VolumeItem = {
+  change_id?: string;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+  id?: string | null;
+} & Omit<DockerService["volumes"][number], "id">;
+
 function ServiceVolumesForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
+  );
+
+  const service = serviceSingleQuery.data;
+  const volumes: Map<string, VolumeItem> = new Map();
+  for (const url of service?.volumes ?? []) {
+    volumes.set(url.id, {
+      ...url,
+      id: url.id
+    });
+  }
+  for (const ch of (service?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "volumes"
+  )) {
+    const newUrl = (ch.new_value ?? ch.old_value) as Omit<
+      DockerService["volumes"][number],
+      "id"
+    >;
+    volumes.set(ch.item_id ?? ch.id, {
+      ...newUrl,
+      change_id: ch.id,
+      id: ch.item_id,
+      change_type: ch.type
+    });
+  }
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -2418,26 +2456,18 @@ function ServiceVolumesForm({ className }: ServiceFormProps) {
           </AlertDescription>
         </Alert>
       </div>
-      <hr className="border-border" />
-      <ul className="flex flex-col gap-2">
-        <li>
-          <ServiceVolumeItem
-            name="redis"
-            container_path="/data"
-            mode="READ_WRITE"
-          />
-        </li>
-        <li>
-          <ServiceVolumeItem
-            name="localtime"
-            container_path="/etc/localtime"
-            host_path="/etc/localtime"
-            change_id="1"
-            change_type="UPDATE"
-            mode="READ_ONLY"
-          />
-        </li>
-      </ul>
+      {volumes.size > 0 && (
+        <>
+          <hr className="border-border" />
+          <ul className="flex flex-col gap-2">
+            {[...volumes.entries()].map(([key, volume]) => (
+              <li key={key}>
+                <ServiceVolumeItem {...volume} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <hr className="border-border" />
       <h3 className="text-lg">Add new volume</h3>
       <NewServiceVolumeForm />
@@ -2445,53 +2475,51 @@ function ServiceVolumesForm({ className }: ServiceFormProps) {
   );
 }
 
-type ServiceVolumeItemProps = {
-  name: string;
-  container_path: string;
-  mode: "READ_ONLY" | "READ_WRITE";
-  host_path?: string;
-  change_id?: string;
-  change_type?: "UPDATE" | "DELETE" | "ADD";
-};
-
 function ServiceVolumeItem({
+  id,
   name,
   container_path,
   host_path,
   change_type,
   mode,
   change_id
-}: ServiceVolumeItemProps) {
-  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read write";
+}: VolumeItem) {
+  const { project_slug, service_slug } = Route.useParams();
+  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read & write";
+
+  const {
+    mutate: editVolume,
+    isPending,
+    data,
+    reset
+  } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "volumes"
+  });
+
+  const { mutateAsync: removeVolume } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "volumes"
+  });
+
+  const cancelVolumeChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const errors = getFormErrorsFromResponseData(data);
+  const [accordionValue, setAccordionValue] = React.useState("");
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
+
   return (
-    <div
-      className={cn(
-        "rounded-md p-4 flex items-start gap-2 group relative bg-muted",
-        {
-          "dark:bg-secondary-foreground bg-secondary/60 ":
-            change_type === "UPDATE",
-          "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
-          "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
-        }
-      )}
-    >
-      <HardDrive size={20} className="text-grey relative top-1.5" />
-      <div className="flex flex-col gap-2">
-        <h3 className="text-lg inline-flex gap-1 items-center">
-          <span>{name}</span>
-        </h3>
-        <small className="text-card-foreground inline-flex gap-1 items-center">
-          {host_path && (
-            <>
-              <span>{host_path}</span>
-              <ArrowRightIcon size={15} className="text-grey" />
-            </>
-          )}
-          <span className="text-grey">{container_path}</span>
-          <Code>{modeSuffix}</Code>
-        </small>
-      </div>
-      <div className="absolute top-4 right-4 flex gap-2 items-center">
+    <div className="relative group">
+      <div
+        className="absolute top-2 right-2 inline-flex gap-1 items-center"
+        role="none"
+      >
         <TooltipProvider>
           {change_id !== undefined ? (
             <Tooltip delayDuration={0}>
@@ -2499,6 +2527,23 @@ function ServiceVolumeItem({
                 <Button
                   variant="ghost"
                   className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  onClick={() =>
+                    toast.promise(
+                      cancelVolumeChangeMutation.mutateAsync(change_id),
+                      {
+                        loading: `Cancelling url change...`,
+                        success: "Success",
+                        error: "Error",
+                        closeButton: true,
+                        description(data) {
+                          if (data instanceof Error) {
+                            return data.message;
+                          }
+                          return "Done.";
+                        }
+                      }
+                    )
+                  }
                 >
                   <Undo2Icon size={15} className="flex-none" />
                   <span className="sr-only">Revert change</span>
@@ -2507,61 +2552,332 @@ function ServiceVolumeItem({
               <TooltipContent>Revert change</TooltipContent>
             </Tooltip>
           ) : (
-            <>
+            id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                  >
-                    <EditIcon size={15} className="flex-none" />
-                    <span className="sr-only">Edit volume</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Edit volume</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() =>
+                      toast.promise(
+                        removeVolume(
+                          {
+                            type: "DELETE",
+                            item_id: id
+                          },
+                          {
+                            onSuccess(errors) {
+                              if (!errors) {
+                                setAccordionValue("");
+                              }
+                            }
+                          }
+                        ),
+                        {
+                          loading: `Requesting change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        }
+                      )
+                    }
                   >
                     <Trash2Icon size={15} className="flex-none text-red-400" />
-                    <span className="sr-only">Delete volume</span>
+                    <span className="sr-only">Delete url</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Delete volume</TooltipContent>
+                <TooltipContent>Delete url</TooltipContent>
               </Tooltip>
-            </>
+            )
           )}
         </TooltipProvider>
       </div>
+      <Accordion
+        type="single"
+        collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
+      >
+        <AccordionItem
+          value={`${name}`}
+          className="border-none"
+          disabled={!!change_id}
+        >
+          <AccordionTrigger
+            className={cn("rounded-md p-4 flex items-start gap-2 bg-muted", {
+              "dark:bg-secondary-foreground bg-secondary/60 ":
+                change_type === "UPDATE",
+              "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
+              "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+            })}
+          >
+            <HardDrive size={20} className="text-grey relative top-1.5" />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg inline-flex gap-1 items-center">
+                <span>{name}</span>
+              </h3>
+              <small className="text-card-foreground inline-flex gap-1 items-center">
+                {host_path && (
+                  <>
+                    <span>{host_path}</span>
+                    <ArrowRightIcon size={15} className="text-grey" />
+                  </>
+                )}
+                <span className="text-grey">{container_path}</span>
+                <Code>{modeSuffix}</Code>
+              </small>
+            </div>
+          </AccordionTrigger>
+          {id && (
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <Form.Root
+                action={(formData) => {
+                  const hostPath = formData.get("host_path")?.toString();
+                  const name = formData.get("name")?.toString();
+                  editVolume(
+                    {
+                      type: "UPDATE",
+                      item_id: id,
+                      new_value: {
+                        container_path:
+                          formData.get("container_path")?.toString() ?? "",
+                        host_path: !hostPath ? undefined : hostPath,
+                        mode: formData
+                          .get("mode")
+                          ?.toString() as DockerService["volumes"][number]["mode"],
+                        name: !name ? undefined : name
+                      }
+                    },
+                    {
+                      onSuccess(errors) {
+                        if (!errors) {
+                          formRef.current?.reset();
+                          setAccordionValue("");
+                        }
+                      }
+                    }
+                  );
+                }}
+                ref={formRef}
+                className={cn("flex flex-col gap-4 w-full")}
+              >
+                <Form.Field
+                  name="mode"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Mode
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Select
+                      value={changedVolumeMode}
+                      onValueChange={(mode) =>
+                        setChangedVolumeMode(mode as VolumeMode)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a volume mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="READ_WRITE">Read & Write</SelectItem>
+                        <SelectItem value="READ_ONLY">Read only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Form.Control>
+                  {errors.new_value?.mode && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.mode}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+                <Form.Field
+                  name="name"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Name
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: postgresl-data"
+                      defaultValue={name}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.name && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.name}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+
+                <Form.Field
+                  name="container_path"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Container path
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: /data"
+                      defaultValue={container_path}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.container_path && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.container_path}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+                <Form.Field
+                  name="host_path"
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <Form.Label className="text-muted-foreground">
+                    Host path
+                  </Form.Label>
+                  <Form.Control asChild>
+                    <Input
+                      placeholder="ex: /etc/localtime"
+                      defaultValue={host_path ?? ""}
+                    />
+                  </Form.Control>
+                  {errors.new_value?.host_path && (
+                    <Form.Message className="text-red-500 text-sm ">
+                      {errors.new_value.host_path}
+                    </Form.Message>
+                  )}
+                </Form.Field>
+
+                <hr className="-mx-4 border-border" />
+                <div className="flex justify-end items-center gap-2">
+                  <SubmitButton
+                    isPending={isPending}
+                    variant="secondary"
+                    className="flex-1 md:flex-none"
+                  >
+                    {isPending ? (
+                      <>
+                        <span>Updating...</span>
+                        <LoaderIcon className="animate-spin" size={15} />
+                      </>
+                    ) : (
+                      <>
+                        <span>Update</span>
+                        <PlusIcon size={15} />
+                      </>
+                    )}
+                  </SubmitButton>
+                  <Button
+                    variant="outline"
+                    type="reset"
+                    className="flex-1 md:flex-none"
+                    onClick={() => {
+                      reset();
+                      setChangedVolumeMode(mode);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </Form.Root>
+            </AccordionContent>
+          )}
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
 
+type VolumeMode = DockerService["volumes"][number]["mode"];
+
 function NewServiceVolumeForm() {
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "volumes"
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+  const [volumeMode, setVolumeMode] = React.useState<VolumeMode>("READ_WRITE");
+
   return (
     <Form.Root
-      action={() => {}}
+      action={(formData) => {
+        const hostPath = formData.get("host_path")?.toString();
+        const name = formData.get("name")?.toString();
+        mutate(
+          {
+            type: "ADD",
+            new_value: {
+              container_path: formData.get("container_path")?.toString() ?? "",
+              host_path: !hostPath ? undefined : hostPath,
+              mode: formData
+                .get("mode")
+                ?.toString() as DockerService["volumes"][number]["mode"],
+              name: !name ? undefined : name
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+                setVolumeMode("READ_WRITE");
+              }
+            }
+          }
+        );
+      }}
+      ref={formRef}
       className={cn(
         "flex flex-col gap-4 w-full border border-border rounded-md p-4"
       )}
     >
-      <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
+      <Form.Field name="mode" className="flex flex-col gap-1.5 flex-1">
         <Form.Label className="text-muted-foreground">Mode</Form.Label>
         <Form.Control asChild>
-          <Select>
+          <Select
+            value={volumeMode}
+            onValueChange={(mode) => setVolumeMode(mode as VolumeMode)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a volume mode" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="READ_ONLY">Read only</SelectItem>
               <SelectItem value="READ_WRITE">Read & Write</SelectItem>
+              <SelectItem value="READ_ONLY">Read only</SelectItem>
             </SelectContent>
           </Select>
         </Form.Control>
+        {errors.new_value?.mode && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.mode}
+          </Form.Message>
+        )}
       </Form.Field>
+      <Form.Field name="name" className="flex flex-col gap-1.5 flex-1">
+        <Form.Label className="text-muted-foreground">Name</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: postgresl-data" />
+        </Form.Control>
+        {errors.new_value?.name && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.name}
+          </Form.Message>
+        )}
+      </Form.Field>
+
       <Form.Field
         name="container_path"
         className="flex flex-col gap-1.5 flex-1"
@@ -2572,26 +2888,53 @@ function NewServiceVolumeForm() {
         <Form.Control asChild>
           <Input placeholder="ex: /data" />
         </Form.Control>
+        {errors.new_value?.container_path && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.container_path}
+          </Form.Message>
+        )}
       </Form.Field>
       <Form.Field name="host_path" className="flex flex-col gap-1.5 flex-1">
         <Form.Label className="text-muted-foreground">Host path</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: /etc/localtime" />
         </Form.Control>
+        {errors.new_value?.host_path && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.host_path}
+          </Form.Message>
+        )}
       </Form.Field>
 
       <hr className="-mx-4 border-border" />
       <div className="flex justify-end items-center gap-2">
         <SubmitButton
-          isPending={false}
+          isPending={isPending}
           variant="secondary"
           className="flex-1 md:flex-none"
         >
-          <span>Add</span>
-          <PlusIcon size={15} className="flex-none" />
+          {isPending ? (
+            <>
+              <span>Adding...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              <span>Add</span>
+              <PlusIcon size={15} />
+            </>
+          )}
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1 md:flex-none">
-          Cancel
+        <Button
+          variant="outline"
+          type="reset"
+          className="flex-1 md:flex-none"
+          onClick={() => {
+            reset();
+            setVolumeMode("READ_WRITE");
+          }}
+        >
+          Reset
         </Button>
       </div>
     </Form.Root>
