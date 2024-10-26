@@ -83,7 +83,11 @@ class VolumeRequestSerializer(serializers.Serializer):
         else:
             if attrs.get("host_path") is not None and attrs.get("mode") != "READ_ONLY":
                 raise serializers.ValidationError(
-                    {"mode": [f"Host volumes can only be mounted in `READ_ONLY` mode."]}
+                    {
+                        "mode": [
+                            f"Volumes with a host path can only be mounted in `read only` mode."
+                        ]
+                    }
                 )
         if attrs.get("name") is None:
             fake = Faker()
