@@ -33,9 +33,7 @@ function Login() {
         return error;
       }
       if (data?.success) {
-        queryClient.removeQueries({
-          queryKey: userQueries.authedUser.queryKey
-        });
+        queryClient.removeQueries(userQueries.authedUser);
         navigate({ to: "/" });
         return;
       }
