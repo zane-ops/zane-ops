@@ -236,7 +236,7 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
         queryClient.setQueryData(
           serviceQueries.single({ project_slug, service_slug: input.slug })
             .queryKey,
-          () => data
+          data
         );
 
         await navigate({
@@ -248,10 +248,9 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
     },
     onSettled: async (error) => {
       if (!error) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceQueries.single({ project_slug, service_slug })
-            .queryKey
-        });
+        queryClient.removeQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
         setIsEditing(false);
       }
     }
@@ -2623,10 +2622,9 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
       }
 
       if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceQueries.single({ project_slug, service_slug })
-            .queryKey
-        });
+        await queryClient.invalidateQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
 
         toast.success("Success", {
           closeButton: true,

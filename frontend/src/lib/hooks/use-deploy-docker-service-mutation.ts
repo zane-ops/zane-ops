@@ -45,10 +45,9 @@ export function useDeployDockerServiceMutation(
         return;
       }
       if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceQueries.single({ project_slug, service_slug })
-            .queryKey
-        });
+        await queryClient.invalidateQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
         toast.success("Success", {
           description: "Deployment queued sucesfully !",
           closeButton: true

@@ -35,8 +35,7 @@ export function useCancelDockerServiceChangeMutation(
 
       if (data) {
         await queryClient.invalidateQueries({
-          queryKey: serviceQueries.single({ project_slug, service_slug })
-            .queryKey,
+          ...serviceQueries.single({ project_slug, service_slug }),
           exact: true
         });
         return;

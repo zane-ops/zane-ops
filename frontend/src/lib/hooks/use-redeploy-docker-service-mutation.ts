@@ -36,11 +36,9 @@ export function useRedeployDockerServiceMutation(
         throw new Error(fullErrorMessage);
       }
       if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceQueries.single({ project_slug, service_slug })
-            .queryKey,
-          exact: false
-        });
+        await queryClient.invalidateQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
         return;
       }
     }
