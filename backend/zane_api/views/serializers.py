@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import time
 from typing import Any, OrderedDict
 
 import django_filters
@@ -8,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
+from faker import Faker
 from rest_framework import pagination
 
 from .helpers import (
@@ -83,6 +85,10 @@ class VolumeRequestSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"mode": [f"Host volumes can only be mounted in `READ_ONLY` mode."]}
                 )
+        if attrs.get("name") is None:
+            fake = Faker()
+            Faker.seed(time.monotonic())
+            attrs["name"] = fake.slug().lower()
         return attrs
 
 
