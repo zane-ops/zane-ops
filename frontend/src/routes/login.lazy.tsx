@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import { SubmitButton } from "~/components/ui/button";
@@ -7,12 +7,11 @@ import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { userKeys } from "~/key-factories";
+import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 
 export const Route = createLazyFileRoute("/login")({
@@ -21,7 +20,7 @@ export const Route = createLazyFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
-  const query = useAuthUser();
+  const query = useQuery(userQueries.authedUser);
   const user = query.data?.data?.user;
 
   const queryClient = useQueryClient();
@@ -35,7 +34,7 @@ function Login() {
       }
       if (data?.success) {
         queryClient.removeQueries({
-          queryKey: userKeys.authedUser
+          queryKey: userQueries.authedUser.queryKey
         });
         navigate({ to: "/" });
         return;

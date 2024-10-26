@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -31,8 +31,7 @@ import {
   CommandList
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
-import { projectKeys } from "~/key-factories";
-import { useSearchDockerHubQuery } from "~/lib/hooks/use-search-docker-hub-query";
+import { dockerHubQueries, projectQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -126,7 +125,9 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
 
   const [debouncedValue] = useDebounce(imageSearchQuery, 300);
-  const { data: imageListData } = useSearchDockerHubQuery(debouncedValue);
+  const { data: imageListData } = useQuery(
+    dockerHubQueries.images(debouncedValue)
+  );
 
   const { isPending, mutate, data } = useMutation({
     onSuccess: (data) => {
@@ -334,7 +335,7 @@ function StepServiceCreated({
         onSuccess(data.data.hash);
         queryClient.invalidateQueries({
           predicate(query) {
-            const [prefix] = projectKeys.serviceList(slug, {});
+            const [prefix] = projectQueries.serviceList(slug, {}).queryKey;
             return query.queryKey[0] === prefix && query.queryKey[1] === slug;
           }
         });

@@ -25,6 +25,7 @@ import { Loader } from "~/components/loader";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 
+import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { Button } from "~/components/ui/button";
 import {
@@ -41,11 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { projectSearchSchema } from "~/key-factories";
-import {
-  useArchivedProjectList,
-  useProjectListQuery
-} from "~/lib/hooks/use-project-list-query";
+import { projectQueries, projectSearchSchema } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { formattedDate, pluralize } from "~/utils";
 
@@ -74,8 +71,8 @@ export function ProjectList() {
     status
   };
 
-  const projectActiveQuery = useProjectListQuery(filters);
-  const projectArchivedQuery = useArchivedProjectList(filters);
+  const projectActiveQuery = useQuery(projectQueries.list(filters));
+  const projectArchivedQuery = useQuery(projectQueries.archived(filters));
 
   const query = status === "active" ? projectActiveQuery : projectArchivedQuery;
 
