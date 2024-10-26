@@ -124,7 +124,7 @@ export const projectQueries = {
       },
       placeholderData: keepPreviousData
     }),
-  serviceList: (slug: string, filters: ProjectServiceListSearch) =>
+  serviceList: (slug: string, filters: ProjectServiceListSearch = {}) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(slug).queryKey,

@@ -58,7 +58,11 @@ import {
 } from "~/components/ui/tooltip";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
 import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
-import { type DockerService, serviceQueries } from "~/lib/queries";
+import {
+  type DockerService,
+  projectQueries,
+  serviceQueries
+} from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, wait } from "~/utils";
 
@@ -2634,6 +2638,52 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
     }
   });
 
+  const navigate = useNavigate();
+  const archiveServiceMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await apiClient.DELETE(
+        "/api/projects/{project_slug}/archive-service/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+    },
+    async onSuccess(errors) {
+      if (!errors) {
+        await Promise.all([
+          navigate({
+            to: `/project/${project_slug}`,
+            replace: true
+          }),
+          queryClient.invalidateQueries(
+            projectQueries.serviceList(project_slug)
+          )
+        ]);
+
+        queryClient.removeQueries({
+          queryKey: serviceQueries.single({ project_slug, service_slug })
+            .queryKey
+        });
+        toast.success("Success", {
+          closeButton: true,
+          description: "Done."
+        });
+        return;
+      }
+    }
+  });
+
   const deploymentListQuery = useQuery(
     serviceQueries.deploymentList({ project_slug, service_slug })
   );
@@ -2645,6 +2695,9 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
 
   const toggleServiceErrors = getFormErrorsFromResponseData(
     toggleServiceStateMutation.data
+  );
+  const archiveServiceErrors = getFormErrorsFromResponseData(
+    archiveServiceMutation.data
   );
 
   return (
@@ -2694,20 +2747,45 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
 
       <hr className="w-full border-border" />
       <h3 className="text-lg text-red-400">Archive this service</h3>
-      <div className="flex flex-col gap-2 items-start">
+      {archiveServiceErrors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {archiveServiceErrors.non_field_errors}
+          </AlertDescription>
+        </Alert>
+      )}
+      <form
+        className="flex flex-col gap-2 items-start"
+        action={() => archiveServiceMutation.mutate()}
+      >
         <p className="text-red-400 ">
           Archiving this service will permanently delete all its deployments,
           This cannot be undone.
         </p>
 
-        <Button
+        <SubmitButton
           variant="destructive"
-          className="bg-red-500 inline-flex gap-1 items-center"
+          className={cn(
+            "inline-flex gap-1 items-center",
+            archiveServiceMutation.isPending ? "bg-red-400" : "bg-red-500"
+          )}
+          isPending={archiveServiceMutation.isPending}
         >
-          <Trash2Icon size={15} className="flex-none" />
-          <span>Archive service</span>
-        </Button>
-      </div>
+          {archiveServiceMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin flex-none" size={15} />
+              <span>Archiving...</span>
+            </>
+          ) : (
+            <>
+              <Trash2Icon size={15} className="flex-none" />
+              <span>Archive service</span>
+            </>
+          )}
+        </SubmitButton>
+      </form>
     </div>
   );
 }
