@@ -60,8 +60,8 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
-    host = serializers.IntegerField(required=False, default=80)
-    forwarded = serializers.IntegerField(required=True)
+    host = serializers.IntegerField(required=False, default=80, min_value=1)
+    forwarded = serializers.IntegerField(required=True, min_value=1)
 
 
 class VolumeRequestSerializer(serializers.Serializer):
