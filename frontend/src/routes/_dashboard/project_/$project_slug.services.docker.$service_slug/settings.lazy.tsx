@@ -21,6 +21,7 @@ import {
   PencilLineIcon,
   Plus,
   PlusIcon,
+  SunriseIcon,
   SunsetIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -2568,9 +2569,9 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
       }
 
       if (data) {
+        await wait(5_000);
         await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: true
+          queryKey: serviceKeys.single(project_slug, service_slug, "docker")
         });
         return;
       }
@@ -2588,27 +2589,54 @@ function ServiceDangerZoneForm({ className }: ServiceFormProps) {
     (dpl) => dpl.is_current_production
   );
 
+  const toggleServiceErrors = getFormErrorsFromResponseData(
+    toggleServiceStateMutation.data
+  );
+
   return (
     <div className={cn("flex flex-col gap-4 items-start", className)}>
-      <h3 className="text-lg">Toggle service state</h3>
-      <form action={() => {}}>
-        <SubmitButton
-          isPending={false}
-          variant="warning"
-          className=" inline-flex gap-1 items-center"
-        >
-          <SunsetIcon size={15} className="flex-none" />
-          <span>Put service to sleep</span>
-        </SubmitButton>
-        {/* <SubmitButton
-          isPending={false}
-          variant="default"
-          className="inline-flex gap-1 items-center"
-        >
-          <SunriseIcon size={15} className="flex-none" />
-          <span>Wake up service</span>
-        </SubmitButton> */}
-      </form>
+      {currentProductionDeployment !== undefined && (
+        <>
+          <h3 className="text-lg">Toggle service state</h3>
+          {toggleServiceErrors.non_field_errors && (
+            <Alert variant="destructive">
+              <AlertCircleIcon className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {toggleServiceErrors.non_field_errors}
+              </AlertDescription>
+            </Alert>
+          )}
+          <form action={() => toggleServiceStateMutation.mutate()}>
+            <SubmitButton
+              isPending={toggleServiceStateMutation.isPending}
+              variant={
+                currentProductionDeployment?.status == "SLEEPING"
+                  ? "default"
+                  : "warning"
+              }
+              className="inline-flex gap-1 items-center"
+            >
+              {toggleServiceStateMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : currentProductionDeployment?.status == "SLEEPING" ? (
+                <>
+                  <SunriseIcon size={15} className="flex-none" />
+                  <span>Wake up service</span>
+                </>
+              ) : (
+                <>
+                  <SunsetIcon size={15} className="flex-none" />
+                  <span>Put service to sleep</span>
+                </>
+              )}
+            </SubmitButton>
+          </form>
+        </>
+      )}
 
       <hr className="w-full border-border" />
       <h3 className="text-lg text-red-400">Archive this service</h3>
