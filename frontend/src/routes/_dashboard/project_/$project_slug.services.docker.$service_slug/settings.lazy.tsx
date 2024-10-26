@@ -166,19 +166,19 @@ function SettingsPage() {
         <nav className="sticky top-20">
           <ul className="flex flex-col gap-2 text-grey">
             <li>
-              <Link to="#details">Details</Link>
+              <Link to="./#details">Details</Link>
             </li>
             <li>
-              <Link to="#source">Source</Link>
+              <Link to="./#source">Source</Link>
             </li>
             <li>
-              <Link to="#networking">Networking</Link>
+              <Link to="./#networking">Networking</Link>
             </li>
             <li>
-              <Link to="#deploy">Deploy</Link>
+              <Link to="./#deploy">Deploy</Link>
             </li>
             <li>
-              <Link to="#volumes">Volumes</Link>
+              <Link to="./#volumes">Volumes</Link>
             </li>
             <li className="text-red-400">
               <a href="#danger-zone">Danger Zone</a>
@@ -2398,7 +2398,45 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
   );
 }
 
+type VolumeItem = {
+  change_id?: string;
+  change_type?: "UPDATE" | "DELETE" | "ADD";
+  id?: string | null;
+} & Omit<DockerService["volumes"][number], "id">;
+
 function ServiceVolumesForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
+  );
+
+  const service = serviceSingleQuery.data;
+  const volumes: Map<string, VolumeItem> = new Map();
+  for (const url of service?.volumes ?? []) {
+    volumes.set(url.id, {
+      ...url,
+      id: url.id
+    });
+  }
+  for (const ch of (service?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "volumes"
+  )) {
+    const newUrl = (ch.new_value ?? ch.old_value) as Omit<
+      DockerService["volumes"][number],
+      "id"
+    >;
+    volumes.set(ch.item_id ?? ch.id, {
+      ...newUrl,
+      change_id: ch.id,
+      id: ch.item_id,
+      change_type: ch.type
+    });
+  }
+
   return (
     <div className={cn("flex flex-col gap-5", className)}>
       <div className="flex flex-col gap-3">
@@ -2418,41 +2456,24 @@ function ServiceVolumesForm({ className }: ServiceFormProps) {
           </AlertDescription>
         </Alert>
       </div>
-      <hr className="border-border" />
-      <ul className="flex flex-col gap-2">
-        <li>
-          <ServiceVolumeItem
-            name="redis"
-            container_path="/data"
-            mode="READ_WRITE"
-          />
-        </li>
-        <li>
-          <ServiceVolumeItem
-            name="localtime"
-            container_path="/etc/localtime"
-            host_path="/etc/localtime"
-            change_id="1"
-            change_type="UPDATE"
-            mode="READ_ONLY"
-          />
-        </li>
-      </ul>
+      {volumes.size > 0 && (
+        <>
+          <hr className="border-border" />
+          <ul className="flex flex-col gap-2">
+            {[...volumes.entries()].map(([key, volume]) => (
+              <li key={key}>
+                <ServiceVolumeItem {...volume} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <hr className="border-border" />
       <h3 className="text-lg">Add new volume</h3>
       <NewServiceVolumeForm />
     </div>
   );
 }
-
-type ServiceVolumeItemProps = {
-  name: string;
-  container_path: string;
-  mode: "READ_ONLY" | "READ_WRITE";
-  host_path?: string;
-  change_id?: string;
-  change_type?: "UPDATE" | "DELETE" | "ADD";
-};
 
 function ServiceVolumeItem({
   name,
@@ -2461,7 +2482,7 @@ function ServiceVolumeItem({
   change_type,
   mode,
   change_id
-}: ServiceVolumeItemProps) {
+}: VolumeItem) {
   const modeSuffix = mode === "READ_ONLY" ? "read only" : "read write";
   return (
     <div
@@ -2540,28 +2561,91 @@ function ServiceVolumeItem({
   );
 }
 
+type VolumeMode = DockerService["volumes"][number]["mode"];
+
 function NewServiceVolumeForm() {
+  const { project_slug, service_slug } = Route.useParams();
+  const formRef = React.useRef<React.ElementRef<"form">>(null);
+
+  const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "volumes"
+  });
+
+  const errors = getFormErrorsFromResponseData(data);
+  const [volumeMode, setVolumeMode] = React.useState<VolumeMode>("READ_WRITE");
+
   return (
     <Form.Root
-      action={() => {}}
+      action={(formData) => {
+        const hostPath = formData.get("host_path")?.toString();
+        const name = formData.get("name")?.toString();
+        mutate(
+          {
+            type: "ADD",
+            new_value: {
+              container_path: formData.get("container_path")?.toString() ?? "",
+              host_path: !hostPath ? undefined : hostPath,
+              mode: formData
+                .get("mode")
+                ?.toString() as DockerService["volumes"][number]["mode"],
+              name: !name ? undefined : name
+            }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                formRef.current?.reset();
+                setVolumeMode("READ_WRITE");
+              } else {
+                console.log({
+                  errors
+                });
+              }
+            }
+          }
+        );
+      }}
+      ref={formRef}
       className={cn(
         "flex flex-col gap-4 w-full border border-border rounded-md p-4"
       )}
     >
-      <Form.Field name="type" className="flex flex-col gap-1.5 flex-1">
+      <Form.Field name="mode" className="flex flex-col gap-1.5 flex-1">
         <Form.Label className="text-muted-foreground">Mode</Form.Label>
         <Form.Control asChild>
-          <Select>
+          <Select
+            value={volumeMode}
+            onValueChange={(mode) => setVolumeMode(mode as VolumeMode)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a volume mode" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="READ_ONLY">Read only</SelectItem>
               <SelectItem value="READ_WRITE">Read & Write</SelectItem>
+              <SelectItem value="READ_ONLY">Read only</SelectItem>
             </SelectContent>
           </Select>
         </Form.Control>
+        {errors.new_value?.mode && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.mode}
+          </Form.Message>
+        )}
       </Form.Field>
+      <Form.Field name="name" className="flex flex-col gap-1.5 flex-1">
+        <Form.Label className="text-muted-foreground">Name</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: postgresl-data" />
+        </Form.Control>
+        {errors.new_value?.name && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.name}
+          </Form.Message>
+        )}
+      </Form.Field>
+
       <Form.Field
         name="container_path"
         className="flex flex-col gap-1.5 flex-1"
@@ -2572,26 +2656,53 @@ function NewServiceVolumeForm() {
         <Form.Control asChild>
           <Input placeholder="ex: /data" />
         </Form.Control>
+        {errors.new_value?.container_path && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.container_path}
+          </Form.Message>
+        )}
       </Form.Field>
       <Form.Field name="host_path" className="flex flex-col gap-1.5 flex-1">
         <Form.Label className="text-muted-foreground">Host path</Form.Label>
         <Form.Control asChild>
           <Input placeholder="ex: /etc/localtime" />
         </Form.Control>
+        {errors.new_value?.host_path && (
+          <Form.Message className="text-red-500 text-sm ">
+            {errors.new_value.host_path}
+          </Form.Message>
+        )}
       </Form.Field>
 
       <hr className="-mx-4 border-border" />
       <div className="flex justify-end items-center gap-2">
         <SubmitButton
-          isPending={false}
+          isPending={isPending}
           variant="secondary"
           className="flex-1 md:flex-none"
         >
-          <span>Add</span>
-          <PlusIcon size={15} className="flex-none" />
+          {isPending ? (
+            <>
+              <span>Adding...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              <span>Add</span>
+              <PlusIcon size={15} />
+            </>
+          )}
         </SubmitButton>
-        <Button variant="outline" type="reset" className="flex-1 md:flex-none">
-          Cancel
+        <Button
+          variant="outline"
+          type="reset"
+          className="flex-1 md:flex-none"
+          onClick={() => {
+            reset();
+            setVolumeMode("READ_WRITE");
+          }}
+        >
+          Reset
         </Button>
       </div>
     </Form.Root>
