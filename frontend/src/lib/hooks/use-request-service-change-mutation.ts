@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type RequestInput, apiClient } from "~/api/client";
-import { serviceKeys } from "~/key-factories";
+import { serviceQueries } from "~/lib/queries";
 import { getCsrfTokenHeader } from "~/utils";
 
 type ChangeRequestBody = RequestInput<
@@ -17,7 +17,6 @@ type useRequestServiceChangeMutationArgs<TField> = {
   project_slug: string;
   service_slug: string;
   field: TField;
-  onSuccess?: () => void;
 };
 
 export function useRequestServiceChangeMutation<
@@ -25,8 +24,7 @@ export function useRequestServiceChangeMutation<
 >({
   project_slug,
   service_slug,
-  field,
-  onSuccess
+  field
 }: useRequestServiceChangeMutationArgs<TField>) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -52,10 +50,9 @@ export function useRequestServiceChangeMutation<
 
       if (data) {
         await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          ...serviceQueries.single({ project_slug, service_slug }),
           exact: true
         });
-        onSuccess?.();
         return;
       }
     }

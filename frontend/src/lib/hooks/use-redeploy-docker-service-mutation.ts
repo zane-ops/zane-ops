@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
-import { serviceKeys } from "~/key-factories";
+import { serviceQueries } from "~/lib/queries";
 import { getCsrfTokenHeader } from "~/utils";
 
 export function useRedeployDockerServiceMutation(
@@ -36,10 +36,9 @@ export function useRedeployDockerServiceMutation(
         throw new Error(fullErrorMessage);
       }
       if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
-          exact: false
-        });
+        await queryClient.invalidateQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
         return;
       }
     }

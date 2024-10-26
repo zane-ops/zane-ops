@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
@@ -24,7 +24,6 @@ import {
   Twitter
 } from "lucide-react";
 import { apiClient } from "~/api/client";
-import { useAuthUser } from "~/components/helper/use-auth-user";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
@@ -40,7 +39,7 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { userKeys } from "~/key-factories";
+import { userQueries } from "~/lib/queries";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
 export const Route = createLazyFileRoute("/_dashboard")({
@@ -56,7 +55,7 @@ export const Route = createLazyFileRoute("/_dashboard")({
 });
 
 function Header() {
-  const query = useAuthUser();
+  const query = useQuery(userQueries.authedUser);
   const navigate = useNavigate();
   const user = query.data?.data?.user;
   const queryClient = useQueryClient();
@@ -72,7 +71,7 @@ function Header() {
       }
 
       queryClient.removeQueries({
-        queryKey: userKeys.authedUser
+        queryKey: userQueries.authedUser.queryKey
       });
       deleteCookie("csrftoken");
       navigate({ to: "/login" });

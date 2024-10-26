@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
-import { serviceKeys } from "~/key-factories";
+import { serviceQueries } from "~/lib/queries";
 import { getCsrfTokenHeader } from "~/utils";
 
 export function useCancelDockerServiceChangeMutation(
@@ -35,7 +35,7 @@ export function useCancelDockerServiceChangeMutation(
 
       if (data) {
         await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          ...serviceQueries.single({ project_slug, service_slug }),
           exact: true
         });
         return;

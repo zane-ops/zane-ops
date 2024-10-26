@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
   Ban,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { type RequestInput, apiClient } from "~/api/client";
+import { apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import {
@@ -42,10 +42,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serviceKeys } from "~/key-factories";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
-import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
 import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
+import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 
@@ -65,26 +64,26 @@ type EnvVariableUI = {
 
 function EnvVariablesPage() {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({ project_slug, service_slug })
   );
 
   if (serviceSingleQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
 
+  const service = serviceSingleQuery.data;
   const env_variables: Map<string, EnvVariableUI> = new Map();
-  for (const env of serviceSingleQuery.data?.data?.env_variables ?? []) {
+  for (const env of service?.env_variables ?? []) {
     env_variables.set(env.key, {
       id: env.id,
       name: env.key,
       value: env.value
     });
   }
-  for (const ch of (
-    serviceSingleQuery.data?.data?.unapplied_changes ?? []
-  ).filter((ch) => ch.field === "env_variables")) {
+  for (const ch of (service?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "env_variables"
+  )) {
     const keyValue = (ch.new_value ?? ch.old_value) as {
       key: string;
       value: string;
@@ -98,8 +97,7 @@ function EnvVariablesPage() {
     });
   }
 
-  const system_env_variables =
-    serviceSingleQuery.data?.data?.system_env_variables ?? [];
+  const system_env_variables = service?.system_env_variables ?? [];
 
   return (
     <div className="my-6 flex flex-col gap-4">
@@ -204,10 +202,7 @@ function EnVariableRow({
   } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "env_variables",
-    onSuccess() {
-      setIsEditing(false);
-    }
+    field: "env_variables"
   });
 
   const { mutateAsync: removeVariable } = useRequestServiceChangeMutation({
@@ -246,14 +241,23 @@ function EnVariableRow({
         <Form.Root
           className="col-span-3 md:col-span-5 flex md:items-start gap-3 md:flex-row flex-col pr-4"
           action={(formData) => {
-            editEnvVariable({
-              type: "UPDATE",
-              new_value: {
-                value: formData.get("value")?.toString() ?? "",
-                key: name
+            editEnvVariable(
+              {
+                type: "UPDATE",
+                new_value: {
+                  value: formData.get("value")?.toString() ?? "",
+                  key: name
+                },
+                item_id: id
               },
-              item_id: id
-            });
+              {
+                onSuccess(errors) {
+                  if (!errors) {
+                    setIsEditing(false);
+                  }
+                }
+              }
+            );
           }}
         >
           <Form.Field
@@ -494,7 +498,7 @@ function NewEnvVariableForm() {
       if (data) {
         formRef.current?.reset();
         await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+          ...serviceQueries.single({ project_slug, service_slug }),
           exact: true
         });
         return;

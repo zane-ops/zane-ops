@@ -1,9 +1,5 @@
-import {
-  Link,
-  createFileRoute,
-  notFound,
-  useNavigate
-} from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDown, PlusIcon, Rocket, Search, Trash } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -29,9 +25,7 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
-import { projectServiceListSearchSchema } from "~/key-factories";
-import { useProjectServiceListQuery } from "~/lib/hooks/use-project-service-list-query";
-import { useProjectSingleQuery } from "~/lib/hooks/use-project-single-query";
+import { projectQueries, projectServiceListSearchSchema } from "~/lib/queries";
 import { timeAgoFormatter } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard/project/$slug")({
@@ -46,10 +40,12 @@ function ProjectDetail() {
 
   const navigate = useNavigate();
 
-  const projectServiceListQuery = useProjectServiceListQuery(slug, {
-    query: debouncedValue
-  });
-  const projectSingleQuery = useProjectSingleQuery(slug);
+  const projectServiceListQuery = useQuery(
+    projectQueries.serviceList(slug, {
+      query: debouncedValue
+    })
+  );
+  const projectSingleQuery = useQuery(projectQueries.single(slug));
   const serviceList = projectServiceListQuery.data?.data;
   const project = projectSingleQuery.data?.data;
 

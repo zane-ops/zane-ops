@@ -26,6 +26,8 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
 
+import { useQuery } from "@tanstack/react-query";
+import type React from "react";
 import { Loader } from "~/components/loader";
 import {
   Popover,
@@ -34,7 +36,8 @@ import {
 } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
-import { useDockerServiceSingleQuery } from "~/lib/hooks/use-docker-service-single-query";
+
+import { type DockerService, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { formatURL, pluralize } from "~/utils";
 
@@ -50,14 +53,13 @@ const TABS = {
   SETTINGS: "settings"
 } as const;
 
-function ServiceDetailsLayout() {
+function ServiceDetailsLayout(): React.JSX.Element {
   const { project_slug, service_slug } = Route.useParams();
   const location = useRouterState({ select: (s) => s.location });
   const navigate = Route.useNavigate();
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({ project_slug, service_slug })
   );
   const { isPending: isDeploying, mutate: deploy } =
     useDeployDockerServiceMutation(project_slug, service_slug);
@@ -70,16 +72,17 @@ function ServiceDetailsLayout() {
   }
 
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}`;
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
+
   let serviceImage =
     service?.image ??
-    (service?.unapplied_changes.filter((change) => change.field === "image")[0]
+    (service?.unapplied_changes?.filter((change) => change.field === "image")[0]
       ?.new_value as string);
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
   }
-  let extraServiceUrls: NonNullable<typeof service>["urls"] = [];
+  let extraServiceUrls: DockerService["urls"] = [];
   let _;
   if (service && service.urls.length > 1) {
     [_, ...extraServiceUrls] = service.urls;

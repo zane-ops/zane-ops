@@ -18,7 +18,7 @@ import {
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { projectKeys } from "~/key-factories";
+import { projectQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
@@ -41,9 +41,7 @@ export function CreateProject() {
 
       if (error) return error;
       if (data) {
-        queryClient.invalidateQueries({
-          queryKey: projectKeys.list({})
-        });
+        queryClient.invalidateQueries(projectQueries.list());
         await navigate({ to: `/project/${data.slug}` });
         return;
       }

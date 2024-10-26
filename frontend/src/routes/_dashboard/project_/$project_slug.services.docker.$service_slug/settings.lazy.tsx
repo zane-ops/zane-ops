@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircleIcon,
@@ -21,6 +21,7 @@ import {
   PencilLineIcon,
   Plus,
   PlusIcon,
+  SunriseIcon,
   SunsetIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -55,13 +56,13 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serviceKeys } from "~/key-factories";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
+import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
 import {
   type DockerService,
-  useDockerServiceSingleQuery
-} from "~/lib/hooks/use-docker-service-single-query";
-import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
+  projectQueries,
+  serviceQueries
+} from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, wait } from "~/utils";
 
@@ -207,7 +208,8 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
       >
     ) => {
       await queryClient.cancelQueries({
-        queryKey: serviceKeys.single(project_slug, service_slug, "docker"),
+        queryKey: serviceQueries.single({ project_slug, service_slug })
+          .queryKey,
         exact: true
       });
 
@@ -232,10 +234,9 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
 
       if (data) {
         queryClient.setQueryData(
-          serviceKeys.single(project_slug, input.slug, "docker"),
-          () => ({
-            data
-          })
+          serviceQueries.single({ project_slug, service_slug: input.slug })
+            .queryKey,
+          data
         );
 
         await navigate({
@@ -247,9 +248,9 @@ function ServiceSlugForm({ className }: ServiceFormProps) {
     },
     onSettled: async (error) => {
       if (!error) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker")
-        });
+        queryClient.removeQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
         setIsEditing(false);
       }
     }
@@ -345,9 +346,11 @@ function ServiceImageForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
 
   const [isEditing, setIsEditing] = React.useState(false);
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
   const cancelImageChangeMutation = useCancelDockerServiceChangeMutation(
     project_slug,
@@ -357,13 +360,10 @@ function ServiceImageForm({ className }: ServiceFormProps) {
   const updateImageMutation = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "image",
-    onSuccess() {
-      setIsEditing(false);
-    }
+    field: "image"
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const serviceImageChange = service?.unapplied_changes.find(
     (change) => change.field === "image"
   );
@@ -383,10 +383,19 @@ function ServiceImageForm({ className }: ServiceFormProps) {
       {isEditing ? (
         <Form.Root
           action={(formData) => {
-            updateImageMutation.mutate({
-              type: "UPDATE",
-              new_value: formData.get("image")?.toString() ?? ""
-            });
+            updateImageMutation.mutate(
+              {
+                type: "UPDATE",
+                new_value: formData.get("image")?.toString() ?? ""
+              },
+              {
+                onSuccess(errors) {
+                  if (!errors) {
+                    setIsEditing(false);
+                  }
+                }
+              }
+            );
           }}
           className="flex flex-col md:flex-row  gap-2 w-full"
         >
@@ -502,9 +511,11 @@ function ServiceImageForm({ className }: ServiceFormProps) {
 function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
 
   const cancelCredentialsChangeMutation = useCancelDockerServiceChangeMutation(
@@ -515,13 +526,10 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
   const updateCredentialsMutation = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "credentials",
-    onSuccess() {
-      setIsPasswordShown(false);
-    }
+    field: "credentials"
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const serviceCredentialsChange = service?.unapplied_changes.find(
     (change) => change.field === "credentials"
   );
@@ -555,7 +563,9 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
     <Form.Root
       ref={formRef}
       action={(formData) => {
-        if (serviceCredentialsChange !== undefined) {
+        const revertChange =
+          formData.get("revert_change")?.toString() === "true";
+        if (revertChange && serviceCredentialsChange !== undefined) {
           cancelCredentialsChangeMutation.mutate(serviceCredentialsChange.id, {
             onSuccess() {
               formRef.current?.reset();
@@ -567,15 +577,24 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
               });
             }
           });
-        } else {
-          updateCredentialsMutation.mutate({
+          return;
+        }
+        updateCredentialsMutation.mutate(
+          {
             type: "UPDATE",
             new_value: {
               username: formData.get("username")?.toString(),
               password: formData.get("password")?.toString()
             }
-          });
-        }
+          },
+          {
+            onSuccess(errors) {
+              if (!errors) {
+                setIsPasswordShown(false);
+              }
+            }
+          }
+        );
       }}
       className={cn("flex flex-col gap-4 w-full items-start", className)}
     >
@@ -670,6 +689,8 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
         <SubmitButton
           isPending={cancelCredentialsChangeMutation.isPending}
           variant="outline"
+          name="revert_change"
+          value="true"
         >
           {cancelCredentialsChangeMutation.isPending ? (
             <>
@@ -713,22 +734,24 @@ type PortItem = {
 
 function ServicePortsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
 
   const ports: Map<string, PortItem> = new Map();
-  for (const port of serviceSingleQuery.data?.data?.ports ?? []) {
+  for (const port of serviceSingleQuery.data?.ports ?? []) {
     ports.set(port.id, {
       id: port.id,
       host: port.host,
       forwarded: port.forwarded
     });
   }
-  for (const ch of (
-    serviceSingleQuery.data?.data?.unapplied_changes ?? []
-  ).filter((ch) => ch.field === "ports")) {
+  for (const ch of (serviceSingleQuery.data?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "ports"
+  )) {
     const hostForwarded = (ch.new_value ?? ch.old_value) as {
       host: number;
       forwarded: number;
@@ -816,10 +839,7 @@ function ServicePortItem({
   const { mutateAsync: removeExposedPort } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "ports",
-    onSuccess() {
-      setAccordionValue("");
-    }
+    field: "ports"
   });
 
   const {
@@ -830,10 +850,7 @@ function ServicePortItem({
   } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "ports",
-    onSuccess() {
-      setAccordionValue("");
-    }
+    field: "ports"
   });
 
   const errors = getFormErrorsFromResponseData(data);
@@ -882,10 +899,19 @@ function ServicePortItem({
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                     onClick={() =>
                       toast.promise(
-                        removeExposedPort({
-                          type: "DELETE",
-                          item_id: id
-                        }),
+                        removeExposedPort(
+                          {
+                            type: "DELETE",
+                            item_id: id
+                          },
+                          {
+                            onSuccess(errors) {
+                              if (!errors) {
+                                setAccordionValue("");
+                              }
+                            }
+                          }
+                        ),
                         {
                           loading: `Requesting change...`,
                           success: "Success",
@@ -946,14 +972,23 @@ function ServicePortItem({
             <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
               <Form.Root
                 action={(formData) => {
-                  editExposedPort({
-                    type: "UPDATE",
-                    item_id: id,
-                    new_value: {
-                      host: Number(formData.get("host") ?? ""),
-                      forwarded: Number(formData.get("forwarded") ?? "")
+                  editExposedPort(
+                    {
+                      type: "UPDATE",
+                      item_id: id,
+                      new_value: {
+                        host: Number(formData.get("host") ?? ""),
+                        forwarded: Number(formData.get("forwarded") ?? "")
+                      }
+                    },
+                    {
+                      onSuccess(errors) {
+                        if (!errors) {
+                          setAccordionValue("");
+                        }
+                      }
                     }
-                  });
+                  );
                 }}
                 className="flex flex-col gap-4"
               >
@@ -1119,21 +1154,24 @@ type UrlItem = {
 
 function ServiceURLsForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
 
+  const service = serviceSingleQuery.data;
   const urls: Map<string, UrlItem> = new Map();
-  for (const url of serviceSingleQuery.data?.data?.urls ?? []) {
+  for (const url of service?.urls ?? []) {
     urls.set(url.id, {
       ...url,
       id: url.id
     });
   }
-  for (const ch of (
-    serviceSingleQuery.data?.data?.unapplied_changes ?? []
-  ).filter((ch) => ch.field === "urls")) {
+  for (const ch of (service?.unapplied_changes ?? []).filter(
+    (ch) => ch.field === "urls"
+  )) {
     const newUrl = (ch.new_value ?? ch.old_value) as Omit<
       DockerService["urls"][number],
       "id"
@@ -1204,10 +1242,7 @@ function ServiceURLFormItem({
   const { mutateAsync: removeUrl } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "urls",
-    onSuccess() {
-      setAccordionValue("");
-    }
+    field: "urls"
   });
 
   const {
@@ -1218,10 +1253,7 @@ function ServiceURLFormItem({
   } = useRequestServiceChangeMutation({
     project_slug,
     service_slug,
-    field: "urls",
-    onSuccess() {
-      setAccordionValue("");
-    }
+    field: "urls"
   });
 
   const errors = getFormErrorsFromResponseData(data);
@@ -1300,10 +1332,19 @@ function ServiceURLFormItem({
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                     onClick={() =>
                       toast.promise(
-                        removeUrl({
-                          type: "DELETE",
-                          item_id: id
-                        }),
+                        removeUrl(
+                          {
+                            type: "DELETE",
+                            item_id: id
+                          },
+                          {
+                            onSuccess(errors) {
+                              if (!errors) {
+                                setAccordionValue("");
+                              }
+                            }
+                          }
+                        ),
                         {
                           loading: `Requesting change...`,
                           success: "Success",
@@ -1371,26 +1412,36 @@ function ServiceURLFormItem({
             <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
               <Form.Root
                 action={(formData) => {
-                  editUrl({
-                    type: "UPDATE",
-                    item_id: id,
-                    new_value: {
-                      domain: formData.get("domain")?.toString() ?? "",
-                      base_path: formData.get("base_path")?.toString(),
-                      strip_prefix:
-                        formData.get("strip_prefix")?.toString() === "on",
-                      redirect_to: !isRedirect
-                        ? undefined
-                        : {
-                            url:
-                              formData.get("redirect_to_url")?.toString() ?? "",
-                            permanent:
-                              formData
-                                .get("redirect_to_permanent")
-                                ?.toString() === "on"
-                          }
+                  editUrl(
+                    {
+                      type: "UPDATE",
+                      item_id: id,
+                      new_value: {
+                        domain: formData.get("domain")?.toString() ?? "",
+                        base_path: formData.get("base_path")?.toString(),
+                        strip_prefix:
+                          formData.get("strip_prefix")?.toString() === "on",
+                        redirect_to: !isRedirect
+                          ? undefined
+                          : {
+                              url:
+                                formData.get("redirect_to_url")?.toString() ??
+                                "",
+                              permanent:
+                                formData
+                                  .get("redirect_to_permanent")
+                                  ?.toString() === "on"
+                            }
+                      }
+                    },
+                    {
+                      onSuccess(errors) {
+                        if (!errors) {
+                          setAccordionValue("");
+                        }
+                      }
                     }
-                  });
+                  );
                 }}
                 className="flex flex-col gap-4"
               >
@@ -1802,12 +1853,14 @@ function NewServiceURLForm() {
 
 function NetworkAliasesGroup({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const singleServiceQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const singleServiceQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
   const [hasCopied, startTransition] = React.useTransition();
-  const service = singleServiceQuery.data?.data;
+  const service = singleServiceQuery.data;
 
   if (!service) return null;
 
@@ -1872,9 +1925,11 @@ function NetworkAliasesGroup({ className }: ServiceFormProps) {
 function ServiceCommandForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
 
   const cancelStartingCommandChangeMutation =
@@ -1886,7 +1941,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
     field: "command"
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const startingCommandChange = service?.unapplied_changes.find(
     (change) => change.field === "command"
   );
@@ -2026,11 +2081,12 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
   const formRef = React.useRef<React.ElementRef<"form">>(null);
 
-  const serviceSingleQuery = useDockerServiceSingleQuery(
-    project_slug,
-    service_slug
+  const serviceSingleQuery = useQuery(
+    serviceQueries.single({
+      project_slug,
+      service_slug
+    })
   );
-
   const cancelHealthcheckChangeMutation = useCancelDockerServiceChangeMutation(
     project_slug,
     service_slug
@@ -2048,7 +2104,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
     field: "healthcheck"
   });
 
-  const service = serviceSingleQuery.data?.data;
+  const service = serviceSingleQuery.data;
   const healthcheckChange = service?.unapplied_changes.find(
     (change) => change.field === "healthcheck"
   );
@@ -2543,44 +2599,191 @@ function NewServiceVolumeForm() {
 }
 
 function ServiceDangerZoneForm({ className }: ServiceFormProps) {
+  const { project_slug, service_slug } = Route.useParams();
+  const queryClient = useQueryClient();
+  const toggleServiceStateMutation = useMutation({
+    mutationFn: async () => {
+      const { error, data } = await apiClient.PUT(
+        "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+
+      if (data) {
+        await queryClient.invalidateQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
+
+        toast.success("Success", {
+          closeButton: true,
+          description:
+            "Sleep status is queued for processing. It may take a moment to update."
+        });
+        return;
+      }
+    }
+  });
+
+  const navigate = useNavigate();
+  const archiveServiceMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await apiClient.DELETE(
+        "/api/projects/{project_slug}/archive-service/docker/{service_slug}/",
+        {
+          headers: {
+            ...(await getCsrfTokenHeader())
+          },
+          params: {
+            path: {
+              project_slug,
+              service_slug
+            }
+          }
+        }
+      );
+      if (error) {
+        return error;
+      }
+    },
+    async onSuccess(errors) {
+      if (!errors) {
+        await Promise.all([
+          navigate({
+            to: `/project/${project_slug}`,
+            replace: true
+          }),
+          queryClient.invalidateQueries(
+            projectQueries.serviceList(project_slug)
+          )
+        ]);
+
+        queryClient.removeQueries({
+          queryKey: serviceQueries.single({ project_slug, service_slug })
+            .queryKey
+        });
+        toast.success("Success", {
+          closeButton: true,
+          description: "Done."
+        });
+        return;
+      }
+    }
+  });
+
+  const deploymentListQuery = useQuery(
+    serviceQueries.deploymentList({ project_slug, service_slug })
+  );
+
+  const deploymentList = deploymentListQuery.data?.data?.results ?? [];
+  const currentProductionDeployment = deploymentList.find(
+    (dpl) => dpl.is_current_production
+  );
+
+  const toggleServiceErrors = getFormErrorsFromResponseData(
+    toggleServiceStateMutation.data
+  );
+  const archiveServiceErrors = getFormErrorsFromResponseData(
+    archiveServiceMutation.data
+  );
+
   return (
     <div className={cn("flex flex-col gap-4 items-start", className)}>
-      <h3 className="text-lg">Toggle service state</h3>
-      <form action={() => {}}>
-        <SubmitButton
-          isPending={false}
-          variant="warning"
-          className=" inline-flex gap-1 items-center"
-        >
-          <SunsetIcon size={15} className="flex-none" />
-          <span>Put service to sleep</span>
-        </SubmitButton>
-        {/* <SubmitButton
-          isPending={false}
-          variant="default"
-          className="inline-flex gap-1 items-center"
-        >
-          <SunriseIcon size={15} className="flex-none" />
-          <span>Wake up service</span>
-        </SubmitButton> */}
-      </form>
+      {currentProductionDeployment !== undefined && (
+        <>
+          <h3 className="text-lg">Toggle service state</h3>
+          {toggleServiceErrors.non_field_errors && (
+            <Alert variant="destructive">
+              <AlertCircleIcon className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {toggleServiceErrors.non_field_errors}
+              </AlertDescription>
+            </Alert>
+          )}
+          <form action={() => toggleServiceStateMutation.mutate()}>
+            <SubmitButton
+              isPending={toggleServiceStateMutation.isPending}
+              variant={
+                currentProductionDeployment?.status == "SLEEPING"
+                  ? "default"
+                  : "warning"
+              }
+              className="inline-flex gap-1 items-center"
+            >
+              {toggleServiceStateMutation.isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : currentProductionDeployment?.status == "SLEEPING" ? (
+                <>
+                  <SunriseIcon size={15} className="flex-none" />
+                  <span>Wake up service</span>
+                </>
+              ) : (
+                <>
+                  <SunsetIcon size={15} className="flex-none" />
+                  <span>Put service to sleep</span>
+                </>
+              )}
+            </SubmitButton>
+          </form>
+        </>
+      )}
 
       <hr className="w-full border-border" />
       <h3 className="text-lg text-red-400">Archive this service</h3>
-      <div className="flex flex-col gap-2 items-start">
+      {archiveServiceErrors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {archiveServiceErrors.non_field_errors}
+          </AlertDescription>
+        </Alert>
+      )}
+      <form
+        className="flex flex-col gap-2 items-start"
+        action={() => archiveServiceMutation.mutate()}
+      >
         <p className="text-red-400 ">
           Archiving this service will permanently delete all its deployments,
           This cannot be undone.
         </p>
 
-        <Button
+        <SubmitButton
           variant="destructive"
-          className="bg-red-500 inline-flex gap-1 items-center"
+          className={cn(
+            "inline-flex gap-1 items-center",
+            archiveServiceMutation.isPending ? "bg-red-400" : "bg-red-500"
+          )}
+          isPending={archiveServiceMutation.isPending}
         >
-          <Trash2Icon size={15} className="flex-none" />
-          <span>Archive service</span>
-        </Button>
-      </div>
+          {archiveServiceMutation.isPending ? (
+            <>
+              <LoaderIcon className="animate-spin flex-none" size={15} />
+              <span>Archiving...</span>
+            </>
+          ) : (
+            <>
+              <Trash2Icon size={15} className="flex-none" />
+              <span>Archive service</span>
+            </>
+          )}
+        </SubmitButton>
+      </form>
     </div>
   );
 }

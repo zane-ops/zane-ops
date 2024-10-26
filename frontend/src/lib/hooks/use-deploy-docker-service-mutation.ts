@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { serviceKeys } from "~/key-factories";
+import { serviceQueries } from "~/lib/queries";
 import { getCsrfTokenHeader } from "~/utils";
 
 export function useDeployDockerServiceMutation(
@@ -45,9 +45,9 @@ export function useDeployDockerServiceMutation(
         return;
       }
       if (data) {
-        await queryClient.invalidateQueries({
-          queryKey: serviceKeys.single(project_slug, service_slug, "docker")
-        });
+        await queryClient.invalidateQueries(
+          serviceQueries.single({ project_slug, service_slug })
+        );
         toast.success("Success", {
           description: "Deployment queued sucesfully !",
           closeButton: true

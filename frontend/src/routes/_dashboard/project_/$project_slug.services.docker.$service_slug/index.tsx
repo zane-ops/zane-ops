@@ -22,15 +22,15 @@ import {
   CommandList
 } from "~/components/ui/command";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { serviceDeploymentListFilters } from "~/key-factories";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
-import { useDockerServiceDeploymentListQuery } from "~/lib/hooks/use-docker-service-deployment-list-query";
+import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
 
@@ -41,7 +41,7 @@ export const Route = createFileRoute(
   component: withAuthRedirect(ServiceDetails)
 });
 
-function ServiceDetails() {
+function ServiceDetails(): React.JSX.Element {
   const { project_slug, service_slug } = Route.useParams();
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
@@ -56,10 +56,8 @@ function ServiceDetails() {
     queued_at_before: searchParams.queued_at_before
   };
 
-  const deploymentListQuery = useDockerServiceDeploymentListQuery(
-    project_slug,
-    service_slug,
-    filters
+  const deploymentListQuery = useQuery(
+    serviceQueries.deploymentList({ project_slug, service_slug, filters })
   );
   const { isPending: isDeploying, mutate: deploy } =
     useDeployDockerServiceMutation(project_slug, service_slug);
