@@ -136,7 +136,8 @@ export function formatURL({
   domain,
   base_path
 }: { domain: string; base_path: string }) {
-  return `https://${domain}${base_path}`;
+  const currentUrl = new URL(window.location.href);
+  return `${currentUrl.protocol}//${domain}${base_path}`;
 }
 
 export function pluralize(word: string, item_count: number) {
