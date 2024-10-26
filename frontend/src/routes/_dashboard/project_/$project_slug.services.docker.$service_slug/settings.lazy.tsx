@@ -2476,6 +2476,7 @@ function ServiceVolumesForm({ className }: ServiceFormProps) {
 }
 
 function ServiceVolumeItem({
+  id,
   name,
   container_path,
   host_path,
@@ -2483,36 +2484,40 @@ function ServiceVolumeItem({
   mode,
   change_id
 }: VolumeItem) {
-  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read write";
+  const { project_slug, service_slug } = Route.useParams();
+  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read & write";
+
+  const {
+    mutate: editVolume,
+    isPending,
+    data,
+    reset
+  } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "volumes"
+  });
+
+  const { mutateAsync: removeVolume } = useRequestServiceChangeMutation({
+    project_slug,
+    service_slug,
+    field: "volumes"
+  });
+
+  const cancelVolumeChangeMutation = useCancelDockerServiceChangeMutation(
+    project_slug,
+    service_slug
+  );
+
+  const errors = getFormErrorsFromResponseData(data);
+  const [accordionValue, setAccordionValue] = React.useState("");
+
   return (
-    <div
-      className={cn(
-        "rounded-md p-4 flex items-start gap-2 group relative bg-muted",
-        {
-          "dark:bg-secondary-foreground bg-secondary/60 ":
-            change_type === "UPDATE",
-          "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
-          "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
-        }
-      )}
-    >
-      <HardDrive size={20} className="text-grey relative top-1.5" />
-      <div className="flex flex-col gap-2">
-        <h3 className="text-lg inline-flex gap-1 items-center">
-          <span>{name}</span>
-        </h3>
-        <small className="text-card-foreground inline-flex gap-1 items-center">
-          {host_path && (
-            <>
-              <span>{host_path}</span>
-              <ArrowRightIcon size={15} className="text-grey" />
-            </>
-          )}
-          <span className="text-grey">{container_path}</span>
-          <Code>{modeSuffix}</Code>
-        </small>
-      </div>
-      <div className="absolute top-4 right-4 flex gap-2 items-center">
+    <div className="relative group">
+      <div
+        className="absolute top-2 right-2 inline-flex gap-1 items-center"
+        role="none"
+      >
         <TooltipProvider>
           {change_id !== undefined ? (
             <Tooltip delayDuration={0}>
@@ -2520,6 +2525,23 @@ function ServiceVolumeItem({
                 <Button
                   variant="ghost"
                   className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  onClick={() =>
+                    toast.promise(
+                      cancelVolumeChangeMutation.mutateAsync(change_id),
+                      {
+                        loading: `Cancelling url change...`,
+                        success: "Success",
+                        error: "Error",
+                        closeButton: true,
+                        description(data) {
+                          if (data instanceof Error) {
+                            return data.message;
+                          }
+                          return "Done.";
+                        }
+                      }
+                    )
+                  }
                 >
                   <Undo2Icon size={15} className="flex-none" />
                   <span className="sr-only">Revert change</span>
@@ -2528,34 +2550,76 @@ function ServiceVolumeItem({
               <TooltipContent>Revert change</TooltipContent>
             </Tooltip>
           ) : (
-            <>
+            id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                  >
-                    <EditIcon size={15} className="flex-none" />
-                    <span className="sr-only">Edit volume</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Edit volume</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() =>
+                      toast.promise(
+                        removeVolume(
+                          {
+                            type: "DELETE",
+                            item_id: id
+                          },
+                          {
+                            onSuccess(errors) {
+                              if (!errors) {
+                                setAccordionValue("");
+                              }
+                            }
+                          }
+                        ),
+                        {
+                          loading: `Requesting change...`,
+                          success: "Success",
+                          error: "Error",
+                          closeButton: true,
+                          description(data) {
+                            if (data instanceof Error) {
+                              return data.message;
+                            }
+                            return "Done.";
+                          }
+                        }
+                      )
+                    }
                   >
                     <Trash2Icon size={15} className="flex-none text-red-400" />
-                    <span className="sr-only">Delete volume</span>
+                    <span className="sr-only">Delete url</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Delete volume</TooltipContent>
+                <TooltipContent>Delete url</TooltipContent>
               </Tooltip>
-            </>
+            )
           )}
         </TooltipProvider>
+      </div>
+      <div
+        className={cn("rounded-md p-4 flex items-start gap-2 bg-muted", {
+          "dark:bg-secondary-foreground bg-secondary/60 ":
+            change_type === "UPDATE",
+          "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
+          "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+        })}
+      >
+        <HardDrive size={20} className="text-grey relative top-1.5" />
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg inline-flex gap-1 items-center">
+            <span>{name}</span>
+          </h3>
+          <small className="text-card-foreground inline-flex gap-1 items-center">
+            {host_path && (
+              <>
+                <span>{host_path}</span>
+                <ArrowRightIcon size={15} className="text-grey" />
+              </>
+            )}
+            <span className="text-grey">{container_path}</span>
+            <Code>{modeSuffix}</Code>
+          </small>
+        </div>
       </div>
     </div>
   );
