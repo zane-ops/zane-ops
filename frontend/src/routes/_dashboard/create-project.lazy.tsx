@@ -41,9 +41,7 @@ export function CreateProject() {
 
       if (error) return error;
       if (data) {
-        queryClient.invalidateQueries({
-          queryKey: projectQueries.list().queryKey
-        });
+        queryClient.invalidateQueries(projectQueries.list());
         await navigate({ to: `/project/${data.slug}` });
         return;
       }
