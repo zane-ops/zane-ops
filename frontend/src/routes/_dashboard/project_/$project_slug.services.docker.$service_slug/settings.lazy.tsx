@@ -994,20 +994,6 @@ function ServicePortItem({
               >
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <Form.Field
-                    name="host"
-                    className="flex-1 inline-flex flex-col gap-1"
-                  >
-                    <Form.Label className="text-gray-400">Host port</Form.Label>
-                    <Form.Control asChild>
-                      <Input placeholder="ex: 80" defaultValue={host ?? 80} />
-                    </Form.Control>
-                    {errors.new_value?.host && (
-                      <Form.Message className="text-red-500 text-sm">
-                        {errors.new_value?.host}
-                      </Form.Message>
-                    )}
-                  </Form.Field>
-                  <Form.Field
                     name="forwarded"
                     className="flex-1 inline-flex flex-col gap-1"
                   >
@@ -1020,6 +1006,20 @@ function ServicePortItem({
                     {errors.new_value?.forwarded && (
                       <Form.Message className="text-red-500 text-sm">
                         {errors.new_value?.forwarded}
+                      </Form.Message>
+                    )}
+                  </Form.Field>
+                  <Form.Field
+                    name="host"
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <Form.Label className="text-gray-400">Host port</Form.Label>
+                    <Form.Control asChild>
+                      <Input placeholder="ex: 80" defaultValue={host ?? 80} />
+                    </Form.Control>
+                    {errors.new_value?.host && (
+                      <Form.Message className="text-red-500 text-sm">
+                        {errors.new_value?.host}
                       </Form.Message>
                     )}
                   </Form.Field>
@@ -1070,12 +1070,16 @@ function NewServicePortForm() {
     <Form.Root
       ref={formRef}
       action={(formData) => {
+        const hostPort =
+          (formData.get("host")?.toString() ?? "").trim() === ""
+            ? 80
+            : formData.get("host")?.toString().trim();
         mutate(
           {
             type: "ADD",
             new_value: {
-              host: Number(formData.get("host") ?? ""),
-              forwarded: Number(formData.get("forwarded") ?? "")
+              forwarded: Number(formData.get("forwarded") ?? ""),
+              host: isNaN(Number(hostPort)) ? 80 : Number(hostPort)
             }
           },
           {
@@ -1089,17 +1093,6 @@ function NewServicePortForm() {
       }}
       className="flex md:items-start gap-3 md:flex-row flex-col items-stretch"
     >
-      <Form.Field name="host" className="flex-1 inline-flex flex-col gap-1">
-        <Form.Label className="text-gray-400">Host port</Form.Label>
-        <Form.Control asChild>
-          <Input placeholder="ex: 80" />
-        </Form.Control>
-        {errors.new_value?.host && (
-          <Form.Message className="text-red-500 text-sm">
-            {errors.new_value?.host}
-          </Form.Message>
-        )}
-      </Form.Field>
       <Form.Field
         name="forwarded"
         className="flex-1 inline-flex flex-col gap-1"
@@ -1111,6 +1104,17 @@ function NewServicePortForm() {
         {errors.new_value?.forwarded && (
           <Form.Message className="text-red-500 text-sm">
             {errors.new_value?.forwarded}
+          </Form.Message>
+        )}
+      </Form.Field>
+      <Form.Field name="host" className="flex-1 inline-flex flex-col gap-1">
+        <Form.Label className="text-gray-400">Host port</Form.Label>
+        <Form.Control asChild>
+          <Input placeholder="ex: 80" defaultValue={80} />
+        </Form.Control>
+        {errors.new_value?.host && (
+          <Form.Message className="text-red-500 text-sm">
+            {errors.new_value?.host}
           </Form.Message>
         )}
       </Form.Field>
