@@ -335,7 +335,7 @@ function StepServiceCreated({
         onSuccess(data.data.hash);
         queryClient.invalidateQueries({
           predicate(query) {
-            const [prefix] = projectQueries.serviceList(slug, {}).queryKey;
+            const [prefix] = projectQueries.serviceList(slug).queryKey;
             return query.queryKey[0] === prefix && query.queryKey[1] === slug;
           }
         });
