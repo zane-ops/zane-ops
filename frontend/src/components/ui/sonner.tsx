@@ -18,7 +18,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
           error: "[&_svg]:text-red-400",
-          success: "[&_svg]:text-green-400",
+          success: "[&_svg]:text-primary",
           icon: "icon",
           closeButton: "border-border [&_svg]:text-foreground"
         }
