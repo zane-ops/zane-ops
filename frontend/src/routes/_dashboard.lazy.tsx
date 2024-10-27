@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronsUpDown,
   CircleUser,
+  CommandIcon,
   Folder,
   Globe,
   Hammer,
@@ -39,8 +40,18 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandSeparator
+} from "~/components/ui/command";
 import { userQueries } from "~/lib/queries";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
+import * as React from "react";
+import { Button } from "~/components/ui/button";
 
 export const Route = createLazyFileRoute("/_dashboard")({
   component: () => (
@@ -89,29 +100,14 @@ function Header() {
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
-          <Menubar className="border-none w-fit text-black bg-primary">
-            <MenubarMenu>
-              <MenubarTrigger className="flex  justify-center text-sm items-center gap-1">
-                Create
-                <ChevronsUpDown className="w-4" />
-              </MenubarTrigger>
-              <MenubarContent className=" border border-border min-w-6">
-                <Link to="/create-project">
-                  <MenubarContentItem icon={Folder} text="Project" />
-                </Link>
-                <MenubarContentItem icon={Globe} text="Web Service" />
-                <MenubarContentItem icon={Hammer} text="Worker" />
-                <MenubarContentItem icon={AlarmCheck} text="CRON" />
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
-          <div className="flex w-full justify-center items-center">
-            <Search className="relative left-10" />
-            <Input
-              className="px-14 my-1  text-sm focus-visible:right-0"
-              placeholder="Search for Service, Worker, CRON, etc..."
-            />
+          <Button asChild>
+            <Link to="/create-project">Create project</Link>
+          </Button>
+
+          <div className="flex mx-2 w-full justify-center items-center">
+            <CommandMenu />
           </div>
+
           <a
             href="https://github.com/zane-ops/zane-ops"
             target="_blank"
@@ -259,5 +255,71 @@ function Footer() {
         ))}
       </div>
     </>
+  );
+}
+
+export function CommandMenu() {
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((prevOpen) => !prevOpen);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={menuRef}>
+      <div
+        onClick={() => setOpen(true)}
+        className="relative w-full flex items-center"
+      >
+        <Search size={15} className="absolute left-4 text-gray-400" />
+        <Input
+          className="w-full pl-12 pr-12 my-1 text-sm rounded-md border focus-visible:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search for Service, Worker, CRON, etc..."
+        />
+        <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1 ">
+          <CommandIcon size={15} />
+          <span className="text-xs">K</span>
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute top-12 left-0 w-full z-50 shadow-lg bg-white rounded-md">
+          <Command>
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup heading="Suggestions">
+                <CommandItem>Calendar</CommandItem>
+                <CommandItem>Search Emoji</CommandItem>
+                <CommandItem>Calculator</CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup heading="Settings">
+                <CommandItem>Profile</CommandItem>
+                <CommandItem>Billing</CommandItem>
+                <CommandItem>Settings</CommandItem>
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
+      )}
+    </div>
   );
 }
