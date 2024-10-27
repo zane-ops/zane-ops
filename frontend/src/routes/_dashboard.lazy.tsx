@@ -24,8 +24,18 @@ import {
   Settings,
   Twitter
 } from "lucide-react";
+import * as React from "react";
 import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
+import { Button } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandSeparator
+} from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -40,18 +50,8 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-  CommandSeparator
-} from "~/components/ui/command";
 import { userQueries } from "~/lib/queries";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
-import * as React from "react";
-import { Button } from "~/components/ui/button";
 
 export const Route = createLazyFileRoute("/_dashboard")({
   component: () => (
