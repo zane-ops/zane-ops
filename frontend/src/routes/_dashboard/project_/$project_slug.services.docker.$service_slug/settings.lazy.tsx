@@ -1945,17 +1945,17 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
   const startingCommandChange = service?.unapplied_changes.find(
     (change) => change.field === "command"
   );
+  const isEmptyChange =
+    startingCommandChange !== undefined &&
+    startingCommandChange.new_value === null;
 
-  const command =
-    (startingCommandChange?.new_value as string) ?? service?.command;
+  const command = isEmptyChange
+    ? ""
+    : (startingCommandChange?.new_value as string) ?? service?.command;
 
   const errors = getFormErrorsFromResponseData(
     updateStartingCommandMutation.data
   );
-
-  const isEmptyChange =
-    startingCommandChange !== undefined &&
-    startingCommandChange.new_value === null;
 
   const formRef = React.useRef<React.ElementRef<"form">>(null);
 
