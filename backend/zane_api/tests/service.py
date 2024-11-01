@@ -148,6 +148,29 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
 
+    def test_create_service_slug_accept_underscores(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zane-ops", owner=owner)
+
+        create_service_payload = {
+            "slug": "hello_nginx",
+            "image": "nginxdemos/hello:latest",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": "hello_nginx"},
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
     def test_create_service_set_network_alias(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
