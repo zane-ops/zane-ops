@@ -149,7 +149,7 @@ function SettingsPage() {
           </div>
         </section>
 
-        <section id="danger-zone" className="flex gap-1 scroll-mt-20">
+        <section id="danger" className="flex gap-1 scroll-mt-20">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
               <FlameIcon size={15} className="flex-none text-red-500" />
@@ -166,7 +166,7 @@ function SettingsPage() {
         <nav className="sticky top-20">
           <ul className="flex flex-col gap-2 text-grey">
             <li>
-              <Link to="./#details">Details</Link>
+              <Link to="./#main">Details</Link>
             </li>
             <li>
               <Link to="./#source">Source</Link>
@@ -181,7 +181,7 @@ function SettingsPage() {
               <Link to="./#volumes">Volumes</Link>
             </li>
             <li className="text-red-400">
-              <a href="#danger-zone">Danger Zone</a>
+              <Link to="./#danger">Danger Zone</Link>
             </li>
           </ul>
         </nav>
