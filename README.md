@@ -19,11 +19,11 @@
 
 ## 🚀 Installation
 
-Follow the [instructions](https://zane.fredkiss.dev/docs/get-started/) in the documentation to install and setup zaneops.
+Follow the [instructions](https://zane.fredkiss.dev/get-started/) in the documentation to install and setup zaneops.
 
 ## 📸 Some Screenshots
 
-You can view all the in-app screenshots in the [documentation](https://zane.fredkiss.dev/docs/screenshots/), but here's a quick showcase:
+You can view all the in-app screenshots in the [documentation](https://zane.fredkiss.dev/screenshots/), but here's a quick showcase:
 
 
 1. Login

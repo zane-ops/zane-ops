@@ -226,7 +226,7 @@ const socialLinks = [
   },
   {
     name: "Docs",
-    url: "https://zane.fredkiss.dev/docs",
+    url: "https://zane.fredkiss.dev",
     icon: <BookOpen width={socialLinksIconWidth} />
   },
   {
