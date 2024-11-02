@@ -26,6 +26,7 @@ with workflow.unsafe.imports_passed_through():
         SimpleLog,
     )
     from docker.models.networks import Network
+    from docker.models.services import Service
     from urllib3.exceptions import HTTPError
     from requests import RequestException
     import requests
@@ -1149,7 +1150,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
         try:
-            swarm_service = self.docker_client.services.get(
+            swarm_service: Service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=deployment.hash,
                     project_id=deployment.project_id,
@@ -1186,8 +1187,6 @@ class DockerSwarmActivities:
             )
 
             if docker_deployment is not None:
-                docker_deployment.status = DockerDeployment.DeploymentStatus.SLEEPING
-                await docker_deployment.asave()
                 try:
                     await pause_schedule(
                         id=deployment.monitor_schedule_id,
@@ -1196,6 +1195,11 @@ class DockerSwarmActivities:
                 except RPCError:
                     # The schedule probably doesn't exist
                     pass
+                finally:
+                    docker_deployment.status = (
+                        DockerDeployment.DeploymentStatus.SLEEPING
+                    )
+                    await docker_deployment.asave()
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
