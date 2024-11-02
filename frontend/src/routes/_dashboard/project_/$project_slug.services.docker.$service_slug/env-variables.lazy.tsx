@@ -315,7 +315,13 @@ function EnVariableRow({
       ) : (
         <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
           {isEnvValueShown ? (
-            <p className="whitespace-nowrap overflow-x-auto">{value}</p>
+            <p className="whitespace-nowrap overflow-x-auto">
+              {value.length > 0 ? (
+                value
+              ) : (
+                <span className="text-grey font-mono">{`<empty>`}</span>
+              )}
+            </p>
           ) : (
             <span className="relative top-1">*********</span>
           )}

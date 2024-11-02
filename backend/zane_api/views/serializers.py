@@ -235,7 +235,7 @@ class HealthCheckRequestSerializer(serializers.Serializer):
 
 class EnvRequestSerializer(serializers.Serializer):
     key = serializers.CharField(required=True, validators=[validate_env_name])
-    value = serializers.CharField(required=True)
+    value = serializers.CharField(required=True, allow_blank=True)
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
