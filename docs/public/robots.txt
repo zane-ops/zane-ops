@@ -1,3 +1,3 @@
 User-agent: *
-Allow: /docs
-Sitemap: https://zane.fredkiss.dev/docs/sitemap-index.xml
+Allow: /
+Sitemap: https://zane.fredkiss.dev/sitemap-index.xml
