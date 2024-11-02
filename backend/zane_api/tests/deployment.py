@@ -3623,10 +3623,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ],
             any_order=True,
         )
-        fake_service.scale.assert_has_calls(
-            [call(1)],
-            any_order=True,
+        fake_service.update.assert_called()
+        scaled_up = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+            for call in fake_service.update.call_args_list
         )
+        self.assertTrue(scaled_up)
 
     async def test_update_url_delete_old_url_from_caddy(self):
         p, service = await self.acreate_and_deploy_caddy_docker_service()
@@ -3797,8 +3799,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        self.assertEqual(2, fake_service.scale.call_count)
-        fake_service.scale.assert_called_with(0)
+        fake_service.update.assert_called()
+        scaled_down = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_down)
 
     async def test_dont_do_zero_downtime_when_updating_with_host_ports(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
@@ -3862,8 +3868,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        self.assertEqual(2, fake_service.scale.call_count)
-        fake_service.scale.assert_called_with(0)
+        fake_service.update.assert_called()
+        scaled_down = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_down)
 
     async def test_update_service_remove_previous_monitor_task(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
@@ -4208,7 +4218,12 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        fake_service.scale.assert_called_with(0)
+        fake_service.update.assert_called()
+        scaled_up = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_up)
         monitor_schedule = self.get_workflow_schedule_by_id(
             first_deployment.monitor_schedule_id
         )
@@ -4277,7 +4292,12 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        fake_service.scale.assert_called_with(1)
+        fake_service.update.assert_called()
+        scaled_up = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_up)
         monitor_schedule = self.get_workflow_schedule_by_id(
             first_deployment.monitor_schedule_id
         )
