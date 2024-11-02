@@ -123,7 +123,7 @@ class CreateDockerServiceAPIView(APIView):
                         project=project,
                     )
 
-                    service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+                    service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
 
                     initial_changes = [
                         DockerDeploymentChange(
