@@ -492,7 +492,7 @@ class AuthAPITestCase(APITestCase):
             slug="caddy"
         )
 
-        service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+        service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
         await service.asave()
 
         other_changes = other_changes if other_changes is not None else []
@@ -670,10 +670,13 @@ class FakeDockerClient:
         def remove(self):
             self.parent.services_remove(self.name)
 
-        def update(self, networks: list):
-            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
-                {"Target": network} for network in networks
-            ]
+        def update(self, **kwargs):
+            if "networks" in kwargs:
+                self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
+                    {"Target": network} for network in kwargs["networks"]
+                ]
+            if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
+                self.swarm_tasks = []
 
         def tasks(self, *args, **kwargs):
             return self.swarm_tasks

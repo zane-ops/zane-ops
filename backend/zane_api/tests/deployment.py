@@ -2952,7 +2952,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                     new_value={
                         "container_path": "/delete",
                         "host_path": "/delete",
-                        "mode": Volume.VolumeMode.READ_WRITE,
+                        "mode": Volume.VolumeMode.READ_ONLY,
                     },
                 ),
             ]
