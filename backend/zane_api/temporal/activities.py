@@ -52,6 +52,7 @@ with workflow.unsafe.imports_passed_through():
     )
 
 from ..dtos import (
+    DockerServiceSnapshot,
     URLDto,
     HealthCheckDto,
     VolumeDto,
@@ -1033,6 +1034,9 @@ class DockerSwarmActivities:
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
                 url=latest_production_deployment.url,
+                service_snapshot=DockerServiceSnapshot.from_dict(
+                    latest_production_deployment.service_snapshot
+                ),
             )
         return None
 
@@ -1162,7 +1166,21 @@ class DockerSwarmActivities:
             # The service for that deployment was removed probably
             return
         else:
-            swarm_service.scale(0)
+            service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "sleeping"
+            update_attributes = dict(
+                mode={"Replicated": {"Replicas": 0}}, labels=service_labels
+            )
+
+            # This is to fix a bug with exposed ports conflicting with a new deployment, the
+            # new deployment creates a service that needs the ports of the service to be available,
+            # but it is still used by the old deployment.
+            # To fix this we scale down and remove the ports from the old services
+            # But only when the `service_snapshot` is provided because that mean we can reconstructs the open ports of the old deployment
+            if deployment.service_snapshot is not None:
+                update_attributes.update(endpoint_spec=EndpointSpec())
+
+            swarm_service.update(**update_attributes)
 
             async def wait_for_service_to_be_down():
                 print(f"waiting for service `{swarm_service.name=}` to be down...")
@@ -1216,7 +1234,25 @@ class DockerSwarmActivities:
             # The service for that deployment was removed probably
             return
         else:
-            swarm_service.scale(1)
+            service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "active"
+            update_attributes = dict(
+                mode={"Replicated": {"Replicas": 1}}, labels=service_labels
+            )
+
+            # If we scaled this deployment by removing the port, we recreate the exposed ports
+            if deployment.service_snapshot is not None:
+                exposed_ports: dict[int, int] = {}
+                new_endpoint_spec = EndpointSpec()
+
+                # We don't expose HTTP ports with docker because they will be handled by caddy directly
+                for port in deployment.service_snapshot.non_http_ports:
+                    exposed_ports[port.host] = port.forwarded
+                if len(exposed_ports) > 0:
+                    new_endpoint_spec = EndpointSpec(ports=exposed_ports)
+                update_attributes.update(endpoint_spec=new_endpoint_spec)
+
+            swarm_service.update(**update_attributes)
 
             # Change back the status to be accurate
             docker_deployment: DockerDeployment | None = (
@@ -1377,6 +1413,7 @@ class DockerSwarmActivities:
                     service.project_id,
                     deployment_hash=deployment.hash,
                     service=deployment.service.id,
+                    status="active"
                 ),
                 networks=[
                     NetworkAttachmentConfig(
