@@ -1113,6 +1113,7 @@ class ToggleDockerServiceAPIView(APIView):
             project_id=project.id,
             service_id=service.id,
             status=production_deployment.status,
+            service_snapshot=production_deployment.service_snapshot,
         )
         transaction.on_commit(
             lambda: start_workflow(

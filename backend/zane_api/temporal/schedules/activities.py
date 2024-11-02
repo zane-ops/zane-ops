@@ -203,6 +203,7 @@ class MonitorDockerDeploymentActivities:
                 non_retryable=True,
             )
         else:
-            deployment.status_reason = healthcheck_result.reason
-            deployment.status = healthcheck_result.status
-            await deployment.asave()
+            if deployment.status != DockerDeployment.DeploymentStatus.SLEEPING:
+                deployment.status_reason = healthcheck_result.reason
+                deployment.status = healthcheck_result.status
+                await deployment.asave()

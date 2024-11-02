@@ -24,7 +24,7 @@ source ./attach-proxy-networks.sh
 echo "Scaling up all zane-ops services..."
 
 # File containing the services to scale up
-docker service ls --filter "label=zane-managed=true" -q |  xargs -P 0 -I {} docker service scale --detach {}=1
+docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q |  xargs -P 0 -I {} docker service scale --detach {}=1
 
 # Wait until Ctrl+C is pressed
 echo "Server launched at http://localhost:5678/"

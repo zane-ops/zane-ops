@@ -138,6 +138,7 @@ class SimpleDeploymentDetails:
     service_id: str
     status: Optional[str] = None
     url: Optional[str] = None
+    service_snapshot: Optional[DockerServiceSnapshot] = None
 
     @property
     def monitor_schedule_id(self):
