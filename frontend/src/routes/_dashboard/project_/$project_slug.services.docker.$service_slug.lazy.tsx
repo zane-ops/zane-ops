@@ -1,7 +1,7 @@
 import {
   Link,
   Outlet,
-  createFileRoute,
+  createLazyFileRoute,
   useRouterState
 } from "@tanstack/react-router";
 import {
@@ -41,7 +41,7 @@ import { type DockerService, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { formatURL, pluralize } from "~/utils";
 
-export const Route = createFileRoute(
+export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug"
 )({
   component: withAuthRedirect(ServiceDetailsLayout)
