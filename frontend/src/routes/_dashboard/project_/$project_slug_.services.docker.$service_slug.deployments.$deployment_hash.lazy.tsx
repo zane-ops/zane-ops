@@ -153,19 +153,14 @@ function DeploymentLayout(): JSX.Element {
             id="header"
             className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
           >
-            <div className="mt-10">
-              <div className="inline-flex gap-1 group">
-                <h1 className="text-2xl inline-flex gap-1.5">
-                  <span className="text-grey">{service_slug} /</span>
+            <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
+              <div className="inline-flex flex-wrap gap-1">
+                <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
+                  <span className="text-grey sr-only md:not-sr-only">
+                    {service_slug} /
+                  </span>
                   <span>{deployment.hash}</span>
                 </h1>
-
-                {deployment.is_current_production && (
-                  <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2 py-1 inline-flex gap-1 items-center">
-                    <RocketIcon size={15} className="flex-none" />
-                    <span>current</span>
-                  </div>
-                )}
 
                 <StatusBadge
                   color={DEPLOYMENT_STATUS_COLOR_MAP[deployment.status]}
@@ -180,6 +175,13 @@ function DeploymentLayout(): JSX.Element {
                 >
                   <p>{deployment.status}</p>
                 </StatusBadge>
+
+                {deployment.is_current_production && (
+                  <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
+                    <RocketIcon size={15} className="flex-none" />
+                    <p>current</p>
+                  </div>
+                )}
               </div>
 
               <p className="flex gap-1 items-center">
@@ -195,7 +197,7 @@ function DeploymentLayout(): JSX.Element {
                       domain: deployment.url
                     })}
                     target="_blank"
-                    className="underline text-link text-sm"
+                    className="underline text-link text-sm break-all"
                   >
                     {formatURL({
                       domain: deployment.url

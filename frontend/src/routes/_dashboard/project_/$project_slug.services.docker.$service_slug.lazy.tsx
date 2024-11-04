@@ -149,7 +149,7 @@ function ServiceDetailsLayout(): React.JSX.Element {
                   <a
                     href={formatURL(service.urls[0])}
                     target="_blank"
-                    className="underline text-link text-sm"
+                    className="underline text-link text-sm break-all"
                   >
                     {formatURL(service.urls[0])}
                   </a>
