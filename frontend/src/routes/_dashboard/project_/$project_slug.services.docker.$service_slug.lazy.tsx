@@ -160,7 +160,7 @@ function ServiceDetailsLayout(): React.JSX.Element {
                           <StatusBadge
                             className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
                             color="gray"
-                            hidePing
+                            pingState="hidden"
                           >
                             <span>
                               {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}

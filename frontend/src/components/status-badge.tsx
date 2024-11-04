@@ -1,12 +1,12 @@
 import * as React from "react";
 import { cn } from "~/lib/utils";
 
-type TrackerColor = "red" | "green" | "yellow" | "gray" | "blue";
+export type StatusBadgeColor = "red" | "green" | "yellow" | "gray" | "blue";
 
 interface StatusBadgeProps {
-  color: TrackerColor;
+  color: StatusBadgeColor;
   children: React.ReactNode;
-  hidePing?: boolean;
+  pingState?: "animated" | "static" | "hidden";
   className?: string;
 }
 
@@ -14,7 +14,7 @@ export function StatusBadge({
   color,
   children,
   className,
-  hidePing = false
+  pingState = "animated"
 }: StatusBadgeProps) {
   return (
     <div
@@ -35,17 +35,18 @@ export function StatusBadge({
         className
       )}
     >
-      {!hidePing && (
+      {(pingState === "animated" || pingState === "static") && (
         <div className="relative w-2 h-2">
           <span
             className={cn(
-              "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+              "absolute inline-flex h-full w-full rounded-full opacity-75",
               {
                 "bg-green-600 ": color === "green",
                 "bg-red-600": color === "red",
                 "bg-yellow-600": color === "yellow",
                 "bg-gray-600": color === "gray",
-                "bg-blue-600": color === "blue"
+                "bg-blue-600": color === "blue",
+                "animate-ping": pingState === "animated"
               }
             )}
           ></span>

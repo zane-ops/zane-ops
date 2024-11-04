@@ -19,7 +19,7 @@ import * as React from "react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import { MetaTitle } from "~/components/meta-title";
-import { StatusBadge } from "~/components/status-badge";
+import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -30,6 +30,7 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { deploymentQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 
@@ -45,6 +46,23 @@ const TABS = {
   LOGS: "logs",
   HTTP_LOGS: "http-logs",
   DETAILS: "details"
+} as const;
+
+const DEPLOYMENT_STATUS_COLOR_MAP: Record<
+  (typeof DEPLOYMENT_STATUSES)[number],
+  StatusBadgeColor
+> = {
+  STARTING: "blue",
+  RESTARTING: "blue",
+  PREPARING: "blue",
+  CANCELLING: "blue",
+  HEALTHY: "green",
+  UNHEALTHY: "red",
+  FAILED: "red",
+  REMOVED: "gray",
+  CANCELLED: "gray",
+  QUEUED: "gray",
+  SLEEPING: "yellow"
 } as const;
 
 function DeploymentLayout(): JSX.Element {
@@ -149,8 +167,18 @@ function DeploymentLayout(): JSX.Element {
                   </div>
                 )}
 
-                <StatusBadge color="green" className="relative top-0.5">
-                  <p>{deployment.status.toLowerCase()}</p>
+                <StatusBadge
+                  color={DEPLOYMENT_STATUS_COLOR_MAP[deployment.status]}
+                  className="relative top-0.5"
+                  pingState={
+                    deployment.is_current_production
+                      ? deployment.status === "SLEEPING"
+                        ? "static"
+                        : "animated"
+                      : "hidden"
+                  }
+                >
+                  <p>{deployment.status}</p>
                 </StatusBadge>
               </div>
 
