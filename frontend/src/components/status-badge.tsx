@@ -1,12 +1,12 @@
 import * as React from "react";
 import { cn } from "~/lib/utils";
 
-type TrackerColor = "red" | "green" | "yellow" | "gray";
+type TrackerColor = "red" | "green" | "yellow" | "gray" | "blue";
 
 interface StatusBadgeProps {
   color: TrackerColor;
   children: React.ReactNode;
-  isPing?: boolean;
+  hidePing?: boolean;
   className?: string;
 }
 
@@ -14,7 +14,7 @@ export function StatusBadge({
   color,
   children,
   className,
-  isPing = true
+  hidePing = false
 }: StatusBadgeProps) {
   return (
     <div
@@ -28,12 +28,14 @@ export function StatusBadge({
           "border-yellow-600 bg-yellow-600 bg-opacity-10 text-status-warning":
             color === "yellow",
           "border-gray-600 bg-gray-600 bg-opacity-10 text-status-warning":
-            color === "gray"
+            color === "gray",
+          "border-blue-600 bg-blue-600 bg-opacity-10 text-blue-100":
+            color === "blue"
         },
         className
       )}
     >
-      {isPing && (
+      {!hidePing && (
         <div className="relative w-2 h-2">
           <span
             className={cn(
@@ -42,7 +44,8 @@ export function StatusBadge({
                 "bg-green-600 ": color === "green",
                 "bg-red-600": color === "red",
                 "bg-yellow-600": color === "yellow",
-                "bg-gray-600": color === "gray"
+                "bg-gray-600": color === "gray",
+                "bg-blue-600": color === "blue"
               }
             )}
           ></span>
@@ -54,7 +57,8 @@ export function StatusBadge({
                 "bg-green-600 ": color === "green",
                 "bg-red-600": color === "red",
                 "bg-yellow-600": color === "yellow",
-                "bg-gay-600": color === "gray"
+                "bg-gray-600": color === "gray",
+                "bg-blue-600": color === "blue"
               }
             )}
           ></div>

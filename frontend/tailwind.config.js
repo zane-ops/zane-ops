@@ -24,7 +24,7 @@ module.exports = {
         mono: ['"Geist-Mono"', ...defaultTheme.fontFamily.mono]
       },
       colors: {
-        link: "var(--link)",
+        link: "hsl(var(--link))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

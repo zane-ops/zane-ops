@@ -259,3 +259,49 @@ export const serviceQueries = {
       }
     })
 };
+
+export const deploymentQueries = {
+  single: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    type = "docker"
+  }: {
+    project_slug: string;
+    service_slug: string;
+    type?: "docker" | "git";
+    deployment_hash: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        "SERVICE_DETAILS",
+        type,
+        service_slug,
+        "DEPLOYMENTS",
+        deployment_hash
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash
+              }
+            },
+            signal
+          }
+        );
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
+};

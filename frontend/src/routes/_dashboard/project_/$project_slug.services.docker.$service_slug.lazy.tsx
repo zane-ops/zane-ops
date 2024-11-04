@@ -134,7 +134,10 @@ function ServiceDetailsLayout(): React.JSX.Element {
       ) : (
         <>
           <MetaTitle title={service.slug} />
-          <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+          <section
+            id="header"
+            className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
+          >
             <div className="mt-10">
               <h1 className="text-2xl">{service.slug}</h1>
               <p className="flex gap-1 items-center">
@@ -157,7 +160,7 @@ function ServiceDetailsLayout(): React.JSX.Element {
                           <StatusBadge
                             className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
                             color="gray"
-                            isPing={false}
+                            hidePing
                           >
                             <span>
                               {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}
@@ -227,7 +230,7 @@ function ServiceDetailsLayout(): React.JSX.Element {
                 </SubmitButton>
               </form>
             </div>
-          </div>
+          </section>
           <Tabs
             value={currentSelectedTab}
             className="w-full mt-5"
