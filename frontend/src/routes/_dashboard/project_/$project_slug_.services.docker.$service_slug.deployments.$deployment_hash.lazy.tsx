@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { deploymentQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
+import { cn } from "~/lib/utils";
 
 import { formatURL, formattedTime } from "~/utils";
 
@@ -164,13 +165,20 @@ function DeploymentLayout(): JSX.Element {
 
                 <StatusBadge
                   color={DEPLOYMENT_STATUS_COLOR_MAP[deployment.status]}
-                  className="relative top-0.5"
+                  className={cn(
+                    "relative top-0.5",
+                    (deployment.status === "FAILED" ||
+                      deployment.status === "UNHEALTHY") &&
+                      "text-red-400"
+                  )}
                   pingState={
                     deployment.is_current_production
                       ? deployment.status === "SLEEPING"
                         ? "static"
                         : "animated"
-                      : "hidden"
+                      : deployment.status === "QUEUED"
+                        ? "static"
+                        : "hidden"
                   }
                 >
                   <p>{deployment.status}</p>
