@@ -167,11 +167,15 @@ function DeploymentLayout(): JSX.Element {
                   color={DEPLOYMENT_STATUS_COLOR_MAP[deployment.status]}
                   className={cn(
                     "relative top-0.5",
-                    deployment.status === "FAILED" && "text-red-400"
+                    !deployment.is_current_production &&
+                      deployment.status === "FAILED" &&
+                      "text-red-400"
                   )}
                   pingState={
-                    deployment.is_current_production
-                      ? deployment.status === "SLEEPING"
+                    deployment.is_current_production &&
+                    deployment.status !== "FAILED"
+                      ? deployment.status === "SLEEPING" ||
+                        deployment.status === "QUEUED"
                         ? "static"
                         : "animated"
                       : deployment.status === "QUEUED"
