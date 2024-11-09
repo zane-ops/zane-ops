@@ -48,6 +48,12 @@ services:
           memory: 200M
     ports:
       - "443:443"
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "-f", "http://localhost:2019/config/"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 10s
     volumes:
       - caddy-data:/data
       - caddy-config:/config
