@@ -1,7 +1,9 @@
 import * as Form from "@radix-ui/react-form";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type VariantProps, cva } from "class-variance-authority";
+import { Command as CommandPrimitive } from "cmdk";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -10,7 +12,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import type { DateRange } from "react-day-picker";
+import { type DateRange } from "react-day-picker";
 import { useDebounce } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -22,7 +24,8 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList
+  CommandList,
+  CommandSeparator
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 
@@ -47,6 +50,7 @@ import {
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
+import { isEmptyObject } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -115,34 +119,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   replace: true
                 })
               }
-              className="min:w-[235px] w-full"
+              className="min-w-[250px] w-full"
             />
-            {date.from !== undefined && date.to !== undefined && (
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        navigate({
-                          search: {
-                            ...filters,
-                            time_before: undefined,
-                            time_after: undefined
-                          },
-                          replace: true
-                        })
-                      }
-                      className="py-2.5 h-auto px-2"
-                    >
-                      <span className="sr-only">Clear date</span>
-                      <XIcon size={15} className="flex-none" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Clear date filter</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
           </div>
 
           <div className="flex w-full items-center relative flex-grow order-2">
@@ -158,19 +136,20 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
               placeholder="Search for log contents"
               name="query"
+              defaultValue={searchParams.query}
               onKeyUp={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log({
-                  query: e.currentTarget.value
-                });
-                navigate({
-                  search: {
-                    ...filters,
-                    query: e.currentTarget.value
-                  },
-                  replace: true
-                });
+                const newQuery = e.currentTarget.value;
+                if (newQuery !== (searchParams.query ?? "")) {
+                  navigate({
+                    search: {
+                      ...filters,
+                      query: e.currentTarget.value
+                    },
+                    replace: true
+                  });
+                }
               }}
             />
           </div>
@@ -180,7 +159,13 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               value={filters.level}
               options={LOG_LEVELS as Writeable<typeof LOG_LEVELS>}
               onValueChange={(newVal) => {
-                //...
+                navigate({
+                  search: {
+                    ...filters,
+                    level: newVal
+                  },
+                  replace: true
+                });
               }}
               placeholder="log levels"
             />
@@ -189,25 +174,47 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               value={filters.source}
               options={LOG_SOURCES as Writeable<typeof LOG_SOURCES>}
               onValueChange={(newVal) => {
-                //...
+                navigate({
+                  search: {
+                    ...filters,
+                    source: newVal
+                  },
+                  replace: true
+                });
               }}
               placeholder="log sources"
             />
           </div>
         </form>
         <hr className="border-border" />
+        {!isEmptyObject(searchParams) && (
+          <Button
+            variant="outline"
+            className="inline-flex w-min gap-1"
+            onClick={() =>
+              navigate({
+                to: "./"
+              })
+            }
+          >
+            <XIcon size={15} />
+            <span>Reset filters</span>
+          </Button>
+        )}
+
         <div className="rounded-md px-4 pb-2  overflow-y-auto bg-muted/25 dark:bg-card h-full w-full">
           <pre
             id="logContent"
-            className="text-base whitespace-no-wrap overflow-x-scroll font-mono pt-2 "
+            className="text-base whitespace-no-wrap overflow-x-scroll font-mono pt-2 relative h-full"
           >
-            <span className="italic text-gray-500">
-              {/* {!!searchValue ? ( */}
-              {/* <>No logs matching filter `{searchValue}`</> */}
-              {/* ) : ( */}
-              <>No logs yets</>
-              {/* )} */}
-            </span>
+            <div className="text-center items-center flex flex-col text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <h3 className="text-lg font-semibold">No logs to show</h3>
+              <small className="inline-block max-w-lg text-balance">
+                New log entries that match your search parameters will appear
+                here.
+              </small>
+              <button className="text-sm underline">Clear filters</button>
+            </div>
           </pre>
         </div>
       </div>
@@ -349,17 +356,21 @@ const SimpleMultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[150px] p-0 border-0"
+          className="w-[200px] p-0 border-0"
           align="end"
           sideOffset={0}
           side="bottom"
           onEscapeKeyDown={() => setIsPopoverOpen(false)}
         >
-          <Command>
-            <CommandInput className="hidden" />
-            <CommandList className="w-full ">
+          <Command className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2">
+            <CommandPrimitive.Input
+              placeholder="search"
+              className="bg-inherit focus-visible:outline-none px-2 py-2"
+            />
+            <hr className="-mx-2 border-border" />
+            <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2">
               <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
+              <CommandPrimitive.Group>
                 {options.map((option) => {
                   const isSelected = value.includes(option);
                   return (
@@ -368,17 +379,21 @@ const SimpleMultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
                       onSelect={() => toggleOption(option)}
                       className="cursor-pointer flex gap-1"
                     >
-                      {isSelected && (
-                        <CheckIcon size={15} className="flex-none" />
-                      )}
+                      <CheckIcon
+                        size={15}
+                        className={cn(
+                          "flex-none transition-transform duration-75",
+                          isSelected ? "scale-100" : "scale-0"
+                        )}
+                      />
                       <div className="flex items-center justify-between w-full">
                         <span>{option}</span>
                       </div>
                     </CommandItem>
                   );
                 })}
-              </CommandGroup>
-            </CommandList>
+              </CommandPrimitive.Group>
+            </CommandPrimitive.List>
           </Command>
         </PopoverContent>
       </Popover>

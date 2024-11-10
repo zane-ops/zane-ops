@@ -182,3 +182,11 @@ export function isArrayOfBooleans(arr: any): arr is boolean[] {
   if (!Array.isArray(arr)) return false;
   return arr.every((item) => typeof item === "boolean");
 }
+
+export function isEmptyObject(object: Record<string, any> | undefined | null) {
+  if (object === null || typeof object === "undefined") return true;
+
+  return !Object.entries(object).some(
+    ([, value]) => value !== null && typeof value !== "undefined"
+  );
+}
