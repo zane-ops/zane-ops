@@ -1,3 +1,5 @@
+.PHONY: all clean test setup help stop deploy create-user delete-resources
+
 SHELL := /bin/bash
 current_dir = $(shell pwd)
 db_password = "$(shell openssl rand -base64 32)"
@@ -12,8 +14,8 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "    ⚒️  INITIAL SETUP OF ZANEOPS ⚒️"
 	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
 	@echo "Step 1️⃣ : initializing docker swarm..."
-	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "active"; then \
-		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -q "true"; then \
+	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \
+		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -qw "true"; then \
 			echo "Swarm is enabled and this node is a manager, skipping swarm initialization 👍"; \
 		else \
 			echo "❌ ERROR: Swarm is enabled, but this node is not a manager. ZaneOps needs be installed on a docker swarm manager. ❌" >&2; \
@@ -54,7 +56,7 @@ setup: ### Launch initial setup before installing zaneops
   	fi
 	@echo "Step 4️⃣ Done ✅"
 	@echo "Step 5️⃣: Create docker network for zaneops..."
-	@if docker network ls | grep -q "zane"; then \
+	@if docker network ls | grep -qw "zane"; then \
     	echo "Zane network already exists, skipping"; \
 	else \
     	docker network create --attachable --driver overlay --label zane.stack=true zane; \
@@ -66,26 +68,22 @@ deploy: ### Install and deploy zaneops
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 	@echo "    🚀   DEPLOYMENT OF ZANEOPS   🚀"
 	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-	@read -p "Do you want to be the server through HTTP (recommended if you use a reverse tunnel like cloudflare tunnel, or deploying locally) ? (Y/N): " use_http && \
-	if [[ $${use_http} == [yY] || $${use_http} == [yY][eE][sS] ]]; then \
-		set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
-	else \
-		set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
-	fi
+	@echo "Deploying zaneops...🔄"
+	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
 	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo "You can monitor the services deployed by running \`docker service ls --filter label=\"zane.stack=true\"\`"
-	@echo "Wait for all services (except for `zane_temporal-admin-tools`) to show up as \`replicated   1/1\` to attest that everything started succesfully"
+	@echo "Wait for all services (except for \`zane_temporal-admin-tools\`) to show up as \`replicated   1/1\` to attest that everything started succesfully"
 
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
 
-remove: ### Take down zaneops and scale down all services created in zaneops
+stop: ### Take down zaneops and scale down all services created in zaneops
 	@echo "Taking down zaneops..."
 	docker stack rm zane
-	@echo "Scaling down services created in zaneops..., use `make deploy` to restart them"
-	docker service ls --filter "label=zane-managed=true" -q | xargs -P 0 -I {} docker service scale --detach {}=0
+	@echo "Scaling down services created in zaneops..., use \`make deploy\` to restart them"
+	@docker service ls --filter "label=zane-managed=true" -q | xargs -P 0 -I {} docker service scale --detach {}=0
 
 delete-resources: ### Delete all resources created by zaneops
 	@echo "Taking down zaneops..."
