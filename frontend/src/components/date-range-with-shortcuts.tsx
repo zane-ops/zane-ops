@@ -39,15 +39,15 @@ export function DateRangeWithShortcuts({
   presets = defaultPresets
 }: DateRangeWithShortcutsProps) {
   React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
+    const up = (e: KeyboardEvent) => {
       presets.map((preset) => {
         if (preset.shortcut === e.key) {
           setDate({ from: preset.from, to: preset.to });
         }
       });
     };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
+    document.addEventListener("keyup", up);
+    return () => document.removeEventListener("keyup", up);
   }, [setDate, presets]);
 
   return (
@@ -152,7 +152,10 @@ function DatePresets({
       <p className="mx-3 text-xs uppercase text-muted-foreground">Date Range</p>
       <div className="grid gap-1">
         {presets.map(({ label, shortcut, from, to }) => {
-          const isActive = selected?.from === from && selected?.to === to;
+          const isActive =
+            selected?.from?.getTime() === from?.getTime() &&
+            selected?.to?.getTime() === to?.getTime();
+
           return (
             <Button
               key={label}
