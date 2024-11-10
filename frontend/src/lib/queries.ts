@@ -1,4 +1,8 @@
-import { keepPreviousData, queryOptions } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { type ApiResponse, apiClient } from "~/api/client";
 import {
@@ -260,6 +264,27 @@ export const serviceQueries = {
     })
 };
 
+export const LOG_LEVELS = ["INFO", "ERROR"] as const;
+export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
+
+export const deploymentLogSearchSchema = z.object({
+  page: z.number().optional().catch(1).optional(),
+  per_page: z.number().optional().catch(10).optional(),
+  cursor: z.string().optional(),
+  level: z
+    .array(z.enum(LOG_LEVELS))
+    .optional()
+    .catch(LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
+  source: z
+    .array(z.enum(LOG_SOURCES))
+    .optional()
+    .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
+  time_before: z.coerce.date().optional().catch(undefined),
+  time_after: z.coerce.date().optional().catch(undefined)
+});
+
+export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
+
 export const deploymentQueries = {
   single: ({
     project_slug,
@@ -303,5 +328,80 @@ export const deploymentQueries = {
         }
         return false;
       }
+    }),
+  logs: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    type = "docker",
+    filters = {}
+  }: {
+    project_slug: string;
+    service_slug: string;
+    type?: "docker" | "git";
+    deployment_hash: string;
+    filters?: DeploymentLogFitlers;
+  }) =>
+    infiniteQueryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          deployment_hash,
+          type
+        }).queryKey,
+        "RUNTIME_LOGS",
+        filters
+      ],
+      queryFn: async ({ pageParam, signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash
+              },
+              query: {
+                ...filters,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          }
+        );
+        return data ?? { next: null, previous: null, results: [] };
+      },
+      // we use the inverse of the cursors we get from the API
+      // because the API order them by time but in descending order,
+      // so the next page is actually the oldest,
+      // we flip it here because we want to keep it consistent with our UI
+      getNextPageParam: ({ previous }) => {
+        if (previous !== null) {
+          return new URL(previous).searchParams.get("cursor");
+        }
+        return null;
+      },
+      getPreviousPageParam: ({ next }) => {
+        if (next !== null) {
+          return new URL(next).searchParams.get("cursor");
+        }
+        return null;
+      },
+      initialPageParam: null as string | null,
+      refetchInterval: (query) => {
+        const now = new Date().getTime() - 10_000; // margin of error as our data can be out of date and the data is not realtime
+        if (
+          !query.state.data ||
+          (filters.time_before && filters.time_before?.getTime() < now)
+        ) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData,
+      staleTime: Infinity
     })
 };
