@@ -1213,9 +1213,10 @@ export interface components {
       attr: "level";
       /**
        * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
        * @enum {string}
        */
-      code: "invalid_choice";
+      code: "invalid_choice" | "invalid_list";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent: {
@@ -1385,11 +1386,12 @@ export interface components {
       /**
        * @description * `invalid` - invalid
        * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
        * * `null` - null
        * * `required` - required
        * @enum {string}
        */
-      code: "invalid" | "max_string_length" | "null" | "required";
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
       detail: string;
     };
     RequestDeploymentChangesNewValueHostErrorComponent: {
@@ -1401,10 +1403,11 @@ export interface components {
       /**
        * @description * `invalid` - invalid
        * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
        * * `null` - null
        * @enum {string}
        */
-      code: "invalid" | "max_string_length" | "null";
+      code: "invalid" | "max_string_length" | "min_value" | "null";
       detail: string;
     };
     RequestDeploymentChangesNewValueHostPathErrorComponent: {
@@ -3040,7 +3043,7 @@ export interface operations {
          * @description * `ERROR` - Error
          * * `INFO` - Info
          */
-        level?: "ERROR" | "INFO";
+        level?: ("ERROR" | "INFO")[];
         /** @description Number of results to return per page. */
         per_page?: number;
         /**

@@ -909,13 +909,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -995,13 +995,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1091,13 +1091,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1177,7 +1177,7 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1273,13 +1273,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1374,13 +1374,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1458,13 +1458,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1553,13 +1553,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1635,13 +1635,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1743,7 +1743,7 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: queued_at_after
@@ -1759,7 +1759,7 @@ paths:
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: status
@@ -1874,13 +1874,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -1975,7 +1975,7 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: request_host
@@ -2021,7 +2021,7 @@ paths:
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: status
@@ -2127,13 +2127,17 @@ paths:
       - in: query
         name: level
         schema:
-          type: string
-          enum:
-          - ERROR
-          - INFO
+          type: array
+          items:
+            type: string
+            enum:
+            - ERROR
+            - INFO
         description: |-
           * `ERROR` - Error
           * `INFO` - Info
+        explode: true
+        style: form
       - name: per_page
         required: false
         in: query
@@ -2144,13 +2148,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: source
@@ -2254,13 +2258,13 @@ paths:
         name: project_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: service_slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -2343,7 +2347,7 @@ paths:
         name: slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -2419,7 +2423,7 @@ paths:
         name: slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -2506,7 +2510,7 @@ paths:
         name: slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -2585,7 +2589,7 @@ paths:
         name: slug
         schema:
           type: string
-          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - projects
@@ -3762,7 +3766,6 @@ components:
           minLength: 1
         value:
           type: string
-          minLength: 1
       required:
       - key
       - value
@@ -5030,8 +5033,11 @@ components:
         code:
           enum:
           - invalid_choice
+          - invalid_list
           type: string
-          description: '* `invalid_choice` - invalid_choice'
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
         detail:
           type: string
       required:
@@ -5398,12 +5404,14 @@ components:
           enum:
           - invalid
           - max_string_length
+          - min_value
           - 'null'
           - required
           type: string
           description: |-
             * `invalid` - invalid
             * `max_string_length` - max_string_length
+            * `min_value` - min_value
             * `null` - null
             * `required` - required
         detail:
@@ -5424,11 +5432,13 @@ components:
           enum:
           - invalid
           - max_string_length
+          - min_value
           - 'null'
           type: string
           description: |-
             * `invalid` - invalid
             * `max_string_length` - max_string_length
+            * `min_value` - min_value
             * `null` - null
         detail:
           type: string
@@ -6055,9 +6065,11 @@ components:
       properties:
         host:
           type: integer
+          minimum: 1
           default: 80
         forwarded:
           type: integer
+          minimum: 1
       required:
       - forwarded
     ServiceStatusEnum:

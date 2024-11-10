@@ -1020,6 +1020,7 @@ class DeploymentLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
     content = django_filters.CharFilter(method="filter_content")
     source = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogSource.choices)
+    level = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogLevel.choices)
 
     @staticmethod
     def filter_content(queryset: QuerySet, name: str, value: str):
