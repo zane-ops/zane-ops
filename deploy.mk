@@ -1,3 +1,5 @@
+.PHONY: all clean test setup help stop deploy create-user delete-resources
+
 SHELL := /bin/bash
 current_dir = $(shell pwd)
 db_password = "$(shell openssl rand -base64 32)"
@@ -80,8 +82,8 @@ create-user: ### Create the first user to login in into the dashboard
 stop: ### Take down zaneops and scale down all services created in zaneops
 	@echo "Taking down zaneops..."
 	docker stack rm zane
-	@echo "Scaling down services created in zaneops..., use `make deploy` to restart them"
-	docker service ls --filter "label=zane-managed=true" -q | xargs -P 0 -I {} docker service scale --detach {}=0
+	@echo "Scaling down services created in zaneops..., use \`make deploy\` to restart them"
+	@docker service ls --filter "label=zane-managed=true" -q | xargs -P 0 -I {} docker service scale --detach {}=0
 
 delete-resources: ### Delete all resources created by zaneops
 	@echo "Taking down zaneops..."
