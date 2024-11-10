@@ -931,7 +931,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
 
 
 class DockerContainerLogSerializer(serializers.Serializer):
-    log = serializers.CharField(required=True, allow_blank=True)
+    log = serializers.CharField(required=True, allow_blank=True, trim_whitespace=False)
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
     time = serializers.DateTimeField(required=True)
