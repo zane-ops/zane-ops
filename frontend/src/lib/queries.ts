@@ -280,7 +280,7 @@ export const deploymentLogSearchSchema = z.object({
     .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
-  query: z.string().optional()
+  content: z.string().optional()
 });
 
 export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
@@ -373,7 +373,15 @@ export const deploymentQueries = {
             signal
           }
         );
-        return data ?? { next: null, previous: null, results: [] };
+
+        if (data?.results) {
+          data.results.reverse();
+        }
+        return {
+          next: data?.next ?? null,
+          previous: data?.previous ?? null,
+          results: data?.results ?? []
+        };
       },
       // we use the inverse of the cursors we get from the API
       // because the API order them by time but in descending order,
@@ -393,11 +401,7 @@ export const deploymentQueries = {
       },
       initialPageParam: null as string | null,
       refetchInterval: (query) => {
-        const now = new Date().getTime() - 10_000; // margin of error as our data can be out of date and the data is not realtime
-        if (
-          !query.state.data ||
-          (filters.time_before && filters.time_before?.getTime() < now)
-        ) {
+        if (!query.state.data) {
           return false;
         }
         return DEFAULT_QUERY_REFETCH_INTERVAL;
