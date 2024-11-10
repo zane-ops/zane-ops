@@ -1,3 +1,5 @@
+.PHONY: all clean test setup help stop deploy create-user delete-resources
+
 SHELL := /bin/bash
 current_dir = $(shell pwd)
 db_password = "$(shell openssl rand -base64 32)"
