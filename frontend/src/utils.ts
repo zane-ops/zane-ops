@@ -43,6 +43,7 @@ export function formattedTime(dateInput: string | Date): string {
     month: "short",
     hour: "numeric",
     minute: "numeric",
+    second: "numeric",
     day: "numeric",
     year: "numeric"
   }).format(date);
