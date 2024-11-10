@@ -1,12 +1,12 @@
 import * as React from "react";
 import { cn } from "~/lib/utils";
 
-type TrackerColor = "red" | "green" | "yellow" | "gray";
+export type StatusBadgeColor = "red" | "green" | "yellow" | "gray" | "blue";
 
 interface StatusBadgeProps {
-  color: TrackerColor;
+  color: StatusBadgeColor;
   children: React.ReactNode;
-  isPing?: boolean;
+  pingState?: "animated" | "static" | "hidden";
   className?: string;
 }
 
@@ -14,7 +14,7 @@ export function StatusBadge({
   color,
   children,
   className,
-  isPing = true
+  pingState = "animated"
 }: StatusBadgeProps) {
   return (
     <div
@@ -28,21 +28,25 @@ export function StatusBadge({
           "border-yellow-600 bg-yellow-600 bg-opacity-10 text-status-warning":
             color === "yellow",
           "border-gray-600 bg-gray-600 bg-opacity-10 text-status-warning":
-            color === "gray"
+            color === "gray",
+          "border-blue-600 bg-blue-600 bg-opacity-10 text-blue-100":
+            color === "blue"
         },
         className
       )}
     >
-      {isPing && (
+      {(pingState === "animated" || pingState === "static") && (
         <div className="relative w-2 h-2">
           <span
             className={cn(
-              "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+              "absolute inline-flex h-full w-full rounded-full opacity-75",
               {
                 "bg-green-600 ": color === "green",
                 "bg-red-600": color === "red",
                 "bg-yellow-600": color === "yellow",
-                "bg-gray-600": color === "gray"
+                "bg-gray-600": color === "gray",
+                "bg-blue-600": color === "blue",
+                "animate-ping": pingState === "animated"
               }
             )}
           ></span>
@@ -54,7 +58,8 @@ export function StatusBadge({
                 "bg-green-600 ": color === "green",
                 "bg-red-600": color === "red",
                 "bg-yellow-600": color === "yellow",
-                "bg-gay-600": color === "gray"
+                "bg-gray-600": color === "gray",
+                "bg-blue-600": color === "blue"
               }
             )}
           ></div>

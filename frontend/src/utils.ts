@@ -37,6 +37,20 @@ export function formattedDate(dateInput: string | Date): string {
   return formattedDate;
 }
 
+export function formattedTime(dateInput: string | Date): string {
+  const date = new Date(dateInput);
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+
+  return formattedDate;
+}
+
 export async function getCsrfTokenHeader() {
   await apiClient.GET("/api/csrf/");
   return { "X-CSRFToken": getCookie("csrftoken") };
@@ -134,8 +148,8 @@ export function capitalizeText(text: string): string {
 
 export function formatURL({
   domain,
-  base_path
-}: { domain: string; base_path: string }) {
+  base_path = "/"
+}: { domain: string; base_path?: string }) {
   const currentUrl = new URL(window.location.href);
   return `${currentUrl.protocol}//${domain}${base_path}`;
 }
