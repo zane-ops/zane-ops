@@ -12,8 +12,8 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "    ⚒️  INITIAL SETUP OF ZANEOPS ⚒️"
 	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
 	@echo "Step 1️⃣ : initializing docker swarm..."
-	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "active"; then \
-		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -q "true"; then \
+	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \
+		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -qw "true"; then \
 			echo "Swarm is enabled and this node is a manager, skipping swarm initialization 👍"; \
 		else \
 			echo "❌ ERROR: Swarm is enabled, but this node is not a manager. ZaneOps needs be installed on a docker swarm manager. ❌" >&2; \
@@ -54,7 +54,7 @@ setup: ### Launch initial setup before installing zaneops
   	fi
 	@echo "Step 4️⃣ Done ✅"
 	@echo "Step 5️⃣: Create docker network for zaneops..."
-	@if docker network ls | grep -q "zane"; then \
+	@if docker network ls | grep -qw "zane"; then \
     	echo "Zane network already exists, skipping"; \
 	else \
     	docker network create --attachable --driver overlay --label zane.stack=true zane; \
