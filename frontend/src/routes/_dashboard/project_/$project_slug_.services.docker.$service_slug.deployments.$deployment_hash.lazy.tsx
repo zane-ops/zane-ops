@@ -6,20 +6,29 @@ import {
   useRouterState
 } from "@tanstack/react-router";
 import {
+  BanIcon,
+  ClockArrowUpIcon,
+  FastForwardIcon,
   GlobeIcon,
+  HeartPulseIcon,
   HistoryIcon,
+  HourglassIcon,
   InfoIcon,
-  KeyRound,
-  Rocket,
+  LoaderIcon,
+  LogsIcon,
+  PauseIcon,
+  RefreshCwOffIcon,
   RocketIcon,
-  ScrollTextIcon,
-  Settings
+  RotateCcwIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
+  XIcon
 } from "lucide-react";
 import * as React from "react";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import { MetaTitle } from "~/components/meta-title";
-import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
+import type { StatusBadgeColor } from "~/components/status-badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -35,7 +44,7 @@ import { deploymentQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
 
-import { formatURL, formattedTime } from "~/utils";
+import { capitalizeText, formatURL, formattedTime } from "~/utils";
 
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash"
@@ -47,23 +56,6 @@ const TABS = {
   LOGS: "logs",
   HTTP_LOGS: "http-logs",
   DETAILS: "details"
-} as const;
-
-const DEPLOYMENT_STATUS_COLOR_MAP: Record<
-  (typeof DEPLOYMENT_STATUSES)[number],
-  StatusBadgeColor
-> = {
-  STARTING: "blue",
-  RESTARTING: "blue",
-  PREPARING: "blue",
-  CANCELLING: "blue",
-  HEALTHY: "green",
-  UNHEALTHY: "red",
-  FAILED: "red",
-  REMOVED: "gray",
-  CANCELLED: "gray",
-  QUEUED: "gray",
-  SLEEPING: "yellow"
 } as const;
 
 function DeploymentLayout(): JSX.Element {
@@ -163,29 +155,7 @@ function DeploymentLayout(): JSX.Element {
                   <span>{deployment.hash}</span>
                 </h1>
 
-                <StatusBadge
-                  color={DEPLOYMENT_STATUS_COLOR_MAP[deployment.status]}
-                  className={cn(
-                    "relative top-0.5",
-                    !deployment.is_current_production &&
-                      deployment.status === "FAILED" &&
-                      "text-red-400"
-                  )}
-                  pingState={
-                    deployment.is_current_production &&
-                    deployment.status !== "FAILED"
-                      ? deployment.status === "SLEEPING" ||
-                        deployment.status === "QUEUED"
-                        ? "static"
-                        : "animated"
-                      : deployment.status === "QUEUED"
-                        ? "static"
-                        : "hidden"
-                  }
-                >
-                  <p>{deployment.status}</p>
-                </StatusBadge>
-
+                <DeploymentStatusBadge status={deployment.status} />
                 {deployment.is_current_production && (
                   <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
                     <RocketIcon size={15} className="flex-none" />
@@ -251,7 +221,7 @@ function DeploymentLayout(): JSX.Element {
                 className="flex gap-2 items-center"
               >
                 <span>Runtime logs</span>
-                <ScrollTextIcon size={15} className="flex-none" />
+                <LogsIcon size={15} className="flex-none" />
               </TabsTrigger>
 
               <TabsTrigger
@@ -285,5 +255,79 @@ function DeploymentLayout(): JSX.Element {
         </>
       )}
     </>
+  );
+}
+
+const DEPLOYMENT_STATUS_COLOR_MAP = {
+  STARTING: "blue",
+  RESTARTING: "blue",
+  PREPARING: "blue",
+  CANCELLING: "blue",
+  HEALTHY: "green",
+  UNHEALTHY: "red",
+  FAILED: "red",
+  REMOVED: "gray",
+  CANCELLED: "gray",
+  QUEUED: "gray",
+  SLEEPING: "yellow"
+} as const satisfies Record<
+  (typeof DEPLOYMENT_STATUSES)[number],
+  StatusBadgeColor
+>;
+
+type DeploymentStatusBadgeProps = {
+  status: keyof typeof DEPLOYMENT_STATUS_COLOR_MAP;
+  className?: string;
+};
+
+function DeploymentStatusBadge({
+  status,
+  className
+}: DeploymentStatusBadgeProps) {
+  const color = DEPLOYMENT_STATUS_COLOR_MAP[status];
+
+  const icons = {
+    HEALTHY: HeartPulseIcon,
+    RESTARTING: RotateCcwIcon,
+    FAILED: XIcon,
+    UNHEALTHY: TriangleAlertIcon,
+    CANCELLED: BanIcon,
+    QUEUED: ClockArrowUpIcon,
+    REMOVED: Trash2Icon,
+    SLEEPING: PauseIcon,
+    STARTING: FastForwardIcon,
+    PREPARING: HourglassIcon,
+    CANCELLING: RefreshCwOffIcon
+  } as const satisfies Record<typeof status, React.ComponentType<any>>;
+
+  const Icon = icons[status];
+
+  const isLoading = [
+    "STARTING",
+    "PREPARING",
+    "CANCELLING",
+    "RESTARTING"
+  ].includes(status);
+  return (
+    <div
+      className={cn(
+        "relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center",
+        {
+          "bg-emerald-400/20 dark:bg-emerald-600/20 text-green-600  dark:text-emerald-400":
+            color === "green",
+          "bg-red-600 bg-opacity-10 text-red-600 dark:text-red-400":
+            color === "red",
+          "bg-yellow-400/20 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400":
+            color === "yellow",
+          "bg-gray-600/20 dark:bg-gray-600/60 text-gray": color === "gray",
+          "bg-link/20 text-link": color === "blue"
+        },
+        className
+      )}
+    >
+      <Icon size={15} className="flex-none" />
+      <p>{capitalizeText(status)}</p>
+      {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />}
+    </div>
   );
 }
