@@ -2,9 +2,16 @@ import * as Form from "@radix-ui/react-form";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type VariantProps, cva } from "class-variance-authority";
-import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  LoaderIcon,
+  SearchIcon,
+  XIcon
+} from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
+import { useDebounce } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
@@ -51,18 +58,19 @@ export const Route = createFileRoute(
 export function DeploymentLogsDetailPage(): React.JSX.Element {
   const { deployment_hash, project_slug, service_slug } = Route.useParams();
   const searchParams = Route.useSearch();
-
   const navigate = useNavigate();
+
+  const [debouncedQuery] = useDebounce(searchParams.query ?? "", 300);
 
   const filters = {
     page: searchParams.page ?? 1,
     per_page: searchParams.per_page ?? 10,
     time_after: searchParams.time_after,
     time_before: searchParams.time_before,
-    cursor: searchParams.cursor,
     source:
       searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
-    level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>)
+    level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
+    query: debouncedQuery
   } satisfies DeploymentLogFitlers;
 
   const logsQuery = useInfiniteQuery(
@@ -92,9 +100,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               data: formData
             });
           }}
-          className="rounded-t-sm w-full flex gap-2"
+          className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-first">
             <DateRangeWithShortcuts
               date={date}
               setDate={(newDateRange) =>
@@ -107,7 +115,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   replace: true
                 })
               }
-              className={cn("w-[235px]")}
+              className="min:w-[235px] w-full"
             />
             {date.from !== undefined && date.to !== undefined && (
               <TooltipProvider>
@@ -137,8 +145,15 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             )}
           </div>
 
-          <div className="flex w-full items-center relative flex-grow">
-            <SearchIcon className="absolute left-4 text-grey" />
+          <div className="flex w-full items-center relative flex-grow order-2">
+            {logsQuery.isFetching ? (
+              <LoaderIcon
+                size={15}
+                className="animate-spin absolute left-4 text-grey"
+              />
+            ) : (
+              <SearchIcon size={15} className="absolute left-4 text-grey" />
+            )}
             <Input
               className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
               placeholder="Search for log contents"
@@ -147,36 +162,20 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log({
-                  v: e.currentTarget.value
+                  query: e.currentTarget.value
+                });
+                navigate({
+                  search: {
+                    ...filters,
+                    query: e.currentTarget.value
+                  },
+                  replace: true
                 });
               }}
             />
           </div>
 
-          <div className="flex-shrink-0 flex items-center gap-1.5">
-            {/* <Label htmlFor="logLevel" className="sr-only">
-              Log levels
-            </Label>
-            <Select
-              name="level"
-              // value={changedVolumeMode}
-              // onValueChange={(mode) => setChangedVolumeMode(mode as VolumeMode)}
-            >
-              <SelectTrigger id="logLevel" className="flex-shrink">
-                <SelectValue placeholder="Log levels" />
-              </SelectTrigger>
-              <SelectContent>
-                {LOG_LEVELS.map((level) => (
-                  <SelectItem value={level} key={level} className="capitalize">
-                    {level}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Label htmlFor="logSource" className="sr-only">
-              Log sources
-            </Label> */}
-
+          <div className="flex-shrink-0 flex items-center gap-1.5 order-1 lg:order-last">
             <SimpleMultiSelect
               value={filters.level}
               options={LOG_LEVELS as Writeable<typeof LOG_LEVELS>}
@@ -194,26 +193,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               }}
               placeholder="log sources"
             />
-            {/* <Select
-              name="source"
-              // value={changedVolumeMode}
-              // onValueChange={(mode) => setChangedVolumeMode(mode as VolumeMode)}
-            >
-              <SelectTrigger id="logSource">
-                <SelectValue placeholder="Log sources" />
-              </SelectTrigger>
-              <SelectContent>
-                {LOG_SOURCES.map((source) => (
-                  <SelectItem
-                    value={source}
-                    key={source}
-                    className="capitalize"
-                  >
-                    {source}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
           </div>
         </form>
         <hr className="border-border" />

@@ -270,7 +270,6 @@ export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
 export const deploymentLogSearchSchema = z.object({
   page: z.number().optional().catch(1).optional(),
   per_page: z.number().optional().catch(10).optional(),
-  cursor: z.string().optional(),
   level: z
     .array(z.enum(LOG_LEVELS))
     .optional()
@@ -280,7 +279,8 @@ export const deploymentLogSearchSchema = z.object({
     .optional()
     .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
   time_before: z.coerce.date().optional().catch(undefined),
-  time_after: z.coerce.date().optional().catch(undefined)
+  time_after: z.coerce.date().optional().catch(undefined),
+  query: z.string().optional()
 });
 
 export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
@@ -353,6 +353,7 @@ export const deploymentQueries = {
         "RUNTIME_LOGS",
         filters
       ],
+      // TODO : handle cursor pagination
       queryFn: async ({ pageParam, signal }) => {
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
