@@ -77,7 +77,7 @@ deploy: ### Install and deploy zaneops
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
 
-remove: ### Take down zaneops and scale down all services created in zaneops
+stop: ### Take down zaneops and scale down all services created in zaneops
 	@echo "Taking down zaneops..."
 	docker stack rm zane
 	@echo "Scaling down services created in zaneops..., use `make deploy` to restart them"
