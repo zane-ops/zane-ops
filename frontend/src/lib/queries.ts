@@ -396,7 +396,6 @@ export const deploymentQueries = {
               },
               query: {
                 ...filters,
-                per_page: 5,
                 cursor,
                 created_at_before: filters.created_at_before?.toISOString(),
                 created_at_after: filters.created_at_after?.toISOString()
