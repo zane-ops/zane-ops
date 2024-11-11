@@ -1,6 +1,12 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { LoaderIcon, SearchIcon, XIcon } from "lucide-react";
+import {
+  LoaderIcon,
+  Maximize2Icon,
+  Minimize2Icon,
+  SearchIcon,
+  XIcon
+} from "lucide-react";
 import * as React from "react";
 import { type DateRange } from "react-day-picker";
 import { useDebounce } from "use-debounce";
@@ -11,6 +17,12 @@ import { MultiSelect } from "~/components/multi-select";
 import { Button } from "~/components/ui/button";
 
 import { Input } from "~/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 
 import {
   type DeploymentLog,
@@ -81,6 +93,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     }
   }, [navigate]);
 
+  const [isFullScreen, setIsFullScreen] = React.useState(false);
+
   if (logsQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
@@ -91,16 +105,19 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-4 mt-8">
-      <div className="col-span-12 flex flex-col h-[65vh] gap-2">
-        <form
-          action={(formData) => {
-            console.log({
-              data: formData
-            });
-          }}
-          className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap"
-        >
+    <div
+      className={cn(
+        "grid grid-cols-12 gap-4 mt-8",
+        isFullScreen && "fixed inset-0 top-20 bg-background z-99 p-5 container"
+      )}
+    >
+      <div
+        className={cn(
+          "col-span-12 flex flex-col gap-2",
+          isFullScreen ? "h-[82svh]" : "h-[65svh]"
+        )}
+      >
+        <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
           <div className="flex items-center gap-2 order-first">
             <DateRangeWithShortcuts
               date={date}
@@ -180,8 +197,31 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               }}
               placeholder="log sources"
             />
+
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsFullScreen(!isFullScreen)}
+                  >
+                    <span className="sr-only">
+                      {isFullScreen ? "Minimize" : "Maximize"}
+                    </span>
+                    {isFullScreen ? (
+                      <Minimize2Icon size={15} />
+                    ) : (
+                      <Maximize2Icon size={15} />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-64 text-balance">
+                  {isFullScreen ? "Minimize" : "Maximize"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        </form>
+        </div>
         <hr className="border-border" />
         {!isEmptyObject(searchParams) && (
           <Button
