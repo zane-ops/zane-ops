@@ -1,7 +1,8 @@
 import {
   infiniteQueryOptions,
   keepPreviousData,
-  queryOptions
+  queryOptions,
+  skipToken
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { type ApiResponse, apiClient } from "~/api/client";
@@ -278,8 +279,8 @@ export const deploymentLogSearchSchema = z.object({
     .array(z.enum(LOG_SOURCES))
     .optional()
     .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
-  time_before: z.coerce.date().optional().catch(undefined),
-  time_after: z.coerce.date().optional().catch(undefined),
+  created_at_before: z.coerce.date().optional().catch(undefined),
+  created_at_after: z.coerce.date().optional().catch(undefined),
   content: z.string().optional()
 });
 
@@ -366,8 +367,8 @@ export const deploymentQueries = {
               },
               query: {
                 ...filters,
-                time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString()
+                created_at_before: filters.created_at_before?.toISOString(),
+                created_at_after: filters.created_at_after?.toISOString()
               }
             },
             signal
@@ -410,3 +411,14 @@ export const deploymentQueries = {
       staleTime: Infinity
     })
 };
+
+export type DeploymentLog = Awaited<
+  ReturnType<
+    NonNullable<
+      Exclude<
+        ReturnType<typeof deploymentQueries.logs>["queryFn"],
+        typeof skipToken
+      >
+    >
+  >
+>["results"][number];
