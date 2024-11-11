@@ -107,8 +107,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                 navigate({
                   search: {
                     ...filters,
-                    time_before: newDateRange?.to,
-                    time_after: newDateRange?.from
+                    created_at_before: newDateRange?.to,
+                    created_at_after: newDateRange?.from
                   },
                   replace: true
                 })
