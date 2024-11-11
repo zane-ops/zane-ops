@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LoaderIcon, SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
@@ -42,7 +42,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
   const filters = {
     page: searchParams.page ?? 1,
-    per_page: searchParams.per_page ?? 50,
     created_at_after: searchParams.created_at_after,
     created_at_before: searchParams.created_at_before,
     source:
@@ -50,13 +49,15 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
     content: debouncedSearchQuery
   } satisfies DeploymentLogFitlers;
+  const queryClient = useQueryClient();
 
   const logsQuery = useInfiniteQuery(
     deploymentQueries.logs({
       deployment_hash,
       project_slug,
       service_slug,
-      filters
+      filters,
+      queryClient
     })
   );
 

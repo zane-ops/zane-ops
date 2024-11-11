@@ -1,4 +1,6 @@
 import {
+  type InfiniteData,
+  QueryClient,
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
@@ -270,7 +272,6 @@ export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
 
 export const deploymentLogSearchSchema = z.object({
   page: z.number().optional().catch(1).optional(),
-  per_page: z.number().optional().catch(10).optional(),
   level: z
     .array(z.enum(LOG_LEVELS))
     .optional()
@@ -335,13 +336,15 @@ export const deploymentQueries = {
     service_slug,
     deployment_hash,
     type = "docker",
-    filters = {}
+    filters = {},
+    queryClient
   }: {
     project_slug: string;
     service_slug: string;
     type?: "docker" | "git";
     deployment_hash: string;
     filters?: DeploymentLogFitlers;
+    queryClient: QueryClient;
   }) =>
     infiniteQueryOptions({
       queryKey: [
@@ -355,7 +358,33 @@ export const deploymentQueries = {
         filters
       ],
       // TODO : handle cursor pagination
-      queryFn: async ({ pageParam, signal }) => {
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        const allData = queryClient.getQueryData(queryKey) as InfiniteData<
+          DeploymentLogQueryData,
+          string | null
+        >;
+        const existingData = allData?.pages.find(
+          (_, index) => allData?.pageParams[index] === pageParam
+        );
+
+        /**
+         * We reuse the data in the query as we are sure this page is immutable,
+         * And we don't want to refetch the same logs that we have already fetched.
+         *
+         * However if we have the data in the cache and previous is `null`,
+         * it means that that page is the last and the next time we fetch it,
+         * it might have more data.
+         * Inspired by: https://github.com/TanStack/query/discussions/5921
+         */
+        if (existingData && existingData.previous) {
+          return existingData;
+        }
+
+        let cursor = pageParam ?? undefined;
+        if (existingData?.cursor) {
+          cursor = existingData.cursor;
+        }
+
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
           {
@@ -367,6 +396,8 @@ export const deploymentQueries = {
               },
               query: {
                 ...filters,
+                per_page: 5,
+                cursor,
                 created_at_before: filters.created_at_before?.toISOString(),
                 created_at_after: filters.created_at_after?.toISOString()
               }
@@ -375,31 +406,68 @@ export const deploymentQueries = {
           }
         );
 
-        if (data?.results) {
-          data.results.reverse();
-        }
-        return {
-          next: data?.next ?? null,
-          previous: data?.previous ?? null,
-          results: data?.results ?? []
+        let apiData: DeploymentLogQueryData = {
+          next: null,
+          previous: null,
+          results: [],
+          cursor: null
         };
+
+        if (data) {
+          apiData = {
+            ...data,
+            next: data?.next
+              ? new URL(data?.next).searchParams.get("cursor")
+              : null,
+            previous: data?.previous
+              ? new URL(data?.previous).searchParams.get("cursor")
+              : null,
+            cursor: existingData?.cursor
+          };
+        }
+
+        // get cursor for initial page as its pageParam is `null`
+        // we want to do so that we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the data it starts
+        if (pageParam === null && apiData.next !== null && !apiData.cursor) {
+          const { data: nextPage } = await apiClient.GET(
+            "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+            {
+              params: {
+                path: {
+                  project_slug,
+                  service_slug,
+                  deployment_hash
+                },
+                query: {
+                  ...filters,
+                  per_page: 5,
+                  cursor: apiData.next,
+                  created_at_before: filters.created_at_before?.toISOString(),
+                  created_at_after: filters.created_at_after?.toISOString()
+                }
+              },
+              signal
+            }
+          );
+          if (nextPage?.previous) {
+            apiData.cursor = new URL(nextPage.previous).searchParams.get(
+              "cursor"
+            );
+          }
+        }
+
+        if (apiData?.results) {
+          apiData.results.reverse();
+        }
+        return apiData;
       },
       // we use the inverse of the cursors we get from the API
       // because the API order them by time but in descending order,
       // so the next page is actually the oldest,
       // we flip it here because we want to keep it consistent with our UI
-      getNextPageParam: ({ previous }) => {
-        if (previous !== null) {
-          return new URL(previous).searchParams.get("cursor");
-        }
-        return null;
-      },
-      getPreviousPageParam: ({ next }) => {
-        if (next !== null) {
-          return new URL(next).searchParams.get("cursor");
-        }
-        return null;
-      },
+      getNextPageParam: ({ previous }) => previous,
+      getPreviousPageParam: ({ next }) => next,
       initialPageParam: null as string | null,
       refetchInterval: (query) => {
         if (!query.state.data) {
@@ -410,6 +478,15 @@ export const deploymentQueries = {
       placeholderData: keepPreviousData,
       staleTime: Infinity
     })
+};
+
+type DeploymentLogQueryData = NonNullable<
+  ApiResponse<
+    "get",
+    "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+  >
+> & {
+  cursor?: string | null;
 };
 
 export type DeploymentLog = Awaited<
