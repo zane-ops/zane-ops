@@ -153,7 +153,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         }
       },
       {
-        rootMargin: "0px",
+        root: logContentRef.current,
+        rootMargin: "20%",
         threshold: 0.1
       }
     );
@@ -182,7 +183,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         }
       },
       {
-        rootMargin: "0px",
+        root: logContentRef.current,
+        rootMargin: "20%",
         threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
       }
     );
@@ -210,6 +212,13 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     to: filters.created_at_before
   };
 
+  /**
+   * TODO :
+   *  - virtualization
+   *  - automatically scroll to the end of the list when fetching next logs
+   *  - modify the scroll to keep the `previous page fetch trigger` so that it doesn't scroll
+   *    when we scrolled up and then down (probably not necessary)
+   */
   return (
     <div
       className={cn(
