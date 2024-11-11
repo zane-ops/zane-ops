@@ -216,8 +216,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
    * TODO :
    *  - virtualization
    *  - automatically scroll to the end of the list when fetching next logs
-   *  - modify the scroll to keep the `previous page fetch trigger` so that it doesn't scroll
-   *    when we scrolled up and then down (probably not necessary)
    */
   return (
     <div
