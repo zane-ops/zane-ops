@@ -44,6 +44,22 @@ export const Route = createFileRoute(
   component: withAuthRedirect(DeploymentLogsDetailPage)
 });
 
+function isElementVisibleInContainer(el: HTMLElement, container: HTMLElement) {
+  const rect = el.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  const topIsVisible =
+    rect.top >= containerRect.top && rect.top < containerRect.bottom;
+  const bottomIsVisible =
+    rect.bottom > containerRect.top && rect.bottom <= containerRect.bottom;
+  const leftIsVisible =
+    rect.left >= containerRect.left && rect.left < containerRect.right;
+  const rightIsVisible =
+    rect.right > containerRect.left && rect.right <= containerRect.right;
+
+  return (topIsVisible || bottomIsVisible) && (leftIsVisible || rightIsVisible);
+}
+
 export function DeploymentLogsDetailPage(): React.JSX.Element {
   const { deployment_hash, project_slug, service_slug } = Route.useParams();
   const searchParams = Route.useSearch();
@@ -94,6 +110,96 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   }, [navigate]);
 
   const [isFullScreen, setIsFullScreen] = React.useState(false);
+  const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
+  const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
+  const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
+
+  const [lastLogInViewId, setLastLogItemIdInView] = React.useState<
+    string | null
+  >(null);
+
+  React.useLayoutEffect(() => {
+    if (lastLogInViewId) {
+      const lastLogInViewElement = document.getElementById(
+        `log-item-${lastLogInViewId}`
+      );
+
+      const logContent = logContentRef.current;
+      const previousPageFetchTrigger = loadPreviousPageRef.current;
+      if (lastLogInViewElement && logContent && previousPageFetchTrigger) {
+        if (isElementVisibleInContainer(previousPageFetchTrigger, logContent)) {
+          logContent?.scroll({
+            top:
+              lastLogInViewElement.offsetTop -
+              previousPageFetchTrigger.offsetHeight -
+              16,
+            behavior: "instant"
+          });
+        }
+      }
+    }
+  }, [lastLogInViewId]);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          logsQuery.hasNextPage
+        ) {
+          logsQuery.fetchNextPage();
+        }
+      },
+      {
+        rootMargin: "0px",
+        threshold: 0.1
+      }
+    );
+
+    const loadNextPage = loadNextPageRef.current;
+    if (loadNextPage) {
+      observer.observe(loadNextPage);
+      return () => {
+        observer.unobserve(loadNextPage);
+      };
+    }
+  }, [logsQuery.fetchNextPage, logsQuery.isFetching, logsQuery.hasNextPage]);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          logsQuery.hasPreviousPage
+        ) {
+          logsQuery
+            .fetchPreviousPage()
+            .then(() => setLastLogItemIdInView(logs[0].id));
+        }
+      },
+      {
+        rootMargin: "0px",
+        threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
+      }
+    );
+
+    const loadPreviousPage = loadPreviousPageRef.current;
+    if (loadPreviousPage) {
+      observer.observe(loadPreviousPage);
+      return () => {
+        observer.unobserve(loadPreviousPage);
+      };
+    }
+  }, [
+    logsQuery.fetchPreviousPage,
+    logsQuery.isFetching,
+    logsQuery.hasPreviousPage,
+    logs
+  ]);
 
   if (logsQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
@@ -236,8 +342,19 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
         <pre
           id="logContent"
+          ref={logContentRef}
           className="text-xs whitespace-no-wrap font-mono pt-2 pb-10 relative h-full rounded-md w-full bg-muted/25 dark:bg-card overflow-y-auto"
         >
+          {logsQuery.hasPreviousPage && (
+            <div
+              ref={loadPreviousPageRef}
+              className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 "
+            >
+              <LoaderIcon size={15} className="animate-spin" />
+              <p>Fetching previous logs...</p>
+            </div>
+          )}
+
           {logs.length === 0 &&
             (logsQuery.isFetching ? (
               <div className="text-sm text-center items-center flex gap-2 text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -270,19 +387,29 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             logs.map((log) => (
               <Log
                 key={log.id}
+                id={log.id}
                 created_at={log.created_at}
                 level={log.level}
                 content={log.content as string}
                 searchValue={filters.content}
               />
             ))}
+          {logsQuery.hasNextPage && (
+            <div
+              ref={loadNextPageRef}
+              className="text-center items-center justify-center flex gap-2 text-gray-500 py-5 px-8"
+            >
+              <LoaderIcon size={15} className="animate-spin" />
+              <p>Fetching next logs...</p>
+            </div>
+          )}
         </pre>
       </div>
     </div>
   );
 }
 
-type LogProps = Pick<DeploymentLog, "level" | "created_at"> & {
+type LogProps = Pick<DeploymentLog, "id" | "level" | "created_at"> & {
   content: string;
   searchValue?: string;
 };
@@ -291,11 +418,13 @@ const Log = React.memo(function ({
   content,
   searchValue,
   level,
-  created_at
+  created_at,
+  id
 }: LogProps) {
   const search = searchValue ?? "";
   return (
     <div
+      id={`log-item-${id}`}
       className={cn("flex gap-2 px-2", level === "ERROR" && "bg-red-400/20")}
     >
       <span className="text-grey">{formatLogTime(created_at)}</span>
