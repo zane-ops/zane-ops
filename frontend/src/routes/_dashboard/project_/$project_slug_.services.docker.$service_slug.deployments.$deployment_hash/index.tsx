@@ -13,6 +13,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
 import {
+  type DeploymentLog,
   type DeploymentLogFitlers,
   LOG_LEVELS,
   LOG_SOURCES,
@@ -42,8 +43,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const filters = {
     page: searchParams.page ?? 1,
     per_page: searchParams.per_page ?? 50,
-    time_after: searchParams.time_after,
-    time_before: searchParams.time_before,
+    created_at_after: searchParams.created_at_after,
+    created_at_before: searchParams.created_at_before,
     source:
       searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
@@ -84,8 +85,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   }
 
   const date: DateRange = {
-    from: filters.time_after,
-    to: filters.time_before
+    from: filters.created_at_after,
+    to: filters.created_at_before
   };
 
   return (
@@ -226,26 +227,143 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
           {logs.length > 0 &&
             logs.map((log) => (
-              <div
+              <Log
                 key={log.id}
-                className={cn(
-                  "flex gap-2 px-2",
-                  log.level === "ERROR" && "bg-red-400/20"
-                )}
-              >
-                <span className="text-grey">
-                  [{new Date(log.time).toLocaleString()}]
-                </span>
-                <pre className="text-wrap  break-all">
-                  {log.content as string}
-                </pre>
-                {/* {!!searchValue
-                          ? getHighlightedText(log.content, searchValue)
-                          : colorLogs(log.content)} */}
-              </div>
+                created_at={log.created_at}
+                level={log.level}
+                content={log.content as string}
+                searchValue={filters.content}
+              />
             ))}
         </pre>
       </div>
     </div>
   );
+}
+
+type LogProps = Pick<DeploymentLog, "level" | "created_at"> & {
+  content: string;
+  searchValue?: string;
+};
+
+const Log = React.memo(function ({
+  content,
+  searchValue,
+  level,
+  created_at
+}: LogProps) {
+  const search = searchValue ?? "";
+  return (
+    <div
+      className={cn("flex gap-2 px-2", level === "ERROR" && "bg-red-400/20")}
+    >
+      <span className="text-grey">{formatLogTime(created_at)}</span>
+      <pre
+        className="text-wrap break-all"
+        dangerouslySetInnerHTML={{
+          __html:
+            search.length > 0
+              ? colorLogs(getHighlightedText(content, search))
+              : colorLogs(content)
+        }}
+      />
+    </div>
+  );
+});
+
+function formatLogTime(time: string) {
+  const date = new Date(time);
+  const now = new Date();
+  const dateFormat = new Intl.DateTimeFormat(navigator.language, {
+    month: "short",
+
+    day: "numeric",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric"
+  }).format(date);
+
+  const hourFormat = new Intl.DateTimeFormat(navigator.language, {
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric"
+  }).format(date);
+
+  return `${dateFormat}, ${hourFormat}`;
+}
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+}
+
+// New function to get highlighted text as HTML string
+function getHighlightedText(text: string, highlight: string): string {
+  // Split on highlight term and include term into parts, ignore case
+  const parts = text.split(new RegExp(`(${escapeRegExp(highlight)})`, "gi"));
+  return parts
+    .map((part) => {
+      if (part.toLowerCase() === highlight.toLowerCase()) {
+        return `<span class="bg-yellow-200/40">${part}</span>`;
+      } else {
+        return part;
+      }
+    })
+    .join("");
+}
+
+function colorLogs(text: string) {
+  const ansiStyles: Record<string, string> = {
+    // Standard foreground colors
+    "\u001b[30m": "text-black",
+    "\u001b[31m": "text-red-500",
+    "\u001b[32m": "text-green-500",
+    "\u001b[33m": "text-yellow-500",
+    "\u001b[34m": "text-blue-500",
+    "\u001b[35m": "text-purple-500",
+    "\u001b[36m": "text-cyan-500",
+    "\u001b[37m": "text-gray-500",
+
+    // Bright foreground colors
+    "\u001b[90m": "text-gray-700",
+    "\u001b[91m": "text-red-600",
+    "\u001b[92m": "text-green-600",
+    "\u001b[93m": "text-yellow-600",
+    "\u001b[94m": "text-blue-600",
+    "\u001b[95m": "text-purple-600",
+    "\u001b[96m": "text-cyan-600",
+    "\u001b[97m": "text-white",
+
+    // Reset
+    "\u001b[0m": ""
+  };
+
+  // Matches ANSI escape sequences
+  const ansiRegex = /\u001b\[([0-9]+)m/g;
+
+  // Keeps track of open span tags to ensure they are closed properly
+  let openSpans = 0;
+
+  text = text.replace(ansiRegex, (match, code) => {
+    const ansiCode = `\u001b[${code}m`;
+    const tailwindClass = ansiStyles[ansiCode];
+
+    if (tailwindClass) {
+      openSpans++;
+      return `</span><span class="${tailwindClass}">`;
+    } else if (ansiCode === "\u001b[0m") {
+      if (openSpans > 0) {
+        openSpans--;
+        return "</span>";
+      } else {
+        return "";
+      }
+    }
+    return "";
+  });
+
+  // Close any unclosed spans
+  while (openSpans > 0) {
+    text += "</span>";
+    openSpans--;
+  }
+
+  return `<span>${text}</span>`;
 }
