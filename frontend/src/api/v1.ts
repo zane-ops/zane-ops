@@ -1203,7 +1203,20 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsLogsListCreatedAtErrorComponent: {
+      /**
+       * @description * `created_at` - created_at
+       * @enum {string}
+       */
+      attr: "created_at";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListCreatedAtErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent: {
       /**
@@ -1231,19 +1244,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice" | "invalid_list";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent: {
-      /**
-       * @description * `time` - time
-       * @enum {string}
-       */
-      attr: "time";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsLogsListValidationError: {
@@ -1793,6 +1793,8 @@ export interface components {
       content: unknown;
       /** Format: date-time */
       time: string;
+      /** Format: date-time */
+      created_at: string;
       level: components["schemas"]["LevelEnum"];
       deployment_id: string | null;
       service_id: string | null;
@@ -3037,6 +3039,8 @@ export interface operations {
     parameters: {
       query?: {
         content?: string;
+        created_at_after?: string;
+        created_at_before?: string;
         /** @description The pagination cursor value. */
         cursor?: string;
         /**
@@ -3052,8 +3056,6 @@ export interface operations {
          * * `SERVICE` - Service Logs
          */
         source?: ("PROXY" | "SERVICE" | "SYSTEM")[];
-        time_after?: string;
-        time_before?: string;
       };
       path: {
         deployment_hash: string;

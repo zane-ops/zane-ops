@@ -241,6 +241,7 @@ class SimpleLogSerializer(ModelSerializer):
             "id",
             "content",
             "time",
+            "created_at",
             "level",
             "deployment_id",
             "service_id",
