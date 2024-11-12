@@ -1,10 +1,10 @@
 import {
   type InfiniteData,
-  QueryClient,
+  type QueryClient,
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
-  skipToken
+  type skipToken
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { type ApiResponse, apiClient } from "~/api/client";
@@ -376,7 +376,7 @@ export const deploymentQueries = {
          * it might have more data.
          * Inspired by: https://github.com/TanStack/query/discussions/5921
          */
-        if (existingData && existingData.previous) {
+        if (existingData?.previous) {
           return existingData;
         }
 
@@ -475,7 +475,7 @@ export const deploymentQueries = {
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData,
-      staleTime: Infinity
+      staleTime: Number.POSITIVE_INFINITY
     })
 };
 

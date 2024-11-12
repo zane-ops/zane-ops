@@ -8,7 +8,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { type DateRange } from "react-day-picker";
+import type { DateRange } from "react-day-picker";
 import { useDebounce } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
@@ -64,7 +64,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const { deployment_hash, project_slug, service_slug } = Route.useParams();
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
-
   const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
   const inputRef = React.useRef<React.ElementRef<"input">>(null);
 
@@ -90,12 +89,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   );
 
   const logs = React.useMemo(() => {
-    return (
-      logsQuery.data?.pages
-        .flat()
-        .map((item) => item.results)
-        .flat() ?? []
-    );
+    return logsQuery.data?.pages.flatMap((item) => item.results) ?? [];
   }, [logsQuery.data]);
 
   const clearFilters = React.useCallback(() => {
@@ -109,64 +103,10 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     }
   }, [navigate]);
 
-  const [isFullScreen, setIsFullScreen] = React.useState(false);
+  const [isMaximized, setIsMaximized] = React.useState(true);
   const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
   const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
   const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
-
-  const [lastLogInViewId, setLastLogItemIdInView] = React.useState<
-    string | null
-  >(null);
-
-  React.useLayoutEffect(() => {
-    if (lastLogInViewId) {
-      const lastLogInViewElement = document.getElementById(
-        `log-item-${lastLogInViewId}`
-      );
-
-      const logContent = logContentRef.current;
-      const previousPageFetchTrigger = loadPreviousPageRef.current;
-      if (lastLogInViewElement && logContent && previousPageFetchTrigger) {
-        if (isElementVisibleInContainer(previousPageFetchTrigger, logContent)) {
-          logContent?.scroll({
-            top:
-              lastLogInViewElement.offsetTop -
-              previousPageFetchTrigger.offsetHeight -
-              16,
-            behavior: "instant"
-          });
-        }
-      }
-    }
-  }, [lastLogInViewId]);
-
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (
-          entry.isIntersecting &&
-          !logsQuery.isFetching &&
-          logsQuery.hasNextPage
-        ) {
-          logsQuery.fetchNextPage();
-        }
-      },
-      {
-        root: logContentRef.current,
-        rootMargin: "20%",
-        threshold: 0.1
-      }
-    );
-
-    const loadNextPage = loadNextPageRef.current;
-    if (loadNextPage) {
-      observer.observe(loadNextPage);
-      return () => {
-        observer.unobserve(loadNextPage);
-      };
-    }
-  }, [logsQuery.fetchNextPage, logsQuery.isFetching, logsQuery.hasNextPage]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -177,9 +117,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
           !logsQuery.isFetching &&
           logsQuery.hasPreviousPage
         ) {
-          logsQuery
-            .fetchPreviousPage()
-            .then(() => setLastLogItemIdInView(logs[0].id));
+          logsQuery.fetchPreviousPage();
         }
       },
       {
@@ -199,8 +137,41 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   }, [
     logsQuery.fetchPreviousPage,
     logsQuery.isFetching,
-    logsQuery.hasPreviousPage,
-    logs
+    logsQuery.hasPreviousPage
+  ]);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          !logsQuery.isFetchingNextPage &&
+          logsQuery.hasNextPage
+        ) {
+          logsQuery.fetchNextPage();
+        }
+      },
+      {
+        root: logContentRef.current,
+        rootMargin: "20%",
+        threshold: 0.1
+      }
+    );
+
+    const loadNextPage = loadNextPageRef.current;
+    if (loadNextPage) {
+      observer.observe(loadNextPage);
+      return () => {
+        observer.unobserve(loadNextPage);
+      };
+    }
+  }, [
+    logsQuery.fetchNextPage,
+    logsQuery.isFetching,
+    logsQuery.hasNextPage,
+    logsQuery.isFetchingNextPage
   ]);
 
   if (logsQuery.isLoading) {
@@ -215,19 +186,19 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   /**
    * TODO :
    *  - virtualization
-   *  - automatically scroll to the end of the list when fetching next logs
    */
   return (
     <div
       className={cn(
         "grid grid-cols-12 gap-4 mt-8",
-        isFullScreen && "fixed inset-0 top-20 bg-background z-99 p-5 container"
+        isMaximized &&
+          "fixed inset-0 bottom-24 top-20 bg-background z-99 p-5 container"
       )}
     >
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2",
-          isFullScreen ? "h-[82svh]" : "h-[65svh]"
+          isMaximized ? "h-[76svh]" : "h-[65svh]"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -316,12 +287,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    onClick={() => setIsFullScreen(!isFullScreen)}
+                    onClick={() => setIsMaximized(!isMaximized)}
                   >
                     <span className="sr-only">
-                      {isFullScreen ? "Minimize" : "Maximize"}
+                      {isMaximized ? "Minimize" : "Maximize"}
                     </span>
-                    {isFullScreen ? (
+                    {isMaximized ? (
                       <Minimize2Icon size={15} />
                     ) : (
                       <Maximize2Icon size={15} />
@@ -329,7 +300,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-64 text-balance">
-                  {isFullScreen ? "Minimize" : "Maximize"}
+                  {isMaximized ? "Minimize" : "Maximize"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -350,18 +321,17 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         <pre
           id="logContent"
           ref={logContentRef}
-          className="text-xs whitespace-no-wrap font-mono pt-2 pb-10 relative h-full rounded-md w-full bg-muted/25 dark:bg-card overflow-y-auto"
+          className="text-xs flex flex-col-reverse whitespace-no-wrap font-mono pt-2 pb-4 relative h-full rounded-md w-full bg-muted/25 dark:bg-card overflow-y-auto"
         >
-          {logsQuery.hasPreviousPage && (
+          {(logsQuery.hasNextPage || logsQuery.isFetchingNextPage) && (
             <div
-              ref={loadPreviousPageRef}
-              className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 "
+              ref={loadNextPageRef}
+              className="text-center items-center py-5 px-8 justify-center flex gap-2 text-gray-500"
             >
               <LoaderIcon size={15} className="animate-spin" />
-              <p>Fetching previous logs...</p>
+              <p>Fetching next logs...</p>
             </div>
           )}
-
           {logs.length === 0 &&
             (logsQuery.isFetching ? (
               <div className="text-sm text-center items-center flex gap-2 text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -390,24 +360,26 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               </div>
             ))}
 
-          {logs.length > 0 &&
-            logs.map((log) => (
-              <Log
-                key={log.id}
-                id={log.id}
-                created_at={log.created_at}
-                level={log.level}
-                content={log.content as string}
-                searchValue={filters.content}
-              />
-            ))}
-          {logsQuery.hasNextPage && (
+          <div className="flex flex-1 flex-col">
+            {logs.length > 0 &&
+              logs.map((log) => (
+                <Log
+                  key={log.id}
+                  id={log.id}
+                  created_at={log.created_at}
+                  level={log.level}
+                  content={log.content as string}
+                  searchValue={filters.content}
+                />
+              ))}
+          </div>
+          {logsQuery.hasPreviousPage && (
             <div
-              ref={loadNextPageRef}
-              className="text-center items-center justify-center flex gap-2 text-gray-500 py-5 px-8"
+              ref={loadPreviousPageRef}
+              className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 "
             >
               <LoaderIcon size={15} className="animate-spin" />
-              <p>Fetching next logs...</p>
+              <p>Fetching previous logs...</p>
             </div>
           )}
         </pre>
@@ -421,32 +393,31 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "created_at"> & {
   searchValue?: string;
 };
 
-const Log = React.memo(function ({
-  content,
-  searchValue,
-  level,
-  created_at,
-  id
-}: LogProps) {
-  const search = searchValue ?? "";
-  return (
-    <div
-      id={`log-item-${id}`}
-      className={cn("flex gap-2 px-2", level === "ERROR" && "bg-red-400/20")}
-    >
-      <span className="text-grey">{formatLogTime(created_at)}</span>
-      <pre
-        className="text-wrap break-all"
-        dangerouslySetInnerHTML={{
-          __html:
-            search.length > 0
-              ? colorLogs(getHighlightedText(content, search))
-              : colorLogs(content)
-        }}
-      />
-    </div>
-  );
-});
+const Log = React.memo(
+  ({ content, searchValue, level, created_at, id }: LogProps) => {
+    const search = searchValue ?? "";
+    return (
+      <div
+        id={`log-item-${id}`}
+        className={cn(
+          "flex gap-2 pl-2 pr-1",
+          level === "ERROR" && "bg-red-400/20"
+        )}
+      >
+        <span className="text-grey">{formatLogTime(created_at)}</span>
+        <pre
+          className="text-wrap break-all"
+          dangerouslySetInnerHTML={{
+            __html:
+              search.length > 0
+                ? colorLogs(getHighlightedText(content, search))
+                : colorLogs(content)
+          }}
+        />
+      </div>
+    );
+  }
+);
 
 function formatLogTime(time: string) {
   const date = new Date(time);
