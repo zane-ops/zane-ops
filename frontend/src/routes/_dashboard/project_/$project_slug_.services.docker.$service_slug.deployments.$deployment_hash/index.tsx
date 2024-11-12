@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   LoaderIcon,
   Maximize2Icon,
@@ -19,6 +19,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
   Tooltip,
+  TooltipArrow,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
@@ -52,7 +53,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const inputRef = React.useRef<React.ElementRef<"input">>(null);
 
   const filters = {
-    page: searchParams.page ?? 1,
     created_at_after: searchParams.created_at_after,
     created_at_before: searchParams.created_at_before,
     source:
@@ -379,12 +379,58 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "created_at"> & {
 const Log = React.memo(
   ({ content, searchValue, level, created_at, id }: LogProps) => {
     const search = searchValue ?? "";
+    const date = new Date(created_at);
+    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const sprams = new URL(window.location.href).searchParams;
+
     return (
       <div
         id={`log-item-${id}`}
-        className={cn("flex gap-2 px-2", level === "ERROR" && "bg-red-400/20")}
+        className={cn(
+          "flex gap-2 px-2 hover:bg-slate-400/20 target:bg-yellow-100/40",
+          level === "ERROR" && "bg-red-400/20"
+        )}
       >
-        <span className="text-grey">{formatLogTime(created_at)}</span>
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Link to={`./?${sprams}#log-item-${id}`} className="text-grey">
+                <time dateTime={date.toISOString()}>{formatLogTime(date)}</time>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent
+              align="center"
+              side="right"
+              className="p-4 text-xs border-transparent shadow-md"
+            >
+              <TooltipArrow className="fill-popover" />
+              <dl className="flex flex-col gap-2">
+                <div className="grid grid-cols-3 gap-1">
+                  <dt className="col-span-1 text-foreground">
+                    {userTimeZone}:
+                  </dt>
+                  <dd className="col-span-2 text-card-foreground">
+                    {formatDateForTimeZone(date, userTimeZone)}
+                  </dd>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <dt className="col-span-1 text-foreground">UTC:</dt>
+                  <dd className="col-span-2 text-card-foreground">
+                    {formatDateForTimeZone(date, "UTC")}
+                  </dd>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <dt className="col-span-1 text-foreground">Timestamp:</dt>
+                  <dd className="col-span-2 text-card-foreground">
+                    {date.getTime()}
+                  </dd>
+                </div>
+              </dl>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         <pre
           className="text-wrap break-all"
           dangerouslySetInnerHTML={{
@@ -399,7 +445,20 @@ const Log = React.memo(
   }
 );
 
-function formatLogTime(time: string) {
+function formatDateForTimeZone(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat(navigator.language, {
+    timeZone: timeZone,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3
+  }).format(date);
+}
+
+function formatLogTime(time: string | Date) {
   const date = new Date(time);
   const now = new Date();
   const dateFormat = new Intl.DateTimeFormat(navigator.language, {
