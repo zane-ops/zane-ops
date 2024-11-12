@@ -382,22 +382,30 @@ const Log = React.memo(
     const date = new Date(created_at);
     const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    const sprams = new URL(window.location.href).searchParams;
-
     return (
       <div
         id={`log-item-${id}`}
         className={cn(
-          "flex gap-2 px-2 hover:bg-slate-400/20 target:bg-yellow-100/40",
+          "flex gap-2 px-2 hover:bg-slate-400/20 target:!bg-yellow-100/40",
           level === "ERROR" && "bg-red-400/20"
         )}
       >
         <TooltipProvider>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Link to={`./?${sprams}#log-item-${id}`} className="text-grey">
+              <button
+                onClick={() => {
+                  const url = new URL(window.location.href);
+                  if (url.hash === `#log-item-${id}`) {
+                    window.location.href = `#`;
+                  } else {
+                    window.location.href = `#log-item-${id}`;
+                  }
+                }}
+                className="text-grey"
+              >
                 <time dateTime={date.toISOString()}>{formatLogTime(date)}</time>
-              </Link>
+              </button>
             </TooltipTrigger>
             <TooltipContent
               align="center"
