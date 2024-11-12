@@ -44,22 +44,6 @@ export const Route = createFileRoute(
   component: withAuthRedirect(DeploymentLogsDetailPage)
 });
 
-function isElementVisibleInContainer(el: HTMLElement, container: HTMLElement) {
-  const rect = el.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-
-  const topIsVisible =
-    rect.top >= containerRect.top && rect.top < containerRect.bottom;
-  const bottomIsVisible =
-    rect.bottom > containerRect.top && rect.bottom <= containerRect.bottom;
-  const leftIsVisible =
-    rect.left >= containerRect.left && rect.left < containerRect.right;
-  const rightIsVisible =
-    rect.right > containerRect.left && rect.right <= containerRect.right;
-
-  return (topIsVisible || bottomIsVisible) && (leftIsVisible || rightIsVisible);
-}
-
 export function DeploymentLogsDetailPage(): React.JSX.Element {
   const { deployment_hash, project_slug, service_slug } = Route.useParams();
   const searchParams = Route.useSearch();
@@ -103,7 +87,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     }
   }, [navigate]);
 
-  const [isMaximized, setIsMaximized] = React.useState(true);
+  const [isMaximized, setIsMaximized] = React.useState(false);
   const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
   const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
   const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
@@ -191,14 +175,13 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     <div
       className={cn(
         "grid grid-cols-12 gap-4 mt-8",
-        isMaximized &&
-          "fixed inset-0 bottom-24 top-20 bg-background z-99 p-5 container"
+        isMaximized && "fixed inset-0 top-20 bg-background z-50 p-5 w-full"
       )}
     >
       <div
         className={cn(
-          "col-span-12 flex flex-col gap-2",
-          isMaximized ? "h-[76svh]" : "h-[65svh]"
+          "col-span-12 flex flex-col gap-2 container",
+          isMaximized ? "h-[82svh]" : "h-[65svh]"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -399,10 +382,7 @@ const Log = React.memo(
     return (
       <div
         id={`log-item-${id}`}
-        className={cn(
-          "flex gap-2 pl-2 pr-1",
-          level === "ERROR" && "bg-red-400/20"
-        )}
+        className={cn("flex gap-2 px-2", level === "ERROR" && "bg-red-400/20")}
       >
         <span className="text-grey">{formatLogTime(created_at)}</span>
         <pre
