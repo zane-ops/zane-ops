@@ -28,7 +28,7 @@ export function deleteCookie(name: string): void {
 
 export function formattedDate(dateInput: string | Date): string {
   const date = new Date(dateInput);
-  const formattedDate = new Intl.DateTimeFormat("en-US", {
+  const formattedDate = new Intl.DateTimeFormat(navigator.language, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -39,7 +39,7 @@ export function formattedDate(dateInput: string | Date): string {
 
 export function formattedTime(dateInput: string | Date): string {
   const date = new Date(dateInput);
-  const formattedDate = new Intl.DateTimeFormat("en-US", {
+  const formattedDate = new Intl.DateTimeFormat(navigator.language, {
     month: "short",
     hour: "numeric",
     minute: "numeric",
