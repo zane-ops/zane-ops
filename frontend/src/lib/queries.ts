@@ -271,7 +271,6 @@ export const LOG_LEVELS = ["INFO", "ERROR"] as const;
 export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
 
 export const deploymentLogSearchSchema = z.object({
-  page: z.number().optional().catch(1).optional(),
   level: z
     .array(z.enum(LOG_LEVELS))
     .optional()
