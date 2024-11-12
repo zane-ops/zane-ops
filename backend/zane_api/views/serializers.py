@@ -1024,9 +1024,7 @@ class DeploymentLogsFilterSet(django_filters.FilterSet):
 
     @staticmethod
     def filter_content(queryset: QuerySet, name: str, value: str):
-        # construct the full lookup expression.
-        lookup = f"{name}__icontains"
-        return queryset.filter(**{lookup: value.replace('"', '\\"')})
+        return queryset.filter(content_text__icontains=value.replace('"', '\\"'))
 
     class Meta:
         model = SimpleLog

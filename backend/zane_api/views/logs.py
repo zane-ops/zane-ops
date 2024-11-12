@@ -1,4 +1,5 @@
 import json
+import re
 from urllib.parse import urlparse
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -131,6 +132,10 @@ class LogTailAPIView(APIView):
                             pass
                         case _:
                             deployment_id = json_tag["deployment_id"]
+                            # Regex pattern to match ANSI color codes
+                            ANSI_ESCAPE_PATTERN = re.compile(
+                                r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
+                            )
                             simple_logs.append(
                                 SimpleLog(
                                     source=SimpleLog.LogSource.SERVICE,
@@ -143,6 +148,9 @@ class LogTailAPIView(APIView):
                                     time=log["time"],
                                     deployment_id=deployment_id,
                                     service_id=service_id,
+                                    content_text=ANSI_ESCAPE_PATTERN.sub(
+                                        "", log["log"]
+                                    ),
                                 )
                             )
             SimpleLog.objects.bulk_create(simple_logs)

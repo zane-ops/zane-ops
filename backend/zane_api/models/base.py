@@ -862,6 +862,7 @@ class SimpleLog(Log):
         SERVICE = "SERVICE", _("Service Logs")
 
     content = models.JSONField(null=True)
+    content_text = models.TextField(null=True, blank=True)
     level = models.CharField(
         max_length=10,
         choices=LogLevel.choices,
