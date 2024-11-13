@@ -188,7 +188,7 @@ async def deployment_log(
             service_id = deployment.service_id
         case _:
             raise TypeError(f"unsupported type {type(deployment)}")
-
+    # Regex pattern to match ANSI color codes
     await SimpleLog.objects.acreate(
         source=SimpleLog.LogSource.SYSTEM,
         level=SimpleLog.LogLevel.INFO,
@@ -196,6 +196,7 @@ async def deployment_log(
         time=current_time,
         deployment_id=deployment_id,
         service_id=service_id,
+        content_text=SimpleLog.escape_ansi(message),
     )
 
 

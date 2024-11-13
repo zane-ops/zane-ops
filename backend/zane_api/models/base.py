@@ -1,3 +1,4 @@
+import re
 import time
 import uuid
 from typing import Union, Optional
@@ -873,6 +874,11 @@ class SimpleLog(Log):
         choices=LogSource.choices,
         default=LogSource.SERVICE,
     )
+
+    @classmethod
+    def escape_ansi(cls, content: str):
+        ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        return ANSI_ESCAPE_PATTERN.sub("", content)
 
     class Meta:
         indexes = [
