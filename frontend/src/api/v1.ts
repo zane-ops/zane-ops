@@ -1791,6 +1791,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       content: unknown;
+      content_text: string | null;
       /** Format: date-time */
       time: string;
       /** Format: date-time */

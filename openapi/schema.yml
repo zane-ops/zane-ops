@@ -6095,6 +6095,9 @@ components:
           readOnly: true
         content:
           nullable: true
+        content_text:
+          type: string
+          nullable: true
         time:
           type: string
           format: date-time
@@ -6114,6 +6117,7 @@ components:
           $ref: '#/components/schemas/SourceEnum'
       required:
       - content
+      - content_text
       - created_at
       - deployment_id
       - id
