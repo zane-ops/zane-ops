@@ -88,7 +88,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     }
   }, [navigate]);
 
-  const [isMaximized, setIsMaximized] = React.useState(false);
+  const [isMaximized, setIsMaximized] = React.useState(
+    localStorage.getItem("is_log_maximized") === "true"
+  );
   const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
   const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
   const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
@@ -320,7 +322,13 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    onClick={() => setIsMaximized(!isMaximized)}
+                    onClick={() => {
+                      setIsMaximized(!isMaximized);
+                      localStorage.setItem(
+                        "is_log_maximized",
+                        `${!isMaximized}`
+                      );
+                    }}
                   >
                     <span className="sr-only">
                       {isMaximized ? "Minimize" : "Maximize"}
