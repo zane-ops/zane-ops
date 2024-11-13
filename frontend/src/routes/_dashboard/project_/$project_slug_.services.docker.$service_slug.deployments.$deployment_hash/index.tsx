@@ -507,12 +507,11 @@ const Log = React.memo(
               {content_text}
             </pre>
           ) : (
-            <pre
-              className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
-              dangerouslySetInnerHTML={{
-                __html: getHighlightedText(content_text, search)
-              }}
-            />
+            <pre className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1">
+              {search.length > 0
+                ? getHighlightedText(content_text, search)
+                : content_text}
+            </pre>
           )}
         </div>
       </div>
@@ -528,19 +527,18 @@ function supportsCSSCustomHighlightsAPI() {
   return "highlights" in window.CSS;
 }
 
-// New function to get highlighted text as HTML string
-function getHighlightedText(text: string, highlight: string): string {
+function getHighlightedText(text: string, highlight: string) {
   // Split on highlight term and include term into parts, ignore case
   const parts = text.split(new RegExp(`(${escapeRegExp(highlight)})`, "gi"));
-  return parts
-    .map((part) => {
-      if (part.toLowerCase() === highlight.toLowerCase()) {
-        return `<span class="bg-yellow-400/50 text-card-foreground">${part}</span>`;
-      } else {
-        return part;
-      }
-    })
-    .join("");
+  return parts.map((part) => {
+    if (part.toLowerCase() === highlight.toLowerCase()) {
+      return (
+        <span className="bg-yellow-400/50 text-card-foreground">{part}</span>
+      );
+    } else {
+      return <span>{part}</span>;
+    }
+  });
 }
 
 function formatLogTime(time: string | Date) {
