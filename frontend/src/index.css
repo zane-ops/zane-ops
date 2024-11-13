@@ -134,8 +134,11 @@ html {
       --ansi-bright-white: theme(ansi.colors.ubuntu.white);
     }
   }
+}
 
-  
+*::selection {
+  color: theme('colors.card.foreground');
+  background-color: rgba(96, 165, 250, 50%)
 }
 
 /** Loader **/
