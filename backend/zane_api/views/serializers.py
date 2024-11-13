@@ -1018,7 +1018,7 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
     created_at = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(method="filter_content")
+    content = django_filters.CharFilter(method="filter_content", strip=False)
     source = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogSource.choices)
     level = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogLevel.choices)
 
