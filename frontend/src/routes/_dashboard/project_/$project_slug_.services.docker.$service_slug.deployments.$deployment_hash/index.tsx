@@ -442,16 +442,32 @@ const Log = React.memo(
         <pre
           className="text-wrap break-all"
           dangerouslySetInnerHTML={{
-            __html:
-              search.length > 0
-                ? colorLogs(getHighlightedText(content, search))
-                : colorLogs(content)
+            // TODO: use the custom highlight API (not available in Firefox though 😢)
+            __html: colorLogs(content)
+            // search.length > 0
+            //   ? colorLogs(getHighlightedText(content, search))
+            //   : colorLogs(content)
           }}
         />
       </div>
     );
   }
 );
+
+// New function to get highlighted text with ANSI characters preserved
+function getHighlightedTextWithAnsi(text: string, highlight: string): string {
+  // Create a regex to match the highlight text with any ANSI codes in between
+  const highlightPattern = highlight
+    .split("")
+    .map((char) => `${escapeRegExp(char)}(?:\u001b\[[0-9]+m)?`)
+    .join("");
+  const regex = new RegExp(`(${highlightPattern})`, "gi");
+
+  // Replace matched text with highlighted HTML
+  return text.replace(regex, (match) => {
+    return `<span class="bg-yellow-200/40">${match}</span>`;
+  });
+}
 
 function formatDateForTimeZone(date: Date, timeZone: string) {
   return new Intl.DateTimeFormat(navigator.language, {
@@ -496,7 +512,7 @@ function getHighlightedText(text: string, highlight: string): string {
   return parts
     .map((part) => {
       if (part.toLowerCase() === highlight.toLowerCase()) {
-        return `<span class="bg-yellow-200/40">${part}</span>`;
+        return `<span class="bg-yellow-200/40 text-white">${part}</span>`;
       } else {
         return part;
       }
