@@ -1024,7 +1024,7 @@ class DeploymentLogsFilterSet(django_filters.FilterSet):
 
     @staticmethod
     def filter_content(queryset: QuerySet, name: str, value: str):
-        return queryset.filter(content_text__icontains=value.replace('"', '\\"'))
+        return queryset.filter(content_text__icontains=value)
 
     class Meta:
         model = SimpleLog
