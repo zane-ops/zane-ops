@@ -517,7 +517,7 @@ const Log = React.memo(
               data-highlight="true"
               className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
               dangerouslySetInnerHTML={{
-                __html: getHighlightedText(content, search)
+                __html: getHighlightedText(stripAnsiCodes(content), search)
               }}
             />
           )}
