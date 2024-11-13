@@ -160,7 +160,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
   React.useEffect(() => {
     if (logContentRef.current) {
-      if (!("highlights" in window.CSS)) {
+      if (!supportsCSSCustomHighlightsAPI()) {
         return;
       }
 
@@ -197,9 +197,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             startPos = index + filters.content.length;
           }
 
-          console.log({
-            indices
-          });
           return indices.map((index) => {
             const range = new Range();
             range.setStart(el, index);
@@ -411,6 +408,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   created_at={log.created_at}
                   level={log.level}
                   content={log.content as string}
+                  searchValue={
+                    supportsCSSCustomHighlightsAPI() ? "" : filters.content
+                  }
                 />
               ))}
           </div>
@@ -505,17 +505,50 @@ const Log = React.memo(
               __html: colorLogs(content)
             }}
           />
-          <span
-            data-highlight="true"
-            className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
-          >
-            {stripAnsiCodes(content)}
-          </span>
+          {supportsCSSCustomHighlightsAPI() ? (
+            <span
+              data-highlight="true"
+              className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
+            >
+              {stripAnsiCodes(content)}
+            </span>
+          ) : (
+            <span
+              data-highlight="true"
+              className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
+              dangerouslySetInnerHTML={{
+                __html: getHighlightedText(content, search)
+              }}
+            />
+          )}
         </div>
       </div>
     );
   }
 );
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+}
+
+function supportsCSSCustomHighlightsAPI() {
+  return "highlights" in window.CSS;
+}
+
+// New function to get highlighted text as HTML string
+function getHighlightedText(text: string, highlight: string): string {
+  // Split on highlight term and include term into parts, ignore case
+  const parts = text.split(new RegExp(`(${escapeRegExp(highlight)})`, "gi"));
+  return parts
+    .map((part) => {
+      if (part.toLowerCase() === highlight.toLowerCase()) {
+        return `<span class="bg-yellow-400/50 text-card-foreground">${part}</span>`;
+      } else {
+        return part;
+      }
+    })
+    .join("");
+}
 
 function stripAnsiCodes(content: string) {
   const ANSI_REGEX =
