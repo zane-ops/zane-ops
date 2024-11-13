@@ -239,7 +239,7 @@ def random_word(length: int = 10):
 class Colors:
     GREEN = "\033[92m"
     BLUE = "\033[94m"
-    YELLOW = "\033[93m"
+    ORANGE = "\033[38;5;208m"
     RED = "\033[91m"
     GREY = "\033[90m"
     ENDC = "\033[0m"  # Reset to default color
