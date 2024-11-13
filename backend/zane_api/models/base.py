@@ -3,6 +3,7 @@ import uuid
 from typing import Union, Optional
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -146,6 +147,8 @@ class BaseService(TimestampedModel):
     @property
     def docker_volumes(self):
         return self.volumes.filter(host_path__isnull=True)
+    def is_port_referenced_by_urls(self, port_id):
+        return self.urls.filter(redirect_to__contains=port_id).exists()
 
     class Meta:
         abstract = True
@@ -172,7 +175,11 @@ class PortConfiguration(models.Model):
     )
     host = models.PositiveIntegerField(null=True, unique=True)
     forwarded = models.PositiveIntegerField()
-
+    
+]   def delete(self, *args, **kwargs):
+        if self.service.is_port_referenced_by_urls(self.id):
+            raise ValidationError("Cannot delete port because it is referenced by one or more URLs.")
+        super().delete(*args, **kwargs)
     def __str__(self):
         host_port = 80 if self.host is None else self.host
         return f"PortConfiguration({host_port} -> {self.forwarded})"
