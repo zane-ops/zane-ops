@@ -71,6 +71,23 @@ html {
     --status-warning: #fef08a ;
     --link: 221.21 83.19% 53.33%;
     --grey: 220 8.94% 46.08%;
+
+    --ansi-black: theme(ansi.colors.terminalapp.black);
+    --ansi-red: theme(ansi.colors.terminalapp.red);
+    --ansi-green: theme(ansi.colors.terminalapp.green);
+    --ansi-yellow: theme(ansi.colors.terminalapp.yellow);
+    --ansi-blue: theme(ansi.colors.terminalapp.blue);
+    --ansi-magenta: theme(ansi.colors.terminalapp.magenta);
+    --ansi-cyan: theme(ansi.colors.terminalapp.cyan);
+    --ansi-white: theme(ansi.colors.terminalapp.white);
+    --ansi-bright-black: theme(ansi.colors.terminalapp.bright-black);
+    --ansi-bright-red: theme(ansi.colors.terminalapp.bright-red);
+    --ansi-bright-green: theme(ansi.colors.terminalapp.bright-green);
+    --ansi-bright-yellow: theme(ansi.colors.terminalapp.bright-yellow);
+    --ansi-bright-blue: theme(ansi.colors.terminalapp.bright-blue);
+    --ansi-bright-magenta: theme(ansi.colors.terminalapp.magenta);
+    --ansi-bright-cyan: theme(ansi.colors.terminalapp.cyan);
+    --ansi-bright-white: theme(ansi.colors.terminalapp.white);
   }
   
   @media (prefers-color-scheme: dark) {
@@ -98,6 +115,23 @@ html {
       --loader: white;
       --link: 213.12 93.9% 67.84%;
       --grey: 217.89 10.61% 64.9%;
+
+      --ansi-black: theme(ansi.colors.ubuntu.black);
+      --ansi-red: theme(ansi.colors.ubuntu.red);
+      --ansi-green: theme(ansi.colors.ubuntu.green);
+      --ansi-yellow: theme(ansi.colors.ubuntu.yellow);
+      --ansi-blue: theme(ansi.colors.ubuntu.blue);
+      --ansi-magenta: theme(ansi.colors.ubuntu.magenta);
+      --ansi-cyan: theme(ansi.colors.ubuntu.cyan);
+      --ansi-white: theme(ansi.colors.ubuntu.white);
+      --ansi-bright-black: theme(ansi.colors.ubuntu.bright-black);
+      --ansi-bright-red: theme(ansi.colors.ubuntu.bright-red);
+      --ansi-bright-green: theme(ansi.colors.ubuntu.bright-green);
+      --ansi-bright-yellow: theme(ansi.colors.ubuntu.bright-yellow);
+      --ansi-bright-blue: theme(ansi.colors.ubuntu.bright-blue);
+      --ansi-bright-magenta: theme(ansi.colors.ubuntu.magenta);
+      --ansi-bright-cyan: theme(ansi.colors.ubuntu.cyan);
+      --ansi-bright-white: theme(ansi.colors.ubuntu.white);
     }
   }
 
