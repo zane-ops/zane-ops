@@ -9,6 +9,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
+from django.utils import timezone
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
@@ -843,7 +844,7 @@ class GitDeployment(BaseDeployment):
 
 class Log(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     service_id = models.CharField(null=True)
     deployment_id = models.CharField(null=True)
     time = models.DateTimeField()
