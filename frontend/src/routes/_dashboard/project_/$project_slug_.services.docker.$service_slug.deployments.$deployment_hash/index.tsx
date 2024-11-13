@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AnsiHtml } from "fancy-ansi/react";
 import {
   LoaderIcon,
   Maximize2Icon,
@@ -106,7 +107,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       },
       {
         root: logContentRef.current,
-        rootMargin: "20%",
+        rootMargin: "120%",
         threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
       }
     );
@@ -165,15 +166,13 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       }
 
       CSS.highlights.clear();
-      const parents = logContentRef.current.querySelectorAll(
-        'span[data-highlight="true"]'
-      );
-      console.log({ parents });
-      const allTextNodes = [...parents].map((parent) => parent.childNodes[0]);
-
       if (filters.content.length === 0) return;
 
-      console.log({ allTextNodes });
+      const parents = logContentRef.current.querySelectorAll(
+        'pre[data-highlight="true"]'
+      );
+      const allTextNodes = [...parents].map((parent) => parent.childNodes[0]);
+
       const ranges = allTextNodes
         .map((el) => {
           return {
@@ -186,7 +185,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             Boolean(text) && text.includes(filters.content.toLowerCase())
         )
         .map(({ text, el }) => {
-          console.log({ match: text });
           // Find all instances of filters.content in el.textContent
           const indices = [];
           let startPos = 0;
@@ -206,10 +204,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         });
 
       const highlight = new Highlight(...ranges.flat());
-      console.log({
-        highlight,
-        ranges
-      });
       CSS.highlights.set("search-results-highlight", highlight);
     }
   }, [filters.content, logs]);
@@ -360,7 +354,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         <pre
           id="logContent"
           ref={logContentRef}
-          className="text-xs flex flex-col-reverse whitespace-no-wrap font-mono pt-2 pb-4 relative h-full rounded-md w-full bg-muted/25 dark:bg-card overflow-y-auto"
+          className="text-xs flex flex-col-reverse whitespace-no-wrap font-mono pt-2 pb-4 relative h-full rounded-md w-full bg-muted/25 dark:bg-neutral-950 overflow-y-auto"
         >
           {(logsQuery.hasNextPage || logsQuery.isFetchingNextPage) && (
             <div
@@ -407,7 +401,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   id={log.id}
                   created_at={log.created_at}
                   level={log.level}
-                  content={log.content as string}
+                  content={(log.content as string) ?? ""}
+                  content_text={log.content_text ?? ""}
                   searchValue={
                     supportsCSSCustomHighlightsAPI() ? "" : filters.content
                   }
@@ -431,11 +426,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
 type LogProps = Pick<DeploymentLog, "id" | "level" | "created_at"> & {
   content: string;
+  content_text: string;
   searchValue?: string;
 };
 
 const Log = React.memo(
-  ({ content, searchValue, level, created_at, id }: LogProps) => {
+  ({ content, searchValue, level, created_at, id, content_text }: LogProps) => {
     const search = searchValue ?? "";
     const date = new Date(created_at);
     const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -498,26 +494,23 @@ const Log = React.memo(
         </TooltipProvider>
 
         <div className="grid">
-          <pre
+          <AnsiHtml
             aria-hidden="true"
-            className="text-wrap break-all select-none  relative    col-start-1 col-end-1 row-start-1 row-end-1"
-            dangerouslySetInnerHTML={{
-              __html: colorLogs(content)
-            }}
+            className="text-wrap break-all select-none whitespace-pre relative    col-start-1 col-end-1 row-start-1 row-end-1"
+            text={content}
           />
           {supportsCSSCustomHighlightsAPI() ? (
-            <span
+            <pre
               data-highlight="true"
-              className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
+              className="text-wrap relative  text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
             >
-              {stripAnsiCodes(content)}
-            </span>
+              {content_text}
+            </pre>
           ) : (
-            <span
-              data-highlight="true"
+            <pre
               className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
               dangerouslySetInnerHTML={{
-                __html: getHighlightedText(stripAnsiCodes(content), search)
+                __html: getHighlightedText(content_text, search)
               }}
             />
           )}
@@ -550,12 +543,6 @@ function getHighlightedText(text: string, highlight: string): string {
     .join("");
 }
 
-function stripAnsiCodes(content: string) {
-  const ANSI_REGEX =
-    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
-  return content.replace(ANSI_REGEX, "");
-}
-
 function formatLogTime(time: string | Date) {
   const date = new Date(time);
   const now = new Date();
@@ -572,63 +559,4 @@ function formatLogTime(time: string | Date) {
   }).format(date);
 
   return `${dateFormat}, ${hourFormat}`;
-}
-
-function colorLogs(text: string) {
-  const ansiStyles: Record<string, string> = {
-    // Standard foreground colors
-    "\u001b[30m": "text-black",
-    "\u001b[31m": "text-red-500",
-    "\u001b[32m": "text-green-500",
-    "\u001b[33m": "text-yellow-500",
-    "\u001b[34m": "text-blue-500",
-    "\u001b[35m": "text-purple-500",
-    "\u001b[36m": "text-cyan-500",
-    "\u001b[37m": "text-gray-500",
-
-    // Bright foreground colors
-    "\u001b[90m": "text-gray-700",
-    "\u001b[91m": "text-red-600",
-    "\u001b[92m": "text-green-600",
-    "\u001b[93m": "text-yellow-600",
-    "\u001b[94m": "text-blue-600",
-    "\u001b[95m": "text-purple-600",
-    "\u001b[96m": "text-cyan-600",
-    "\u001b[97m": "text-white",
-
-    // Reset
-    "\u001b[0m": ""
-  };
-
-  // Matches ANSI escape sequences
-  const ansiRegex = /\u001b\[([0-9]+)m/g;
-
-  // Keeps track of open span tags to ensure they are closed properly
-  let openSpans = 0;
-
-  text = text.replace(ansiRegex, (match, code) => {
-    const ansiCode = `\u001b[${code}m`;
-    const tailwindClass = ansiStyles[ansiCode];
-
-    if (tailwindClass) {
-      openSpans++;
-      return `</span><span class="${tailwindClass}">`;
-    } else if (ansiCode === "\u001b[0m") {
-      if (openSpans > 0) {
-        openSpans--;
-        return "</span>";
-      } else {
-        return "";
-      }
-    }
-    return "";
-  });
-
-  // Close any unclosed spans
-  while (openSpans > 0) {
-    text += "</span>";
-    openSpans--;
-  }
-
-  return `<span>${text}</span>`;
 }
