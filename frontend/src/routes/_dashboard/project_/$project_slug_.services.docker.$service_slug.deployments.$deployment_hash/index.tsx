@@ -36,7 +36,7 @@ import {
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
 
-import { isEmptyObject } from "~/utils";
+import { formatDateForTimeZone, isEmptyObject } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -158,6 +158,65 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     logsQuery.isFetchingNextPage
   ]);
 
+  React.useEffect(() => {
+    if (logContentRef.current) {
+      if (!("highlights" in window.CSS)) {
+        return;
+      }
+
+      CSS.highlights.clear();
+      const parents = logContentRef.current.querySelectorAll(
+        'span[data-highlight="true"]'
+      );
+      console.log({ parents });
+      const allTextNodes = [...parents].map((parent) => parent.childNodes[0]);
+
+      if (filters.content.length === 0) return;
+
+      console.log({ allTextNodes });
+      const ranges = allTextNodes
+        .map((el) => {
+          return {
+            el,
+            text: (el?.textContent ?? "").toLowerCase()
+          };
+        })
+        .filter(
+          ({ text }) =>
+            Boolean(text) && text.includes(filters.content.toLowerCase())
+        )
+        .map(({ text, el }) => {
+          console.log({ match: text });
+          // Find all instances of filters.content in el.textContent
+          const indices = [];
+          let startPos = 0;
+          while (startPos < text.length) {
+            const index = text.indexOf(filters.content.toLowerCase(), startPos);
+            if (index === -1) break;
+            indices.push(index);
+            startPos = index + filters.content.length;
+          }
+
+          console.log({
+            indices
+          });
+          return indices.map((index) => {
+            const range = new Range();
+            range.setStart(el, index);
+            range.setEnd(el, index + filters.content.length);
+            return range;
+          });
+        });
+
+      const highlight = new Highlight(...ranges.flat());
+      console.log({
+        highlight,
+        ranges
+      });
+      CSS.highlights.set("search-results-highlight", highlight);
+    }
+  }, [filters.content, logs]);
+
   if (logsQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
@@ -180,8 +239,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     >
       <div
         className={cn(
-          "col-span-12 flex flex-col gap-2 container",
-          isMaximized ? "h-[82svh]" : "h-[65svh]"
+          "col-span-12 flex flex-col gap-2",
+          isMaximized ? "container px-0 h-[82svh]" : "h-[65svh]"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -343,7 +402,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               </div>
             ))}
 
-          <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col [&_::highlight(search-results-highlight)]:bg-yellow-400/50 [&_::highlight(search-results-highlight)]:text-card-foreground">
             {logs.length > 0 &&
               logs.map((log) => (
                 <Log
@@ -352,7 +411,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   created_at={log.created_at}
                   level={log.level}
                   content={log.content as string}
-                  searchValue={filters.content}
                 />
               ))}
           </div>
@@ -439,47 +497,30 @@ const Log = React.memo(
           </Tooltip>
         </TooltipProvider>
 
-        <pre
-          className="text-wrap break-all"
-          dangerouslySetInnerHTML={{
-            // TODO: use the custom highlight API (not available in Firefox though 😢)
-            __html: colorLogs(content)
-            // search.length > 0
-            //   ? colorLogs(getHighlightedText(content, search))
-            //   : colorLogs(content)
-          }}
-        />
+        <div className="grid">
+          <pre
+            aria-hidden="true"
+            className="text-wrap break-all select-none  relative    col-start-1 col-end-1 row-start-1 row-end-1"
+            dangerouslySetInnerHTML={{
+              __html: colorLogs(content)
+            }}
+          />
+          <span
+            data-highlight="true"
+            className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
+          >
+            {stripAnsiCodes(content)}
+          </span>
+        </div>
       </div>
     );
   }
 );
 
-// New function to get highlighted text with ANSI characters preserved
-function getHighlightedTextWithAnsi(text: string, highlight: string): string {
-  // Create a regex to match the highlight text with any ANSI codes in between
-  const highlightPattern = highlight
-    .split("")
-    .map((char) => `${escapeRegExp(char)}(?:\u001b\[[0-9]+m)?`)
-    .join("");
-  const regex = new RegExp(`(${highlightPattern})`, "gi");
-
-  // Replace matched text with highlighted HTML
-  return text.replace(regex, (match) => {
-    return `<span class="bg-yellow-200/40">${match}</span>`;
-  });
-}
-
-function formatDateForTimeZone(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat(navigator.language, {
-    timeZone: timeZone,
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    fractionalSecondDigits: 3
-  }).format(date);
+function stripAnsiCodes(content: string) {
+  const ANSI_REGEX =
+    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+  return content.replace(ANSI_REGEX, "");
 }
 
 function formatLogTime(time: string | Date) {
@@ -487,7 +528,6 @@ function formatLogTime(time: string | Date) {
   const now = new Date();
   const dateFormat = new Intl.DateTimeFormat(navigator.language, {
     month: "short",
-
     day: "numeric",
     year: date.getFullYear() === now.getFullYear() ? undefined : "numeric"
   }).format(date);
@@ -499,25 +539,6 @@ function formatLogTime(time: string | Date) {
   }).format(date);
 
   return `${dateFormat}, ${hourFormat}`;
-}
-
-function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
-}
-
-// New function to get highlighted text as HTML string
-function getHighlightedText(text: string, highlight: string): string {
-  // Split on highlight term and include term into parts, ignore case
-  const parts = text.split(new RegExp(`(${escapeRegExp(highlight)})`, "gi"));
-  return parts
-    .map((part) => {
-      if (part.toLowerCase() === highlight.toLowerCase()) {
-        return `<span class="bg-yellow-200/40 text-white">${part}</span>`;
-      } else {
-        return part;
-      }
-    })
-    .join("");
 }
 
 function colorLogs(text: string) {

@@ -190,3 +190,16 @@ export function isEmptyObject(object: Record<string, any> | undefined | null) {
     ([, value]) => value !== null && typeof value !== "undefined"
   );
 }
+
+export function formatDateForTimeZone(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat(navigator.language, {
+    timeZone: timeZone,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3
+  }).format(date);
+}
