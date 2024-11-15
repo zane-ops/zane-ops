@@ -122,10 +122,35 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
   const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
 
+  let count = logs.length;
+  if (logsQuery.hasNextPage) {
+    count++;
+  }
+  if (logsQuery.hasPreviousPage) {
+    count++;
+  }
+
+  const virtualizer = useVirtualizer({
+    count: logs.length,
+    getScrollElement: () => logContentRef.current,
+    estimateSize: () => 16,
+    overscan: 50,
+    paddingStart: 16,
+    paddingEnd: 8
+  });
+  const virtualItems = virtualizer.getVirtualItems();
+
+  console.log({
+    "logs.length": logs.length,
+    isAutoRefetchEnabled
+  });
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
+        console.log({
+          entry
+        });
         if (entry.isIntersecting) {
           setIsAutoRefetchEnabled(true);
         } else {
@@ -141,12 +166,13 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
     const autoRefetchTrigger = refetchRef.current;
     if (autoRefetchTrigger) {
+      console.log("Observiing", { autoRefetchTrigger });
       observer.observe(autoRefetchTrigger);
       return () => {
         observer.unobserve(autoRefetchTrigger);
       };
     }
-  }, []);
+  }, [virtualItems]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -175,6 +201,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       };
     }
   }, [
+    virtualItems,
     logsQuery.fetchPreviousPage,
     logsQuery.isFetching,
     logsQuery.hasPreviousPage
@@ -208,36 +235,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       };
     }
   }, [
+    virtualItems,
     logsQuery.fetchNextPage,
     logsQuery.isFetching,
     logsQuery.hasNextPage,
     logsQuery.isFetchingNextPage
   ]);
-
-  let count = logs.length;
-  if (logsQuery.hasNextPage) {
-    count++;
-  }
-  if (logsQuery.hasPreviousPage) {
-    count++;
-  }
-
-  const virtualizer = useVirtualizer({
-    count: logs.length,
-    getScrollElement: () => logContentRef.current,
-    estimateSize: () => 16,
-    overscan: 50
-
-    // scrollPaddingStart: 8,
-    // scrollPaddingEnd: 16
-    // paddingStart: 8,
-    // paddingEnd: 16
-  });
-  const virtualItems = virtualizer.getVirtualItems();
-
-  console.log({
-    totalCount: logs.length
-  });
 
   React.useEffect(() => {
     if (logContentRef.current) {
@@ -478,7 +481,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             "text-xs font-mono h-full rounded-md w-full",
             "bg-muted/25 dark:bg-neutral-950",
             "overflow-y-auto contain-strict",
-            "pt-2 pb-4 whitespace-no-wrap"
+            "whitespace-no-wrap"
           )}
         >
           {logs.length === 0 &&
@@ -650,11 +653,11 @@ const Log = React.memo(
               isOpen ? "bg-yellow-700/20" : "bg-transparent"
             )}
           >
-            <button className="inline-flex items-center">
+            <span className="inline-flex items-center">
               <time className="text-grey" dateTime={date.toISOString()}>
                 {formatLogTime(date)}
               </time>
-            </button>
+            </span>
 
             <div className="grid relative z-10">
               <AnsiHtml
