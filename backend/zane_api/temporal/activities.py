@@ -1655,6 +1655,12 @@ class DockerSwarmActivities:
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
             f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
         )
+        await deployment_log(
+            deployment,
+            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+            f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+            f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC} ✅",
+        )
         return deployment_status, deployment_status_reason
 
     @activity.defn
