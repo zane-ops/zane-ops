@@ -312,7 +312,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            QUERY_STRING=f"level=ERROR&created_at_after={time_after.strftime('%Y-%m-%dT%H:%M:%SZ')}&created_at_before={time_before.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+            QUERY_STRING=f"level=ERROR&time_after={time_after.strftime('%Y-%m-%dT%H:%M:%SZ')}&time_before={time_before.strftime('%Y-%m-%dT%H:%M:%SZ')}",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, len(response.json()["results"]))
