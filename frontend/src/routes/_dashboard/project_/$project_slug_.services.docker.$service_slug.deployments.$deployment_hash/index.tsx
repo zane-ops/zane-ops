@@ -656,9 +656,12 @@ function getHighlightedText(text: string, highlight: string) {
 function formatLogTime(time: string | Date) {
   const date = new Date(time);
   const now = new Date();
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const dateFormat = new Intl.DateTimeFormat("en-GB", {
     month: "short",
     day: "numeric",
+    timeZone: userTimeZone,
     year: date.getFullYear() === now.getFullYear() ? undefined : "numeric"
   })
     .format(date)
@@ -667,7 +670,8 @@ function formatLogTime(time: string | Date) {
   const hourFormat = new Intl.DateTimeFormat("en-GB", {
     hour: "numeric",
     minute: "numeric",
-    second: "numeric"
+    second: "numeric",
+    timeZone: userTimeZone
   }).format(date);
 
   return `${dateFormat}, ${hourFormat}`;
