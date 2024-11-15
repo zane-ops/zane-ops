@@ -14,14 +14,8 @@ import type { DateRange } from "react-day-picker";
 import { useDebounce } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
-import { Loader } from "~/components/loader";
 import { MultiSelect } from "~/components/multi-select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "~/components/ui/accordion";
+
 import { Button } from "~/components/ui/button";
 
 import { Input } from "~/components/ui/input";
@@ -43,8 +37,6 @@ import {
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
-
-import { formatDateForTimeZone } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -140,10 +132,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   });
   const virtualItems = virtualizer.getVirtualItems();
 
-  console.log({
-    "logs.length": logs.length,
-    isAutoRefetchEnabled
-  });
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
