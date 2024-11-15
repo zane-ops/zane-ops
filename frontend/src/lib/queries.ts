@@ -458,9 +458,6 @@ export const deploymentQueries = {
           }
         }
 
-        if (apiData?.results) {
-          apiData.results.reverse();
-        }
         return apiData;
       },
       // we use the inverse of the cursors we get from the API
