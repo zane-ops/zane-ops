@@ -9,6 +9,7 @@ import {
 import { z } from "zod";
 import { type ApiResponse, apiClient } from "~/api/client";
 import {
+  DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
   DEPLOYMENT_STATUSES
 } from "~/lib/constants";
@@ -279,9 +280,10 @@ export const deploymentLogSearchSchema = z.object({
     .array(z.enum(LOG_SOURCES))
     .optional()
     .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
-  created_at_before: z.coerce.date().optional().catch(undefined),
-  created_at_after: z.coerce.date().optional().catch(undefined),
-  content: z.string().optional()
+  time_before: z.coerce.date().optional().catch(undefined),
+  time_after: z.coerce.date().optional().catch(undefined),
+  content: z.string().optional(),
+  isMaximized: z.coerce.boolean().optional().catch(false)
 });
 
 export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
@@ -342,7 +344,7 @@ export const deploymentQueries = {
     service_slug: string;
     type?: "docker" | "git";
     deployment_hash: string;
-    filters?: DeploymentLogFitlers;
+    filters?: Omit<DeploymentLogFitlers, "isMaximized">;
     queryClient: QueryClient;
   }) =>
     infiniteQueryOptions({
@@ -395,9 +397,10 @@ export const deploymentQueries = {
               },
               query: {
                 ...filters,
+                per_page: DEFAULT_LOGS_PER_PAGE,
                 cursor,
-                created_at_before: filters.created_at_before?.toISOString(),
-                created_at_after: filters.created_at_after?.toISOString()
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
               }
             },
             signal
@@ -439,10 +442,10 @@ export const deploymentQueries = {
                 },
                 query: {
                   ...filters,
-                  per_page: 50,
+                  per_page: DEFAULT_LOGS_PER_PAGE,
                   cursor: apiData.next,
-                  created_at_before: filters.created_at_before?.toISOString(),
-                  created_at_after: filters.created_at_after?.toISOString()
+                  time_before: filters.time_before?.toISOString(),
+                  time_after: filters.time_after?.toISOString()
                 }
               },
               signal
