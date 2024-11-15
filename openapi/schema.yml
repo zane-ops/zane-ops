@@ -2112,16 +2112,6 @@ paths:
         name: content
         schema:
           type: string
-      - in: query
-        name: created_at_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: created_at_before
-        schema:
-          type: string
-          format: date-time
       - name: cursor
         required: false
         in: query
@@ -2182,6 +2172,16 @@ paths:
           * `SERVICE` - Service Logs
         explode: true
         style: form
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
       tags:
       - projects
       security:
@@ -5000,37 +5000,18 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsLogsListCreatedAtErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - created_at
-          type: string
-          description: '* `created_at` - created_at'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsServiceDetailsDockerDeploymentsLogsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListCreatedAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           level: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent'
           content: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent'
-          created_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListCreatedAtErrorComponent'
+          time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent'
           source: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400:
       oneOf:
@@ -5079,6 +5060,25 @@ components:
           description: |-
             * `invalid_choice` - invalid_choice
             * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - time
+          type: string
+          description: '* `time` - time'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
         detail:
           type: string
       required:
@@ -6104,7 +6104,6 @@ components:
         created_at:
           type: string
           format: date-time
-          readOnly: true
         level:
           $ref: '#/components/schemas/LevelEnum'
         deployment_id:

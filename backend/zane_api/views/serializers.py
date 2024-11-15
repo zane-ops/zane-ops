@@ -1017,7 +1017,7 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
-    created_at = django_filters.DateTimeFromToRangeFilter()
+    time = django_filters.DateTimeFromToRangeFilter()
     content = django_filters.CharFilter(method="filter_content", strip=False)
     source = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogSource.choices)
     level = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogLevel.choices)
@@ -1028,13 +1028,13 @@ class DeploymentLogsFilterSet(django_filters.FilterSet):
 
     class Meta:
         model = SimpleLog
-        fields = ["level", "content", "created_at", "source"]
+        fields = ["level", "content", "time", "source"]
 
 
 class DeploymentLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
-    ordering = "-created_at"
+    ordering = "-time"
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
