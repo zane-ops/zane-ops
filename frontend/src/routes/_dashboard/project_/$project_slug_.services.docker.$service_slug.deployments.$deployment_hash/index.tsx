@@ -67,8 +67,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     return (
       !searchParams.time_after &&
       !searchParams.time_before &&
-      LOG_SOURCES.every((source) => searchParams.source?.includes(source)) &&
-      LOG_LEVELS.every((source) => searchParams.level?.includes(source)) &&
+      (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
+        searchParams.source?.length === 0 ||
+        !searchParams.source) &&
+      (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
+        searchParams.level?.length === 0 ||
+        !searchParams.level) &&
       (searchParams.content ?? "").length === 0
     );
   }, [searchParams]);
@@ -183,6 +187,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     getScrollElement: () => logContentRef.current,
     estimateSize: () => 16,
     overscan: 100
+
     // scrollPaddingStart: 8,
     // scrollPaddingEnd: 16
     // paddingStart: 8,
@@ -245,6 +250,14 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     }
   }, [filters.content, logs, virtualItems]);
 
+  React.useEffect(() => {
+    // virtualizer.get
+    // if (logs.length && logContentRef.current) {
+    //   const { index, align } = logContentRef.current;
+    //   virtualizer.scrollToIndex(index, { align });
+    // }
+  }, [logs.length]);
+
   if (logsQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
@@ -265,7 +278,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2",
-          searchParams.isMaximized ? "container px-0 h-[82svh]" : "h-[65svh]"
+          searchParams.isMaximized && "container px-0"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -397,11 +410,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
           id="logContent"
           ref={logContentRef}
           className={cn(
-            "flex flex-col-reverse justify-start min-h-0",
+            "flex-col-reverse justify-start min-h-0",
             "text-xs font-mono h-full rounded-md w-full",
             "bg-muted/25 dark:bg-neutral-950",
             "overflow-y-auto contain-strict",
-            "pt-2 pb-4 whitespace-no-wrap"
+            "pt-2 pb-4 whitespace-no-wrap",
+            searchParams.isMaximized ? "h-[70svh]" : "h-[40vh]"
           )}
         >
           {/* {logs.length === 0 &&
@@ -437,7 +451,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
             }}
             className={cn(
-              "relative flex flex-col-reverse flex-shrink-0 justify-start mb-auto",
+              "relative flex-col-reverse flex-shrink-0 justify-start mb-auto",
               "[&_::highlight(search-results-highlight)]:bg-yellow-400/50",
               "[&_::highlight(search-results-highlight)]:text-card-foreground"
             )}
