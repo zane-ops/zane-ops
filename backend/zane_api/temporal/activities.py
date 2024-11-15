@@ -1608,13 +1608,11 @@ class DockerSwarmActivities:
                                 deployment_status_reason = response.content.decode(
                                     "utf-8"
                                 )
-
                         except (HTTPError, RequestException) as e:
                             deployment_status = (
                                 DockerDeployment.DeploymentStatus.UNHEALTHY
                             )
                             deployment_status_reason = str(e)
-                            break
 
                 healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
@@ -1632,10 +1630,22 @@ class DockerSwarmActivities:
                         deployment,
                         f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
-                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
+                        f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                    )
+                    await deployment_log(
+                        deployment,
+                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                        f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC}",
                     )
                     return deployment_status, deployment_status_reason
 
+            await deployment_log(
+                deployment,
+                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+                f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+            )
             await deployment_log(
                 deployment,
                 f"Healtcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
@@ -1653,13 +1663,13 @@ class DockerSwarmActivities:
             deployment,
             f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
-            f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
+            f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC} ✅",
         )
         await deployment_log(
             deployment,
             f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
-            f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC} ✅",
+            f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
         )
         return deployment_status, deployment_status_reason
 
