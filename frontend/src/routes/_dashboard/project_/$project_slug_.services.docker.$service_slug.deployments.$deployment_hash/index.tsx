@@ -16,6 +16,12 @@ import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import { MultiSelect } from "~/components/multi-select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 
 import { Input } from "~/components/ui/input";
@@ -191,7 +197,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     count: logs.length,
     getScrollElement: () => logContentRef.current,
     estimateSize: () => 16,
-    overscan: 100
+    overscan: 50
 
     // scrollPaddingStart: 8,
     // scrollPaddingEnd: 16
@@ -277,6 +283,14 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     from: filters.time_after,
     to: filters.time_before
   };
+
+  /**
+   * Two outstanding bugs :
+   * - when there are fewer items than the visible viewport, they get pushed at the end (bcos of `scaleY(-1)`)
+   * - Tooltips seem to be painted in a weird order where the next element is always on top :
+   *    -> https://renatello.com/css-position-fixed-not-working/
+   *    -> now, they are inverted in position, the tooltip is far from where it should be
+   */
 
   return (
     <div
@@ -487,10 +501,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                       ref={virtualizer.measureElement}
                     >
                       {logsQuery.hasNextPage && virtualRow.index === 0 && (
-                        <div
-                          ref={loadNextPageRef}
-                          className="bg-red-500 w-full h-px"
-                        />
+                        <div ref={loadNextPageRef} className="w-full h-px" />
                       )}
 
                       <Log
@@ -506,12 +517,16 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                             : filters.content
                         }
                       />
-                      {logsQuery.hasPreviousPage &&
+                      {(logsQuery.hasPreviousPage ||
+                        logsQuery.isFetchingPreviousPage) &&
                         virtualRow.index === logs.length - 1 && (
                           <div
                             ref={loadPreviousPageRef}
-                            className="bg-blue-500 w-full h-px"
-                          />
+                            className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 -scale-y-100"
+                          >
+                            <LoaderIcon size={15} className="animate-spin" />
+                            <p>Fetching previous logs...</p>
+                          </div>
                         )}
                     </div>
                   );
@@ -529,7 +544,7 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content: string;
   content_text: string;
   searchValue?: string;
-  index?: number;
+  index: number;
 };
 
 const Log = React.memo(
@@ -545,79 +560,85 @@ const Log = React.memo(
     const search = searchValue ?? "";
     const date = new Date(time);
     const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const [isOpen, setIsOpen] = React.useState(false);
 
-    // const idPrefix = id.split("-")[0];
     return (
-      <div
-        id={`log-item-${id}`}
-        className={cn(
-          "flex gap-2 px-2 hover:bg-slate-400/20 -scale-y-100",
-          level === "ERROR" && "bg-red-400/20"
-        )}
+      <Accordion
+        value={isOpen ? `log-item-${id}` : ""}
+        onValueChange={(newVal) => setIsOpen(!!newVal.trim())}
+        type="single"
+        collapsible
+        className="p-0 w-full"
       >
-        <TooltipProvider>
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button className="inline-flex items-center">
-                <time className="text-grey" dateTime={date.toISOString()}>
-                  {formatLogTime(date)}
-                </time>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent
-              align="center"
-              side="right"
-              className="p-4 text-xs border-transparent shadow-md "
-            >
-              <TooltipArrow className="fill-popover" />
-              <dl className="flex flex-col gap-2">
-                <div className="grid grid-cols-3 gap-1">
-                  <dt className="col-span-1 text-foreground">
-                    {userTimeZone}:
-                  </dt>
-                  <dd className="col-span-2 text-card-foreground">
-                    {formatDateForTimeZone(date, userTimeZone)}
-                  </dd>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  <dt className="col-span-1 text-foreground">UTC:</dt>
-                  <dd className="col-span-2 text-card-foreground">
-                    {formatDateForTimeZone(date, "UTC")}
-                  </dd>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  <dt className="col-span-1 text-foreground">Timestamp:</dt>
-                  <dd className="col-span-2 text-card-foreground">
-                    {date.getTime()}
-                  </dd>
-                </div>
-              </dl>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <div className="grid">
-          <AnsiHtml
-            aria-hidden="true"
-            className="text-wrap break-all select-none whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-            text={content}
-          />
-          {supportsCSSCustomHighlightsAPI() ? (
-            <pre
-              data-highlight="true"
-              className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
-            >
-              {content_text}
-            </pre>
-          ) : (
-            <pre className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1">
-              {search.length > 0
-                ? getHighlightedText(content_text, search)
-                : content_text}
-            </pre>
+        <AccordionItem
+          value={`log-item-${id}`}
+          className={cn(
+            "p-0 border-none border-0 ring-0 bg-transparent w-full ",
+            isOpen ? "bg-yellow-500/20" : "bg-transparent"
           )}
-        </div>
-      </div>
+        >
+          <AccordionContent className="-scale-y-100  w-full px-4 py-2 max-w-[400px] data-[state=open]:animate-accordion-up data-[state=closed]:animate-accordion-down">
+            <dl className="flex flex-col gap-0 ">
+              <h4 className="font-semibold underline">Event time :</h4>
+              <div className="grid grid-cols-3 gap-1">
+                <dt className="col-span-1 text-foreground">{userTimeZone}:</dt>
+                <dd className="col-span-2 text-card-foreground">
+                  {formatDateForTimeZone(date, userTimeZone)}
+                </dd>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <dt className="col-span-1 text-foreground">UTC:</dt>
+                <dd className="col-span-2 text-card-foreground">
+                  {formatDateForTimeZone(date, "UTC")}
+                </dd>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <dt className="col-span-1 text-foreground">Timestamp:</dt>
+                <dd className="col-span-2 text-card-foreground">
+                  {date.getTime()}
+                </dd>
+              </div>
+            </dl>
+          </AccordionContent>
+          <AccordionTrigger
+            id={`log-item-${id}`}
+            className={cn(
+              "flex gap-2 px-2 hover:bg-slate-400/20 -scale-y-100 relative select-auto",
+              "p-0 border-none border-0 ring-0",
+              level === "ERROR" && "bg-red-400/20",
+              isOpen ? "bg-yellow-700/20" : "bg-transparent"
+            )}
+          >
+            <button className="inline-flex items-center">
+              <time className="text-grey" dateTime={date.toISOString()}>
+                {formatLogTime(date)}
+              </time>
+            </button>
+
+            <div className="grid relative z-10">
+              <AnsiHtml
+                aria-hidden="true"
+                className="text-wrap break-all select-none whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+                text={content}
+              />
+              {supportsCSSCustomHighlightsAPI() ? (
+                <pre
+                  data-highlight="true"
+                  className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
+                >
+                  {content_text}
+                </pre>
+              ) : (
+                <pre className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1">
+                  {search.length > 0
+                    ? getHighlightedText(content_text, search)
+                    : content_text}
+                </pre>
+              )}
+            </div>
+          </AccordionTrigger>
+        </AccordionItem>
+      </Accordion>
     );
   }
 );
