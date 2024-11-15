@@ -287,9 +287,11 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   /**
    * Two outstanding bugs :
    * - when there are fewer items than the visible viewport, they get pushed at the end (bcos of `scaleY(-1)`)
+   *   -> ... (how to fix ?)
    * - Tooltips seem to be painted in a weird order where the next element is always on top :
    *    -> https://renatello.com/css-position-fixed-not-working/
    *    -> now, they are inverted in position, the tooltip is far from where it should be
+   *        --> replaced tooltips with `Accordions`
    */
 
   return (
@@ -579,7 +581,9 @@ const Log = React.memo(
         >
           <AccordionContent className="-scale-y-100  w-full px-4 py-2 max-w-[400px] data-[state=open]:animate-accordion-up data-[state=closed]:animate-accordion-down">
             <dl className="flex flex-col gap-0 ">
-              <h4 className="font-semibold underline">Event time :</h4>
+              <h4 className="font-semibold">
+                <span className="underline">Event time</span>:
+              </h4>
               <div className="grid grid-cols-3 gap-1">
                 <dt className="col-span-1 text-foreground">{userTimeZone}:</dt>
                 <dd className="col-span-2 text-card-foreground">
