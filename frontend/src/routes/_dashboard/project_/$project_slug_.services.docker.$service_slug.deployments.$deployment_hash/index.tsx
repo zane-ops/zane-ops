@@ -21,7 +21,6 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
   Tooltip,
-  TooltipArrow,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
@@ -299,20 +298,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     from: filters.time_after,
     to: filters.time_before
   };
-
-  /**
-   * TODO :
-   *  - Enable auto-refresh only when the bottom trigger is visible
-   *  - ...
-   *
-   * Two outstanding bugs :
-   * - when there are fewer items than the visible viewport, they get pushed at the end (bcos of `scaleY(-1)`)
-   *   -> ... (how to fix ?)
-   * - Tooltips seem to be painted in a weird order where the next element is always on top :
-   *    -> https://renatello.com/css-position-fixed-not-working/
-   *    -> now, they are inverted in position, the tooltip is far from where it should be
-   *        --> replaced tooltips with `Accordions`
-   */
 
   return (
     <div
