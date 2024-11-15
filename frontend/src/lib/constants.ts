@@ -13,3 +13,4 @@ export const DEPLOYMENT_STATUSES = [
 ] as const;
 
 export const DEFAULT_QUERY_REFETCH_INTERVAL = 5 * 1000; // 5 seconds
+export const DEFAULT_LOGS_PER_PAGE = 50;

@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnsiHtml } from "fancy-ansi/react";
 import {
   LoaderIcon,
@@ -37,7 +38,7 @@ import {
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
 
-import { formatDateForTimeZone, isEmptyObject } from "~/utils";
+import { formatDateForTimeZone } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -54,13 +55,24 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const inputRef = React.useRef<React.ElementRef<"input">>(null);
 
   const filters = {
-    created_at_after: searchParams.created_at_after,
-    created_at_before: searchParams.created_at_before,
+    time_after: searchParams.time_after,
+    time_before: searchParams.time_before,
     source:
       searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
     content: debouncedSearchQuery
   } satisfies DeploymentLogFitlers;
+
+  const isEmptySearchParams = React.useMemo(() => {
+    return (
+      !searchParams.time_after &&
+      !searchParams.time_before &&
+      LOG_SOURCES.every((source) => searchParams.source?.includes(source)) &&
+      LOG_LEVELS.every((source) => searchParams.level?.includes(source)) &&
+      (searchParams.content ?? "").length === 0
+    );
+  }, [searchParams]);
+
   const queryClient = useQueryClient();
 
   const logsQuery = useInfiniteQuery(
@@ -88,9 +100,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     }
   }, [navigate]);
 
-  const [isMaximized, setIsMaximized] = React.useState(
-    localStorage.getItem("is_log_maximized") === "true"
-  );
   const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
   const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
   const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
@@ -161,6 +170,30 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     logsQuery.isFetchingNextPage
   ]);
 
+  let count = logs.length;
+  if (logsQuery.hasNextPage) {
+    count++;
+  }
+  if (logsQuery.hasPreviousPage) {
+    count++;
+  }
+
+  const virtualizer = useVirtualizer({
+    count: logs.length,
+    getScrollElement: () => logContentRef.current,
+    estimateSize: () => 16,
+    overscan: 100
+    // scrollPaddingStart: 8,
+    // scrollPaddingEnd: 16
+    // paddingStart: 8,
+    // paddingEnd: 16
+  });
+  const virtualItems = virtualizer.getVirtualItems();
+
+  console.log({
+    totalCount: logs.length
+  });
+
   React.useEffect(() => {
     if (logContentRef.current) {
       if (!supportsCSSCustomHighlightsAPI()) {
@@ -173,8 +206,11 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       const parents = logContentRef.current.querySelectorAll(
         'pre[data-highlight="true"]'
       );
+      // we know that these elements (`pre[data-highlight="true"]`) only have simple text nodes inside of them
       const allTextNodes = [...parents].map((parent) => parent.childNodes[0]);
 
+      // Code originally copied from here :
+      // https://microsoftedge.github.io/Demos/custom-highlight-api/
       const ranges = allTextNodes
         .map((el) => {
           return {
@@ -187,7 +223,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             Boolean(text) && text.includes(filters.content.toLowerCase())
         )
         .map(({ text, el }) => {
-          // Find all instances of filters.content in el.textContent
           const indices = [];
           let startPos = 0;
           while (startPos < text.length) {
@@ -208,32 +243,29 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       const highlight = new Highlight(...ranges.flat());
       CSS.highlights.set("search-results-highlight", highlight);
     }
-  }, [filters.content, logs]);
+  }, [filters.content, logs, virtualItems]);
 
   if (logsQuery.isLoading) {
     return <Loader className="h-[50vh]" />;
   }
 
   const date: DateRange = {
-    from: filters.created_at_after,
-    to: filters.created_at_before
+    from: filters.time_after,
+    to: filters.time_before
   };
 
-  /**
-   * TODO :
-   *  - virtualization
-   */
   return (
     <div
       className={cn(
         "grid grid-cols-12 gap-4 mt-8",
-        isMaximized && "fixed inset-0 top-20 bg-background z-50 p-5 w-full"
+        searchParams.isMaximized &&
+          "fixed inset-0 top-20 bg-background z-50 p-5 w-full"
       )}
     >
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2",
-          isMaximized ? "container px-0 h-[82svh]" : "h-[65svh]"
+          searchParams.isMaximized ? "container px-0 h-[82svh]" : "h-[65svh]"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -244,8 +276,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                 navigate({
                   search: {
                     ...filters,
-                    created_at_before: newDateRange?.to,
-                    created_at_after: newDateRange?.from
+                    time_before: newDateRange?.to,
+                    time_after: newDateRange?.from
                   },
                   replace: true
                 })
@@ -323,17 +355,19 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setIsMaximized(!isMaximized);
-                      localStorage.setItem(
-                        "is_log_maximized",
-                        `${!isMaximized}`
-                      );
+                      navigate({
+                        search: {
+                          ...filters,
+                          isMaximized: !searchParams.isMaximized
+                        },
+                        replace: true
+                      });
                     }}
                   >
                     <span className="sr-only">
-                      {isMaximized ? "Minimize" : "Maximize"}
+                      {searchParams.isMaximized ? "Minimize" : "Maximize"}
                     </span>
-                    {isMaximized ? (
+                    {searchParams.isMaximized ? (
                       <Minimize2Icon size={15} />
                     ) : (
                       <Maximize2Icon size={15} />
@@ -341,14 +375,14 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-64 text-balance">
-                  {isMaximized ? "Minimize" : "Maximize"}
+                  {searchParams.isMaximized ? "Minimize" : "Maximize"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         </div>
         <hr className="border-border" />
-        {!isEmptyObject(searchParams) && (
+        {!isEmptySearchParams && (
           <Button
             variant="outline"
             className="inline-flex w-min gap-1"
@@ -362,18 +396,15 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         <pre
           id="logContent"
           ref={logContentRef}
-          className="text-xs flex flex-col-reverse whitespace-no-wrap font-mono pt-2 pb-4 relative h-full rounded-md w-full bg-muted/25 dark:bg-neutral-950 overflow-y-auto"
-        >
-          {(logsQuery.hasNextPage || logsQuery.isFetchingNextPage) && (
-            <div
-              ref={loadNextPageRef}
-              className="text-center items-center py-5 px-8 justify-center flex gap-2 text-gray-500"
-            >
-              <LoaderIcon size={15} className="animate-spin" />
-              <p>Fetching next logs...</p>
-            </div>
+          className={cn(
+            "flex flex-col-reverse justify-start min-h-0",
+            "text-xs font-mono h-full rounded-md w-full",
+            "bg-muted/25 dark:bg-neutral-950",
+            "overflow-y-auto contain-strict",
+            "pt-2 pb-4 whitespace-no-wrap"
           )}
-          {logs.length === 0 &&
+        >
+          {/* {logs.length === 0 &&
             (logsQuery.isFetching ? (
               <div className="text-sm text-center items-center flex gap-2 text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                 <LoaderIcon size={15} className="animate-spin" />
@@ -399,75 +430,94 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   Clear filters
                 </button>
               </div>
-            ))}
+            ))} */}
 
-          <div className="flex flex-1 flex-col [&_::highlight(search-results-highlight)]:bg-yellow-400/50 [&_::highlight(search-results-highlight)]:text-card-foreground">
-            {logs.length > 0 &&
-              logs.map((log) => (
-                <Log
-                  key={log.id}
-                  id={log.id}
-                  created_at={log.created_at}
-                  level={log.level}
-                  content={(log.content as string) ?? ""}
-                  content_text={log.content_text ?? ""}
-                  searchValue={
-                    supportsCSSCustomHighlightsAPI() ? "" : filters.content
-                  }
-                />
-              ))}
-          </div>
-          {logsQuery.hasPreviousPage && (
+          <div
+            style={{
+              height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
+            }}
+            className={cn(
+              "relative flex flex-col-reverse flex-shrink-0 justify-start mb-auto",
+              "[&_::highlight(search-results-highlight)]:bg-yellow-400/50",
+              "[&_::highlight(search-results-highlight)]:text-card-foreground"
+            )}
+          >
             <div
-              ref={loadPreviousPageRef}
-              className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 "
+              className="absolute top-0 left-0 w-full"
+              style={{
+                transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
+              }}
             >
-              <LoaderIcon size={15} className="animate-spin" />
-              <p>Fetching previous logs...</p>
+              {virtualItems.map((virtualRow) => {
+                const log = logs[virtualRow.index];
+                return (
+                  <div
+                    key={virtualRow.key}
+                    className="w-full"
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                  >
+                    {logsQuery.hasPreviousPage && virtualRow.index === 0 && (
+                      <div
+                        ref={loadPreviousPageRef}
+                        className="bg-blue-500 w-full h-px"
+                      ></div>
+                    )}
+                    <Log
+                      id={log.id}
+                      time={log.time}
+                      level={log.level}
+                      content={(log.content as string) ?? ""}
+                      content_text={log.content_text ?? ""}
+                      searchValue={
+                        supportsCSSCustomHighlightsAPI() ? "" : filters.content
+                      }
+                    />
+                    {logsQuery.hasNextPage &&
+                      virtualRow.index === logs.length - 1 && (
+                        <div
+                          ref={loadNextPageRef}
+                          className="bg-red-500 w-full h-px"
+                        ></div>
+                      )}
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
         </pre>
       </div>
     </div>
   );
 }
 
-type LogProps = Pick<DeploymentLog, "id" | "level" | "created_at"> & {
+type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content: string;
   content_text: string;
   searchValue?: string;
 };
 
 const Log = React.memo(
-  ({ content, searchValue, level, created_at, id, content_text }: LogProps) => {
+  ({ content, searchValue, level, time, id, content_text }: LogProps) => {
     const search = searchValue ?? "";
-    const date = new Date(created_at);
+    const date = new Date(time);
     const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+    const idPrefix = id.split("-")[0];
     return (
       <div
         id={`log-item-${id}`}
         className={cn(
-          "flex gap-2 px-2 hover:bg-slate-400/20 target:!bg-yellow-100/40",
+          "flex gap-2 px-2 hover:bg-slate-400/20",
           level === "ERROR" && "bg-red-400/20"
         )}
       >
         <TooltipProvider>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  const url = new URL(window.location.href);
-                  if (url.hash === `#log-item-${id}`) {
-                    window.location.href = `#`;
-                  } else {
-                    window.location.href = `#log-item-${id}`;
-                  }
-                }}
-                className="text-grey"
-              >
-                <time dateTime={date.toISOString()}>{formatLogTime(date)}</time>
-              </button>
+              <time className="text-grey" dateTime={date.toISOString()}>
+                {formatLogTime(date)} ({idPrefix})
+              </time>
             </TooltipTrigger>
             <TooltipContent
               align="center"
@@ -510,7 +560,7 @@ const Log = React.memo(
           {supportsCSSCustomHighlightsAPI() ? (
             <pre
               data-highlight="true"
-              className="text-wrap relative  text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
+              className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
             >
               {content_text}
             </pre>
