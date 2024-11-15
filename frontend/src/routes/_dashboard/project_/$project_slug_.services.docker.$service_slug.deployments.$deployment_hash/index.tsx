@@ -133,8 +133,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const virtualizer = useVirtualizer({
     count: logs.length,
     getScrollElement: () => logContentRef.current,
-    estimateSize: () => 16,
-    overscan: 50,
+    estimateSize: () => 16 * 2,
+    overscan: 25,
     paddingStart: 16,
     paddingEnd: 8
   });
@@ -148,9 +148,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        console.log({
-          entry
-        });
         if (entry.isIntersecting) {
           setIsAutoRefetchEnabled(true);
         } else {
@@ -166,7 +163,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
     const autoRefetchTrigger = refetchRef.current;
     if (autoRefetchTrigger) {
-      console.log("Observiing", { autoRefetchTrigger });
       observer.observe(autoRefetchTrigger);
       return () => {
         observer.unobserve(autoRefetchTrigger);
@@ -480,7 +476,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             "-scale-y-100 justify-start min-h-0",
             "text-xs font-mono h-full rounded-md w-full",
             "bg-muted/25 dark:bg-neutral-950",
-            "overflow-y-auto contain-strict",
+            "overflow-y-auto overflow-x-clip contain-strict",
             "whitespace-no-wrap"
           )}
         >
@@ -519,8 +515,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
               }}
               className={cn(
                 "relative justify-start mb-auto",
-                "[&_::highlight(search-results-highlight)]:bg-yellow-400/50",
-                "[&_::highlight(search-results-highlight)]:text-card-foreground"
+                "[&_::highlight(search-results-highlight)]:bg-yellow-400/50"
               )}
             >
               <div
@@ -549,7 +544,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         id={log.id}
                         time={log.time}
                         level={log.level}
-                        index={virtualRow.index}
                         content={(log.content as string) ?? ""}
                         content_text={log.content_text ?? ""}
                         searchValue={
@@ -586,103 +580,53 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content: string;
   content_text: string;
   searchValue?: string;
-  index: number;
 };
 
 const Log = React.memo(
-  ({
-    content,
-    searchValue,
-    level,
-    time,
-    id,
-    content_text,
-    index
-  }: LogProps) => {
+  ({ content, searchValue, level, time, id, content_text }: LogProps) => {
     const search = searchValue ?? "";
     const date = new Date(time);
-    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const [isOpen, setIsOpen] = React.useState(false);
 
     return (
-      <Accordion
-        value={isOpen ? `log-item-${id}` : ""}
-        onValueChange={(newVal) => setIsOpen(!!newVal.trim())}
-        type="single"
-        collapsible
-        className="p-0 w-full"
-      >
-        <AccordionItem
-          value={`log-item-${id}`}
+      <pre className="px-4 w-full -scale-y-100 group">
+        <pre
+          id={`log-item-${id}`}
           className={cn(
-            "p-0 border-none border-0 ring-0 bg-transparent w-full ",
-            isOpen ? "bg-yellow-500/20" : "bg-transparent"
+            "flex gap-2 px-2 hover:bg-slate-400/20 relative",
+            "p-0 border-none border-0 ring-0",
+            level === "ERROR" && "bg-red-400/20",
+            "group-open:bg-yellow-700/20"
           )}
         >
-          <AccordionContent className="-scale-y-100  w-full px-4 py-2 max-w-[400px] data-[state=open]:animate-accordion-up data-[state=closed]:animate-accordion-down">
-            <dl className="flex flex-col gap-0 ">
-              <h4 className="font-semibold">
-                <span className="underline">Event time</span>:
-              </h4>
-              <div className="grid grid-cols-3 gap-1">
-                <dt className="col-span-1 text-foreground">{userTimeZone}:</dt>
-                <dd className="col-span-2 text-card-foreground">
-                  {formatDateForTimeZone(date, userTimeZone)}
-                </dd>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <dt className="col-span-1 text-foreground">UTC:</dt>
-                <dd className="col-span-2 text-card-foreground">
-                  {formatDateForTimeZone(date, "UTC")}
-                </dd>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <dt className="col-span-1 text-foreground">Timestamp:</dt>
-                <dd className="col-span-2 text-card-foreground">
-                  {date.getTime()}
-                </dd>
-              </div>
-            </dl>
-          </AccordionContent>
-          <AccordionTrigger
-            id={`log-item-${id}`}
-            className={cn(
-              "flex gap-2 px-2 hover:bg-slate-400/20 -scale-y-100 relative select-auto",
-              "p-0 border-none border-0 ring-0",
-              level === "ERROR" && "bg-red-400/20",
-              isOpen ? "bg-yellow-700/20" : "bg-transparent"
-            )}
-          >
-            <span className="inline-flex items-center">
-              <time className="text-grey" dateTime={date.toISOString()}>
-                {formatLogTime(date)}
-              </time>
-            </span>
+          <span className="inline-flex items-start select-none">
+            <time className="text-grey" dateTime={date.toISOString()}>
+              {formatLogTime(date)}
+            </time>
+          </span>
 
-            <div className="grid relative z-10">
-              <AnsiHtml
-                aria-hidden="true"
-                className="text-wrap break-all select-none whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-                text={content}
-              />
-              {supportsCSSCustomHighlightsAPI() ? (
-                <pre
-                  data-highlight="true"
-                  className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1"
-                >
-                  {content_text}
-                </pre>
-              ) : (
-                <pre className="text-wrap relative text-transparent z-10 break-all col-start-1 col-end-1 row-start-1 row-end-1">
-                  {search.length > 0
-                    ? getHighlightedText(content_text, search)
-                    : content_text}
-                </pre>
-              )}
-            </div>
-          </AccordionTrigger>
-        </AccordionItem>
-      </Accordion>
+          <div className="grid relative z-10">
+            <AnsiHtml
+              aria-hidden="true"
+              className="text-wrap text-start break-all select-auto z-10 whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+              text={content}
+            />
+            {supportsCSSCustomHighlightsAPI() ? (
+              <pre
+                data-highlight="true"
+                className="text-wrap text-start relative select-none text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
+              >
+                {content_text}
+              </pre>
+            ) : (
+              <pre className="text-wrap  text-start relative text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1">
+                {search.length > 0
+                  ? getHighlightedText(content_text, search)
+                  : content_text}
+              </pre>
+            )}
+          </div>
+        </pre>
+      </pre>
     );
   }
 );
