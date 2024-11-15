@@ -337,6 +337,7 @@ export const deploymentQueries = {
     service_slug,
     deployment_hash,
     type = "docker",
+    autoRefetchEnabled = true,
     filters = {},
     queryClient
   }: {
@@ -346,6 +347,7 @@ export const deploymentQueries = {
     deployment_hash: string;
     filters?: Omit<DeploymentLogFitlers, "isMaximized">;
     queryClient: QueryClient;
+    autoRefetchEnabled?: boolean;
   }) =>
     infiniteQueryOptions({
       queryKey: [
@@ -468,7 +470,7 @@ export const deploymentQueries = {
       getPreviousPageParam: ({ next }) => next,
       initialPageParam: null as string | null,
       refetchInterval: (query) => {
-        if (!query.state.data) {
+        if (!query.state.data || !autoRefetchEnabled) {
           return false;
         }
         return DEFAULT_QUERY_REFETCH_INTERVAL;

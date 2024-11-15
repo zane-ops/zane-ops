@@ -59,6 +59,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const navigate = useNavigate();
   const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
   const inputRef = React.useRef<React.ElementRef<"input">>(null);
+  const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
   const filters = {
     time_after: searchParams.time_after,
@@ -91,7 +92,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       project_slug,
       service_slug,
       filters,
-      queryClient
+      queryClient,
+      autoRefetchEnabled: isAutoRefetchEnabled
     })
   );
 
@@ -116,8 +118,35 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   }, [navigate, searchParams.isMaximized]);
 
   const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
+  const refetchRef = React.useRef<React.ElementRef<"div">>(null);
   const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
   const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setIsAutoRefetchEnabled(true);
+        } else {
+          setIsAutoRefetchEnabled(false);
+        }
+      },
+      {
+        root: logContentRef.current,
+        rootMargin: "0px",
+        threshold: 0.1
+      }
+    );
+
+    const autoRefetchTrigger = refetchRef.current;
+    if (autoRefetchTrigger) {
+      observer.observe(autoRefetchTrigger);
+      return () => {
+        observer.unobserve(autoRefetchTrigger);
+      };
+    }
+  }, []);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -285,6 +314,10 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   };
 
   /**
+   * TODO :
+   *  - Enable auto-refresh only when the bottom trigger is visible
+   *  - ...
+   *
    * Two outstanding bugs :
    * - when there are fewer items than the visible viewport, they get pushed at the end (bcos of `scaleY(-1)`)
    *   -> ... (how to fix ?)
@@ -505,6 +538,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                       {logsQuery.hasNextPage && virtualRow.index === 0 && (
                         <div ref={loadNextPageRef} className="w-full h-px" />
                       )}
+                      {virtualRow.index === 0 && (
+                        <div className="w-full h-px" ref={refetchRef} />
+                      )}
 
                       <Log
                         id={log.id}
@@ -519,6 +555,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                             : filters.content
                         }
                       />
+
                       {(logsQuery.hasPreviousPage ||
                         logsQuery.isFetchingPreviousPage) &&
                         virtualRow.index === logs.length - 1 && (
