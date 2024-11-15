@@ -617,9 +617,7 @@ function getHighlightedText(text: string, highlight: string) {
   const parts = text.split(new RegExp(`(${escapeRegExp(highlight)})`, "gi"));
   return parts.map((part) => {
     if (part.toLowerCase() === highlight.toLowerCase()) {
-      return (
-        <span className="bg-yellow-400/50 text-card-foreground">{part}</span>
-      );
+      return <span className="bg-yellow-400/50">{part}</span>;
     } else {
       return <span>{part}</span>;
     }
