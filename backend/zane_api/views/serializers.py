@@ -1034,7 +1034,10 @@ class DeploymentLogsFilterSet(django_filters.FilterSet):
 class DeploymentLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
-    ordering = "-time"
+    ordering = (
+        "-time",
+        "-created_at",
+    )
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
