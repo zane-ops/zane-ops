@@ -210,6 +210,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=(
                         SimpleLog.LogLevel.INFO
                         if i % 2 == 0
@@ -245,6 +246,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=(
                         SimpleLog.LogLevel.INFO
                         if i % 2 == 0
@@ -279,10 +281,12 @@ class SimpleLogViewTests(AuthAPITestCase):
             [
                 SimpleLog(
                     time=time,
+                    created_at=time,
                     content=content,
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=(
                         SimpleLog.LogLevel.INFO
                         if i % 2 == 0
@@ -325,6 +329,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=SimpleLog.LogLevel.INFO,
                 )
                 for (time, content) in self.sample_log_contents
@@ -357,6 +362,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=SimpleLog.LogLevel.INFO,
                 )
                 for (time, content) in self.sample_log_contents

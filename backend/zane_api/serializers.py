@@ -240,7 +240,9 @@ class SimpleLogSerializer(ModelSerializer):
         fields = [
             "id",
             "content",
+            "content_text",
             "time",
+            "created_at",
             "level",
             "deployment_id",
             "service_id",

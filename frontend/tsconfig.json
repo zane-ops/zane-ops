@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ESNext",
     "verbatimModuleSyntax": true,
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "types": ["react/canary", "react-dom/canary"],

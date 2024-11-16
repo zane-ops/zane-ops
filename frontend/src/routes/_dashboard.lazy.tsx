@@ -244,7 +244,7 @@ const socialLinks = [
 function Footer() {
   return (
     <>
-      <div className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-4 md:gap-10">
+      <footer className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-4 md:gap-10">
         {socialLinks.map((link) => (
           <a
             key={link.name}
@@ -257,7 +257,7 @@ function Footer() {
             {link.name}
           </a>
         ))}
-      </div>
+      </footer>
     </>
   );
 }

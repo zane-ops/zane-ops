@@ -308,6 +308,8 @@ function DeploymentStatusBadge({
     "CANCELLING",
     "RESTARTING"
   ].includes(status);
+
+  const isActive = ["HEALTHY", "UNHEALTHY"].includes(status);
   return (
     <div
       className={cn(
@@ -325,7 +327,15 @@ function DeploymentStatusBadge({
         className
       )}
     >
-      <Icon size={15} className="flex-none" />
+      <div className="relative ">
+        {isActive && (
+          <Icon
+            size={15}
+            className="flex-none animate-ping absolute h-full w-full"
+          />
+        )}
+        <Icon size={15} className="flex-none" />
+      </div>
       <p>{capitalizeText(status)}</p>
       {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />}
     </div>

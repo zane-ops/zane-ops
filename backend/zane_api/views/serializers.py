@@ -931,7 +931,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
 
 
 class DockerContainerLogSerializer(serializers.Serializer):
-    log = serializers.CharField(required=True, allow_blank=True)
+    log = serializers.CharField(required=True, allow_blank=True, trim_whitespace=False)
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
     time = serializers.DateTimeField(required=True)
@@ -1018,14 +1018,13 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(method="filter_content")
+    content = django_filters.CharFilter(method="filter_content", strip=False)
     source = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogSource.choices)
+    level = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogLevel.choices)
 
     @staticmethod
     def filter_content(queryset: QuerySet, name: str, value: str):
-        # construct the full lookup expression.
-        lookup = f"{name}__icontains"
-        return queryset.filter(**{lookup: value.replace('"', '\\"')})
+        return queryset.filter(content_text__icontains=value)
 
     class Meta:
         model = SimpleLog
@@ -1035,7 +1034,10 @@ class DeploymentLogsFilterSet(django_filters.FilterSet):
 class DeploymentLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
-    ordering = "-time"
+    ordering = (
+        "-time",
+        "-created_at",
+    )
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):

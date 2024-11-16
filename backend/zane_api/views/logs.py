@@ -1,4 +1,5 @@
 import json
+import re
 from urllib.parse import urlparse
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -143,6 +144,7 @@ class LogTailAPIView(APIView):
                                     time=log["time"],
                                     deployment_id=deployment_id,
                                     service_id=service_id,
+                                    content_text=SimpleLog.escape_ansi(log["log"]),
                                 )
                             )
             SimpleLog.objects.bulk_create(simple_logs)

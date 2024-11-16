@@ -28,7 +28,7 @@ export function deleteCookie(name: string): void {
 
 export function formattedDate(dateInput: string | Date): string {
   const date = new Date(dateInput);
-  const formattedDate = new Intl.DateTimeFormat("en-US", {
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -39,7 +39,7 @@ export function formattedDate(dateInput: string | Date): string {
 
 export function formattedTime(dateInput: string | Date): string {
   const date = new Date(dateInput);
-  const formattedDate = new Intl.DateTimeFormat("en-US", {
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
     month: "short",
     hour: "numeric",
     minute: "numeric",
@@ -161,4 +161,45 @@ export function pluralize(word: string, item_count: number) {
 export function wait(ms: number): Promise<void> {
   // Wait for the specified amount of time
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function isArrayOfNumbers(arr: any): arr is number[] {
+  if (!Array.isArray(arr)) return false;
+  return arr.every((item) => typeof item === "number");
+}
+
+export function isArrayOfDates(arr: any): arr is Date[] {
+  if (!Array.isArray(arr)) return false;
+  return arr.every((item) => item instanceof Date);
+}
+
+export function isArrayOfStrings(arr: any): arr is string[] {
+  if (!Array.isArray(arr)) return false;
+  return arr.every((item) => typeof item === "string");
+}
+
+export function isArrayOfBooleans(arr: any): arr is boolean[] {
+  if (!Array.isArray(arr)) return false;
+  return arr.every((item) => typeof item === "boolean");
+}
+
+export function isEmptyObject(object: Record<string, any> | undefined | null) {
+  if (object === null || typeof object === "undefined") return true;
+
+  return !Object.entries(object).some(
+    ([, value]) => value !== null && typeof value !== "undefined"
+  );
+}
+
+export function formatDateForTimeZone(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: timeZone,
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3
+  }).format(date);
 }

@@ -3,15 +3,21 @@ from rest_framework import status
 from temporalio import workflow, activity
 from temporalio.exceptions import ApplicationError
 
-from ..shared import HealthcheckDeploymentDetails, DeploymentHealthcheckResult
+
+from ..shared import (
+    HealthcheckDeploymentDetails,
+    DeploymentHealthcheckResult,
+    SimpleDeploymentDetails,
+)
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
+    from django.utils import timezone
     import docker
     import docker.errors
     from django import db
-    from ...models import DockerDeployment, HealthCheck
-    from ...utils import DockerSwarmTaskState, DockerSwarmTask
+    from ...models import DockerDeployment, HealthCheck, SimpleLog
+    from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors
 
 docker_client: docker.DockerClient | None = None
 
@@ -29,6 +35,25 @@ def get_swarm_service_name_for_deployment(
     service_id: str,
 ):
     return f"srv-{project_id}-{service_id}-{deployment_hash}"
+
+
+async def deployment_log(
+    deployment: SimpleDeploymentDetails,
+    message: str,
+):
+    current_time = timezone.now()
+    print(f"[{current_time.isoformat()}]: {message}")
+
+    # Regex pattern to match ANSI color codes
+    await SimpleLog.objects.acreate(
+        source=SimpleLog.LogSource.SYSTEM,
+        level=SimpleLog.LogLevel.INFO,
+        content=message,
+        time=current_time,
+        deployment_id=deployment.hash,
+        service_id=deployment.service_id,
+        content_text=SimpleLog.escape_ansi(message),
+    )
 
 
 class MonitorDockerDeploymentActivities:
@@ -185,7 +210,29 @@ class MonitorDockerDeploymentActivities:
                             deployment_status_reason = str(e)
 
                 print(
-                    f"Healtcheck for {details.deployment.hash=} | finished with {deployment_status=} ✅"
+                    f"Healtcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
+                )
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                )
+                status_color = (
+                    Colors.GREEN
+                    if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                    else Colors.RED
+                )
+
+                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
+                    status_flag = "✅"
+                elif deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                    status_flag = "❌"
+                else:
+                    status_flag = "🏁"
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
                 )
                 return deployment_status, deployment_status_reason
 
