@@ -25,6 +25,8 @@ with workflow.unsafe.imports_passed_through():
     from .schedules import (
         MonitorDockerDeploymentWorkflow,
         MonitorDockerDeploymentActivities,
+        CleanupActivities,
+        CleanupAppLogsWorkflow,
     )
 
 
@@ -622,6 +624,7 @@ class ToggleDockerServiceWorkflow:
 def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
+    cleanup_activites = CleanupActivities()
     return dict(
         workflows=[
             ArchiveDockerServiceWorkflow,
@@ -630,6 +633,7 @@ def get_workflows_and_activities():
             DeployDockerServiceWorkflow,
             MonitorDockerDeploymentWorkflow,
             ToggleDockerServiceWorkflow,
+            CleanupAppLogsWorkflow,
         ],
         activities=[
             swarm_activities.toggle_cancelling_status,
@@ -665,5 +669,6 @@ def get_workflows_and_activities():
             swarm_activities.create_deployment_healthcheck_schedule,
             monitor_activities.save_deployment_status,
             monitor_activities.run_deployment_monitor_healthcheck,
+            cleanup_activites.cleanup_simple_logs,
         ],
     )

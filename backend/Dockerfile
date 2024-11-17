@@ -18,4 +18,4 @@ WORKDIR /code
 EXPOSE 8000
 
 # runs the dev server
-CMD uv venv /venv && python manage.py runserver
+CMD bash -c "source /venv/bin/activate && uv pip install -r requirements.txt && python manage.py create_log_cleanup_schedule && python manage.py runserver"

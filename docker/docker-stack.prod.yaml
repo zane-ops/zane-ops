@@ -190,7 +190,7 @@ services:
           memory: 500M
     networks:
       - zane
-  temporal-worker:
+  temporal-main-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
     command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
     volumes:
@@ -203,6 +203,40 @@ services:
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    networks:
+      - zane
+  temporal-schedule-worker:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+      - temporal-server
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
+      TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
     deploy:
       replicas: 1
       update_config:
