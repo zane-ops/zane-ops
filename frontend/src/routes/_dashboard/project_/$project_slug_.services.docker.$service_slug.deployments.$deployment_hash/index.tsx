@@ -591,7 +591,7 @@ const Log = React.memo(
                 {content_text}
               </pre>
             ) : (
-              <pre className="text-wrap  text-start relative text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1">
+              <pre className="text-wrap text-start relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
                 {search.length > 0
                   ? getHighlightedText(content_text, search)
                   : content_text}
