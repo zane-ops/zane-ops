@@ -40,6 +40,7 @@ import {
   SheetTrigger
 } from "~/components/ui/sheet";
 import { userQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
 export const Route = createLazyFileRoute("/_dashboard")({
@@ -84,6 +85,16 @@ function Header() {
   }
   return (
     <>
+      {!import.meta.env.PROD && (
+        <div
+          className={cn(
+            "py-0.5 bg-red-500 text-white text-center fixed top-10 -left-10 -rotate-[30deg] z-[100]",
+            "w-72"
+          )}
+        >
+          <p className="">⚠️ YOU ARE IN DEV ⚠️</p>
+        </div>
+      )}
       <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-50">
         <Link to="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
