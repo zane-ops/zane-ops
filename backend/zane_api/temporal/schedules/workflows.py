@@ -4,7 +4,11 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 from .activities import MonitorDockerDeploymentActivities, CleanupActivities
-from ..shared import HealthcheckDeploymentDetails, DeploymentHealthcheckResult
+from ..shared import (
+    HealthcheckDeploymentDetails,
+    DeploymentHealthcheckResult,
+    LogsCleanupResult,
+)
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
@@ -59,7 +63,7 @@ class MonitorDockerDeploymentWorkflow:
 @workflow.defn(name="cleanup-app-logs")
 class CleanupAppLogsWorkflow:
     @workflow.run
-    async def run(self):
+    async def run(self) -> LogsCleanupResult:
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
