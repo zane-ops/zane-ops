@@ -566,7 +566,7 @@ const Log = React.memo(
           id={`log-item-${id}`}
           className={cn(
             "flex gap-2 hover:bg-slate-400/20 relative",
-            "py-0 pl-4 pr-2 border-none border-0 ring-0",
+            "py-0 px-4 border-none border-0 ring-0",
             level === "ERROR" && "bg-red-400/20",
             "group-open:bg-yellow-700/20"
           )}
