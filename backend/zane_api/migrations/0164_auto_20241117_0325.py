@@ -23,7 +23,7 @@ def populate_and_clean_content_text(apps, schema_editor):
                     Func(
                         Cast(F("content"), db_type="text"),  # Cast content JSON to text
                         Value(r"\\"),  # Replace escaped backslashes `\\` `\`
-                        Value(""),
+                        Value("\\"),
                         function="REPLACE",
                     ),
                     Value(r"\""),  # Replace escaped double quotes
