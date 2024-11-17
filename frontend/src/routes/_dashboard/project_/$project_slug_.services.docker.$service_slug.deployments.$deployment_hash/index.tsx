@@ -561,12 +561,12 @@ const Log = React.memo(
     const date = new Date(time);
 
     return (
-      <pre className="px-4 w-full -scale-y-100 group">
+      <pre className="w-full -scale-y-100 group">
         <pre
           id={`log-item-${id}`}
           className={cn(
-            "flex gap-2 px-2 hover:bg-slate-400/20 relative",
-            "p-0 border-none border-0 ring-0",
+            "flex gap-2 hover:bg-slate-400/20 relative",
+            "py-0 pl-4 pr-2 border-none border-0 ring-0",
             level === "ERROR" && "bg-red-400/20",
             "group-open:bg-yellow-700/20"
           )}
