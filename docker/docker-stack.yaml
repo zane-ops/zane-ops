@@ -41,34 +41,34 @@ services:
       zane:
         aliases:
           - zane.proxy
-  temporal:
-    entrypoint: ["/etc/temporal/entrypoint.sh"]
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=password
-      - POSTGRES_SEEDS=zane.db
-      - SKIP_SCHEMA_SETUP=false
-      - SKIP_DB_SETUP=false
-      - SERVICES=history,matching,frontend,worker
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - BIND_ON_IP=0.0.0.0
-    image: ghcr.io/zane-ops/temporal-with-archival:canary
-    volumes:
-      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
-      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
-      - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
-      - temporal-archival:/etc/temporal/archival
-    networks:
-      zane:
-        aliases:
-          - zane.temporal
-    ports:
-      - 7233:7233
-    deploy:
-      labels:
-        zane.role: "temporal"
+  # temporal:
+  #   entrypoint: ["/etc/temporal/entrypoint.sh"]
+  #   environment:
+  #     - DB=postgres12
+  #     - DB_PORT=5432
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PWD=password
+  #     - POSTGRES_SEEDS=zane.db
+  #     - SKIP_SCHEMA_SETUP=false
+  #     - SKIP_DB_SETUP=false
+  #     - SERVICES=history,matching,frontend,worker
+  #     - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+  #     - BIND_ON_IP=0.0.0.0
+  #   image: ghcr.io/zane-ops/temporal-with-archival:canary
+  #   volumes:
+  #     - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
+  #     - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
+  #     - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
+  #     - temporal-archival:/etc/temporal/archival
+  #   networks:
+  #     zane:
+  #       aliases:
+  #         - zane.temporal
+  #   ports:
+  #     - 7233:7233
+  #   deploy:
+  #     labels:
+  #       zane.role: "temporal"
   temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
@@ -81,8 +81,8 @@ services:
       - SKIP_DB_SETUP=false
       - SERVICES=history,matching,frontend,worker
       - TEMPORAL_HOME=/etc/temporal
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
+      - TEMPORAL_ADDRESS=zane.temporal:7233
+      - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
     volumes:
@@ -99,7 +99,7 @@ services:
     depends_on:
       - temporal
     environment:
-      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
     image: temporalio/ui:2.26.2
     networks:

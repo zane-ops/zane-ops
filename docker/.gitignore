@@ -3,3 +3,4 @@ registry/data/
 .alive_services
 proxy/*.bak
 .fluentd/
+temporalio/archival/*

@@ -6,11 +6,61 @@ services:
       - "2020:2020"
     environment:
       CADDY_ADMIN: 0.0.0.0:2020
-  temporal-worker:
+  temporal-server:
+    entrypoint: ["/etc/temporal/entrypoint.sh"]
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=zane.db
+      - SKIP_SCHEMA_SETUP=false
+      - SKIP_DB_SETUP=false
+      - SERVICES=history,matching,frontend,worker
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    image: ghcr.io/zane-ops/temporal-with-archival:canary
+    volumes:
+      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
+      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
+      - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
+      - ./temporalio/archival:/etc/temporal/archival
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    ports:
+      - 7233:7233
+    deploy:
+      labels:
+        zane.role: "temporal"
+    depends_on:
+      - db
+  api:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
-    container_name: zane-temporal-worker
+    command: >
+      bash -c "source /venv/bin/activate &&
+               uv pip install -r requirements.txt &&
+               python manage.py create_log_cleanup_schedule && python manage.py runserver"
+    container_name: zane-api
+    volumes:
+      - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - redis
+      - temporal-server
+    network_mode: host
+    restart: on-failure:5
+    environment:
+      ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+  temporal-main-worker:
+    build:
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
+    container_name: zane-temporal-main-worker
     command: >
       bash -c "source /venv/bin/activate &&
                uv pip install watchdog &&
@@ -22,10 +72,34 @@ services:
     depends_on:
       - db
       - redis
+      - temporal-server
     network_mode: host
     environment:
       BACKEND_COMPONENT: WORKER
       ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+  temporal-schedule-worker:
+    build:
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
+    container_name: zane-temporal-schedule-worker
+    command: >
+      bash -c "source /venv/bin/activate &&
+               uv pip install watchdog &&
+               uv pip install -r requirements.txt &&
+               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
+    volumes:
+      - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - redis
+      - temporal-server
+    network_mode: host
+    environment:
+      BACKEND_COMPONENT: WORKER
+      TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
+      ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+ 
   registry:
     image: registry:2
     container_name: zane-registry
