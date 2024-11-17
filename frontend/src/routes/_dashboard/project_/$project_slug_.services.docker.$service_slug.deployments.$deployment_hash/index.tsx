@@ -561,12 +561,12 @@ const Log = React.memo(
     const date = new Date(time);
 
     return (
-      <pre className="px-4 w-full -scale-y-100 group">
+      <pre className="w-full -scale-y-100 group">
         <pre
           id={`log-item-${id}`}
           className={cn(
-            "flex gap-2 px-2 hover:bg-slate-400/20 relative",
-            "p-0 border-none border-0 ring-0",
+            "flex gap-2 hover:bg-slate-400/20 relative",
+            "py-0 px-4 border-none border-0 ring-0",
             level === "ERROR" && "bg-red-400/20",
             "group-open:bg-yellow-700/20"
           )}
@@ -591,7 +591,7 @@ const Log = React.memo(
                 {content_text}
               </pre>
             ) : (
-              <pre className="text-wrap  text-start relative text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1">
+              <pre className="text-wrap text-start relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
                 {search.length > 0
                   ? getHighlightedText(content_text, search)
                   : content_text}
