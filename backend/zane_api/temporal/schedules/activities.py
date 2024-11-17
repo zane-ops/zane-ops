@@ -1,3 +1,4 @@
+from datetime import timedelta
 import requests
 from rest_framework import status
 from temporalio import workflow, activity
@@ -5,6 +6,7 @@ from temporalio.exceptions import ApplicationError
 
 
 from ..shared import (
+    LogsCleanupResult,
     HealthcheckDeploymentDetails,
     DeploymentHealthcheckResult,
     SimpleDeploymentDetails,
@@ -254,3 +256,12 @@ class MonitorDockerDeploymentActivities:
                 deployment.status_reason = healthcheck_result.reason
                 deployment.status = healthcheck_result.status
                 await deployment.asave()
+
+
+class CleanupActivities:
+    @activity.defn
+    async def cleanup_simple_logs(self) -> LogsCleanupResult:
+        deleted_count, _ = await SimpleLog.objects.filter(
+            time__lt=timezone.now() - timedelta(days=30)
+        ).adelete()
+        return LogsCleanupResult(deleted_count=deleted_count)
