@@ -50,20 +50,15 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 3. Start the project :
 
-   Start the DEV server for docker and the frontend :
+   Start the DEV server :
     ```shell
     make dev
     # or
     pnpm run  --filter='!backend' --recursive --parallel dev
     ```
 
-   Wait until you see `Server launched at http://localhost:5678` in the terminal . Then, start the development server for the API:
-    ```shell
-    make dev-api
-    # or
-	pnpm run  --filter='backend' --recursive dev
-    ```
-
+   Wait until you see `Server launched at http://localhost:5678` in the terminal.:
+   
 4. Run DB migrations :
 
     ```shell
