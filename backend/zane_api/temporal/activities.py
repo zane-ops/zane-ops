@@ -1899,4 +1899,5 @@ class DockerSwarmActivities:
                 args=healthcheck_details,
                 id=docker_deployment.monitor_schedule_id,
                 interval=timedelta(seconds=interval_seconds),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             )
