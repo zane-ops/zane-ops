@@ -125,7 +125,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     count: logs.length,
     getScrollElement: () => logContentRef.current,
     estimateSize: () => 16 * 2,
-    overscan: 25,
     paddingStart: 16,
     paddingEnd: 8
   });
