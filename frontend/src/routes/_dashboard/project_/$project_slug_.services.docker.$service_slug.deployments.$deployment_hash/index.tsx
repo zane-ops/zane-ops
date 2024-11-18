@@ -510,7 +510,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         <div ref={loadNextPageRef} className="w-full h-px" />
                       )}
                       {virtualRow.index === 0 && (
-                        <div className="w-full h-px" ref={refetchRef} />
+                        <div
+                          className="w-full py-2 text-center -scale-y-100 text-grey italic"
+                          ref={refetchRef}
+                        >
+                          -- LIVE ⚡️ new log entries will appear here --
+                        </div>
                       )}
 
                       <Log
