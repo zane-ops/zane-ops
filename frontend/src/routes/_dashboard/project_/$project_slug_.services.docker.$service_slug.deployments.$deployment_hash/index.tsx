@@ -513,7 +513,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                           className="w-full py-2 text-center -scale-y-100 text-grey italic"
                           ref={refetchRef}
                         >
-                          -- LIVE ⚡️ new log entries will appear here --
+                          -- LIVE <Ping /> new log entries will appear here --
                         </div>
                       )}
 
@@ -550,6 +550,15 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
         </pre>
       </div>
     </div>
+  );
+}
+
+function Ping() {
+  return (
+    <span className="relative inline-flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+    </span>
   );
 }
 
