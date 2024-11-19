@@ -309,7 +309,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2",
-          searchParams.isMaximized ? "container px-0 h-[82svh]" : "h-[65svh]"
+          searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[65dvh]"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
