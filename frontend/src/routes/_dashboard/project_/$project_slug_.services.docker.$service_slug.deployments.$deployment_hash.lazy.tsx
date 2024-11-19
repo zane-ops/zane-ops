@@ -166,9 +166,13 @@ function DeploymentLayout(): JSX.Element {
 
               <p className="flex gap-1 items-center">
                 <HistoryIcon size={15} />
-                <span className="text-grey text-sm">
+                <span className="sr-only">Deployed at :</span>
+                <time
+                  dateTime={deployment.queued_at}
+                  className="text-grey text-sm"
+                >
                   {formattedTime(deployment.queued_at)}
-                </span>
+                </time>
               </p>
               {deployment.url && (
                 <div className="flex gap-3 items-center flex-wrap">
