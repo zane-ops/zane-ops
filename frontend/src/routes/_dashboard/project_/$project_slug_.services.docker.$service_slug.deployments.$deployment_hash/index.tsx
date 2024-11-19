@@ -593,7 +593,7 @@ const Log = React.memo(
           <div className="grid relative z-10">
             <AnsiHtml
               aria-hidden="true"
-              className="text-wrap text-start break-all select-auto z-10 whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+              className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
               text={content}
             />
             {supportsCSSCustomHighlightsAPI() ? (
