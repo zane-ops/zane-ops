@@ -590,7 +590,7 @@ const Log = React.memo(
             {supportsCSSCustomHighlightsAPI() ? (
               <pre
                 data-highlight="true"
-                className="text-wrap text-start relative select-none text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
+                className="text-wrap text-start relative z-[-1] text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
               >
                 {content_text}
               </pre>
