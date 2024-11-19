@@ -56,7 +56,10 @@ export function DockerServiceCard({
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <span className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1 z-10">
+            <span
+              tabIndex={0}
+              className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1 z-10"
+            >
               {status !== "NOT_DEPLOYED_YET" && status !== "CANCELLED" && (
                 <span
                   className={cn(
@@ -84,6 +87,7 @@ export function DockerServiceCard({
                   }
                 )}
               ></span>
+              <span className="sr-only">{status}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent>
