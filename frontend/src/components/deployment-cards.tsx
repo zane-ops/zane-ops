@@ -23,6 +23,12 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { MenubarContentItem } from "~/components/ui/menubar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { useCancelDockerServiceDeploymentMutation } from "~/lib/hooks/use-cancel-docker-service-deployment-mutation";
 import { useRedeployDockerServiceMutation } from "~/lib/hooks/use-redeploy-docker-service-mutation";
@@ -30,6 +36,7 @@ import { cn } from "~/lib/utils";
 import {
   capitalizeText,
   formatElapsedTime,
+  formattedTime,
   mergeTimeAgoFormatterAndFormattedDate
 } from "~/utils";
 
@@ -161,17 +168,29 @@ export function DockerDeploymentCard({
               <LoaderIcon className="animate-spin" size={15} />
             )}
           </h3>
-          <p className="text-sm text-gray-500/80 dark:text-gray-400 text-nowrap">
-            {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
-          </p>
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <time
+                  dateTime={queued_at.toISOString()}
+                  className="text-sm text-gray-500/80 dark:text-gray-400 text-nowrap"
+                >
+                  {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
+                </time>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-balance">
+                {formattedTime(queued_at)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Commit message & timer */}
         <div className="flex flex-col items-start gap-1">
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
-              className="after:absolute after:inset-0"
               to={`./deployments/${hash}`}
+              className="whitespace-nowrap overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
               {capitalizeText(commit_message)}
             </Link>
