@@ -309,7 +309,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2",
-          searchParams.isMaximized ? "container px-0 h-[82svh]" : "h-[65svh]"
+          searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[65dvh]"
         )}
       >
         <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -513,7 +513,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                           className="w-full py-2 text-center -scale-y-100 text-grey italic"
                           ref={refetchRef}
                         >
-                          -- LIVE ⚡️ new log entries will appear here --
+                          -- LIVE <Ping /> new log entries will appear here --
                         </div>
                       )}
 
@@ -553,6 +553,15 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   );
 }
 
+function Ping() {
+  return (
+    <span className="relative inline-flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+    </span>
+  );
+}
+
 type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content: string;
   content_text: string;
@@ -584,13 +593,13 @@ const Log = React.memo(
           <div className="grid relative z-10">
             <AnsiHtml
               aria-hidden="true"
-              className="text-wrap text-start break-all select-auto z-10 whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+              className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
               text={content}
             />
             {supportsCSSCustomHighlightsAPI() ? (
               <pre
                 data-highlight="true"
-                className="text-wrap text-start relative select-none text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
+                className="text-wrap text-start relative z-[-1] text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
               >
                 {content_text}
               </pre>
