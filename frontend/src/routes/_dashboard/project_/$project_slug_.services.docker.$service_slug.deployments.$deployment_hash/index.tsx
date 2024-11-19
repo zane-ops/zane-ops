@@ -573,6 +573,8 @@ const Log = React.memo(
     const search = searchValue ?? "";
     const date = new Date(time);
 
+    const logTime = formatLogTime(date);
+
     return (
       <pre className="w-full -scale-y-100 group">
         <pre
@@ -586,7 +588,10 @@ const Log = React.memo(
         >
           <span className="inline-flex items-start select-none">
             <time className="text-grey" dateTime={date.toISOString()}>
-              {formatLogTime(date)}
+              <span className="sr-only sm:not-sr-only">
+                {logTime.dateFormat},&nbsp;
+              </span>
+              <span>{logTime.hourFormat}</span>
             </time>
           </span>
 
@@ -658,5 +663,5 @@ function formatLogTime(time: string | Date) {
     timeZone: userTimeZone
   }).format(date);
 
-  return `${dateFormat}, ${hourFormat}`;
+  return { dateFormat, hourFormat };
 }
