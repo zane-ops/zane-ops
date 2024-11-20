@@ -237,7 +237,7 @@ const socialLinks = [
   },
   {
     name: "Docs",
-    url: "https://zane.fredkiss.dev",
+    url: "https://zaneops.dev",
     icon: <BookOpen width={socialLinksIconWidth} />
   },
   {
