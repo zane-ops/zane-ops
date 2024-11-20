@@ -81,7 +81,7 @@ ALLOWED_HOSTS = (
     else [f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
 )
 
-SESSION_COOKIE_DOMAIN = False
+SESSION_COOKIE_DOMAIN = None
 
 if ENVIRONMENT == PRODUCTION_ENV:
     is_same_subdomain = ZANE_APP_DOMAIN.endswith(ROOT_DOMAIN)
