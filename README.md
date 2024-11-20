@@ -19,11 +19,11 @@
 
 ## 🚀 Installation
 
-Follow the [instructions](https://zane.fredkiss.dev/get-started/) in the documentation to install and setup zaneops.
+Follow the [instructions](https://zaneops.dev/get-started/) in the documentation to install and setup zaneops.
 
 ## 📸 Some Screenshots
 
-You can view all the in-app screenshots in the [documentation](https://zane.fredkiss.dev/screenshots/), but here's a quick showcase:
+You can view all the in-app screenshots in the [documentation](https://zaneops.dev/screenshots/), but here's a quick showcase:
 
 
 1. Login
@@ -77,7 +77,7 @@ You can view all the in-app screenshots in the [documentation](https://zane.fred
      - [x] Details page 
      - [x] Env variables page
      - [x] Settings page
-     - [ ] Single deployment application logs page
+     - [x] Single deployment application logs page
      - [ ] Single deployment page details 
      - [ ] Single deployment http logs page
      - [x] deploy & redeploy deployments
@@ -94,24 +94,19 @@ You can view all the in-app screenshots in the [documentation](https://zane.fred
   - [ ] Git services API
     - [ ] create service from a public repo
     - [ ] deploy service  
+      - [ ] Building service with Dockerfile
       - [ ] Building service with nixpacks  
     - [ ] archive service
     - [ ] Pull Request environments & deploying automatically
     - [ ] Auto-comments with deployment status on github
   - [ ] Git services frontend & API (same as docker services)
 
-- **v2** :
-  - [ ] CLI
-     - [ ] install & setup zaneops
-     - [ ] shutting down & uninstalling ZaneOps
-     - [ ] upgrading ZaneOps
-     - [ ] authenticate with token (require token UI+API in ZaneOps)
-     - [ ] Deploy a service using the CLI
+<!-- - **v2** :
   - [ ] Static websites support
   - [ ] CRONs support for services
   - [ ] Template support
     - [ ] Allow also for seeding templates
-  - [ ] Multi-server support
+  - [ ] Multi-server support -->
 </details>
 
 
