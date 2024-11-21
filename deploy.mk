@@ -56,7 +56,7 @@ setup: ### Launch initial setup before installing zaneops
 		sed -i'.bak' "s#{{ZANE_DJANGO_SECRET_KEY}}#\"$(django_secret)\"#g" ./.env; \
 		if [ $$(uname) = "Linux" ]; then \
 			sed -i'.bak' "s#127-0-0-1#$(ip_address)#g" ./.env; \
-		fi \
+		fi; \
 		echo "Your .env file has been generated with: " \
 		if [ $$(uname) = "Linux" ]; then \
 			echo "ROOT_DOMAIN=\"\x1b[94m$(ip_address).sslip.io\x1b[0m\""; \
@@ -64,7 +64,7 @@ setup: ### Launch initial setup before installing zaneops
 		else \
 			echo "ROOT_DOMAIN=\"\x1b[94m127-0-0-1.sslip.io\x1b[0m\""; \
 			echo "ZANE_APP_DOMAIN=\"\x1b[94m127-0-0-1.sslip.io\x1b[0m\";  \
-		fi \
+		fi; \
 		echo "__DANGEROUS_ALLOW_HTTP_SESSION=\"\x1b[94mtrue\x1b[0m\"";  \
 		echo "⚠️ PLEASE DON'T FORGET TO CHANGE THESE ON PRODUCTION ⚠️"; \
 		rm .env.bak; \
