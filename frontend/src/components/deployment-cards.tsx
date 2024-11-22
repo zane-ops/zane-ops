@@ -173,7 +173,7 @@ export function DockerDeploymentCard({
               <TooltipTrigger asChild>
                 <time
                   dateTime={queued_at.toISOString()}
-                  className="text-sm text-gray-500/80 dark:text-gray-400 text-nowrap"
+                  className="text-sm relative z-10 text-gray-500/80 dark:text-gray-400 text-nowrap"
                 >
                   {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
                 </time>
@@ -190,7 +190,7 @@ export function DockerDeploymentCard({
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
               to={`./deployments/${hash}`}
-              className="whitespace-nowrap overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
+              className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
               {capitalizeText(commit_message)}
             </Link>
@@ -204,7 +204,7 @@ export function DockerDeploymentCard({
               </small>
             )}
           </h3>
-          <div className="flex text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
+          <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
               <Timer size={15} className="flex-none" />
               {started_at && !finished_at ? (
