@@ -16,9 +16,9 @@ export const Route = createRootRoute({
       <Toaster />
       {!import.meta.env.PROD && (
         <>
-          <ReactQueryDevtools />
-          <TanStackRouterDevtools />
-          <TailwindIndicator />
+          {/* <ReactQueryDevtools /> */}
+          {/* <TanStackRouterDevtools /> */}
+          {/* <TailwindIndicator /> */}
         </>
       )}
     </div>

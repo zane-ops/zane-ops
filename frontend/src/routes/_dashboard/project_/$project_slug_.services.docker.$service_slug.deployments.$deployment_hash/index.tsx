@@ -36,6 +36,7 @@ import {
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
+import { excerpt } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -121,40 +122,46 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     count++;
   }
 
-  const virtualizer = useVirtualizer({
-    count: logs.length,
-    getScrollElement: () => logContentRef.current,
-    estimateSize: () => 16 * 2,
-    paddingStart: 16,
-    paddingEnd: 8
-  });
-  const virtualItems = virtualizer.getVirtualItems();
+  // const virtualizer = useVirtualizer({
+  //   count: logs.length,
+  //   getScrollElement: () => logContentRef.current,
+  //   estimateSize: () => 16 * 2,
+  //   paddingStart: 16,
+  //   paddingEnd: 8,
+  //   overscan: 3
+  // });
+  // const virtualItems = virtualizer.getVirtualItems();
 
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting) {
-          setIsAutoRefetchEnabled(true);
-        } else {
-          setIsAutoRefetchEnabled(false);
+  React.useEffect(
+    () => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry.isIntersecting) {
+            setIsAutoRefetchEnabled(true);
+          } else {
+            setIsAutoRefetchEnabled(false);
+          }
+        },
+        {
+          root: logContentRef.current,
+          rootMargin: "0px",
+          threshold: 0.1
         }
-      },
-      {
-        root: logContentRef.current,
-        rootMargin: "0px",
-        threshold: 0.1
-      }
-    );
+      );
 
-    const autoRefetchTrigger = refetchRef.current;
-    if (autoRefetchTrigger) {
-      observer.observe(autoRefetchTrigger);
-      return () => {
-        observer.unobserve(autoRefetchTrigger);
-      };
-    }
-  }, [virtualItems]);
+      const autoRefetchTrigger = refetchRef.current;
+      if (autoRefetchTrigger) {
+        observer.observe(autoRefetchTrigger);
+        return () => {
+          observer.unobserve(autoRefetchTrigger);
+        };
+      }
+    },
+    [
+      // virtualItems
+    ]
+  );
 
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -183,7 +190,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       };
     }
   }, [
-    virtualItems,
+    // virtualItems,
     logsQuery.fetchPreviousPage,
     logsQuery.isFetching,
     logsQuery.hasPreviousPage
@@ -217,7 +224,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       };
     }
   }, [
-    virtualItems,
+    // virtualItems,
     logsQuery.fetchNextPage,
     logsQuery.isFetching,
     logsQuery.hasNextPage,
@@ -225,6 +232,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   ]);
 
   React.useEffect(() => {
+    return;
     if (logContentRef.current) {
       if (!supportsCSSCustomHighlightsAPI()) {
         return;
@@ -273,7 +281,11 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       const highlight = new Highlight(...ranges.flat());
       CSS.highlights.set("search-results-highlight", highlight);
     }
-  }, [filters.content, logs, virtualItems]);
+  }, [
+    filters.content,
+    logs
+    //  virtualItems
+  ]);
 
   React.useEffect(() => {
     const parentElement = logContentRef.current;
@@ -312,134 +324,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
           searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[65dvh]"
         )}
       >
-        <div className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
-          <div className="flex items-center gap-2 order-first">
-            <DateRangeWithShortcuts
-              date={date}
-              setDate={(newDateRange) =>
-                navigate({
-                  search: {
-                    ...filters,
-                    isMaximized: searchParams.isMaximized,
-                    time_before: newDateRange?.to,
-                    time_after: newDateRange?.from
-                  },
-                  replace: true
-                })
-              }
-              className="min-w-[250px] w-full"
-            />
-          </div>
-
-          <div className="flex w-full items-center relative flex-grow order-2">
-            {logsQuery.isFetching ? (
-              <LoaderIcon
-                size={15}
-                className="animate-spin absolute left-4 text-grey"
-              />
-            ) : (
-              <SearchIcon size={15} className="absolute left-4 text-grey" />
-            )}
-            <Input
-              className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
-              placeholder="Search for log contents"
-              name="content"
-              defaultValue={searchParams.content}
-              ref={inputRef}
-              onKeyUp={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const newQuery = e.currentTarget.value;
-                if (newQuery !== (searchParams.content ?? "")) {
-                  navigate({
-                    search: {
-                      ...filters,
-                      isMaximized: searchParams.isMaximized,
-                      content: e.currentTarget.value
-                    },
-                    replace: true
-                  });
-                }
-              }}
-            />
-          </div>
-
-          <div className="flex-shrink-0 flex items-center gap-1.5 order-1 lg:order-last">
-            <MultiSelect
-              value={filters.level}
-              options={LOG_LEVELS as Writeable<typeof LOG_LEVELS>}
-              onValueChange={(newVal) => {
-                navigate({
-                  search: {
-                    ...filters,
-                    isMaximized: searchParams.isMaximized,
-                    level: newVal
-                  },
-                  replace: true
-                });
-              }}
-              placeholder="log levels"
-            />
-
-            <MultiSelect
-              value={filters.source}
-              options={LOG_SOURCES as Writeable<typeof LOG_SOURCES>}
-              onValueChange={(newVal) => {
-                navigate({
-                  search: {
-                    ...filters,
-                    isMaximized: searchParams.isMaximized,
-                    source: newVal
-                  },
-                  replace: true
-                });
-              }}
-              placeholder="log sources"
-            />
-
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      navigate({
-                        search: {
-                          ...filters,
-                          isMaximized: !searchParams.isMaximized
-                        },
-                        replace: true
-                      });
-                    }}
-                  >
-                    <span className="sr-only">
-                      {searchParams.isMaximized ? "Minimize" : "Maximize"}
-                    </span>
-                    {searchParams.isMaximized ? (
-                      <Minimize2Icon size={15} />
-                    ) : (
-                      <Maximize2Icon size={15} />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64 text-balance">
-                  {searchParams.isMaximized ? "Minimize" : "Maximize"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-        <hr className="border-border" />
-        {!isEmptySearchParams && (
-          <Button
-            variant="outline"
-            className="inline-flex w-min gap-1"
-            onClick={clearFilters}
-          >
-            <XIcon size={15} />
-            <span>Reset filters</span>
-          </Button>
-        )}
+        <HeaderSection isFetchingLogs={logsQuery.isFetching} />
 
         <pre
           id="logContent"
@@ -482,9 +367,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
           {logs.length > 0 && (
             <div
-              style={{
-                height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
-              }}
+              // style={{
+              //   height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
+              // }}
               className={cn(
                 "relative justify-start mb-auto",
                 "[&_::highlight(search-results-highlight)]:bg-yellow-400/50"
@@ -492,23 +377,24 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             >
               <div
                 className="absolute top-0 left-0 w-full"
-                style={{
-                  transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
-                }}
+                // style={{
+                //   transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
+                // }}
               >
-                {virtualItems.map((virtualRow) => {
-                  const log = logs[virtualRow.index];
+                {logs.map((virtualRow, index) => {
+                  const log = logs[index];
                   return (
                     <div
-                      key={virtualRow.key}
+                      // key={virtualRow.key}
+                      key={log.id}
                       className="w-full"
-                      data-index={virtualRow.index}
-                      ref={virtualizer.measureElement}
+                      // data-index={virtualRow.index}
+                      // ref={virtualizer.measureElement}
                     >
-                      {logsQuery.hasNextPage && virtualRow.index === 0 && (
+                      {logsQuery.hasNextPage && index === 0 && (
                         <div ref={loadNextPageRef} className="w-full h-px" />
                       )}
-                      {virtualRow.index === 0 && (
+                      {index === 0 && (
                         <div
                           className="w-full py-2 text-center -scale-y-100 text-grey italic"
                           ref={refetchRef}
@@ -524,7 +410,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         content={(log.content as string) ?? ""}
                         content_text={log.content_text ?? ""}
                         searchValue={
-                          supportsCSSCustomHighlightsAPI()
+                          !supportsCSSCustomHighlightsAPI()
                             ? ""
                             : filters.content
                         }
@@ -532,7 +418,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
                       {(logsQuery.hasPreviousPage ||
                         logsQuery.isFetchingPreviousPage) &&
-                        virtualRow.index === logs.length - 1 && (
+                        index === logs.length - 1 && (
                           <div
                             ref={loadPreviousPageRef}
                             className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 -scale-y-100"
@@ -551,6 +437,204 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       </div>
     </div>
   );
+}
+
+type HeaderSectionProps = {
+  isFetchingLogs?: boolean;
+};
+
+const HeaderSection = React.memo(function HeaderSection({
+  isFetchingLogs
+}: HeaderSectionProps) {
+  const searchParams = Route.useSearch();
+  const navigate = useNavigate();
+  const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
+  const inputRef = React.useRef<React.ElementRef<"input">>(null);
+
+  const filters = {
+    time_after: searchParams.time_after,
+    time_before: searchParams.time_before,
+    source:
+      searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
+    level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
+    content: debouncedSearchQuery
+  } satisfies DeploymentLogFitlers;
+
+  const date: DateRange = {
+    from: filters.time_after,
+    to: filters.time_before
+  };
+
+  const isEmptySearchParams = React.useMemo(() => {
+    return (
+      !searchParams.time_after &&
+      !searchParams.time_before &&
+      (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
+        searchParams.source?.length === 0 ||
+        !searchParams.source) &&
+      (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
+        searchParams.level?.length === 0 ||
+        !searchParams.level) &&
+      (filters.content ?? "").length === 0
+    );
+  }, [
+    searchParams.time_after,
+    searchParams.time_before,
+    searchParams.source,
+    searchParams.level,
+    filters.content
+  ]);
+
+  const clearFilters = React.useCallback(() => {
+    navigate({
+      to: "./",
+      search: {
+        isMaximized: searchParams.isMaximized
+      },
+      replace: true
+    });
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }, [navigate, searchParams.isMaximized]);
+
+  return (
+    <>
+      <section className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
+        <div className="flex items-center gap-2 order-first">
+          <DateRangeWithShortcuts
+            date={date}
+            setDate={(newDateRange) =>
+              navigate({
+                search: {
+                  ...filters,
+                  isMaximized: searchParams.isMaximized,
+                  time_before: newDateRange?.to,
+                  time_after: newDateRange?.from
+                },
+                replace: true
+              })
+            }
+            className="min-w-[250px] w-full"
+          />
+        </div>
+
+        <div className="flex w-full items-center relative flex-grow order-2">
+          {isFetchingLogs ? (
+            <LoaderIcon
+              size={15}
+              className="animate-spin absolute left-4 text-grey"
+            />
+          ) : (
+            <SearchIcon size={15} className="absolute left-4 text-grey" />
+          )}
+          <Input
+            className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
+            placeholder="Search for log contents"
+            name="content"
+            defaultValue={searchParams.content}
+            ref={inputRef}
+            onKeyUp={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const newQuery = e.currentTarget.value;
+              if (newQuery !== (searchParams.content ?? "")) {
+                navigate({
+                  search: {
+                    ...filters,
+                    isMaximized: searchParams.isMaximized,
+                    content: e.currentTarget.value
+                  },
+                  replace: true
+                });
+              }
+            }}
+          />
+        </div>
+
+        <div className="flex-shrink-0 flex items-center gap-1.5 order-1 lg:order-last">
+          <MultiSelect
+            value={filters.level}
+            options={LOG_LEVELS as Writeable<typeof LOG_LEVELS>}
+            onValueChange={(newVal) => {
+              navigate({
+                search: {
+                  ...filters,
+                  isMaximized: searchParams.isMaximized,
+                  level: newVal
+                },
+                replace: true
+              });
+            }}
+            placeholder="log levels"
+          />
+
+          <MultiSelect
+            value={filters.source}
+            options={LOG_SOURCES as Writeable<typeof LOG_SOURCES>}
+            onValueChange={(newVal) => {
+              navigate({
+                search: {
+                  ...filters,
+                  isMaximized: searchParams.isMaximized,
+                  source: newVal
+                },
+                replace: true
+              });
+            }}
+            placeholder="log sources"
+          />
+
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigate({
+                      search: {
+                        ...filters,
+                        isMaximized: !searchParams.isMaximized
+                      },
+                      replace: true
+                    });
+                  }}
+                >
+                  <span className="sr-only">
+                    {searchParams.isMaximized ? "Minimize" : "Maximize"}
+                  </span>
+                  {searchParams.isMaximized ? (
+                    <Minimize2Icon size={15} />
+                  ) : (
+                    <Maximize2Icon size={15} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-balance">
+                {searchParams.isMaximized ? "Minimize" : "Maximize"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </section>
+      <hr className="border-border" />
+      {!isEmptySearchParams && (
+        <Button
+          variant="outline"
+          className="inline-flex w-min gap-1"
+          onClick={clearFilters}
+        >
+          <XIcon size={15} />
+          <span>Reset filters</span>
+        </Button>
+      )}
+    </>
+  );
+});
+
+function LogHeaderSection() {
+  return <></>;
 }
 
 function Ping() {
@@ -574,6 +658,9 @@ const Log = React.memo(
     const date = new Date(time);
 
     const logTime = formatLogTime(date);
+    // if (content_text.length > 1000) {
+    //   const logExcerpt = excerpt(content_text, 1000);
+    // }
 
     return (
       <pre className="w-full -scale-y-100 group">
@@ -586,7 +673,7 @@ const Log = React.memo(
             "group-open:bg-yellow-700/20"
           )}
         >
-          <span className="inline-flex items-start select-none">
+          <span className="inline-flex items-start select-none min-w-fit flex-none">
             <time className="text-grey" dateTime={date.toISOString()}>
               <span className="sr-only sm:not-sr-only">
                 {logTime.dateFormat},&nbsp;
@@ -596,25 +683,31 @@ const Log = React.memo(
           </span>
 
           <div className="grid relative z-10">
-            <AnsiHtml
-              aria-hidden="true"
-              className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-              text={content}
-            />
-            {supportsCSSCustomHighlightsAPI() ? (
+            {/* {content_text.length > 1_000 ? ( */}
+            <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
+              {content_text}
+            </pre>
+            {/* // ) : 
+               <AnsiHtml
+            //     aria-hidden="true"
+            //     className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+            //     text={content}
+            //   />
+            // )}
+            {/* {supportsCSSCustomHighlightsAPI() ? (
               <pre
                 data-highlight="true"
                 className="text-wrap text-start relative z-[-1] text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
               >
                 {content_text}
               </pre>
-            ) : (
-              <pre className="text-wrap text-start relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
-                {search.length > 0
-                  ? getHighlightedText(content_text, search)
-                  : content_text}
-              </pre>
-            )}
+            ) : ( */}
+            {/* <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
+              {search.length > 0
+                ? getHighlightedText(content_text, search)
+                : content_text}
+            </pre> */}
+            {/* )} */}
           </div>
         </pre>
       </pre>

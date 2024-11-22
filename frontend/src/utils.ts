@@ -1,5 +1,12 @@
 import { apiClient } from "./api/client";
 
+export function excerpt(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.substring(0, maxLength).trimEnd() + "...";
+}
+
 /**
  * Get the value of a cookie with the given name.
  * @example
