@@ -352,7 +352,7 @@ function StepServiceCreated({
   onSuccess
 }: StepServiceCreatedProps) {
   const queryClient = useQueryClient();
-  const { isPending, mutate, data } = useMutation({
+  const { isPending, mutateAsync, data } = useMutation({
     onSuccess: (data) => {
       if (data.data) {
         onSuccess(data.data.hash);
@@ -397,7 +397,9 @@ function StepServiceCreated({
       )}
 
       <form
-        action={() => mutate()}
+        action={async () => {
+          await mutateAsync();
+        }}
         className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
       >
         <Alert variant="success">
