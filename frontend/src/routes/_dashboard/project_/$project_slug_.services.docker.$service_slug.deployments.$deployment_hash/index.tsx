@@ -227,7 +227,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                   transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
                 }}
               >
-                {/* {virtualItems.map((virtualRow) => {
+                {virtualItems.map((virtualRow) => {
                   const log = logs[virtualRow.index];
                   return (
                     <div
@@ -344,7 +344,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         )}
                     </div>
                   );
-                })} */}
+                })}
               </div>
             </div>
           )}
@@ -562,11 +562,11 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
 
 const Log = ({ content, level, time, id, content_text }: LogProps) => {
   const date = new Date(time);
-  const search = Route.useSearch({
-    select: (search) => search.content ?? ""
-  });
+  // const search = Route.useSearch({
+  //   select: (search) => search.content ?? ""
+  // });
 
-  const logTime = formatLogTime(date);
+  // const logTime = formatLogTime(date);
 
   return (
     <pre className="w-full -scale-y-100 group">
@@ -582,31 +582,32 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
         <span className="inline-flex items-start select-none min-w-fit flex-none">
           <time className="text-grey" dateTime={date.toISOString()}>
             <span className="sr-only sm:not-sr-only">
-              {logTime.dateFormat},&nbsp;
+              {/* {logTime.dateFormat},&nbsp; */}
             </span>
-            <span>{logTime.hourFormat}</span>
+            {/* <span>{logTime.hourFormat}</span> */}
+            {date.toISOString()}
           </time>
         </span>
 
         <div className="grid relative z-10">
-          {content_text.length > 1_000 ? (
-            <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
-              {content_text}
-            </pre>
-          ) : (
-            <AnsiHtml
-              aria-hidden="true"
-              className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-              text={content}
-            />
-          )}
-          <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
-            {search.length > 0 ? (
-              <HighlightedText text={content_text} highlight={search} />
-            ) : (
-              content_text
-            )}
+          {/* {content_text.length > 1_000 ? ( */}
+          <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
+            {content_text}
           </pre>
+          {/*// ) : (
+          //   <AnsiHtml
+          //     aria-hidden="true"
+          //     className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+          //     text={content}
+          //   />
+          // )}
+          // <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
+          //   {search.length > 0 ? (
+          //     <HighlightedText text={content_text} highlight={search} />
+          //   ) : (
+          //     content_text
+          //   )} 
+          </pre>*/}
         </div>
       </pre>
     </pre>
