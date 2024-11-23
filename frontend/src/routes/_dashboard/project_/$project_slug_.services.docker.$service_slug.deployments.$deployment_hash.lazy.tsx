@@ -73,7 +73,6 @@ function DeploymentLayout(): JSX.Element {
   const navigate = Route.useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  console.log("Rendering `DeploymentLayout()`");
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.LOGS;
   if (pathname.match(/http\-logs\/?$/)) {
     currentSelectedTab = TABS.HTTP_LOGS;

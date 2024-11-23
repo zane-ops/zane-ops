@@ -12,6 +12,7 @@ import {
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { useDebounce, useDebouncedCallback } from "use-debounce";
+import { date } from "zod";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MultiSelect } from "~/components/multi-select";
@@ -49,7 +50,7 @@ function useRouteParams() {
     select(params) {
       return {
         deployment_hash: params.deployment_hash,
-        project_slug: params.deployment_hash,
+        project_slug: params.project_slug,
         service_slug: params.service_slug
       };
     }
@@ -243,62 +244,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   ]);
 
   React.useEffect(() => {
-    return;
-    if (logContentRef.current) {
-      if (!supportsCSSCustomHighlightsAPI()) {
-        return;
-      }
-
-      CSS.highlights.clear();
-      if (filters.content.length === 0) return;
-
-      const parents = logContentRef.current.querySelectorAll(
-        'pre[data-highlight="true"]'
-      );
-      // we know that these elements (`pre[data-highlight="true"]`) only have simple text nodes inside of them
-      const allTextNodes = [...parents].map((parent) => parent.childNodes[0]);
-
-      // Code originally copied from here :
-      // https://microsoftedge.github.io/Demos/custom-highlight-api/
-      const ranges = allTextNodes
-        .map((el) => {
-          return {
-            el,
-            text: (el?.textContent ?? "").toLowerCase()
-          };
-        })
-        .filter(
-          ({ text }) =>
-            Boolean(text) && text.includes(filters.content.toLowerCase())
-        )
-        .map(({ text, el }) => {
-          const indices = [];
-          let startPos = 0;
-          while (startPos < text.length) {
-            const index = text.indexOf(filters.content.toLowerCase(), startPos);
-            if (index === -1) break;
-            indices.push(index);
-            startPos = index + filters.content.length;
-          }
-
-          return indices.map((index) => {
-            const range = new Range();
-            range.setStart(el, index);
-            range.setEnd(el, index + filters.content.length);
-            return range;
-          });
-        });
-
-      const highlight = new Highlight(...ranges.flat());
-      CSS.highlights.set("search-results-highlight", highlight);
-    }
-  }, [
-    filters.content,
-    logs
-    //  virtualItems
-  ]);
-
-  React.useEffect(() => {
     const parentElement = logContentRef.current;
     if (!parentElement) return;
 
@@ -315,11 +260,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
     return () => abortCtrl.abort();
   }, []);
-
-  const date: DateRange = {
-    from: filters.time_after,
-    to: filters.time_before
-  };
 
   return (
     <div
@@ -420,11 +360,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         level={log.level}
                         content={(log.content as string) ?? ""}
                         content_text={log.content_text ?? ""}
-                        searchValue={
-                          !supportsCSSCustomHighlightsAPI()
-                            ? ""
-                            : filters.content
-                        }
+                        searchValue={filters.content}
                       />
 
                       {(logsQuery.hasPreviousPage ||
@@ -450,35 +386,6 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   );
 }
 
-type HeaderSectionProps = {
-  isFetchingLogs?: boolean;
-};
-
-function useLogsQuery() {
-  const searchParams = Route.useSearch();
-  const { deployment_hash, project_slug, service_slug } = useRouteParams();
-  const filters = {
-    time_after: searchParams.time_after,
-    time_before: searchParams.time_before,
-    source:
-      searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
-    level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
-    content: searchParams.content
-  } satisfies DeploymentLogFitlers;
-
-  const queryClient = useQueryClient();
-  const logsQuery = useInfiniteQuery(
-    deploymentQueries.logs({
-      deployment_hash,
-      project_slug,
-      service_slug,
-      filters,
-      queryClient
-      // autoRefetchEnabled: isAutoRefetchEnabled
-    })
-  );
-}
-
 const HeaderSection = React.memo(function HeaderSection() {
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
@@ -493,34 +400,23 @@ const HeaderSection = React.memo(function HeaderSection() {
     content: searchParams.content
   } satisfies DeploymentLogFitlers;
 
-  const date: DateRange = React.useMemo(() => {
-    return {
-      from: filters.time_after,
-      to: filters.time_before
-    };
-  }, [filters.time_after, filters.time_before]);
+  const date: DateRange = {
+    from: filters.time_after,
+    to: filters.time_before
+  };
 
-  const isEmptySearchParams = React.useMemo(() => {
-    return (
-      !searchParams.time_after &&
-      !searchParams.time_before &&
-      (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
-        searchParams.source?.length === 0 ||
-        !searchParams.source) &&
-      (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
-        searchParams.level?.length === 0 ||
-        !searchParams.level) &&
-      (filters.content ?? "").length === 0
-    );
-  }, [
-    searchParams.time_after,
-    searchParams.time_before,
-    searchParams.source,
-    searchParams.level,
-    filters.content
-  ]);
+  const isEmptySearchParams =
+    !searchParams.time_after &&
+    !searchParams.time_before &&
+    (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
+      searchParams.source?.length === 0 ||
+      !searchParams.source) &&
+    (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
+      searchParams.level?.length === 0 ||
+      !searchParams.level) &&
+    (filters.content ?? "").length === 0;
 
-  const clearFilters = React.useCallback(() => {
+  const clearFilters = () => {
     navigate({
       to: "./",
       search: {
@@ -532,7 +428,7 @@ const HeaderSection = React.memo(function HeaderSection() {
     if (inputRef.current) {
       inputRef.current.value = "";
     }
-  }, [navigate, searchParams.isMaximized]);
+  };
 
   const searchLogsForContent = useDebouncedCallback((content: string) => {
     navigate({
@@ -567,14 +463,7 @@ const HeaderSection = React.memo(function HeaderSection() {
         </div>
 
         <div className="flex w-full items-center relative flex-grow order-2">
-          {/* {isFetchingLogs ? (
-            <LoaderIcon
-              size={15}
-              className="animate-spin absolute left-4 text-grey"
-            />
-          ) : ( */}
           <SearchIcon size={15} className="absolute left-4 text-grey" />
-          {/* )} */}
 
           <Input
             className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
@@ -671,7 +560,7 @@ const HeaderSection = React.memo(function HeaderSection() {
   );
 });
 
-function LogHeaderSection() {
+function LogContentSection() {
   return <></>;
 }
 
@@ -721,31 +610,22 @@ const Log = React.memo(
           </span>
 
           <div className="grid relative z-10">
-            {/* {content_text.length > 1_000 ? ( */}
-            <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
-              {content_text}
-            </pre>
-            {/* // ) : 
-               <AnsiHtml
-            //     aria-hidden="true"
-            //     className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-            //     text={content}
-            //   />
-            // )}
-            {/* {supportsCSSCustomHighlightsAPI() ? (
-              <pre
-                data-highlight="true"
-                className="text-wrap text-start relative z-[-1] text-transparent break-all col-start-1 col-end-1 row-start-1 row-end-1"
-              >
+            {content_text.length > 1_000 ? (
+              <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
                 {content_text}
               </pre>
-            ) : ( */}
-            {/* <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
+            ) : (
+              <AnsiHtml
+                aria-hidden="true"
+                className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+                text={content}
+              />
+            )}
+            <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
               {search.length > 0
                 ? getHighlightedText(content_text, search)
                 : content_text}
-            </pre> */}
-            {/* )} */}
+            </pre>
           </div>
         </pre>
       </pre>
