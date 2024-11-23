@@ -153,7 +153,7 @@ export const MultiSelect = ({
         <Command className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2">
           <CommandPrimitive.Input
             placeholder="search"
-            className="bg-inherit focus-visible:outline-none px-2 py-2"
+            className="bg-inherit focus-visible:outline-hidden px-2 py-2"
           />
           <hr className="-mx-2 border-border" />
           <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2">

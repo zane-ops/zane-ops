@@ -88,7 +88,7 @@ function CreateForm() {
   return (
     <form
       action={formAction}
-      className="flex h-[60vh] flex-grow justify-center items-center"
+      className="flex h-[60vh] grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Project</h1>

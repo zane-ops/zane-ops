@@ -47,7 +47,7 @@ export const Route = createLazyFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
       <Header />
-      <main className="flex-grow container p-6">
+      <main className="grow container p-6">
         <Outlet />
       </main>
       <Footer />
@@ -88,7 +88,7 @@ function Header() {
       {!import.meta.env.PROD && (
         <div
           className={cn(
-            "py-0.5 bg-red-500 text-white text-center fixed top-10 -left-10 -rotate-[30deg] z-[100]",
+            "py-0.5 bg-red-500 text-white text-center fixed top-10 -left-10 -rotate-[30deg] z-100",
             "w-72"
           )}
         >

@@ -623,7 +623,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
               defaultValue={credentials?.username}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
             />
@@ -647,7 +647,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
                 defaultValue={credentials?.password}
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                   "disabled:border-transparent"
                 )}
               />
@@ -954,7 +954,7 @@ function ServicePortItem({
           <AccordionTrigger
             className={cn(
               "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
-              "[&[data-state=open]]:rounded-b-none",
+              "data-[state=open]:rounded-b-none",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
                   change_type === "UPDATE",
@@ -1391,7 +1391,7 @@ function ServiceURLFormItem({
           <AccordionTrigger
             className={cn(
               "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
-              "[&[data-state=open]]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
+              "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
                   change_type === "UPDATE",
@@ -2010,7 +2010,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
               disabled={startingCommandChange !== undefined}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
               defaultValue={command}
@@ -2207,8 +2207,8 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               >
                 <SelectTrigger
                   className={cn(
-                    "data-[disabled]:bg-secondary/60 data-[disabled]:dark:bg-secondary-foreground",
-                    "data-[disabled]:opacity-100 data-[disabled]:border-transparent",
+                    "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
+                    "data-disabled:opacity-100 data-disabled:border-transparent",
                     healthcheckType === "none" && "text-muted-foreground"
                   )}
                 >
@@ -2243,7 +2243,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
                 }
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                   "disabled:border-transparent"
                 )}
                 defaultValue={healthcheck?.value}
@@ -2276,7 +2276,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               }
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
             />
@@ -2307,7 +2307,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               }
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
             />

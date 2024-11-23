@@ -12,7 +12,7 @@ const Card = ({
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border border-input  text-card-foreground shadow-sm",
+      "rounded-lg border border-input  text-card-foreground shadow-xs",
       className
     )}
     {...props}

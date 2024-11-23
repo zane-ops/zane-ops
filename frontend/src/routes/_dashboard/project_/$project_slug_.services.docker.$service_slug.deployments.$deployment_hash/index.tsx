@@ -448,7 +448,7 @@ const HeaderSection = React.memo(function HeaderSection({
           />
         </div>
 
-        <div className="flex w-full items-center relative flex-grow order-2">
+        <div className="flex w-full items-center relative grow order-2">
           <SearchIcon size={15} className="absolute left-4 text-grey" />
 
           <Input
@@ -466,7 +466,7 @@ const HeaderSection = React.memo(function HeaderSection({
           />
         </div>
 
-        <div className="flex-shrink-0 flex items-center gap-1.5 order-1 lg:order-last">
+        <div className="shrink-0 flex items-center gap-1.5 order-1 lg:order-last">
           <MultiSelect
             value={filters.level}
             options={LOG_LEVELS as Writeable<typeof LOG_LEVELS>}

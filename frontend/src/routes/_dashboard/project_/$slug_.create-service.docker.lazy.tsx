@@ -185,7 +185,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
   return (
     <form
       action={formAction}
-      className="flex my-10 flex-grow justify-center items-center"
+      className="flex my-10 grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>
@@ -238,7 +238,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
             />
             <CommandList
               className={cn({
-                "!hidden":
+                "hidden!":
                   imageList.length === 0 ||
                   imageSearchQuery.trim().length === 0 ||
                   !isComboxOpen

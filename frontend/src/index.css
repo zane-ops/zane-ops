@@ -1,45 +1,148 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
+@plugin 'tailwindcss-animate';
+@plugin 'fancy-ansi/plugin';
 
-html {
-  scroll-behavior: smooth;
+@variant dark (@media (prefers-color-scheme: dark));
+
+@theme {
+  --font-sans: Geist, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: 'Geist-Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --color-link: hsl(var(--link));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-grey: hsl(var(--grey));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-light: hsl(var(--light));
+
+  --color-toggle: hsl(var(--toggle));
+  --color-toggle-light: hsl(var(--light));
+
+  --color-status-success: hsl(var(--status-success));
+  --color-status-success-light: hsl(var(--light));
+
+  --color-status-error: hsl(var(--status-error));
+  --color-status-error-light: hsl(var(--light));
+
+  --color-status-warning: hsl(var(--status-warning));
+  --color-status-warning-light: hsl(var(--light));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
 }
 
-@media (prefers-reduced-motion) {
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
+
+@layer utilities {
   html {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
   }
-}
 
+  @media (prefers-reduced-motion) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 
-@supports (font-variation-settings: normal) {
+  @supports (font-variation-settings: normal) {
+    :root {
+      font-optical-sizing: auto;
+    }
+  }
+  @font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('assets/fonts/variable-woff/GeistVF.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'Geist-Mono';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('assets/fonts/variable-woff/GeistMono[wght].woff2') format('woff2');
+  }
+
   :root {
-    font-optical-sizing: auto;
+    color: var(--color-card-foreground);
+    font-family: 'Geist';
   }
-}
-@font-face {
-  font-family: "Geist";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("assets/fonts/variable-woff/GeistVF.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Geist-Mono";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("assets/fonts/variable-woff/GeistMono[wght].woff2") format("woff2");
-}
-
-
-
-:root {
-  color: theme("colors.card.foreground");
-  font-family: "Geist";
 }
 
 @layer base {
@@ -72,22 +175,22 @@ html {
     --link: 221.21 83.19% 53.33%;
     --grey: 220 8.94% 46.08%;
 
-    --ansi-black: theme(ansi.colors.terminalapp.black);
-    --ansi-red: theme(ansi.colors.terminalapp.red);
-    --ansi-green: theme(ansi.colors.terminalapp.green);
-    --ansi-yellow: theme(ansi.colors.terminalapp.yellow);
-    --ansi-blue: theme(ansi.colors.terminalapp.blue);
-    --ansi-magenta: theme(ansi.colors.terminalapp.magenta);
-    --ansi-cyan: theme(ansi.colors.terminalapp.cyan);
-    --ansi-white: theme(ansi.colors.terminalapp.white);
-    --ansi-bright-black: theme(ansi.colors.terminalapp.bright-black);
-    --ansi-bright-red: theme(ansi.colors.terminalapp.bright-red);
-    --ansi-bright-green: theme(ansi.colors.terminalapp.bright-green);
-    --ansi-bright-yellow: theme(ansi.colors.terminalapp.bright-yellow);
-    --ansi-bright-blue: theme(ansi.colors.terminalapp.bright-blue);
-    --ansi-bright-magenta: theme(ansi.colors.terminalapp.magenta);
-    --ansi-bright-cyan: theme(ansi.colors.terminalapp.cyan);
-    --ansi-bright-white: theme(ansi.colors.terminalapp.white);
+    --ansi-black: var(--ansi-colors-terminalapp-black);
+    --ansi-red: var(--ansi-colors-terminalapp-red);
+    --ansi-green: var(--ansi-colors-terminalapp-green);
+    --ansi-yellow: var(--ansi-colors-terminalapp-yellow);
+    --ansi-blue: var(--ansi-colors-terminalapp-blue);
+    --ansi-magenta: var(--ansi-colors-terminalapp-magenta);
+    --ansi-cyan: var(--ansi-colors-terminalapp-cyan);
+    --ansi-white: var(--ansi-colors-terminalapp-white);
+    --ansi-bright-black: var(--ansi-colors-terminalapp-bright-black);
+    --ansi-bright-red: var(--ansi-colors-terminalapp-bright-red);
+    --ansi-bright-green: var(--ansi-colors-terminalapp-bright-green);
+    --ansi-bright-yellow: var(--ansi-colors-terminalapp-bright-yellow);
+    --ansi-bright-blue: var(--ansi-colors-terminalapp-bright-blue);
+    --ansi-bright-magenta: var(--ansi-colors-terminalapp-magenta);
+    --ansi-bright-cyan: var(--ansi-colors-terminalapp-cyan);
+    --ansi-bright-white: var(--ansi-colors-terminalapp-white);
   }
   
   @media (prefers-color-scheme: dark) {
@@ -116,28 +219,28 @@ html {
       --link: 213.12 93.9% 67.84%;
       --grey: 217.89 10.61% 64.9%;
 
-      --ansi-black: theme(ansi.colors.ubuntu.black);
-      --ansi-red: theme(ansi.colors.ubuntu.red);
-      --ansi-green: theme(ansi.colors.ubuntu.green);
-      --ansi-yellow: theme(ansi.colors.ubuntu.yellow);
-      --ansi-blue: theme(ansi.colors.ubuntu.blue);
-      --ansi-magenta: theme(ansi.colors.ubuntu.magenta);
-      --ansi-cyan: theme(ansi.colors.ubuntu.cyan);
-      --ansi-white: theme(ansi.colors.ubuntu.white);
-      --ansi-bright-black: theme(ansi.colors.ubuntu.bright-black);
-      --ansi-bright-red: theme(ansi.colors.ubuntu.bright-red);
-      --ansi-bright-green: theme(ansi.colors.ubuntu.bright-green);
-      --ansi-bright-yellow: theme(ansi.colors.ubuntu.bright-yellow);
-      --ansi-bright-blue: theme(ansi.colors.ubuntu.bright-blue);
-      --ansi-bright-magenta: theme(ansi.colors.ubuntu.magenta);
-      --ansi-bright-cyan: theme(ansi.colors.ubuntu.cyan);
-      --ansi-bright-white: theme(ansi.colors.ubuntu.white);
+      --ansi-black: var(--ansi-colors-ubuntu-black);
+      --ansi-red: var(--ansi-colors-ubuntu-red);
+      --ansi-green: var(--ansi-colors-ubuntu-green);
+      --ansi-yellow: var(--ansi-colors-ubuntu-yellow);
+      --ansi-blue: var(--ansi-colors-ubuntu-blue);
+      --ansi-magenta: var(--ansi-colors-ubuntu-magenta);
+      --ansi-cyan: var(--ansi-colors-ubuntu-cyan);
+      --ansi-white: var(--ansi-colors-ubuntu-white);
+      --ansi-bright-black: var(--ansi-colors-ubuntu-bright-black);
+      --ansi-bright-red: var(--ansi-colors-ubuntu-bright-red);
+      --ansi-bright-green: var(--ansi-colors-ubuntu-bright-green);
+      --ansi-bright-yellow: var(--ansi-colors-ubuntu-bright-yellow);
+      --ansi-bright-blue: var(--ansi-colors-ubuntu-bright-blue);
+      --ansi-bright-magenta: var(--ansi-colors-ubuntu-magenta);
+      --ansi-bright-cyan: var(--ansi-colors-ubuntu-cyan);
+      --ansi-bright-white: var(--ansi-colors-ubuntu-white);
     }
   }
 }
 
 *::selection {
-  color: theme('colors.card.foreground');
+  color: var(--color-card-foreground);
   background-color: rgba(96, 165, 250, 50%)
 }
 

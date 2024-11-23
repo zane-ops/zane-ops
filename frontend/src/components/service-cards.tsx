@@ -121,7 +121,7 @@ export function DockerServiceCard({
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex  justify-end flex-grow gap-0.5 flex-col text-sm text-gray-400 p-6">
+      <CardContent className="flex  justify-end grow gap-0.5 flex-col text-sm text-gray-400 p-6">
         {!!url && (
           <a
             href={`//${url}`}
