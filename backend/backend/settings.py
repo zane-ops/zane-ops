@@ -232,25 +232,25 @@ LOGGING = {
         }
     },
     "loggers": {
-        "django.db.backends": {
+        "gunicorn.error": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "gunicorn.access": {
             "level": "DEBUG",
             "handlers": ["console"],
+            "propagate": True,
         },
     },
 }
 
-if DEBUG:
+if DEBUG and not os.environ.get("SILENT"):
     LOGGING["loggers"].update(
         {
-            "gunicorn.error": {
-                "handlers": ["console"],
-                "level": "INFO",
-                "propagate": True,
-            },
-            "gunicorn.access": {
+            "django.db.backends": {
                 "level": "DEBUG",
                 "handlers": ["console"],
-                "propagate": True,
             },
         }
     )
