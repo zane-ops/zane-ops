@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { useActionState } from "react";
+import * as React from "react";
 import { type RequestInput, apiClient } from "~/api/client";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 
@@ -70,7 +70,7 @@ function CreateForm() {
     }
   });
 
-  const [state, formAction, isPending] = useActionState(
+  const [state, formAction, isPending] = React.useActionState(
     async (prev: any, formData: FormData) => {
       const data = {
         slug: formData.get("slug")?.toString().trim(),
