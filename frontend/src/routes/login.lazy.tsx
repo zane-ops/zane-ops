@@ -1,4 +1,3 @@
-import * as Form from "@radix-ui/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -7,6 +6,7 @@ import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 
 import { AlertCircle, LoaderIcon } from "lucide-react";
+import { useActionState } from "react";
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { MetaTitle } from "~/components/meta-title";
@@ -24,7 +24,7 @@ function Login() {
   const user = query.data?.data?.user;
 
   const queryClient = useQueryClient();
-  const { isPending, mutate, data } = useMutation({
+  const { mutateAsync, data } = useMutation({
     mutationFn: async (input: RequestInput<"post", "/api/auth/login/">) => {
       const { error, data } = await apiClient.POST("/api/auth/login/", {
         body: input
@@ -48,8 +48,22 @@ function Login() {
     navigate({ to: "/" });
     return null;
   }
-
   const errors = getFormErrorsFromResponseData(data);
+
+  const [state, formAction, isPending] = useActionState(
+    async (prev: any, formData: FormData) => {
+      const credentials = {
+        username: formData.get("username")!.toString(),
+        password: formData.get("password")!.toString()
+      };
+      const errors = await mutateAsync(credentials);
+
+      if (errors) {
+        return credentials;
+      }
+    },
+    null
+  );
 
   return (
     <>
@@ -68,13 +82,8 @@ function Login() {
           </p>
         </div>
 
-        <Form.Root
-          action={(formData) =>
-            mutate({
-              username: formData.get("username")!.toString(),
-              password: formData.get("password")!.toString()
-            })
-          }
+        <form
+          action={formAction}
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
           <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
@@ -89,47 +98,55 @@ function Login() {
               </Alert>
             )}
 
-            <Form.Field className="my-2 flex flex-col gap-1" name="username">
-              <Form.Label className="">Username</Form.Label>
-              <Form.Control asChild>
-                <Input placeholder="ex: JohnDoe" name="username" type="text" />
-              </Form.Control>
+            <div className="my-2 flex flex-col gap-1">
+              <label htmlFor="username" className="">
+                Username
+              </label>
+              <Input
+                id="username"
+                name="username"
+                placeholder="ex: JohnDoe"
+                defaultValue={state?.username}
+                type="text"
+                aria-describedby="username-error"
+              />
               {errors.username && (
-                <Form.Message className="text-red-500 text-sm">
+                <span id="username-error" className="text-red-500 text-sm">
                   {errors.username}
-                </Form.Message>
+                </span>
               )}
-            </Form.Field>
+            </div>
 
-            <Form.Field className="flex flex-col gap-1" name="password">
-              <Form.Label>Password</Form.Label>
-              <Form.Control asChild>
-                <Input type="password" name="password" />
-              </Form.Control>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="password">Password</label>
+              <Input
+                type="password"
+                name="password"
+                id="password"
+                defaultValue={state?.password}
+              />
               {errors.password && (
-                <Form.Message className="text-red-500 text-sm">
+                <span id="password-error" className="text-red-500 text-sm">
                   {errors.password}
-                </Form.Message>
+                </span>
               )}
-            </Form.Field>
+            </div>
 
-            <Form.Submit asChild>
-              <SubmitButton
-                className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
-                isPending={isPending}
-              >
-                {isPending ? (
-                  <>
-                    <span>Submitting...</span>
-                    <LoaderIcon className="animate-spin" size={15} />
-                  </>
-                ) : (
-                  "Submit"
-                )}
-              </SubmitButton>
-            </Form.Submit>
+            <SubmitButton
+              className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
+              isPending={isPending}
+            >
+              {isPending ? (
+                <>
+                  <span>Submitting...</span>
+                  <LoaderIcon className="animate-spin" size={15} />
+                </>
+              ) : (
+                "Submit"
+              )}
+            </SubmitButton>
           </div>
-        </Form.Root>
+        </form>
       </div>
     </>
   );
