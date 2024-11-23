@@ -549,7 +549,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
     non_field_errors = non_field_errors.concat(errors.new_value);
   }
 
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const newCredentialsValue =
     serviceCredentialsChange?.new_value as DockerService["credentials"];
 
@@ -1058,7 +1058,7 @@ function ServicePortItem({
 
 function NewServicePortForm() {
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
     project_slug,
@@ -1640,7 +1640,7 @@ function ServiceURLFormItem({
 function NewServiceURLForm() {
   const [isRedirect, setIsRedirect] = React.useState(false);
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
     project_slug,
@@ -1957,7 +1957,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
     updateStartingCommandMutation.data
   );
 
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   return (
     <Form.Root
@@ -2079,7 +2079,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
 
 function ServiceHealthcheckForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const serviceSingleQuery = useQuery(
     serviceQueries.single({
@@ -2511,7 +2511,7 @@ function ServiceVolumeItem({
 
   const errors = getFormErrorsFromResponseData(data);
   const [accordionValue, setAccordionValue] = React.useState("");
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
 
   return (
@@ -2801,7 +2801,7 @@ type VolumeMode = DockerService["volumes"][number]["mode"];
 
 function NewServiceVolumeForm() {
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
     project_slug,

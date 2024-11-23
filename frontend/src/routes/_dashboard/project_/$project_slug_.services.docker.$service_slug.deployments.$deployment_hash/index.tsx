@@ -62,7 +62,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
   // const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
-  const inputRef = React.useRef<React.ElementRef<"input">>(null);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
   const filters = {
@@ -74,19 +74,16 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     content: searchParams.content ?? ""
   } satisfies DeploymentLogFitlers;
 
-  const isEmptySearchParams = React.useMemo(() => {
-    return (
-      !searchParams.time_after &&
-      !searchParams.time_before &&
-      (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
-        searchParams.source?.length === 0 ||
-        !searchParams.source) &&
-      (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
-        searchParams.level?.length === 0 ||
-        !searchParams.level) &&
-      (searchParams.content ?? "").length === 0
-    );
-  }, [searchParams]);
+  const isEmptySearchParams =
+    !searchParams.time_after &&
+    !searchParams.time_before &&
+    (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
+      searchParams.source?.length === 0 ||
+      !searchParams.source) &&
+    (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
+      searchParams.level?.length === 0 ||
+      !searchParams.level) &&
+    (searchParams.content ?? "").length === 0;
 
   const queryClient = useQueryClient();
 
@@ -101,13 +98,10 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     })
   );
 
-  const logs = React.useMemo(() => {
-    return (
-      logsQuery.data?.pages.toReversed().flatMap((item) => item.results) ?? []
-    );
-  }, [logsQuery.data]);
+  const logs =
+    logsQuery.data?.pages.toReversed().flatMap((item) => item.results) ?? [];
 
-  const clearFilters = React.useCallback(() => {
+  const clearFilters = () => {
     navigate({
       to: "./",
       search: {
@@ -119,12 +113,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     if (inputRef.current) {
       inputRef.current.value = "";
     }
-  }, [navigate, searchParams.isMaximized]);
+  };
 
-  const loadNextPageRef = React.useRef<React.ElementRef<"div">>(null);
-  const refetchRef = React.useRef<React.ElementRef<"div">>(null);
-  const loadPreviousPageRef = React.useRef<React.ElementRef<"div">>(null);
-  const logContentRef = React.useRef<React.ElementRef<"pre">>(null);
+  const loadNextPageRef = React.useRef<React.ComponentRef<"div">>(null);
+  const refetchRef = React.useRef<React.ComponentRef<"div">>(null);
+  const loadPreviousPageRef = React.useRef<React.ComponentRef<"div">>(null);
+  const logContentRef = React.useRef<React.ComponentRef<"pre">>(null);
 
   let count = logs.length;
   if (logsQuery.hasNextPage) {
@@ -386,10 +380,10 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   );
 }
 
-const HeaderSection = React.memo(function HeaderSection() {
+const HeaderSection = function HeaderSection() {
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
-  const inputRef = React.useRef<React.ElementRef<"input">>(null);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
   const filters = {
     time_after: searchParams.time_after,
@@ -558,7 +552,7 @@ const HeaderSection = React.memo(function HeaderSection() {
       )}
     </>
   );
-});
+};
 
 function LogContentSection() {
   return <></>;
@@ -579,59 +573,64 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   searchValue?: string;
 };
 
-const Log = React.memo(
-  ({ content, searchValue, level, time, id, content_text }: LogProps) => {
-    const search = searchValue ?? "";
-    const date = new Date(time);
+const Log = ({
+  content,
+  searchValue,
+  level,
+  time,
+  id,
+  content_text
+}: LogProps) => {
+  const search = searchValue ?? "";
+  const date = new Date(time);
 
-    const logTime = formatLogTime(date);
-    // if (content_text.length > 1000) {
-    //   const logExcerpt = excerpt(content_text, 1000);
-    // }
+  const logTime = formatLogTime(date);
+  // if (content_text.length > 1000) {
+  //   const logExcerpt = excerpt(content_text, 1000);
+  // }
 
-    return (
-      <pre className="w-full -scale-y-100 group">
-        <pre
-          id={`log-item-${id}`}
-          className={cn(
-            "flex gap-2 hover:bg-slate-400/20 relative",
-            "py-0 px-4 border-none border-0 ring-0",
-            level === "ERROR" && "bg-red-400/20",
-            "group-open:bg-yellow-700/20"
-          )}
-        >
-          <span className="inline-flex items-start select-none min-w-fit flex-none">
-            <time className="text-grey" dateTime={date.toISOString()}>
-              <span className="sr-only sm:not-sr-only">
-                {logTime.dateFormat},&nbsp;
-              </span>
-              <span>{logTime.hourFormat}</span>
-            </time>
-          </span>
+  return (
+    <pre className="w-full -scale-y-100 group">
+      <pre
+        id={`log-item-${id}`}
+        className={cn(
+          "flex gap-2 hover:bg-slate-400/20 relative",
+          "py-0 px-4 border-none border-0 ring-0",
+          level === "ERROR" && "bg-red-400/20",
+          "group-open:bg-yellow-700/20"
+        )}
+      >
+        <span className="inline-flex items-start select-none min-w-fit flex-none">
+          <time className="text-grey" dateTime={date.toISOString()}>
+            <span className="sr-only sm:not-sr-only">
+              {logTime.dateFormat},&nbsp;
+            </span>
+            <span>{logTime.hourFormat}</span>
+          </time>
+        </span>
 
-          <div className="grid relative z-10">
-            {content_text.length > 1_000 ? (
-              <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
-                {content_text}
-              </pre>
-            ) : (
-              <AnsiHtml
-                aria-hidden="true"
-                className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-                text={content}
-              />
-            )}
-            <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
-              {search.length > 0
-                ? getHighlightedText(content_text, search)
-                : content_text}
+        <div className="grid relative z-10">
+          {content_text.length > 1_000 ? (
+            <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
+              {content_text}
             </pre>
-          </div>
-        </pre>
+          ) : (
+            <AnsiHtml
+              aria-hidden="true"
+              className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
+              text={content}
+            />
+          )}
+          <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
+            {search.length > 0
+              ? getHighlightedText(content_text, search)
+              : content_text}
+          </pre>
+        </div>
       </pre>
-    );
-  }
-);
+    </pre>
+  );
+};
 
 function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string

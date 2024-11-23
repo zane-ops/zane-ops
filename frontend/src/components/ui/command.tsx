@@ -91,22 +91,28 @@ function CommandGroup({
   );
 }
 
-const CommandSeparator = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Separator>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
->(({ className, ...props }, ref) => (
+const CommandSeparator = ({
+  ref,
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator> & {
+  ref?: React.RefObject<React.ComponentRef<typeof CommandPrimitive.Separator>>;
+}) => (
   <CommandPrimitive.Separator
     ref={ref}
     className={cn("-mx-1 h-px bg-border", className)}
     {...props}
   />
-));
+);
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
 
-const CommandItem = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
->(({ className, ...props }, ref) => (
+const CommandItem = ({
+  ref,
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {
+  ref?: React.RefObject<React.ComponentRef<typeof CommandPrimitive.Item>>;
+}) => (
   <CommandPrimitive.Item
     ref={ref}
     onMouseDown={(e) => {
@@ -119,7 +125,7 @@ const CommandItem = React.forwardRef<
     )}
     {...props}
   />
-));
+);
 
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 

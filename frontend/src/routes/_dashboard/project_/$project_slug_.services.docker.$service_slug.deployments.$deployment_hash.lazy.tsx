@@ -235,7 +235,7 @@ function BodySection({ children }: { children: React.ReactNode }) {
   );
 }
 
-const HeaderSection = React.memo(function HeaderSection() {
+function HeaderSection() {
   const { project_slug, service_slug, deployment_hash } = Route.useParams();
   const deploymentQuery = useQuery(
     deploymentQueries.single({
@@ -295,7 +295,7 @@ const HeaderSection = React.memo(function HeaderSection() {
       </div>
     </section>
   );
-});
+}
 
 const DEPLOYMENT_STATUS_COLOR_MAP = {
   STARTING: "blue",

@@ -471,7 +471,7 @@ function EnVariableRow({
 function NewEnvVariableForm() {
   const { project_slug, service_slug } = Route.useParams();
   const queryClient = useQueryClient();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data } = useMutation({
     mutationFn: async (input: {
