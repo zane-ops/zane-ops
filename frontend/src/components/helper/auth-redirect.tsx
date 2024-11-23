@@ -16,7 +16,13 @@ export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
 
     const user = query.data?.data?.user;
     if (!user) {
-      navigate({ to: "/login" });
+      const currentPath = window.location.pathname;
+      navigate({
+        to: "/login",
+        search: {
+          redirect_to: currentPath
+        }
+      });
       return null;
     }
 

@@ -20,6 +20,12 @@ export const Route = createLazyFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
+  const redirect_to = Route.useSearch({
+    select(s) {
+      return (s as { redirect_to?: string }).redirect_to as string;
+    }
+  });
+
   const query = useQuery(userQueries.authedUser);
   const user = query.data?.data?.user;
 
@@ -34,21 +40,17 @@ function Login() {
       }
       if (data?.success) {
         queryClient.removeQueries(userQueries.authedUser);
-        navigate({ to: "/" });
+
+        let redirectTo = "/";
+        if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
+          redirectTo = redirect_to;
+        }
+
+        navigate({ to: redirectTo });
         return;
       }
     }
   });
-
-  if (query.isLoading) {
-    return <Loader />;
-  }
-
-  if (user) {
-    navigate({ to: "/" });
-    return null;
-  }
-  const errors = getFormErrorsFromResponseData(data);
 
   const [state, formAction, isPending] = useActionState(
     async (prev: any, formData: FormData) => {
@@ -64,6 +66,16 @@ function Login() {
     },
     null
   );
+
+  if (query.isLoading) {
+    return <Loader />;
+  }
+
+  if (user) {
+    navigate({ to: "/" });
+    return null;
+  }
+  const errors = getFormErrorsFromResponseData(data);
 
   return (
     <>
