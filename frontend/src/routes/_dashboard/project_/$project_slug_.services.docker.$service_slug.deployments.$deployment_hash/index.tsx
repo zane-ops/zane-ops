@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { useDebounce, useDebouncedCallback } from "use-debounce";
-import { date } from "zod";
+import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MultiSelect } from "~/components/multi-select";
@@ -27,6 +26,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 
+import { withScan } from "react-scan";
 import {
   type DeploymentLog,
   type DeploymentLogFitlers,
@@ -45,6 +45,12 @@ export const Route = createFileRoute(
   component: withAuthRedirect(DeploymentLogsDetailPage)
 });
 
+if (import.meta.env.DEV) {
+  withScan(DeploymentLogsDetailPage, {
+    log: true
+  });
+}
+
 function useRouteParams() {
   return Route.useParams({
     select(params) {
@@ -60,8 +66,9 @@ function useRouteParams() {
 export function DeploymentLogsDetailPage(): React.JSX.Element {
   const { deployment_hash, project_slug, service_slug } = useRouteParams();
   const searchParams = Route.useSearch();
-  const navigate = useNavigate();
-  // const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
+  const navigate = useNavigate({
+    from: "./"
+  });
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
@@ -101,141 +108,17 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const logs =
     logsQuery.data?.pages.toReversed().flatMap((item) => item.results) ?? [];
 
-  const clearFilters = () => {
-    navigate({
-      to: "./",
-      search: {
-        isMaximized: searchParams.isMaximized
-      },
-      replace: true
-    });
-
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-  };
-
-  const loadNextPageRef = React.useRef<React.ComponentRef<"div">>(null);
-  const refetchRef = React.useRef<React.ComponentRef<"div">>(null);
-  const loadPreviousPageRef = React.useRef<React.ComponentRef<"div">>(null);
   const logContentRef = React.useRef<React.ComponentRef<"pre">>(null);
 
-  let count = logs.length;
-  if (logsQuery.hasNextPage) {
-    count++;
-  }
-  if (logsQuery.hasPreviousPage) {
-    count++;
-  }
-
-  // const virtualizer = useVirtualizer({
-  //   count: logs.length,
-  //   getScrollElement: () => logContentRef.current,
-  //   estimateSize: () => 16 * 2,
-  //   paddingStart: 16,
-  //   paddingEnd: 8,
-  //   overscan: 3
-  // });
-  // const virtualItems = virtualizer.getVirtualItems();
-
-  React.useEffect(
-    () => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          if (entry.isIntersecting) {
-            setIsAutoRefetchEnabled(true);
-          } else {
-            setIsAutoRefetchEnabled(false);
-          }
-        },
-        {
-          root: logContentRef.current,
-          rootMargin: "0px",
-          threshold: 0.1
-        }
-      );
-
-      const autoRefetchTrigger = refetchRef.current;
-      if (autoRefetchTrigger) {
-        observer.observe(autoRefetchTrigger);
-        return () => {
-          observer.unobserve(autoRefetchTrigger);
-        };
-      }
-    },
-    [
-      // virtualItems
-    ]
-  );
-
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (
-          entry.isIntersecting &&
-          !logsQuery.isFetching &&
-          logsQuery.hasPreviousPage
-        ) {
-          logsQuery.fetchPreviousPage();
-        }
-      },
-      {
-        root: logContentRef.current,
-        rootMargin: "120%",
-        threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
-      }
-    );
-
-    const loadPreviousPage = loadPreviousPageRef.current;
-    if (loadPreviousPage) {
-      observer.observe(loadPreviousPage);
-      return () => {
-        observer.unobserve(loadPreviousPage);
-      };
-    }
-  }, [
-    // virtualItems,
-    logsQuery.fetchPreviousPage,
-    logsQuery.isFetching,
-    logsQuery.hasPreviousPage
-  ]);
-
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (
-          entry.isIntersecting &&
-          !logsQuery.isFetching &&
-          !logsQuery.isFetchingNextPage &&
-          logsQuery.hasNextPage
-        ) {
-          logsQuery.fetchNextPage();
-        }
-      },
-      {
-        root: logContentRef.current,
-        rootMargin: "20%",
-        threshold: 0.1
-      }
-    );
-
-    const loadNextPage = loadNextPageRef.current;
-    if (loadNextPage) {
-      observer.observe(loadNextPage);
-      return () => {
-        observer.unobserve(loadNextPage);
-      };
-    }
-  }, [
-    // virtualItems,
-    logsQuery.fetchNextPage,
-    logsQuery.isFetching,
-    logsQuery.hasNextPage,
-    logsQuery.isFetchingNextPage
-  ]);
+  const virtualizer = useVirtualizer({
+    count: logs.length,
+    getScrollElement: () => logContentRef.current,
+    estimateSize: () => 16 * 2,
+    paddingStart: 16,
+    paddingEnd: 8,
+    overscan: 3
+  });
+  const virtualItems = virtualizer.getVirtualItems();
 
   React.useEffect(() => {
     const parentElement = logContentRef.current;
@@ -255,6 +138,24 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     return () => abortCtrl.abort();
   }, []);
 
+  const [isPending, startTransition] = React.useTransition();
+
+  const clearFilters = () => {
+    startTransition(() =>
+      navigate({
+        to: "./",
+        search: {
+          isMaximized: searchParams.isMaximized
+        },
+        replace: true
+      })
+    );
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -269,10 +170,10 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
           searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[65dvh]"
         )}
       >
-        <HeaderSection />
+        <HeaderSection startTransition={startTransition} />
 
-        <pre
-          id="logContent"
+        <section
+          id="log-content"
           ref={logContentRef}
           className={cn(
             "-scale-y-100 justify-start min-h-0",
@@ -312,9 +213,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
           {logs.length > 0 && (
             <div
-              // style={{
-              //   height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
-              // }}
+              style={{
+                height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
+              }}
               className={cn(
                 "relative justify-start mb-auto",
                 "[&_::highlight(search-results-highlight)]:bg-yellow-400/50"
@@ -322,27 +223,77 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
             >
               <div
                 className="absolute top-0 left-0 w-full"
-                // style={{
-                //   transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
-                // }}
+                style={{
+                  transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
+                }}
               >
-                {logs.map((virtualRow, index) => {
-                  const log = logs[index];
+                {/* {virtualItems.map((virtualRow) => {
+                  const log = logs[virtualRow.index];
                   return (
                     <div
-                      // key={virtualRow.key}
-                      key={log.id}
+                      key={virtualRow.key}
                       className="w-full"
-                      // data-index={virtualRow.index}
-                      // ref={virtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
                     >
-                      {logsQuery.hasNextPage && index === 0 && (
-                        <div ref={loadNextPageRef} className="w-full h-px" />
+                      {logsQuery.hasNextPage && virtualRow.index === 0 && (
+                        <div
+                          ref={(node) => {
+                            if (!node) return;
+                            const observer = new IntersectionObserver(
+                              (entries) => {
+                                const entry = entries[0];
+                                if (
+                                  entry.isIntersecting &&
+                                  !logsQuery.isFetching &&
+                                  !logsQuery.isFetchingNextPage &&
+                                  logsQuery.hasNextPage
+                                ) {
+                                  logsQuery.fetchNextPage();
+                                }
+                              },
+                              {
+                                root: node.closest("#log-content"),
+                                rootMargin: "20%",
+                                threshold: 0.1
+                              }
+                            );
+
+                            observer.observe(node);
+                            return () => {
+                              observer.unobserve(node);
+                            };
+                          }}
+                          className="w-full h-px"
+                        />
                       )}
-                      {index === 0 && (
+                      {virtualRow.index === 0 && (
                         <div
                           className="w-full py-2 text-center -scale-y-100 text-grey italic"
-                          ref={refetchRef}
+                          ref={(node) => {
+                            if (!node) return;
+
+                            const observer = new IntersectionObserver(
+                              (entries) => {
+                                const entry = entries[0];
+                                if (entry.isIntersecting) {
+                                  setIsAutoRefetchEnabled(true);
+                                } else {
+                                  setIsAutoRefetchEnabled(false);
+                                }
+                              },
+                              {
+                                root: node.closest("#log-content"),
+                                rootMargin: "0px",
+                                threshold: 0.1
+                              }
+                            );
+
+                            observer.observe(node);
+                            return () => {
+                              observer.unobserve(node);
+                            };
+                          }}
                         >
                           -- LIVE <Ping /> new log entries will appear here --
                         </div>
@@ -354,14 +305,37 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         level={log.level}
                         content={(log.content as string) ?? ""}
                         content_text={log.content_text ?? ""}
-                        searchValue={filters.content}
                       />
 
                       {(logsQuery.hasPreviousPage ||
                         logsQuery.isFetchingPreviousPage) &&
-                        index === logs.length - 1 && (
+                        virtualRow.index === logs.length - 1 && (
                           <div
-                            ref={loadPreviousPageRef}
+                            ref={(node) => {
+                              if (!node) return;
+                              const observer = new IntersectionObserver(
+                                (entries) => {
+                                  const entry = entries[0];
+                                  if (
+                                    entry.isIntersecting &&
+                                    !logsQuery.isFetching &&
+                                    logsQuery.hasPreviousPage
+                                  ) {
+                                    logsQuery.fetchPreviousPage();
+                                  }
+                                },
+                                {
+                                  root: logContentRef.current,
+                                  rootMargin: "120%",
+                                  threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
+                                }
+                              );
+
+                              observer.observe(node);
+                              return () => {
+                                observer.unobserve(node);
+                              };
+                            }}
                             className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 -scale-y-100"
                           >
                             <LoaderIcon size={15} className="animate-spin" />
@@ -370,18 +344,32 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         )}
                     </div>
                   );
-                })}
+                })} */}
               </div>
             </div>
           )}
-        </pre>
+        </section>
       </div>
     </div>
   );
 }
 
-const HeaderSection = function HeaderSection() {
-  const searchParams = Route.useSearch();
+const HeaderSection = React.memo(function HeaderSection({
+  startTransition
+}: { startTransition: React.TransitionStartFunction }) {
+  const searchParams = Route.useSearch({
+    select(search) {
+      return {
+        time_after: search.time_after,
+        time_before: search.time_before,
+        source: search.source,
+        level: search.level,
+        content: search.content,
+        isMaximized: search.isMaximized
+      };
+    }
+  });
+
   const navigate = useNavigate();
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
@@ -408,16 +396,18 @@ const HeaderSection = function HeaderSection() {
     (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
       searchParams.level?.length === 0 ||
       !searchParams.level) &&
-    (filters.content ?? "").length === 0;
+    (searchParams.content ?? "").length === 0;
 
   const clearFilters = () => {
-    navigate({
-      to: "./",
-      search: {
-        isMaximized: searchParams.isMaximized
-      },
-      replace: true
-    });
+    startTransition(() =>
+      navigate({
+        to: "./",
+        search: {
+          isMaximized: searchParams.isMaximized
+        },
+        replace: true
+      })
+    );
 
     if (inputRef.current) {
       inputRef.current.value = "";
@@ -425,14 +415,16 @@ const HeaderSection = function HeaderSection() {
   };
 
   const searchLogsForContent = useDebouncedCallback((content: string) => {
-    navigate({
-      search: {
-        ...filters,
-        isMaximized: searchParams.isMaximized,
-        content
-      },
-      replace: true
-    });
+    startTransition(() =>
+      navigate({
+        search: {
+          ...filters,
+          isMaximized: searchParams.isMaximized,
+          content
+        },
+        replace: true
+      })
+    );
   }, 300);
 
   return (
@@ -552,11 +544,7 @@ const HeaderSection = function HeaderSection() {
       )}
     </>
   );
-};
-
-function LogContentSection() {
-  return <></>;
-}
+});
 
 function Ping() {
   return (
@@ -570,24 +558,15 @@ function Ping() {
 type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content: string;
   content_text: string;
-  searchValue?: string;
 };
 
-const Log = ({
-  content,
-  searchValue,
-  level,
-  time,
-  id,
-  content_text
-}: LogProps) => {
-  const search = searchValue ?? "";
+const Log = ({ content, level, time, id, content_text }: LogProps) => {
   const date = new Date(time);
+  const search = Route.useSearch({
+    select: (search) => search.content ?? ""
+  });
 
   const logTime = formatLogTime(date);
-  // if (content_text.length > 1000) {
-  //   const logExcerpt = excerpt(content_text, 1000);
-  // }
 
   return (
     <pre className="w-full -scale-y-100 group">
@@ -622,9 +601,11 @@ const Log = ({
             />
           )}
           <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
-            {search.length > 0
-              ? getHighlightedText(content_text, search)
-              : content_text}
+            {search.length > 0 ? (
+              <HighlightedText text={content_text} highlight={search} />
+            ) : (
+              content_text
+            )}
           </pre>
         </div>
       </pre>
@@ -636,21 +617,24 @@ function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
-function supportsCSSCustomHighlightsAPI() {
-  return "highlights" in window.CSS;
-}
-
-function getHighlightedText(text: string, highlight: string) {
+const HighlightedText = React.memo(function HighlightedText({
+  text,
+  highlight
+}: { text: string; highlight: string }) {
   // Split on highlight term and include term into parts, ignore case
   const parts = text.split(new RegExp(`(${escapeRegExp(highlight)})`, "gi"));
-  return parts.map((part) => {
+  return parts.map((part, index) => {
     if (part.toLowerCase() === highlight.toLowerCase()) {
-      return <span className="bg-yellow-400/50">{part}</span>;
+      return (
+        <span key={index} className="bg-yellow-400/50">
+          {part}
+        </span>
+      );
     } else {
-      return <span>{part}</span>;
+      return <span key={index}>{part}</span>;
     }
   });
-}
+});
 
 function formatLogTime(time: string | Date) {
   const date = new Date(time);
