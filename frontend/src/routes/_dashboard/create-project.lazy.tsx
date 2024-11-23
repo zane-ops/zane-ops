@@ -30,7 +30,7 @@ export function CreateProject() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { isPending, mutate, data } = useMutation({
+  const { isPending, mutateAsync, data } = useMutation({
     mutationFn: async (input: RequestInput<"post", "/api/projects/">) => {
       const { error, data } = await apiClient.POST("/api/projects/", {
         headers: {
@@ -67,8 +67,8 @@ export function CreateProject() {
         </BreadcrumbList>
       </Breadcrumb>
       <Form.Root
-        action={(formData) => {
-          mutate({
+        action={async (formData) => {
+          await mutateAsync({
             slug: formData.get("slug")?.toString().trim(),
             description: formData.get("description")?.toString() || undefined
           });

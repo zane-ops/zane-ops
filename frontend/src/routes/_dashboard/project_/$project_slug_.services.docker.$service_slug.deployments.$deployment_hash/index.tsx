@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { useDebounce } from "use-debounce";
+import { useDebounce, useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MultiSelect } from "~/components/multi-select";
@@ -36,7 +36,6 @@ import {
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
-import { excerpt } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -45,11 +44,23 @@ export const Route = createFileRoute(
   component: withAuthRedirect(DeploymentLogsDetailPage)
 });
 
+function useRouteParams() {
+  return Route.useParams({
+    select(params) {
+      return {
+        deployment_hash: params.deployment_hash,
+        project_slug: params.deployment_hash,
+        service_slug: params.service_slug
+      };
+    }
+  });
+}
+
 export function DeploymentLogsDetailPage(): React.JSX.Element {
-  const { deployment_hash, project_slug, service_slug } = Route.useParams();
+  const { deployment_hash, project_slug, service_slug } = useRouteParams();
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
-  const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
+  // const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
   const inputRef = React.useRef<React.ElementRef<"input">>(null);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
@@ -59,7 +70,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     source:
       searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
-    content: debouncedSearchQuery
+    content: searchParams.content ?? ""
   } satisfies DeploymentLogFitlers;
 
   const isEmptySearchParams = React.useMemo(() => {
@@ -324,7 +335,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
           searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[65dvh]"
         )}
       >
-        <HeaderSection isFetchingLogs={logsQuery.isFetching} />
+        <HeaderSection />
 
         <pre
           id="logContent"
@@ -443,12 +454,34 @@ type HeaderSectionProps = {
   isFetchingLogs?: boolean;
 };
 
-const HeaderSection = React.memo(function HeaderSection({
-  isFetchingLogs
-}: HeaderSectionProps) {
+function useLogsQuery() {
+  const searchParams = Route.useSearch();
+  const { deployment_hash, project_slug, service_slug } = useRouteParams();
+  const filters = {
+    time_after: searchParams.time_after,
+    time_before: searchParams.time_before,
+    source:
+      searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
+    level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
+    content: searchParams.content
+  } satisfies DeploymentLogFitlers;
+
+  const queryClient = useQueryClient();
+  const logsQuery = useInfiniteQuery(
+    deploymentQueries.logs({
+      deployment_hash,
+      project_slug,
+      service_slug,
+      filters,
+      queryClient
+      // autoRefetchEnabled: isAutoRefetchEnabled
+    })
+  );
+}
+
+const HeaderSection = React.memo(function HeaderSection() {
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
-  const [debouncedSearchQuery] = useDebounce(searchParams.content ?? "", 300);
   const inputRef = React.useRef<React.ElementRef<"input">>(null);
 
   const filters = {
@@ -457,13 +490,15 @@ const HeaderSection = React.memo(function HeaderSection({
     source:
       searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
-    content: debouncedSearchQuery
+    content: searchParams.content
   } satisfies DeploymentLogFitlers;
 
-  const date: DateRange = {
-    from: filters.time_after,
-    to: filters.time_before
-  };
+  const date: DateRange = React.useMemo(() => {
+    return {
+      from: filters.time_after,
+      to: filters.time_before
+    };
+  }, [filters.time_after, filters.time_before]);
 
   const isEmptySearchParams = React.useMemo(() => {
     return (
@@ -499,6 +534,17 @@ const HeaderSection = React.memo(function HeaderSection({
     }
   }, [navigate, searchParams.isMaximized]);
 
+  const searchLogsForContent = useDebouncedCallback((content: string) => {
+    navigate({
+      search: {
+        ...filters,
+        isMaximized: searchParams.isMaximized,
+        content
+      },
+      replace: true
+    });
+  }, 300);
+
   return (
     <>
       <section className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
@@ -521,33 +567,25 @@ const HeaderSection = React.memo(function HeaderSection({
         </div>
 
         <div className="flex w-full items-center relative flex-grow order-2">
-          {isFetchingLogs ? (
+          {/* {isFetchingLogs ? (
             <LoaderIcon
               size={15}
               className="animate-spin absolute left-4 text-grey"
             />
-          ) : (
-            <SearchIcon size={15} className="absolute left-4 text-grey" />
-          )}
+          ) : ( */}
+          <SearchIcon size={15} className="absolute left-4 text-grey" />
+          {/* )} */}
+
           <Input
             className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
             placeholder="Search for log contents"
             name="content"
             defaultValue={searchParams.content}
             ref={inputRef}
-            onKeyUp={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const newQuery = e.currentTarget.value;
-              if (newQuery !== (searchParams.content ?? "")) {
-                navigate({
-                  search: {
-                    ...filters,
-                    isMaximized: searchParams.isMaximized,
-                    content: e.currentTarget.value
-                  },
-                  replace: true
-                });
+            onChange={(ev) => {
+              const newQuery = ev.currentTarget.value;
+              if (newQuery !== (filters.content ?? "")) {
+                searchLogsForContent(newQuery);
               }
             }}
           />

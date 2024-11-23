@@ -129,7 +129,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
     dockerHubQueries.images(debouncedValue)
   );
 
-  const { isPending, mutate, data } = useMutation({
+  const { isPending, mutateAsync, data } = useMutation({
     onSuccess: (data) => {
       if (data.data) {
         onSuccess(data.data.slug);
@@ -166,8 +166,8 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
 
   return (
     <Form.Root
-      action={(formData) => {
-        mutate({
+      action={async (formData) => {
+        await mutateAsync({
           slug: formData.get("slug")?.toString().trim() ?? "",
           image: formData.get("image")?.toString() ?? "",
           credentials: {

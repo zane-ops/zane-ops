@@ -59,13 +59,23 @@ const TABS = {
 } as const;
 
 function DeploymentLayout(): JSX.Element {
-  const { project_slug, service_slug, deployment_hash } = Route.useParams();
+  const { project_slug, service_slug, deployment_hash } = Route.useParams({
+    select(s) {
+      return {
+        project_slug: s.project_slug,
+        service_slug: s.service_slug,
+        deployment_hash: s.deployment_hash
+      };
+    }
+  });
   const navigate = Route.useNavigate();
-  const location = useRouterState({ select: (s) => s.location });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  console.log("Rendering `DeploymentLayout()`");
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.LOGS;
-  if (location.pathname.match(/http\-logs\/?$/)) {
+  if (pathname.match(/http\-logs\/?$/)) {
     currentSelectedTab = TABS.HTTP_LOGS;
-  } else if (location.pathname.match(/details\/?$/)) {
+  } else if (pathname.match(/details\/?$/)) {
     currentSelectedTab = TABS.DETAILS;
   }
 
@@ -168,86 +178,6 @@ function DeploymentLayout(): JSX.Element {
           </TabsContent>
         </Tabs>
       </BodySection>
-      {/* {deploymentQuery.isLoading ? (
-        <>
-          <div className="col-span-full">
-            <Loader className="h-[70vh]" />
-          </div>
-        </>
-      ) : deployment === undefined ? (
-        <>
-          <section className="col-span-full ">
-            <MetaTitle title="404 - Deployment does not exist" />
-            <div className="flex flex-col gap-5 h-[70vh] items-center justify-center">
-              <div className="flex-col flex gap-3 items-center">
-                <h1 className="text-3xl font-bold">Error 404</h1>
-                <p className="text-lg">
-                  This deployment does not exist on this service
-                </p>
-              </div>
-              <Link to="/">
-                <Button>Go home</Button>
-              </Link>
-            </div>
-          </section>
-        </>
-      ) : (
-        <>
-          <MetaTitle
-            title={`${service_slug} / ${deployment.unprefixed_hash}`}
-          />
-          <section
-            id="header"
-            className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
-          >
-            <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
-              <div className="inline-flex flex-wrap gap-1">
-                <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
-                  <span className="text-grey sr-only md:not-sr-only">
-                    {service_slug} /
-                  </span>
-                  <span>{deployment.hash}</span>
-                </h1>
-
-                <DeploymentStatusBadge status={deployment.status} />
-                {deployment.is_current_production && (
-                  <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
-                    <RocketIcon size={15} className="flex-none" />
-                    <p>current</p>
-                  </div>
-                )}
-              </div>
-
-              <p className="flex gap-1 items-center">
-                <HistoryIcon size={15} />
-                <span className="sr-only">Deployed at :</span>
-                <time
-                  dateTime={deployment.queued_at}
-                  className="text-grey text-sm"
-                >
-                  {formattedTime(deployment.queued_at)}
-                </time>
-              </p>
-              {deployment.url && (
-                <div className="flex gap-3 items-center flex-wrap">
-                  <a
-                    href={formatURL({
-                      domain: deployment.url
-                    })}
-                    target="_blank"
-                    className="underline text-link text-sm break-all"
-                  >
-                    {formatURL({
-                      domain: deployment.url
-                    })}
-                  </a>
-                </div>
-              )}
-            </div>
-          </section>
-          
-        </>
-      )} */}
     </>
   );
 }
