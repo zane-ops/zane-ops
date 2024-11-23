@@ -46,6 +46,8 @@ import { cn } from "~/lib/utils";
 
 import { capitalizeText, formatURL, formattedTime } from "~/utils";
 
+import type { JSX } from "react";
+
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash"
 )({
