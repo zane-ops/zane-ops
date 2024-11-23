@@ -36,6 +36,7 @@ services:
         zane.role: "temporal"
     depends_on:
       - db
+    restart: always
   api:
     build:
       context: ../backend
@@ -53,7 +54,7 @@ services:
       - redis
       - temporal-server
     network_mode: host
-    restart: on-failure:5
+    restart: always
     environment:
       ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   temporal-main-worker:
