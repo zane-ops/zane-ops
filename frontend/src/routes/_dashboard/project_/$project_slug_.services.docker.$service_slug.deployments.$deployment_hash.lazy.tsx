@@ -356,8 +356,7 @@ function DeploymentStatusBadge({
         {
           "bg-emerald-400/20 dark:bg-emerald-600/20 text-green-600  dark:text-emerald-400":
             color === "green",
-          "bg-red-600 bg-opacity-10 text-red-600 dark:text-red-400":
-            color === "red",
+          "bg-red-600/10 text-red-600 dark:text-red-400": color === "red",
           "bg-yellow-400/20 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400":
             color === "yellow",
           "bg-gray-600/20 dark:bg-gray-600/60 text-gray": color === "gray",
