@@ -1,7 +1,6 @@
 @import 'tailwindcss';
 
 @plugin 'tailwindcss-animate';
-@plugin 'fancy-ansi/plugin';
 
 @variant dark (@media (prefers-color-scheme: dark));
 
@@ -175,22 +174,22 @@
     --link: 221.21 83.19% 53.33%;
     --grey: 220 8.94% 46.08%;
 
-    --ansi-black: var(--ansi-colors-terminalapp-black);
-    --ansi-red: var(--ansi-colors-terminalapp-red);
-    --ansi-green: var(--ansi-colors-terminalapp-green);
-    --ansi-yellow: var(--ansi-colors-terminalapp-yellow);
-    --ansi-blue: var(--ansi-colors-terminalapp-blue);
-    --ansi-magenta: var(--ansi-colors-terminalapp-magenta);
-    --ansi-cyan: var(--ansi-colors-terminalapp-cyan);
-    --ansi-white: var(--ansi-colors-terminalapp-white);
-    --ansi-bright-black: var(--ansi-colors-terminalapp-bright-black);
-    --ansi-bright-red: var(--ansi-colors-terminalapp-bright-red);
-    --ansi-bright-green: var(--ansi-colors-terminalapp-bright-green);
-    --ansi-bright-yellow: var(--ansi-colors-terminalapp-bright-yellow);
-    --ansi-bright-blue: var(--ansi-colors-terminalapp-bright-blue);
-    --ansi-bright-magenta: var(--ansi-colors-terminalapp-magenta);
-    --ansi-bright-cyan: var(--ansi-colors-terminalapp-cyan);
-    --ansi-bright-white: var(--ansi-colors-terminalapp-white);
+    --ansi-black: #000000;
+  --ansi-red: #990000;
+  --ansi-green: #00a600;
+  --ansi-yellow: #999900;
+  --ansi-blue: #0000b2;
+  --ansi-magenta: #b200b2;
+  --ansi-cyan: #00a6b2;
+  --ansi-white: #bfbfbf;
+  --ansi-bright-black: #666666;
+  --ansi-bright-red: #e60000;
+  --ansi-bright-green: #00d900;
+  --ansi-bright-yellow: #e6e600;
+  --ansi-bright-blue: #0000ff;
+  --ansi-bright-magenta: #b200b2;
+  --ansi-bright-cyan: #00a6b2;
+  --ansi-bright-white: #bfbfbf;
   }
   
   @media (prefers-color-scheme: dark) {
@@ -219,22 +218,22 @@
       --link: 213.12 93.9% 67.84%;
       --grey: 217.89 10.61% 64.9%;
 
-      --ansi-black: var(--ansi-colors-ubuntu-black);
-      --ansi-red: var(--ansi-colors-ubuntu-red);
-      --ansi-green: var(--ansi-colors-ubuntu-green);
-      --ansi-yellow: var(--ansi-colors-ubuntu-yellow);
-      --ansi-blue: var(--ansi-colors-ubuntu-blue);
-      --ansi-magenta: var(--ansi-colors-ubuntu-magenta);
-      --ansi-cyan: var(--ansi-colors-ubuntu-cyan);
-      --ansi-white: var(--ansi-colors-ubuntu-white);
-      --ansi-bright-black: var(--ansi-colors-ubuntu-bright-black);
-      --ansi-bright-red: var(--ansi-colors-ubuntu-bright-red);
-      --ansi-bright-green: var(--ansi-colors-ubuntu-bright-green);
-      --ansi-bright-yellow: var(--ansi-colors-ubuntu-bright-yellow);
-      --ansi-bright-blue: var(--ansi-colors-ubuntu-bright-blue);
-      --ansi-bright-magenta: var(--ansi-colors-ubuntu-magenta);
-      --ansi-bright-cyan: var(--ansi-colors-ubuntu-cyan);
-      --ansi-bright-white: var(--ansi-colors-ubuntu-white);
+      --ansi-black: #000000;
+      --ansi-red: #bb0000;
+      --ansi-green: #00bb00;
+      --ansi-yellow: #bbbb00;
+      --ansi-blue: #0000bb;
+      --ansi-magenta: #bb00bb;
+      --ansi-cyan: #00bbbb;
+      --ansi-white: #bbbbbb;
+      --ansi-bright-black: #555555;
+      --ansi-bright-red: #ff5555;
+      --ansi-bright-green: #55ff55;
+      --ansi-bright-yellow: #ffff55;
+      --ansi-bright-blue: #5555ff;
+      --ansi-bright-magenta: #bb00bb;
+      --ansi-bright-cyan: #00bbbb;
+      --ansi-bright-white: #bbbbbb;
     }
   }
 }
