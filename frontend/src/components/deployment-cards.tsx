@@ -124,21 +124,21 @@ export function DockerDeploymentCard({
   return (
     <div
       className={cn(
-        "flex flex-col md:flex-row items-start gap-4 md:gap-0 border group  px-3 py-4 rounded-md  bg-opacity-10 justify-between md:items-center relative",
+        "flex flex-col md:flex-row items-start gap-4 md:gap-0 border group  px-3 py-4 rounded-md justify-between md:items-center relative",
         {
-          "border-blue-600 bg-blue-600":
+          "border-blue-600 bg-blue-600/10":
             status === "STARTING" ||
             status === "RESTARTING" ||
             status === "PREPARING" ||
             status === "CANCELLING",
-          "border-green-600 bg-green-600": status === "HEALTHY",
-          "border-red-600 bg-red-600":
+          "border-green-600 bg-green-600/10": status === "HEALTHY",
+          "border-red-600 bg-red-600/10":
             status === "UNHEALTHY" || status === "FAILED",
-          "border-gray-600 bg-gray-600":
+          "border-gray-600 bg-gray-600/10":
             status === "REMOVED" ||
             status === "CANCELLED" ||
             status === "QUEUED",
-          "border-yellow-600 bg-yellow-600": status === "SLEEPING"
+          "border-yellow-600 bg-yellow-600/10": status === "SLEEPING"
         }
       )}
     >
