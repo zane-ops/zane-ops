@@ -38,6 +38,7 @@ jobs:
           tags: ghcr.io/zane-ops/proxy:canary,ghcr.io/zane-ops/proxy:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:canary
           cache-to: type=inline
+          build-args: ENVIRONMENT=prod
   build-push-frontend:
     name: Build and Push Zane Frontend
     runs-on: ubuntu-latest
