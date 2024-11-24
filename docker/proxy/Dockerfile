@@ -6,6 +6,5 @@ ARG ENVIRONMENT=dev
 
 RUN apk add --no-cache wget
 
-COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 COPY default-caddy-config-${ENVIRONMENT}.json /config/caddy/autosave.json
 CMD caddy run --resume
