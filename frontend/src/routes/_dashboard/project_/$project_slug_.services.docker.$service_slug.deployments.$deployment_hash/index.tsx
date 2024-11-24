@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnsiHtml } from "fancy-ansi/react";
 import {
+  ChevronRightIcon,
   LoaderIcon,
   Maximize2Icon,
   Minimize2Icon,
@@ -16,7 +17,7 @@ import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { MultiSelect } from "~/components/multi-select";
 
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 
 import { Input } from "~/components/ui/input";
 import {
@@ -26,7 +27,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 
-import { withScan } from "react-scan";
+import { MAX_VISIBLE_LOG_CHARS_LIMIT } from "~/lib/constants";
 import {
   type DeploymentLog,
   type DeploymentLogFitlers,
@@ -37,6 +38,7 @@ import {
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import { cn } from "~/lib/utils";
+import { excerpt } from "~/utils";
 
 export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/"
@@ -44,12 +46,6 @@ export const Route = createFileRoute(
   validateSearch: (search) => deploymentLogSearchSchema.parse(search),
   component: withAuthRedirect(DeploymentLogsDetailPage)
 });
-
-if (import.meta.env.DEV) {
-  withScan(DeploymentLogsDetailPage, {
-    log: true
-  });
-}
 
 function useRouteParams() {
   return Route.useParams({
@@ -108,7 +104,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const logs =
     logsQuery.data?.pages.toReversed().flatMap((item) => item.results) ?? [];
 
-  const logContentRef = React.useRef<React.ComponentRef<"pre">>(null);
+  const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
 
   const virtualizer = useVirtualizer({
     count: logs.length,
@@ -116,29 +112,11 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     estimateSize: () => 16 * 2,
     paddingStart: 16,
     paddingEnd: 8,
-    overscan: 3
+    overscan: 1
   });
   const virtualItems = virtualizer.getVirtualItems();
 
-  React.useEffect(() => {
-    const parentElement = logContentRef.current;
-    if (!parentElement) return;
-
-    const invertedWheelScroll = (event: WheelEvent) => {
-      parentElement.scrollTop -= event.deltaY;
-      event.preventDefault();
-    };
-
-    const abortCtrl = new AbortController();
-    parentElement.addEventListener("wheel", invertedWheelScroll, {
-      passive: false,
-      signal: abortCtrl.signal
-    });
-
-    return () => abortCtrl.abort();
-  }, []);
-
-  const [isPending, startTransition] = React.useTransition();
+  const [_, startTransition] = React.useTransition();
 
   const clearFilters = () => {
     startTransition(() =>
@@ -154,6 +132,105 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     if (inputRef.current) {
       inputRef.current.value = "";
     }
+  };
+
+  const fetchNextPageRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          !logsQuery.isFetchingNextPage &&
+          logsQuery.hasNextPage
+        ) {
+          logsQuery.fetchNextPage();
+        }
+      },
+      {
+        root: node.closest("#log-content"),
+        rootMargin: "20%",
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.unobserve(node);
+    };
+  };
+
+  const fetchPreviousPageRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          logsQuery.hasPreviousPage
+        ) {
+          logsQuery.fetchPreviousPage();
+        }
+      },
+      {
+        root: logContentRef.current,
+        rootMargin: "120%",
+        threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
+      }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.unobserve(node);
+    };
+  };
+
+  const autoRefetchRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setIsAutoRefetchEnabled(true);
+        } else {
+          setIsAutoRefetchEnabled(false);
+        }
+      },
+      {
+        root: node.closest("#log-content"),
+        rootMargin: "0px",
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.unobserve(node);
+    };
+  };
+
+  const logContainerRef = (node: HTMLElement | null) => {
+    if (!node) return;
+
+    const invertedWheelScroll = (event: WheelEvent) => {
+      node.scrollTop -= event.deltaY;
+      event.preventDefault();
+    };
+
+    const abortCtrl = new AbortController();
+    node.addEventListener("wheel", invertedWheelScroll, {
+      passive: false,
+      signal: abortCtrl.signal
+    });
+
+    logContentRef.current = node;
+    return () => {
+      abortCtrl.abort();
+      logContentRef.current = null;
+    };
   };
 
   return (
@@ -174,7 +251,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
 
         <section
           id="log-content"
-          ref={logContentRef}
+          ref={logContainerRef}
           className={cn(
             "-scale-y-100 justify-start min-h-0",
             "text-xs font-mono h-full rounded-md w-full",
@@ -237,63 +314,12 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                       ref={virtualizer.measureElement}
                     >
                       {logsQuery.hasNextPage && virtualRow.index === 0 && (
-                        <div
-                          ref={(node) => {
-                            if (!node) return;
-                            const observer = new IntersectionObserver(
-                              (entries) => {
-                                const entry = entries[0];
-                                if (
-                                  entry.isIntersecting &&
-                                  !logsQuery.isFetching &&
-                                  !logsQuery.isFetchingNextPage &&
-                                  logsQuery.hasNextPage
-                                ) {
-                                  logsQuery.fetchNextPage();
-                                }
-                              },
-                              {
-                                root: node.closest("#log-content"),
-                                rootMargin: "20%",
-                                threshold: 0.1
-                              }
-                            );
-
-                            observer.observe(node);
-                            return () => {
-                              observer.unobserve(node);
-                            };
-                          }}
-                          className="w-full h-px"
-                        />
+                        <div ref={fetchNextPageRef} className="w-fit h-px" />
                       )}
                       {virtualRow.index === 0 && (
                         <div
                           className="w-full py-2 text-center -scale-y-100 text-grey italic"
-                          ref={(node) => {
-                            if (!node) return;
-
-                            const observer = new IntersectionObserver(
-                              (entries) => {
-                                const entry = entries[0];
-                                if (entry.isIntersecting) {
-                                  setIsAutoRefetchEnabled(true);
-                                } else {
-                                  setIsAutoRefetchEnabled(false);
-                                }
-                              },
-                              {
-                                root: node.closest("#log-content"),
-                                rootMargin: "0px",
-                                threshold: 0.1
-                              }
-                            );
-
-                            observer.observe(node);
-                            return () => {
-                              observer.unobserve(node);
-                            };
-                          }}
+                          ref={autoRefetchRef}
                         >
                           -- LIVE <Ping /> new log entries will appear here --
                         </div>
@@ -303,6 +329,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         id={log.id}
                         time={log.time}
                         level={log.level}
+                        key={log.id}
                         content={(log.content as string) ?? ""}
                         content_text={log.content_text ?? ""}
                       />
@@ -311,31 +338,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                         logsQuery.isFetchingPreviousPage) &&
                         virtualRow.index === logs.length - 1 && (
                           <div
-                            ref={(node) => {
-                              if (!node) return;
-                              const observer = new IntersectionObserver(
-                                (entries) => {
-                                  const entry = entries[0];
-                                  if (
-                                    entry.isIntersecting &&
-                                    !logsQuery.isFetching &&
-                                    logsQuery.hasPreviousPage
-                                  ) {
-                                    logsQuery.fetchPreviousPage();
-                                  }
-                                },
-                                {
-                                  root: logContentRef.current,
-                                  rootMargin: "120%",
-                                  threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
-                                }
-                              );
-
-                              observer.observe(node);
-                              return () => {
-                                observer.unobserve(node);
-                              };
-                            }}
+                            ref={fetchPreviousPageRef}
                             className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2 -scale-y-100"
                           >
                             <LoaderIcon size={15} className="animate-spin" />
@@ -562,57 +565,114 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
 
 const Log = ({ content, level, time, id, content_text }: LogProps) => {
   const date = new Date(time);
-  // const search = Route.useSearch({
-  //   select: (search) => search.content ?? ""
-  // });
 
-  // const logTime = formatLogTime(date);
+  const search = Route.useSearch({
+    select: (search) => search.content ?? ""
+  });
+
+  const logTime = formatLogTime(date);
 
   return (
-    <pre className="w-full -scale-y-100 group">
-      <pre
-        id={`log-item-${id}`}
-        className={cn(
-          "flex gap-2 hover:bg-slate-400/20 relative",
-          "py-0 px-4 border-none border-0 ring-0",
-          level === "ERROR" && "bg-red-400/20",
-          "group-open:bg-yellow-700/20"
-        )}
-      >
-        <span className="inline-flex items-start select-none min-w-fit flex-none">
-          <time className="text-grey" dateTime={date.toISOString()}>
-            <span className="sr-only sm:not-sr-only">
-              {/* {logTime.dateFormat},&nbsp; */}
-            </span>
-            {/* <span>{logTime.hourFormat}</span> */}
-            {date.toISOString()}
-          </time>
-        </span>
+    <div
+      id={`log-item-${id}`}
+      className={cn(
+        "w-full flex gap-2 hover:bg-slate-400/20 relative -scale-y-100 group",
+        "py-0 px-4 border-none border-0 ring-0",
+        level === "ERROR" && "bg-red-400/20"
+      )}
+    >
+      <span className="inline-flex items-start select-none min-w-fit flex-none">
+        <time className="text-grey" dateTime={date.toISOString()}>
+          <span className="sr-only sm:not-sr-only">
+            {logTime.dateFormat},&nbsp;
+          </span>
+          <span>{logTime.hourFormat}</span>
+        </time>
+      </span>
 
-        <div className="grid relative z-10">
-          {/* {content_text.length > 1_000 ? ( */}
-          <pre className="text-wrap text-start relative z-[-1] text-card-foreground break-all col-start-1 col-end-1 row-start-1 row-end-1">
-            {content_text}
-          </pre>
-          {/*// ) : (
-          //   <AnsiHtml
-          //     aria-hidden="true"
-          //     className="text-wrap text-start break-all z-10 mix-blend-color dark:mix-blend-color-dodge whitespace-pre relative col-start-1 col-end-1 row-start-1 row-end-1"
-          //     text={content}
-          //   />
-          // )}
-          // <pre className="text-wrap text-start z-[-1] relative text-transparent break-all whitespace-pre col-start-1 col-end-1 row-start-1 row-end-1">
-          //   {search.length > 0 ? (
-          //     <HighlightedText text={content_text} highlight={search} />
-          //   ) : (
-          //     content_text
-          //   )} 
-          </pre>*/}
-        </div>
-      </pre>
-    </pre>
+      <div className="grid relative z-10 w-full">
+        {content_text.length <= MAX_VISIBLE_LOG_CHARS_LIMIT ? (
+          <>
+            <AnsiHtml
+              aria-hidden="true"
+              className={cn(
+                "text-start z-10 mix-blend-color dark:mix-blend-color-dodge  relative",
+                "col-start-1 col-end-1 row-start-1 row-end-1",
+                "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
+              )}
+              text={content}
+            />
+            <pre
+              className={cn(
+                "text-start -z-1 mix-blend-color dark:mix-blend-color-dodge text-transparent relative",
+                "col-start-1 col-end-1 row-start-1 row-end-1",
+                "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
+              )}
+            >
+              {search.length > 0 ? (
+                <HighlightedText text={content_text} highlight={search} />
+              ) : (
+                content_text
+              )}
+            </pre>
+          </>
+        ) : (
+          <LongLogContent content_text={content_text} search={search} />
+        )}
+      </div>
+    </div>
   );
 };
+
+function LongLogContent({
+  content_text,
+  search
+}: { content_text: string; search: string }) {
+  const [isFullContentShown, setIsFullContentShown] = React.useState(
+    content_text.length <= MAX_VISIBLE_LOG_CHARS_LIMIT
+  );
+
+  const visibleContent = isFullContentShown
+    ? content_text
+    : excerpt(content_text, MAX_VISIBLE_LOG_CHARS_LIMIT);
+
+  return (
+    <>
+      <pre
+        className={cn(
+          "text-start z-10 mix-blend-color dark:mix-blend-color-dodge  relative",
+          "col-start-1 col-end-1 row-start-1 row-end-1",
+          "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
+        )}
+      >
+        {search.length > 0 ? (
+          <HighlightedText text={visibleContent} highlight={search} />
+        ) : (
+          visibleContent
+        )}
+
+        <button
+          onClick={() => setIsFullContentShown(!isFullContentShown)}
+          className={cn(
+            buttonVariants({
+              variant: "link"
+            }),
+            "inline-flex p-0 mx-2 underline h-auto rounded items-center cursor-pointer gap-1"
+          )}
+        >
+          <span>{isFullContentShown ? "see less" : "see more"}</span>
+          <ChevronRightIcon
+            className={cn(
+              "flex-none relative top-0.25",
+              isFullContentShown && "-rotate-90"
+            )}
+            size={12}
+          />
+        </button>
+      </pre>
+    </>
+  );
+}
 
 function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
