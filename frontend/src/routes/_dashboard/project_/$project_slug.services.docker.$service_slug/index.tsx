@@ -418,280 +418,273 @@ interface MultiSelectProps
   className?: string;
   value: string[];
 }
-const DeploymentStatusesMultiSelect = React.forwardRef<
-  HTMLButtonElement,
-  MultiSelectProps
->(
-  (
-    {
-      options,
-      onValueChange,
-      variant,
-      value = [],
-      placeholder = "Select options",
-      animation = 0,
-      maxCount = 3,
-      modalPopover = false,
-      asChild = false,
-      className,
-      ...props
-    },
-    ref
-  ) => {
-    const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
+const DeploymentStatusesMultiSelect = ({
+  ref,
+  options,
+  onValueChange,
+  variant,
+  value = [],
+  placeholder = "Select options",
+  animation = 0,
+  maxCount = 3,
+  modalPopover = false,
+  asChild = false,
+  className,
+  ...props
+}: MultiSelectProps & {
+  ref?: React.RefObject<HTMLButtonElement>;
+}) => {
+  const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
-    const handleInputKeyDown = (
-      event: React.KeyboardEvent<HTMLInputElement>
-    ) => {
-      if (event.key === "Enter") {
-        setIsPopoverOpen(true);
-      }
-    };
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      setIsPopoverOpen(true);
+    }
+  };
 
-    const toggleOption = (option: string) => {
-      const newSelectedValues = value.includes(option)
-        ? value.filter((v) => v !== option)
-        : [...value, option];
-      onValueChange(newSelectedValues);
-    };
+  const toggleOption = (option: string) => {
+    const newSelectedValues = value.includes(option)
+      ? value.filter((v) => v !== option)
+      : [...value, option];
+    onValueChange(newSelectedValues);
+  };
 
-    const handleClear = () => {
-      onValueChange([]);
-    };
+  const handleClear = () => {
+    onValueChange([]);
+  };
 
-    const handleTogglePopover = () => {
-      setIsPopoverOpen((prev) => !prev);
-    };
+  const handleTogglePopover = () => {
+    setIsPopoverOpen((prev) => !prev);
+  };
 
-    const toggleAll = () => {
-      if (value.length === options.length) {
-        handleClear();
-      } else {
-        onValueChange(options);
-      }
-    };
+  const toggleAll = () => {
+    if (value.length === options.length) {
+      handleClear();
+    } else {
+      onValueChange(options);
+    }
+  };
 
-    return (
-      <Popover
-        open={isPopoverOpen}
-        onOpenChange={setIsPopoverOpen}
-        modal={modalPopover}
+  return (
+    <Popover
+      open={isPopoverOpen}
+      onOpenChange={setIsPopoverOpen}
+      modal={modalPopover}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          ref={ref}
+          {...props}
+          onClick={handleTogglePopover}
+          className={cn(
+            "flex w-full p-1 rounded-md border border-border min-h-10 h-auto items-center justify-between bg-inherit hover:bg-inherit",
+            className
+          )}
+        >
+          <div className="flex items-center justify-between w-full mx-auto">
+            <div className="flex items-center">
+              <div className="mx-2 flex items-center w-24 overflow-visible">
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border border-border rounded-full",
+                    {
+                      "bg-gray-400": value.includes("QUEUED"),
+                      "bg-background": !value.includes("QUEUED")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
+                    {
+                      "bg-gray-400": value.includes("CANCELLED"),
+                      "bg-background": !value.includes("CANCELLED")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
+                    {
+                      "bg-blue-400": value.includes("CANCELLING"),
+                      "bg-background": !value.includes("CANCELLING")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none relative -left-2 h-3 border border-border rounded-full",
+                    {
+                      "bg-red-400": value.includes("FAILED"),
+                      "bg-background": !value.includes("FAILED")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 relative -left-3 border border-border rounded-full",
+                    {
+                      "bg-blue-400": value.includes("PREPARING"),
+                      "bg-background": !value.includes("PREPARING")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 relative -left-4 border border-border rounded-full",
+                    {
+                      "bg-green-400": value.includes("HEALTHY"),
+                      "bg-background": !value.includes("HEALTHY")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-5 border-border rounded-full",
+                    {
+                      "bg-red-400": value.includes("UNHEALTHY"),
+                      "bg-background": !value.includes("UNHEALTHY")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-6 border-border rounded-full",
+                    {
+                      "bg-blue-400": value.includes("STARTING"),
+                      "bg-background": !value.includes("STARTING")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-7 border-border rounded-full",
+                    {
+                      "bg-blue-400": value.includes("RESTARTING"),
+                      "bg-background": !value.includes("RESTARTING")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-8 border-border rounded-full",
+                    {
+                      "bg-gray-400": value.includes("REMOVED"),
+                      "bg-background": !value.includes("REMOVED")
+                    }
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border relative -left-9 border-border rounded-full",
+                    {
+                      "bg-orange-400": value.includes("SLEEPING"),
+                      "bg-background": !value.includes("SLEEPING")
+                    }
+                  )}
+                />
+              </div>
+
+              <span className="text-sm text-muted-foreground">
+                {placeholder}
+              </span>
+            </div>
+            <ChevronDown className="h-4 cursor-pointer text-muted-foreground mx-2" />
+          </div>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
-        <PopoverTrigger asChild>
-          <Button
-            ref={ref}
-            {...props}
-            onClick={handleTogglePopover}
-            className={cn(
-              "flex w-full p-1 rounded-md border border-border min-h-10 h-auto items-center justify-between bg-inherit hover:bg-inherit",
-              className
-            )}
-          >
-            <div className="flex items-center justify-between w-full mx-auto">
-              <div className="flex items-center">
-                <div className="mx-2 flex items-center w-24 overflow-visible">
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border border-border rounded-full",
-                      {
-                        "bg-gray-400": value.includes("QUEUED"),
-                        "bg-background": !value.includes("QUEUED")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
-                      {
-                        "bg-gray-400": value.includes("CANCELLED"),
-                        "bg-background": !value.includes("CANCELLED")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-1 border-border rounded-full",
-                      {
-                        "bg-blue-400": value.includes("CANCELLING"),
-                        "bg-background": !value.includes("CANCELLING")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none relative -left-2 h-3 border border-border rounded-full",
-                      {
-                        "bg-red-400": value.includes("FAILED"),
-                        "bg-background": !value.includes("FAILED")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 relative -left-3 border border-border rounded-full",
-                      {
-                        "bg-blue-400": value.includes("PREPARING"),
-                        "bg-background": !value.includes("PREPARING")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 relative -left-4 border border-border rounded-full",
-                      {
-                        "bg-green-400": value.includes("HEALTHY"),
-                        "bg-background": !value.includes("HEALTHY")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-5 border-border rounded-full",
-                      {
-                        "bg-red-400": value.includes("UNHEALTHY"),
-                        "bg-background": !value.includes("UNHEALTHY")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-6 border-border rounded-full",
-                      {
-                        "bg-blue-400": value.includes("STARTING"),
-                        "bg-background": !value.includes("STARTING")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-7 border-border rounded-full",
-                      {
-                        "bg-blue-400": value.includes("RESTARTING"),
-                        "bg-background": !value.includes("RESTARTING")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-8 border-border rounded-full",
-                      {
-                        "bg-gray-400": value.includes("REMOVED"),
-                        "bg-background": !value.includes("REMOVED")
-                      }
-                    )}
-                  />
-
-                  <div
-                    className={cn(
-                      "w-3 flex-none h-3 border relative -left-9 border-border rounded-full",
-                      {
-                        "bg-orange-400": value.includes("SLEEPING"),
-                        "bg-background": !value.includes("SLEEPING")
-                      }
-                    )}
-                  />
+        <Command>
+          <CommandInput
+            placeholder="Filter Statuses..."
+            onKeyDown={handleInputKeyDown}
+          />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                key="SELECT_ALL"
+                onSelect={toggleAll}
+                className="cursor-pointer flex gap-0.5"
+              >
+                <div
+                  className={cn(
+                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                    value.length === options.length
+                      ? "bg-primary text-primary-foreground"
+                      : "opacity-50 [&_svg]:invisible"
+                  )}
+                >
+                  <CheckIcon className="h-4 w-4" />
                 </div>
 
-                <span className="text-sm text-muted-foreground">
-                  {placeholder}
-                </span>
-              </div>
-              <ChevronDown className="h-4 cursor-pointer text-muted-foreground mx-2" />
-            </div>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-auto p-0"
-          align="start"
-          onEscapeKeyDown={() => setIsPopoverOpen(false)}
-        >
-          <Command>
-            <CommandInput
-              placeholder="Filter Statuses..."
-              onKeyDown={handleInputKeyDown}
-            />
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
-                <CommandItem
-                  key="SELECT_ALL"
-                  onSelect={toggleAll}
-                  className="cursor-pointer flex gap-0.5"
-                >
-                  <div
-                    className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                      value.length === options.length
-                        ? "bg-primary text-primary-foreground"
-                        : "opacity-50 [&_svg]:invisible"
-                    )}
+                <div className="flex items-center justify-between w-full">
+                  <span>(Select all)</span>
+                </div>
+              </CommandItem>
+              {options.map((option) => {
+                const isSelected = value.includes(option);
+                return (
+                  <CommandItem
+                    key={option}
+                    onSelect={() => toggleOption(option)}
+                    className="cursor-pointer flex gap-0.5"
                   >
-                    <CheckIcon className="h-4 w-4" />
-                  </div>
-
-                  <div className="flex items-center justify-between w-full">
-                    <span>(Select all)</span>
-                  </div>
-                </CommandItem>
-                {options.map((option) => {
-                  const isSelected = value.includes(option);
-                  return (
-                    <CommandItem
-                      key={option}
-                      onSelect={() => toggleOption(option)}
-                      className="cursor-pointer flex gap-0.5"
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible"
+                      )}
                     >
+                      <CheckIcon className="h-4 w-4" />
+                    </div>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{option}</span>
+
                       <div
                         className={cn(
-                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50 [&_svg]:invisible"
+                          "relative rounded-full bg-green-400 w-2.5 h-2.5",
+                          {
+                            "bg-blue-400":
+                              option === "STARTING" ||
+                              option === "RESTARTING" ||
+                              option === "CANCELLING" ||
+                              option === "PREPARING",
+                            "bg-green-600": option === "HEALTHY",
+                            "bg-red-400":
+                              option === "UNHEALTHY" || option === "FAILED",
+                            "bg-gray-400":
+                              option === "REMOVED" ||
+                              option === "CANCELLED" ||
+                              option === "QUEUED",
+                            "bg-orange-400": option === "SLEEPING"
+                          }
                         )}
-                      >
-                        <CheckIcon className="h-4 w-4" />
-                      </div>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{option}</span>
-
-                        <div
-                          className={cn(
-                            "relative rounded-full bg-green-400 w-2.5 h-2.5",
-                            {
-                              "bg-blue-400":
-                                option === "STARTING" ||
-                                option === "RESTARTING" ||
-                                option === "CANCELLING" ||
-                                option === "PREPARING",
-                              "bg-green-600": option === "HEALTHY",
-                              "bg-red-400":
-                                option === "UNHEALTHY" || option === "FAILED",
-                              "bg-gray-400":
-                                option === "REMOVED" ||
-                                option === "CANCELLED" ||
-                                option === "QUEUED",
-                              "bg-orange-400": option === "SLEEPING"
-                            }
-                          )}
-                        ></div>
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    );
-  }
-);
+                      ></div>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};

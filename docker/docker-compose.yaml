@@ -36,6 +36,7 @@ services:
         zane.role: "temporal"
     depends_on:
       - db
+    restart: always
   api:
     build:
       context: ../backend
@@ -53,7 +54,7 @@ services:
       - redis
       - temporal-server
     network_mode: host
-    restart: on-failure:5
+    restart: always
     environment:
       ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   temporal-main-worker:
@@ -99,26 +100,6 @@ services:
       BACKEND_COMPONENT: WORKER
       TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
       ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
- 
-  registry:
-    image: registry:2
-    container_name: zane-registry
-    restart: always
-    environment:
-      REGISTRY_AUTH: htpasswd
-      REGISTRY_AUTH_HTPASSWD_REALM: Registry
-      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
-    volumes:
-      - ./registry/auth:/auth
-      - ./registry/data:/data
-      - registry-lib-data:/var/lib/registry
-    ports:
-      - "9989:5000"
-    networks:
-      zane:
-        aliases:
-          - zane.registry
   redis:
     image: valkey/valkey:7.2.5-alpine
     container_name: zane-redis
@@ -183,7 +164,6 @@ volumes:
   redis-data:
   redisinsight:
   caddy-data:
-  registry-lib-data:
   pgadmin-data:
 networks:
   zane:

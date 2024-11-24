@@ -38,18 +38,6 @@ export function DateRangeWithShortcuts({
   setDate,
   presets = defaultPresets
 }: DateRangeWithShortcutsProps) {
-  React.useEffect(() => {
-    const up = (e: KeyboardEvent) => {
-      presets.map((preset) => {
-        if (preset.shortcut === e.key) {
-          setDate({ from: preset.from, to: preset.to });
-        }
-      });
-    };
-    document.addEventListener("keyup", up);
-    return () => document.removeEventListener("keyup", up);
-  }, [setDate, presets]);
-
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -103,38 +91,32 @@ export const defaultPresets = [
   {
     label: "Today",
     from: startOfDay(new Date()),
-    to: endOfDay(new Date()),
-    shortcut: "d" // day
+    to: endOfDay(new Date())
   },
   {
     label: "Yesterday",
     from: startOfDay(addDays(new Date(), -1)),
-    to: endOfDay(addDays(new Date(), -1)),
-    shortcut: "y"
+    to: endOfDay(addDays(new Date(), -1))
   },
   {
     label: "Last hour",
     from: addHours(new Date(), -1),
-    to: new Date(),
-    shortcut: "h"
+    to: new Date()
   },
   {
     label: "Last 7 days",
     from: startOfDay(addDays(new Date(), -7)),
-    to: endOfDay(new Date()),
-    shortcut: "w"
+    to: endOfDay(new Date())
   },
   {
     label: "Last 14 days",
     from: startOfDay(addDays(new Date(), -14)),
-    to: endOfDay(new Date()),
-    shortcut: "b" // bi-weekly
+    to: endOfDay(new Date())
   },
   {
     label: "Last 30 days",
     from: startOfDay(addDays(new Date(), -30)),
-    to: endOfDay(new Date()),
-    shortcut: "m"
+    to: endOfDay(new Date())
   }
 ] satisfies DatePreset[];
 
@@ -151,7 +133,7 @@ function DatePresets({
     <div className="flex flex-col gap-2 p-3">
       <p className="mx-3 text-xs uppercase text-muted-foreground">Date Range</p>
       <div className="grid gap-1">
-        {presets.map(({ label, shortcut, from, to }) => {
+        {presets.map(({ label, from, to }) => {
           const isActive =
             selected?.from?.getTime() === from?.getTime() &&
             selected?.to?.getTime() === to?.getTime();
@@ -168,7 +150,6 @@ function DatePresets({
               )}
             >
               <span className="mr-auto">{label}</span>
-              <span className={cn(kbdVariants(), "uppercase")}>{shortcut}</span>
             </Button>
           );
         })}

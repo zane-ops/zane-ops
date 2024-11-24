@@ -360,7 +360,6 @@ export const deploymentQueries = {
         "RUNTIME_LOGS",
         filters
       ],
-      // TODO : handle cursor pagination
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
           DeploymentLogQueryData,

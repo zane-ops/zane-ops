@@ -5,7 +5,7 @@ import * as React from "react";
 import { cn } from "~/lib/utils";
 
 export const kbdVariants = cva(
-  "select-none rounded px-1.5 py-px font-mono text-[0.7rem] font-normal font-mono shadow-sm disabled:opacity-50",
+  "select-none rounded px-1.5 py-px font-mono text-[0.7rem] font-normal font-mono shadow-xs disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -31,25 +31,32 @@ export interface KbdProps
   abbrTitle?: string;
 }
 
-const Kbd = React.forwardRef<HTMLUnknownElement, KbdProps>(
-  ({ abbrTitle, children, className, variant, ...props }, ref) => {
-    return (
-      <kbd
-        className={cn(kbdVariants({ variant, className }))}
-        ref={ref}
-        {...props}
-      >
-        {abbrTitle ? (
-          <abbr title={abbrTitle} className="no-underline">
-            {children}
-          </abbr>
-        ) : (
-          children
-        )}
-      </kbd>
-    );
-  }
-);
+const Kbd = ({
+  ref,
+  abbrTitle,
+  children,
+  className,
+  variant,
+  ...props
+}: KbdProps & {
+  ref?: React.RefObject<HTMLUnknownElement>;
+}) => {
+  return (
+    <kbd
+      className={cn(kbdVariants({ variant, className }))}
+      ref={ref}
+      {...props}
+    >
+      {abbrTitle ? (
+        <abbr title={abbrTitle} className="no-underline">
+          {children}
+        </abbr>
+      ) : (
+        children
+      )}
+    </kbd>
+  );
+};
 Kbd.displayName = "Kbd";
 
 export { Kbd };

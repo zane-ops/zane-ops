@@ -73,8 +73,8 @@ deploy: ### Install and deploy zaneops
 	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
-	@echo "You can monitor the services deployed by running \`docker service ls --filter label=\"zane.stack=true\"\`"
-	@echo "Wait for all services (except for \`zane_temporal-admin-tools\`) to show up as \`replicated   1/1\` to attest that everything started succesfully"
+	@echo "You can monitor the services deployed by running \x1b[92mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
+	@echo "Wait for all services (except for \`zane_temporal-admin-tools\`) to show up as \x1b[92mreplicated   1/1\x1b[0m to attest that everything started succesfully"
 
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
@@ -89,12 +89,22 @@ delete-resources: ### Delete all resources created by zaneops
 	@echo "Taking down zaneops..."
 	docker stack rm zane
 	@echo "Removing zane-ops volumes..."
+	@echo "Waiting for all containers related to services to be removed..."
+	@while [ -n "$$(docker ps -a | grep "zane_" | awk '{print $$1}')" ]; do \
+		sleep 2; \
+	done
 	docker volume rm $$(docker volume ls --filter "label=zane.stack=true" -q)
-	@echo "Removing down all services created by zane-ops..."
+	@echo "Removing all services created by zane-ops..."
 	docker service rm $$(docker service ls --filter "label=zane-managed=true" -q) || true
+	@echo "Waiting for all containers related to services to be removed..."
+	@while [ -n "$$(docker ps -a | grep "srv-prj_" | awk '{print $$1}')" ]; do \
+		sleep 2; \
+	done
 	@echo "Removing all networks created by zane-ops..."
 	docker network rm $$(docker network ls --filter "label=zane-managed=true" -q) || true
 	@echo "Removing all volumes created by zane-ops..."
 	docker volume rm $$(docker volume ls --filter "label=zane-managed=true" -q) || true
 	@echo "Removing zane-ops network..."
 	docker network rm zane
+	@echo "Cleaning up unused docker resources..."
+	docker system prune -f --volumes

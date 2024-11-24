@@ -1,4 +1,3 @@
-import * as Form from "@radix-ui/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createLazyFileRoute } from "@tanstack/react-router";
 import {
@@ -129,7 +128,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
     dockerHubQueries.images(debouncedValue)
   );
 
-  const { isPending, mutate, data } = useMutation({
+  const { mutateAsync, data } = useMutation({
     onSuccess: (data) => {
       if (data.data) {
         onSuccess(data.data.slug);
@@ -160,23 +159,33 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
     }
   });
 
+  const [state, formAction, isPending] = React.useActionState(
+    async (prev: any, formData: FormData) => {
+      const data = {
+        slug: formData.get("slug")?.toString().trim() ?? "",
+        image: formData.get("image")?.toString() ?? "",
+        credentials: {
+          password: formData.get("credentials.password")?.toString(),
+          username: formData.get("credentials.username")?.toString().trim()
+        }
+      };
+      const { error } = await mutateAsync(data);
+
+      if (error) {
+        return data;
+      }
+    },
+    null
+  );
+
   const errors = getFormErrorsFromResponseData(data?.error);
 
   const imageList = imageListData?.data?.images ?? [];
 
   return (
-    <Form.Root
-      action={(formData) => {
-        mutate({
-          slug: formData.get("slug")?.toString().trim() ?? "",
-          image: formData.get("image")?.toString() ?? "",
-          credentials: {
-            password: formData.get("credentials.password")?.toString(),
-            username: formData.get("credentials.username")?.toString().trim()
-          }
-        });
-      }}
-      className="flex my-10 flex-grow justify-center items-center"
+    <form
+      action={formAction}
+      className="flex my-10 grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>
@@ -189,26 +198,29 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </Alert>
         )}
 
-        <Form.Field className="my-2 flex flex-col gap-1" name="slug">
-          <Form.Label>Slug</Form.Label>
+        <div className="my-2 flex flex-col gap-1">
+          <label htmlFor="slug">Slug</label>
 
-          <Form.Control asChild>
-            <Input
-              className="p-3"
-              placeholder="ex: db"
-              name="slug"
-              type="text"
-            />
-          </Form.Control>
+          <Input
+            className="p-3"
+            placeholder="ex: db"
+            name="slug"
+            id="slug"
+            type="text"
+            defaultValue={state?.slug}
+            aria-describedby="slug-error"
+          />
           {errors.slug && (
-            <Form.Message className="text-red-500 text-sm">
+            <span id="slug-error" className="text-red-500 text-sm">
               {errors.slug}
-            </Form.Message>
+            </span>
           )}
-        </Form.Field>
+        </div>
 
-        <Form.Field name="image" className="my-2 flex flex-col gap-1">
-          <label aria-hidden="true">Image</label>
+        <div className="my-2 flex flex-col gap-1">
+          <label aria-hidden="true" htmlFor="image">
+            Image
+          </label>
           <Command shouldFilter={false} label="Image">
             <CommandInput
               id="image"
@@ -222,10 +234,11 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
               value={imageSearchQuery}
               placeholder="ex: bitnami/redis"
               name="image"
+              aria-describedby="image-error"
             />
             <CommandList
               className={cn({
-                "!hidden":
+                "hidden!":
                   imageList.length === 0 ||
                   imageSearchQuery.trim().length === 0 ||
                   !isComboxOpen
@@ -254,11 +267,11 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </Command>
 
           {errors.image && (
-            <Form.Message className="text-red-500 text-sm">
+            <span id="image-error" className="text-red-500 text-sm">
               {errors.image}
-            </Form.Message>
+            </span>
           )}
-        </Form.Field>
+        </div>
 
         <div className="flex flex-col gap-3">
           <h2 className="text-lg">
@@ -270,50 +283,60 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           </p>
         </div>
 
-        <Form.Field
-          className="my-2 flex flex-col gap-1"
-          name="credentials.username"
-        >
-          <Form.Label>Username for registry</Form.Label>
-          <Form.Control asChild>
-            <Input className="p-3" placeholder="ex: mocherif" type="text" />
-          </Form.Control>
+        <div className="my-2 flex flex-col gap-1">
+          <label htmlFor="credentials.username">Username for registry</label>
+          <Input
+            className="p-3"
+            placeholder="ex: mocherif"
+            type="text"
+            id="credentials.username"
+            name="credentials.username"
+            defaultValue={state?.credentials.username}
+            aria-describedby="credentials.username-error"
+          />
+
           {errors.credentials?.username && (
-            <Form.Message className="text-red-500 text-sm">
+            <span
+              id="credentials.username-error"
+              className="text-red-500 text-sm"
+            >
               {errors.credentials.username}
-            </Form.Message>
+            </span>
           )}
-        </Form.Field>
+        </div>
 
-        <Form.Field
-          className="my-2 flex flex-col gap-1"
-          name="credentials.password"
-        >
-          <Form.Label>Password for registry</Form.Label>
-          <Form.Control asChild>
-            <Input className="p-3" type="password" />
-          </Form.Control>
+        <div className="my-2 flex flex-col gap-1">
+          <label htmlFor="credentials.password">Password for registry</label>
+          <Input
+            className="p-3"
+            type="password"
+            name="credentials.password"
+            id="credentials.password"
+            defaultValue={state?.credentials.password}
+            aria-describedby="credentials.password-error"
+          />
           {errors.credentials?.password && (
-            <Form.Message className="text-red-500 text-sm">
+            <span
+              id="credentials.password-error"
+              className="text-red-500 text-sm"
+            >
               {errors.credentials.password}
-            </Form.Message>
+            </span>
           )}
-        </Form.Field>
+        </div>
 
-        <Form.Submit asChild>
-          <SubmitButton className="p-3 rounded-lg gap-2" isPending={isPending}>
-            {isPending ? (
-              <>
-                <span>Creating Service...</span>
-                <LoaderIcon className="animate-spin" size={15} />
-              </>
-            ) : (
-              " Create New Service"
-            )}
-          </SubmitButton>
-        </Form.Submit>
+        <SubmitButton className="p-3 rounded-lg gap-2" isPending={isPending}>
+          {isPending ? (
+            <>
+              <span>Creating Service...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            " Create New Service"
+          )}
+        </SubmitButton>
       </div>
-    </Form.Root>
+    </form>
   );
 }
 
@@ -329,7 +352,7 @@ function StepServiceCreated({
   onSuccess
 }: StepServiceCreatedProps) {
   const queryClient = useQueryClient();
-  const { isPending, mutate, data } = useMutation({
+  const { isPending, mutateAsync, data } = useMutation({
     onSuccess: (data) => {
       if (data.data) {
         onSuccess(data.data.hash);
@@ -373,8 +396,10 @@ function StepServiceCreated({
         </Alert>
       )}
 
-      <Form.Root
-        action={() => mutate()}
+      <form
+        action={async () => {
+          await mutateAsync();
+        }}
         className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
       >
         <Alert variant="success">
@@ -410,7 +435,7 @@ function StepServiceCreated({
             </Link>
           </Button>
         </div>
-      </Form.Root>
+      </form>
     </div>
   );
 }

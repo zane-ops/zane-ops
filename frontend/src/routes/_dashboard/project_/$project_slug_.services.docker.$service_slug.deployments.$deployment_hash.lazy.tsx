@@ -46,6 +46,8 @@ import { cn } from "~/lib/utils";
 
 import { capitalizeText, formatURL, formattedTime } from "~/utils";
 
+import type { JSX } from "react";
+
 export const Route = createLazyFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash"
 )({
@@ -59,27 +61,26 @@ const TABS = {
 } as const;
 
 function DeploymentLayout(): JSX.Element {
-  const { project_slug, service_slug, deployment_hash } = Route.useParams();
+  const { project_slug, service_slug, deployment_hash } = Route.useParams({
+    select(s) {
+      return {
+        project_slug: s.project_slug,
+        service_slug: s.service_slug,
+        deployment_hash: s.deployment_hash
+      };
+    }
+  });
   const navigate = Route.useNavigate();
-  const location = useRouterState({ select: (s) => s.location });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.LOGS;
-  if (location.pathname.match(/http\-logs\/?$/)) {
+  if (pathname.match(/http\-logs\/?$/)) {
     currentSelectedTab = TABS.HTTP_LOGS;
-  } else if (location.pathname.match(/details\/?$/)) {
+  } else if (pathname.match(/details\/?$/)) {
     currentSelectedTab = TABS.DETAILS;
   }
 
   const baseUrl = `/project/${project_slug}/services/docker/${service_slug}/deployments/${deployment_hash}`;
-
-  const deploymentQuery = useQuery(
-    deploymentQueries.single({
-      project_slug,
-      service_slug,
-      deployment_hash
-    })
-  );
-
-  const deployment = deploymentQuery.data;
 
   return (
     <>
@@ -114,151 +115,185 @@ function DeploymentLayout(): JSX.Element {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      {deploymentQuery.isLoading ? (
-        <>
-          <div className="col-span-full">
-            <Loader className="h-[70vh]" />
-          </div>
-        </>
-      ) : deployment === undefined ? (
-        <>
-          <section className="col-span-full ">
-            <MetaTitle title="404 - Service does not exist" />
-            <div className="flex flex-col gap-5 h-[70vh] items-center justify-center">
-              <div className="flex-col flex gap-3 items-center">
-                <h1 className="text-3xl font-bold">Error 404</h1>
-                <p className="text-lg">
-                  This deployment does not exist on this service
-                </p>
-              </div>
-              <Link to="/">
-                <Button>Go home</Button>
-              </Link>
-            </div>
-          </section>
-        </>
-      ) : (
-        <>
-          <MetaTitle
-            title={`${service_slug} / ${deployment.unprefixed_hash}`}
-          />
-          <section
-            id="header"
-            className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
-          >
-            <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
-              <div className="inline-flex flex-wrap gap-1">
-                <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
-                  <span className="text-grey sr-only md:not-sr-only">
-                    {service_slug} /
-                  </span>
-                  <span>{deployment.hash}</span>
-                </h1>
+      <BodySection>
+        <Tabs
+          value={currentSelectedTab}
+          className="w-full mt-5"
+          onValueChange={(value) => {
+            switch (value) {
+              case TABS.LOGS:
+                navigate({
+                  from: baseUrl,
+                  to: "."
+                });
+                break;
+              case TABS.HTTP_LOGS:
+                navigate({
+                  from: baseUrl,
+                  to: "./http-logs"
+                });
+                break;
+              case TABS.DETAILS:
+                navigate({
+                  from: baseUrl,
+                  to: "./details"
+                });
+                break;
+              default:
+                break;
+            }
+          }}
+        >
+          <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
+            <TabsTrigger value={TABS.LOGS} className="flex gap-2 items-center">
+              <span>Runtime logs</span>
+              <LogsIcon size={15} className="flex-none" />
+            </TabsTrigger>
 
-                <DeploymentStatusBadge status={deployment.status} />
-                {deployment.is_current_production && (
-                  <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
-                    <RocketIcon size={15} className="flex-none" />
-                    <p>current</p>
-                  </div>
-                )}
-              </div>
+            <TabsTrigger
+              value={TABS.HTTP_LOGS}
+              className="flex gap-2 items-center"
+            >
+              <span>HTTP logs</span>
+              <GlobeIcon size={15} className="flex-none" />
+            </TabsTrigger>
 
-              <p className="flex gap-1 items-center">
-                <HistoryIcon size={15} />
-                <span className="sr-only">Deployed at :</span>
-                <time
-                  dateTime={deployment.queued_at}
-                  className="text-grey text-sm"
-                >
-                  {formattedTime(deployment.queued_at)}
-                </time>
-              </p>
-              {deployment.url && (
-                <div className="flex gap-3 items-center flex-wrap">
-                  <a
-                    href={formatURL({
-                      domain: deployment.url
-                    })}
-                    target="_blank"
-                    className="underline text-link text-sm break-all"
-                  >
-                    {formatURL({
-                      domain: deployment.url
-                    })}
-                  </a>
-                </div>
-              )}
-            </div>
-          </section>
-          <Tabs
-            value={currentSelectedTab}
-            className="w-full mt-5"
-            onValueChange={(value) => {
-              switch (value) {
-                case TABS.LOGS:
-                  navigate({
-                    from: baseUrl,
-                    to: "."
-                  });
-                  break;
-                case TABS.HTTP_LOGS:
-                  navigate({
-                    from: baseUrl,
-                    to: "./http-logs"
-                  });
-                  break;
-                case TABS.DETAILS:
-                  navigate({
-                    from: baseUrl,
-                    to: "./details"
-                  });
-                  break;
-                default:
-                  break;
-              }
-            }}
-          >
-            <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
-              <TabsTrigger
-                value={TABS.LOGS}
-                className="flex gap-2 items-center"
-              >
-                <span>Runtime logs</span>
-                <LogsIcon size={15} className="flex-none" />
-              </TabsTrigger>
+            <TabsTrigger
+              value={TABS.DETAILS}
+              className="flex gap-2 items-center"
+            >
+              <span>Details</span>
+              <InfoIcon size={15} className="flex-none" />
+            </TabsTrigger>
+          </TabsList>
 
-              <TabsTrigger
-                value={TABS.HTTP_LOGS}
-                className="flex gap-2 items-center"
-              >
-                <span>HTTP logs</span>
-                <GlobeIcon size={15} className="flex-none" />
-              </TabsTrigger>
+          <TabsContent value={TABS.LOGS}>
+            <Outlet />
+          </TabsContent>
 
-              <TabsTrigger
-                value={TABS.DETAILS}
-                className="flex gap-2 items-center"
-              >
-                <span>Details</span>
-                <InfoIcon size={15} className="flex-none" />
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={TABS.LOGS}>
-              <Outlet />
-            </TabsContent>
-
-            <TabsContent value={TABS.HTTP_LOGS}>
-              <Outlet />
-            </TabsContent>
-            <TabsContent value={TABS.DETAILS}>
-              <Outlet />
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+          <TabsContent value={TABS.HTTP_LOGS}>
+            <Outlet />
+          </TabsContent>
+          <TabsContent value={TABS.DETAILS}>
+            <Outlet />
+          </TabsContent>
+        </Tabs>
+      </BodySection>
     </>
+  );
+}
+
+function BodySection({ children }: { children: React.ReactNode }) {
+  const { project_slug, service_slug, deployment_hash } = Route.useParams();
+  const deploymentQuery = useQuery(
+    deploymentQueries.single({
+      project_slug,
+      service_slug,
+      deployment_hash
+    })
+  );
+
+  const deployment = deploymentQuery.data;
+
+  if (deploymentQuery.isLoading) {
+    return (
+      <>
+        <div className="col-span-full">
+          <Loader className="h-[70vh]" />
+        </div>
+      </>
+    );
+  }
+
+  if (deployment === undefined) {
+    return (
+      <>
+        <section className="col-span-full ">
+          <MetaTitle title="404 - Deployment does not exist" />
+          <div className="flex flex-col gap-5 h-[70vh] items-center justify-center">
+            <div className="flex-col flex gap-3 items-center">
+              <h1 className="text-3xl font-bold">Error 404</h1>
+              <p className="text-lg">
+                This deployment does not exist on this service
+              </p>
+            </div>
+            <Link to="/">
+              <Button>Go home</Button>
+            </Link>
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <MetaTitle title={`${service_slug} / ${deployment.unprefixed_hash}`} />
+      <HeaderSection />
+      {children}
+    </>
+  );
+}
+
+function HeaderSection() {
+  const { project_slug, service_slug, deployment_hash } = Route.useParams();
+  const deploymentQuery = useQuery(
+    deploymentQueries.single({
+      project_slug,
+      service_slug,
+      deployment_hash
+    })
+  );
+
+  const deployment = deploymentQuery.data!;
+
+  return (
+    <section
+      id="header"
+      className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
+    >
+      <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
+        <div className="inline-flex flex-wrap gap-1">
+          <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
+            <span className="text-grey sr-only md:not-sr-only">
+              {service_slug} /
+            </span>
+            <span>{deployment.hash}</span>
+          </h1>
+
+          <DeploymentStatusBadge status={deployment.status} />
+          {deployment.is_current_production && (
+            <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
+              <RocketIcon size={15} className="flex-none" />
+              <p>current</p>
+            </div>
+          )}
+        </div>
+
+        <p className="flex gap-1 items-center">
+          <HistoryIcon size={15} />
+          <span className="sr-only">Deployed at :</span>
+          <time dateTime={deployment.queued_at} className="text-grey text-sm">
+            {formattedTime(deployment.queued_at)}
+          </time>
+        </p>
+        {deployment.url && (
+          <div className="flex gap-3 items-center flex-wrap">
+            <a
+              href={formatURL({
+                domain: deployment.url
+              })}
+              target="_blank"
+              className="underline text-link text-sm break-all"
+            >
+              {formatURL({
+                domain: deployment.url
+              })}
+            </a>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -321,8 +356,7 @@ function DeploymentStatusBadge({
         {
           "bg-emerald-400/20 dark:bg-emerald-600/20 text-green-600  dark:text-emerald-400":
             color === "green",
-          "bg-red-600 bg-opacity-10 text-red-600 dark:text-red-400":
-            color === "red",
+          "bg-red-600/10 text-red-600 dark:text-red-400": color === "red",
           "bg-yellow-400/20 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400":
             color === "yellow",
           "bg-gray-600/20 dark:bg-gray-600/60 text-gray": color === "gray",

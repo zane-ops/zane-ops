@@ -5,10 +5,13 @@ export type NavLinkProps = Omit<LinkProps, "to" | "ref" | "activeProps"> & {
   href: string;
 };
 
-export const NavLink = React.forwardRef<
-  React.ElementRef<typeof Link>,
-  NavLinkProps
->(function NavLink({ href, ...props }, ref) {
+export const NavLink = function NavLink({
+  ref,
+  href,
+  ...props
+}: NavLinkProps & {
+  ref?: React.RefObject<React.ComponentRef<typeof Link>>;
+}) {
   return (
     <Link
       ref={ref}
@@ -19,4 +22,4 @@ export const NavLink = React.forwardRef<
       to={href}
     />
   );
-});
+};
