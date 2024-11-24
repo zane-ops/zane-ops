@@ -1,12 +1,6 @@
-ARG CADDY_VERSION=2.8
-FROM caddy:${CADDY_VERSION}-builder AS builder
+FROM ghcr.io/fredkiss3/caddy-cloudflare:2.8.4-alpine
 
 LABEL org.opencontainers.image.source=https://github.com/zane-ops/zane-ops
-
-RUN xcaddy build \
-    --with github.com/caddy-dns/cloudflare
-
-FROM caddy:${CADDY_VERSION}-alpine
 
 ARG ENVIRONMENT=dev
 
