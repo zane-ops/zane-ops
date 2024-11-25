@@ -153,7 +153,15 @@ class AsyncCustomAPIClient(AsyncClient):
         super().__init__(enforce_csrf_checks=False, **defaults)
         self.parent = parent
 
-    async def post(self, path, data=None, content_type=None, follow=False, **extra):
+    async def post(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
         async with self.parent.acaptureCommitCallbacks(execute=True):
@@ -163,10 +171,21 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
-    async def put(self, path, data=None, content_type=None, follow=False, **extra):
+    async def put(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
 
@@ -177,10 +196,21 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
-    async def patch(self, path, data=None, content_type=None, follow=False, **extra):
+    async def patch(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
 
@@ -191,10 +221,21 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
-    async def delete(self, path, data=None, content_type=None, follow=False, **extra):
+    async def delete(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
         async with self.parent.acaptureCommitCallbacks(execute=True):
@@ -204,6 +245,9 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 

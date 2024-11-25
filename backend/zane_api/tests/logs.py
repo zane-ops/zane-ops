@@ -1097,8 +1097,8 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
 
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
-            headers={"X-Secret": settings.SECRET_KEY},
             data=simple_proxy_logs,
+            headers={"X-Secret": settings.SECRET_KEY},
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(0, SimpleLog.objects.count())
