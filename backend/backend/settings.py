@@ -382,4 +382,5 @@ if BACKEND_COMPONENT == "API":
         zane_app_domain=ZANE_APP_DOMAIN,
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        internal_tls=DEBUG,
     )
