@@ -20,9 +20,12 @@ export function withAuthRedirect(WrappedComponent: ComponentType<any>) {
 
       navigate({
         to: "/login",
-        search: {
-          redirect_to: currentPath !== "/login" ? currentPath : ""
-        }
+        search:
+          currentPath !== "/login"
+            ? {
+                redirect_to: currentPath
+              }
+            : undefined
       });
       return null;
     }
