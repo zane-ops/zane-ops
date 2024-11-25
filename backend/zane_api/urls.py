@@ -80,9 +80,9 @@ urlpatterns += [
         name="proxy.check_certificates",
     ),
     re_path(
-        "^logs/tail/?$",
-        views.LogTailAPIView.as_view(),
-        name="logs.tail",
+        "^logs/ingest/?$",
+        views.LogIngestAPIView.as_view(),
+        name="logs.ingest",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/cancel-service-changes/docker"
