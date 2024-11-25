@@ -1,4 +1,3 @@
-from backend.bootstrap import register_zaneops_app_on_proxy
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, exceptions, status
@@ -9,20 +8,6 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from . import serializers
 from ..models import URL, DockerDeployment, GitDeployment
-
-
-@extend_schema(exclude=True)
-class RegisterZaneProxyAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request: Request):
-        register_zaneops_app_on_proxy(
-            proxy_url=settings.CADDY_PROXY_ADMIN_HOST,
-            zane_app_domain=settings.ZANE_APP_DOMAIN,
-            zane_api_internal_domain=settings.ZANE_API_SERVICE_INTERNAL_DOMAIN,
-            zane_front_internal_domain=settings.ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
-        )
-        return Response(data={"success": True}, status=status.HTTP_200_OK)
 
 
 class CertificateCheckSerializer(serializers.Serializer):
