@@ -76,7 +76,7 @@ def register_zaneops_app_on_proxy(
 
         if 200 <= response.status_code < 300:
             print(
-                f"[{Colors.BLUE}{config_id}{Colors.ENDC}] Updated proxy configuration succesfully ✅\n"
+                f"[{Colors.BLUE}{config_id}{Colors.ENDC}] Updated proxy configuration succesfully ✅"
             )
         else:
             print(
@@ -107,7 +107,7 @@ def register_zaneops_app_on_proxy(
     )
     if 200 <= response.status_code < 300:
         print(
-            f"[{Colors.BLUE}root.apps.tls{Colors.ENDC}] Updated proxy configuration succesfully ✅\n"
+            f"[{Colors.BLUE}root.apps.tls{Colors.ENDC}] Updated proxy configuration succesfully ✅"
         )
     else:
         print(
