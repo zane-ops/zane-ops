@@ -11,6 +11,7 @@ from temporalio.testing import WorkflowEnvironment
 
 from temporalio.common import RetryPolicy
 
+
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
@@ -32,7 +33,9 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         json_log = json.loads(simple_proxy_logs[0]["log"])
 
         response = self.client.post(
-            reverse("zane_api:logs.ingest"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            data=simple_proxy_logs,
+            headers={"X-Secret": settings.SECRET_KEY},
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -142,7 +145,11 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
             },
         ]
 
-        response = self.client.post(reverse("zane_api:logs.ingest"), data=simple_logs)
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={"X-Secret": settings.SECRET_KEY},
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(len(simple_logs), deployment.logs.count())
@@ -738,7 +745,9 @@ class HttpLogViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(
-            reverse("zane_api:logs.ingest"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            data=simple_proxy_logs,
+            headers={"X-Secret": settings.SECRET_KEY},
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -783,7 +792,9 @@ class HttpLogViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(
-            reverse("zane_api:logs.ingest"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            headers={"X-Secret": settings.SECRET_KEY},
+            data=simple_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -1085,7 +1096,9 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(
-            reverse("zane_api:logs.ingest"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            headers={"X-Secret": settings.SECRET_KEY},
+            data=simple_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(0, SimpleLog.objects.count())
@@ -1192,6 +1205,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
 
         response = await self.async_client.post(
             reverse("zane_api:logs.ingest"),
+            headers={"X-Secret": settings.SECRET_KEY},
             data=first_deploy_proxy_logs + second_deploy_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)

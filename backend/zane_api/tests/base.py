@@ -47,7 +47,14 @@ class CustomAPIClient(APIClient):
         self.parent = parent
 
     def post(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -55,14 +62,24 @@ class CustomAPIClient(APIClient):
             path=path,
             data=data,
             format=format,
+            headers=headers,
+            follow=follow,
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            **extra,
         )
         return response
 
     def put(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -74,11 +91,21 @@ class CustomAPIClient(APIClient):
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            follow=follow,
+            headers=headers,
+            **extra,
         )
         return response
 
     def patch(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -89,11 +116,21 @@ class CustomAPIClient(APIClient):
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            follow=follow,
+            headers=headers,
+            **extra,
         )
         return response
 
     def delete(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -104,6 +141,9 @@ class CustomAPIClient(APIClient):
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            follow=follow,
+            headers=headers,
+            **extra,
         )
         return response
 
