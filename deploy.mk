@@ -74,7 +74,7 @@ deploy: ### Install and deploy zaneops
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo -e "You can monitor the services deployed by running \x1b[94mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
-	@echo -e "Wait for all services (except for \x1b[94mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[94mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[94mreplicated   1/1\x1b[0m to attest that everything started succesfully"
 
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
