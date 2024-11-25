@@ -65,16 +65,24 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "Setup finished 🏁"
 
 deploy: ### Install and deploy zaneops
-	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-	@echo "    🚀   DEPLOYMENT OF ZANEOPS   🚀"
-	@echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-	@echo "Deploying zaneops...🔄"
+	@echo -e "====== \x1b[94mDeploying ZaneOps...🔄\x1b[0m ======"
+	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane;
+	@. ./attach-proxy-networks.sh
+	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
+	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
+	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
+	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
+
+deploy-with-http: ### Install and deploy zaneops with the HTTP port enabled : better suited for tests and local installation
+	@echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️ with HTTP enabled ⚠️\x1b[0m... ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
 	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
 	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
