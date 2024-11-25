@@ -3,6 +3,9 @@ from typing import Any
 
 from drf_standardized_errors.handler import ExceptionHandler
 from rest_framework import exceptions, status
+from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from django.conf import settings
 
 EMPTY_RESPONSE = {}
 EMPTY_PAGINATED_RESPONSE = OrderedDict(
@@ -70,3 +73,14 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
             continue
         schema["required"] = sorted(schema["properties"].keys())
     return result
+
+
+class InternalZaneAppPermission(BasePermission):
+    """
+    Allow only internal zaneops apps like the proxy or fluentd.
+    This is set
+    """
+
+    def has_permission(self, request: Request, view: Any):
+        secret = request.headers.get("x-secret")
+        return secret == settings.SECRET_KEY

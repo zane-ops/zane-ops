@@ -1,5 +1,4 @@
 import json
-import re
 from urllib.parse import urlparse
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -10,6 +9,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+
+from .base import InternalZaneAppPermission
 
 from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
@@ -27,8 +28,8 @@ from ..serializers import SimpleLogSerializer
 
 
 @extend_schema(exclude=True)
-class LogTailAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+class LogIngestAPIView(APIView):
+    permission_classes = [InternalZaneAppPermission]
     throttle_scope = "log_collect"
     throttle_classes = [ScopedRateThrottle]
     serializer_class = DockerContainerLogsResponseSerializer
