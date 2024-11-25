@@ -10,9 +10,7 @@ help: ### Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 setup: ### Launch initial setup before installing zaneops
-	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
-	@echo "    ⚒️  INITIAL SETUP OF ZANEOPS ⚒️"
-	@echo "⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️⚒️"
+	@echo -e "====== \x1b[94m⚒️  INITIAL SETUP OF ZANEOPS ⚒️\x1b[0m ======"
 	@echo "Step 1️⃣ : initializing docker swarm..."
 	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \
 		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -qw "true"; then \
@@ -52,6 +50,11 @@ setup: ### Launch initial setup before installing zaneops
 		sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
 		sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
 		sed -i'.bak' "s#{{ZANE_DJANGO_SECRET_KEY}}#\"$(django_secret)\"#g" ./.env; \
+		if [ "$(shell uname)" = "Linux" ]; then \
+			IP_ADDRESS=$(shell ip route show default | awk '/src/ {for (i=1; i<=NF; i++) if ($$i=="src") print $$(i+1)}' |  sed 's/\./-/g'); \
+			sed -i "s/127-0-0-1/$$IP_ADDRESS/g" .env; \
+			echo -e "default ZaneOps domain configured to \x1b[96m$$IP_ADDRESS.sslip.io\x1b[0m in the .env file ✅"; \
+		fi; \
 		rm .env.bak; \
   	fi
 	@echo "Step 4️⃣ Done ✅"
@@ -65,23 +68,25 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "Setup finished 🏁"
 
 deploy: ### Install and deploy zaneops
-	@echo -e "====== \x1b[94mDeploying ZaneOps...🔄\x1b[0m ======"
+	@echo -e "====== \x1b[94mDeploying ZaneOps \x1b[92mwith HTTPS 🔒\x1b[0m ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane;
 	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
 	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@set -a; . ./.env; set +a && echo -e "Once everything is ok, zaneops will be accessible at \x1b[96mhttps://$$ZANE_APP_DOMAIN\x1b[0m"
 	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 deploy-with-http: ### Install and deploy zaneops with the HTTP port enabled : better suited for tests and local installation
-	@echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m... ======"
+	@echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m  ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
 	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
 	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@set -a; . ./.env; set +a && echo -e "Once everything is ok, zaneops will be accessible at \x1b[96mhttp://$$ZANE_APP_DOMAIN\x1b[0m"
 	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 create-user: ### Create the first user to login in into the dashboard
