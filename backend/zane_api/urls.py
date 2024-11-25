@@ -75,7 +75,7 @@ if settings.DEBUG:
 
 urlpatterns += [
     re_path(
-        "^_proxy/check-certiticates/?$",
+        r"^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
         name="proxy.check_certificates",
     ),
