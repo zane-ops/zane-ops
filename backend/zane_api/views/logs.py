@@ -11,6 +11,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
+from ..utils import Colors
 
 from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
@@ -157,6 +158,11 @@ class LogIngestAPIView(APIView):
                     "http_logs_inserted": len(http_logs),
                 }
             )
+            print("====== LOGS INGEST ======")
+            print(
+                f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}"
+            )
+            print(f"HTTP logs inserted = {Colors.BLUE}{len(http_logs)}{Colors.ENDC}")
             return Response(response.data, status=status.HTTP_200_OK)
 
 
