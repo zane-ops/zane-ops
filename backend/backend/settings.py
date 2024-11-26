@@ -245,15 +245,6 @@ LOGGING = {
     },
 }
 
-if DEBUG and not os.environ.get("SILENT"):
-    LOGGING["loggers"].update(
-        {
-            "django.db.backends": {
-                "level": "DEBUG",
-                "handlers": ["console"],
-            },
-        }
-    )
 
 # Django Rest framework
 
