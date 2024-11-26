@@ -8,7 +8,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from temporalio.testing import WorkflowEnvironment
-
+import base64
 from temporalio.common import RetryPolicy
 
 
@@ -35,7 +35,9 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_proxy_logs,
-            headers={"X-Secret": settings.SECRET_KEY},
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -148,7 +150,9 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_logs,
-            headers={"X-Secret": settings.SECRET_KEY},
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -747,7 +751,9 @@ class HttpLogViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_proxy_logs,
-            headers={"X-Secret": settings.SECRET_KEY},
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -793,7 +799,9 @@ class HttpLogViewTests(AuthAPITestCase):
 
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
-            headers={"X-Secret": settings.SECRET_KEY},
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
             data=simple_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -1098,7 +1106,9 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_proxy_logs,
-            headers={"X-Secret": settings.SECRET_KEY},
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(0, SimpleLog.objects.count())
@@ -1205,7 +1215,9 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
 
         response = await self.async_client.post(
             reverse("zane_api:logs.ingest"),
-            headers={"X-Secret": settings.SECRET_KEY},
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
             data=first_deploy_proxy_logs + second_deploy_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
