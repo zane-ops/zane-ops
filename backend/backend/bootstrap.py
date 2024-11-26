@@ -10,6 +10,7 @@ def register_zaneops_app_on_proxy(
     zane_app_domain: str,
     zane_api_internal_domain: str,
     zane_front_internal_domain: str,
+    internal_tls: bool = False,
 ):
     url_configurations = [
         {
@@ -73,7 +74,55 @@ def register_zaneops_app_on_proxy(
                 f"{proxy_url}/id/{config_id}", timeout=5, json=config
             )
 
-        print(
-            f"[{config_id}] Got Response from proxy :\n {response.status_code=}\n {response.text=}\n"
+        if 200 <= response.status_code < 300:
+            print(
+                f"[{Colors.BLUE}{config_id}{Colors.ENDC}] Updated proxy configuration succesfully ✅"
+            )
+        else:
+            print(
+                f"[{Colors.RED}{config_id}{Colors.ENDC}] ❌ Got an error when trying to update the proxy ❌"
+            )
+            print(f"With status code : {Colors.RED}{response.status_code}{Colors.ENDC}")
+            print(f"With response data : {Colors.ORANGE}{response.text}{Colors.ENDC}\n")
+
+    tls_app_config = {
+        "automation": {
+            "policies": [{"on_demand": True}],
+            "on_demand": {
+                "permission": {
+                    "@id": "tls-endpoint",
+                    "endpoint": f"http://{zane_api_internal_domain}/api/_proxy/check-certiticates",
+                    "module": "http",
+                }
+            },
+        }
+    }
+
+    if internal_tls:
+        tls_app_config["automation"]["policies"][0].update(
+            {"issuers": [{"module": "internal"}]}
         )
+    response = requests.patch(
+        f"{proxy_url}/id/root/apps/tls", timeout=5, json=tls_app_config
+    )
+    if 200 <= response.status_code < 300:
+        print(
+            f"[{Colors.BLUE}root.apps.tls{Colors.ENDC}] Updated proxy configuration succesfully ✅"
+        )
+    else:
+        print(
+            f"[{Colors.RED}root.apps.tls{Colors.ENDC}] ❌ Got an error when trying to update the proxy ❌"
+        )
+        print(f"With status code : {Colors.RED}{response.status_code}{Colors.ENDC}")
+        print(f"With response data : {Colors.ORANGE}{response.text}{Colors.ENDC}\n")
+
     return
+
+
+class Colors:
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    ORANGE = "\033[38;5;208m"
+    RED = "\033[91m"
+    GREY = "\033[90m"
+    ENDC = "\033[0m"  # Reset to default color

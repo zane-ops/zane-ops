@@ -70,24 +70,19 @@ if settings.DEBUG:
             rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/_bulk/?$",
             views.BulkRequestDockerServiceDeploymentChangesAPIView.as_view(),
         ),
-        re_path(
-            "^_proxy/register-zane-to-proxy/?$",
-            views.RegisterZaneProxyAPIView.as_view(),
-            name="proxy.register_zane",
-        ),
     ]
 
 
 urlpatterns += [
     re_path(
-        "^_proxy/check-certiticates/?$",
+        r"^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
         name="proxy.check_certificates",
     ),
     re_path(
-        "^logs/tail/?$",
-        views.LogTailAPIView.as_view(),
-        name="logs.tail",
+        "^logs/ingest/?$",
+        views.LogIngestAPIView.as_view(),
+        name="logs.ingest",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/cancel-service-changes/docker"

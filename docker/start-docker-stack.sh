@@ -27,7 +27,7 @@ echo "Scaling up all zane-ops services..."
 docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q |  xargs -P 0 -I {} docker service scale --detach {}=1
 
 # Wait until Ctrl+C is pressed
-echo "Server launched at http://localhost:5678/"
+echo -e "Server launched at \x1b[96mhttp://localhost:5678/\x1b[0m"
 echo "Press Ctrl+C to stop everything..."
 while true; do
   sleep 1
