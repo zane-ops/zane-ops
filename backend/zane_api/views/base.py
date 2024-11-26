@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from typing import Any
+import base64
 
 from drf_standardized_errors.handler import ExceptionHandler
 from rest_framework import exceptions, status
@@ -77,10 +78,19 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
 
 class InternalZaneAppPermission(BasePermission):
     """
-    Allow only internal zaneops apps like the proxy or fluentd.
-    This is set
+    Allow only internal zaneops apps like fluentd.
+    This is so that critical internal endpoints are still secure even though they are open to the internet.
     """
 
-    def has_permission(self, request: Request, view: Any):
-        secret = request.headers.get("x-secret")
-        return secret == settings.SECRET_KEY
+    def has_permission(self, request: Request, view: Any) -> bool:
+        auth = request.headers.get("Authorization", "").split(" ")  # type: list[str]
+
+        if len(auth) != 2:
+            return False
+
+        _type, credentials = auth
+        if _type != "Basic":
+            return False
+
+        credentials = base64.b64decode(credentials).decode("utf-8")
+        return credentials == f"zaneops:{settings.SECRET_KEY}"
