@@ -93,7 +93,7 @@ export const MultiSelect = ({
   options,
   onValueChange,
   variant,
-  value = [],
+  value: values = [],
   label = "Select options",
   animation = 0,
   maxCount = 3,
@@ -107,9 +107,9 @@ export const MultiSelect = ({
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
   const toggleOption = (option: string) => {
-    const newSelectedValues = value.includes(option)
-      ? value.filter((v) => v !== option)
-      : [...value, option];
+    const newSelectedValues = values.includes(option)
+      ? values.filter((v) => v !== option)
+      : [...values, option];
     onValueChange(newSelectedValues);
   };
 
@@ -131,6 +131,7 @@ export const MultiSelect = ({
           className={cn(
             "flex w-full py-1 px-2 rounded-md border border-border border-dashed min-h-10 h-auto items-center justify-between bg-inherit",
             "hover:bg-accent",
+            values.length === 0 && "pr-3.5",
             className
           )}
         >
@@ -141,15 +142,15 @@ export const MultiSelect = ({
             />
             <div className="flex items-center gap-1">
               <span className="text-sm text-card-foreground">{label}</span>
-              {value.length > 0 && (
+              {values.length > 0 && (
                 <>
                   <div className="h-4 bg-border w-px"></div>
-                  {value.length > 2 ? (
+                  {values.length > 2 ? (
                     <span className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground">
-                      {value.length} selected
+                      {values.length} selected
                     </span>
                   ) : (
-                    value.map((val) => (
+                    values.map((val) => (
                       <span
                         key={val}
                         className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground"
@@ -181,7 +182,7 @@ export const MultiSelect = ({
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandPrimitive.Group>
               {options.map((option) => {
-                const isSelected = value.includes(option);
+                const isSelected = values.includes(option);
                 return (
                   <CommandItem
                     key={option}
