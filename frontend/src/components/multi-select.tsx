@@ -10,6 +10,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
+import { capitalizeText } from "~/utils";
 
 /**
  * Variants for the multi-select component to handle different styles.
@@ -155,7 +156,7 @@ export const MultiSelect = ({
                         key={val}
                         className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground"
                       >
-                        {val}
+                        {capitalizeText(val)}
                       </span>
                     ))
                   )}
