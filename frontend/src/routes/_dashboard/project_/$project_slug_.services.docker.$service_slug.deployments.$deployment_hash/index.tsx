@@ -80,12 +80,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const isEmptySearchParams =
     !searchParams.time_after &&
     !searchParams.time_before &&
-    (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
-      searchParams.source?.length === 0 ||
-      !searchParams.source) &&
-    (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
-      searchParams.level?.length === 0 ||
-      !searchParams.level) &&
+    (searchParams.source?.length === 0 || !searchParams.source) &&
+    (searchParams.level?.length === 0 || !searchParams.level) &&
     (searchParams.content ?? "").length === 0;
 
   const queryClient = useQueryClient();
@@ -244,7 +240,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2",
-          searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[65dvh]"
+          searchParams.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh]"
         )}
       >
         <HeaderSection startTransition={startTransition} />
@@ -294,7 +290,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                 height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
               }}
               className={cn(
-                "relative justify-start mb-auto",
+                "relative justify-start",
                 "[&_::highlight(search-results-highlight)]:bg-yellow-400/50"
               )}
             >
@@ -318,7 +314,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
                       )}
                       {virtualRow.index === 0 && (
                         <div
-                          className="w-full py-2 text-center -scale-y-100 text-grey italic"
+                          className="w-full pt-2 text-center -scale-y-100 text-grey italic"
                           ref={autoRefetchRef}
                         >
                           -- LIVE <Ping /> new log entries will appear here --
@@ -376,29 +372,16 @@ const HeaderSection = React.memo(function HeaderSection({
   const navigate = useNavigate();
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
-  const filters = {
-    time_after: searchParams.time_after,
-    time_before: searchParams.time_before,
-    source:
-      searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
-    level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
-    content: searchParams.content
-  } satisfies DeploymentLogFitlers;
-
   const date: DateRange = {
-    from: filters.time_after,
-    to: filters.time_before
+    from: searchParams.time_after,
+    to: searchParams.time_before
   };
 
   const isEmptySearchParams =
     !searchParams.time_after &&
     !searchParams.time_before &&
-    (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
-      searchParams.source?.length === 0 ||
-      !searchParams.source) &&
-    (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
-      searchParams.level?.length === 0 ||
-      !searchParams.level) &&
+    (searchParams.source ?? []).length === 0 &&
+    (searchParams.level ?? []).length === 0 &&
     (searchParams.content ?? "").length === 0;
 
   const clearFilters = () => {
@@ -421,7 +404,7 @@ const HeaderSection = React.memo(function HeaderSection({
     startTransition(() =>
       navigate({
         search: {
-          ...filters,
+          ...searchParams,
           isMaximized: searchParams.isMaximized,
           content
         },
@@ -432,14 +415,14 @@ const HeaderSection = React.memo(function HeaderSection({
 
   return (
     <>
-      <section className="rounded-t-sm w-full flex gap-2 flex-col md:flex-row flex-wrap lg:flex-nowrap">
-        <div className="flex items-center gap-2 order-first">
+      <section className="rounded-t-sm w-full flex gap-2 flex-col items-start">
+        <div className="flex items-center gap-2 flex-wrap">
           <DateRangeWithShortcuts
             date={date}
             setDate={(newDateRange) =>
               navigate({
                 search: {
-                  ...filters,
+                  ...searchParams,
                   isMaximized: searchParams.isMaximized,
                   time_before: newDateRange?.to,
                   time_after: newDateRange?.from
@@ -447,59 +430,70 @@ const HeaderSection = React.memo(function HeaderSection({
                 replace: true
               })
             }
-            className="min-w-[250px] w-full"
+            className="w-[250px] grow"
           />
-        </div>
 
-        <div className="flex w-full items-center relative grow order-2">
-          <SearchIcon size={15} className="absolute left-4 text-grey" />
-
-          <Input
-            className="px-14 w-full text-sm  bg-muted/40 dark:bg-card/30"
-            placeholder="Search for log contents"
-            name="content"
-            defaultValue={searchParams.content}
-            ref={inputRef}
-            onChange={(ev) => {
-              const newQuery = ev.currentTarget.value;
-              if (newQuery !== (filters.content ?? "")) {
-                searchLogsForContent(newQuery);
-              }
-            }}
-          />
-        </div>
-
-        <div className="shrink-0 flex items-center gap-1.5 order-1 lg:order-last">
           <MultiSelect
-            value={filters.level}
+            value={searchParams.level as string[]}
+            className="w-auto"
             options={LOG_LEVELS as Writeable<typeof LOG_LEVELS>}
             onValueChange={(newVal) => {
               navigate({
                 search: {
-                  ...filters,
+                  ...searchParams,
                   isMaximized: searchParams.isMaximized,
                   level: newVal
                 },
                 replace: true
               });
             }}
-            placeholder="log levels"
+            label="levels"
           />
 
           <MultiSelect
-            value={filters.source}
+            value={searchParams.source as string[]}
+            className="w-auto"
             options={LOG_SOURCES as Writeable<typeof LOG_SOURCES>}
             onValueChange={(newVal) => {
               navigate({
                 search: {
-                  ...filters,
+                  ...searchParams,
                   isMaximized: searchParams.isMaximized,
                   source: newVal
                 },
                 replace: true
               });
             }}
-            placeholder="log sources"
+            label="sources"
+          />
+
+          {!isEmptySearchParams && (
+            <Button
+              variant="outline"
+              className="inline-flex w-min gap-1"
+              onClick={clearFilters}
+            >
+              <XIcon size={15} />
+              <span>Reset filters</span>
+            </Button>
+          )}
+        </div>
+
+        <div className="flex gap-2 w-full items-center relative">
+          <SearchIcon size={15} className="absolute left-4 text-grey" />
+
+          <Input
+            className="px-14 w-full md:min-w-150 text-sm  bg-muted/40 dark:bg-card/30"
+            placeholder="Search for log contents"
+            name="content"
+            defaultValue={searchParams.content}
+            ref={inputRef}
+            onChange={(ev) => {
+              const newQuery = ev.currentTarget.value;
+              if (newQuery !== (searchParams.content ?? "")) {
+                searchLogsForContent(newQuery);
+              }
+            }}
           />
 
           <TooltipProvider>
@@ -510,7 +504,7 @@ const HeaderSection = React.memo(function HeaderSection({
                   onClick={() => {
                     navigate({
                       search: {
-                        ...filters,
+                        ...searchParams,
                         isMaximized: !searchParams.isMaximized
                       },
                       replace: true
@@ -535,16 +529,6 @@ const HeaderSection = React.memo(function HeaderSection({
         </div>
       </section>
       <hr className="border-border" />
-      {!isEmptySearchParams && (
-        <Button
-          variant="outline"
-          className="inline-flex w-min gap-1"
-          onClick={clearFilters}
-        >
-          <XIcon size={15} />
-          <span>Reset filters</span>
-        </Button>
-      )}
     </>
   );
 });
