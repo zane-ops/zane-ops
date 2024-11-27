@@ -80,12 +80,8 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const isEmptySearchParams =
     !searchParams.time_after &&
     !searchParams.time_before &&
-    (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
-      searchParams.source?.length === 0 ||
-      !searchParams.source) &&
-    (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
-      searchParams.level?.length === 0 ||
-      !searchParams.level) &&
+    (searchParams.source?.length === 0 || !searchParams.source) &&
+    (searchParams.level?.length === 0 || !searchParams.level) &&
     (searchParams.content ?? "").length === 0;
 
   const queryClient = useQueryClient();
@@ -384,12 +380,8 @@ const HeaderSection = React.memo(function HeaderSection({
   const isEmptySearchParams =
     !searchParams.time_after &&
     !searchParams.time_before &&
-    (LOG_SOURCES.every((source) => searchParams.source?.includes(source)) ||
-      searchParams.source?.length === 0 ||
-      !searchParams.source) &&
-    (LOG_LEVELS.every((source) => searchParams.level?.includes(source)) ||
-      searchParams.level?.length === 0 ||
-      !searchParams.level) &&
+    (searchParams.source?.length === 0 || !searchParams.source) &&
+    (searchParams.level?.length === 0 || !searchParams.level) &&
     (searchParams.content ?? "").length === 0;
 
   const clearFilters = () => {
