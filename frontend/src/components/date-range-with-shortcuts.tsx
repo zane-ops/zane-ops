@@ -1,17 +1,12 @@
 "use client";
 
-// import type { Table } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { addDays, addHours, endOfDay, startOfDay } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-// import { useMemo } from "react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-// import type { DataTableTimerangeFilterField } from "~/lib/types";
-// import { isArrayOfDates } from "~/utils";
 
 import { useDebounce } from "use-debounce";
-import { kbdVariants } from "~/components/kbd";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
 import { Input } from "~/components/ui/input";
@@ -36,7 +31,7 @@ export function DateRangeWithShortcuts({
   className,
   date,
   setDate,
-  presets = defaultPresets
+  presets
 }: DateRangeWithShortcutsProps) {
   return (
     <div className={cn("grid gap-2", className)}>
@@ -68,7 +63,11 @@ export function DateRangeWithShortcuts({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <div className="flex justify-between">
-            <DatePresets onSelect={setDate} selected={date} presets={presets} />
+            <DatePresets
+              onSelect={setDate}
+              selected={date}
+              presets={presets ?? getDefaultPresets()}
+            />
             <Separator orientation="vertical" className="h-auto w-[px]" />
             <Calendar
               initialFocus
@@ -87,38 +86,40 @@ export function DateRangeWithShortcuts({
   );
 }
 
-export const defaultPresets = [
-  {
-    label: "Today",
-    from: startOfDay(new Date()),
-    to: endOfDay(new Date())
-  },
-  {
-    label: "Yesterday",
-    from: startOfDay(addDays(new Date(), -1)),
-    to: endOfDay(addDays(new Date(), -1))
-  },
-  {
-    label: "Last hour",
-    from: addHours(new Date(), -1),
-    to: new Date()
-  },
-  {
-    label: "Last 7 days",
-    from: startOfDay(addDays(new Date(), -7)),
-    to: endOfDay(new Date())
-  },
-  {
-    label: "Last 14 days",
-    from: startOfDay(addDays(new Date(), -14)),
-    to: endOfDay(new Date())
-  },
-  {
-    label: "Last 30 days",
-    from: startOfDay(addDays(new Date(), -30)),
-    to: endOfDay(new Date())
-  }
-] satisfies DatePreset[];
+function getDefaultPresets() {
+  return [
+    {
+      label: "Today",
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date())
+    },
+    {
+      label: "Yesterday",
+      from: startOfDay(addDays(new Date(), -1)),
+      to: endOfDay(addDays(new Date(), -1))
+    },
+    {
+      label: "Last hour",
+      from: addHours(new Date(), -1),
+      to: new Date()
+    },
+    {
+      label: "Last 7 days",
+      from: startOfDay(addDays(new Date(), -7)),
+      to: endOfDay(new Date())
+    },
+    {
+      label: "Last 14 days",
+      from: startOfDay(addDays(new Date(), -14)),
+      to: endOfDay(new Date())
+    },
+    {
+      label: "Last 30 days",
+      from: startOfDay(addDays(new Date(), -30)),
+      to: endOfDay(new Date())
+    }
+  ] satisfies DatePreset[];
+}
 
 function DatePresets({
   selected,
