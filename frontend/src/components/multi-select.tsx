@@ -54,7 +54,7 @@ interface MultiSelectProps
    * Placeholder text to be displayed when no values are selected.
    * Optional, defaults to "Select options".
    */
-  placeholder?: string;
+  label?: string;
 
   /**
    * Animation duration in seconds for the visual effects (e.g., bouncing badges).
@@ -94,7 +94,7 @@ export const MultiSelect = ({
   onValueChange,
   variant,
   value = [],
-  placeholder = "Select options",
+  label = "Select options",
   animation = 0,
   maxCount = 3,
   modalPopover = false,
@@ -129,17 +129,38 @@ export const MultiSelect = ({
           {...props}
           onClick={handleTogglePopover}
           className={cn(
-            "flex w-full p-1 pl-4 rounded-md border border-border min-h-10 h-auto items-center justify-between bg-inherit hover:bg-inherit",
+            "flex w-full py-1 px-2 rounded-md border border-border border-dashed min-h-10 h-auto items-center justify-between bg-inherit",
+            "hover:bg-accent",
             className
           )}
         >
-          <div className="flex items-center justify-between w-full mx-auto">
-            <div className="flex items-center">
-              <span className="text-sm text-muted-foreground">
-                {placeholder}
-              </span>
+          <div className="flex items-center gap-1 justify-between w-full mx-auto">
+            <ChevronDownIcon
+              size={15}
+              className="cursor-pointer text-muted-foreground"
+            />
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-card-foreground">{label}</span>
+              {value.length > 0 && (
+                <>
+                  <div className="h-4 bg-border w-px"></div>
+                  {value.length > 2 ? (
+                    <span className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground">
+                      {value.length} selected
+                    </span>
+                  ) : (
+                    value.map((val) => (
+                      <span
+                        key={val}
+                        className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground"
+                      >
+                        {val}
+                      </span>
+                    ))
+                  )}
+                </>
+              )}
             </div>
-            <ChevronDownIcon className="h-4 cursor-pointer text-muted-foreground mx-2" />
           </div>
         </Button>
       </PopoverTrigger>
