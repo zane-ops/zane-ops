@@ -4,3 +4,5 @@ __pycache__/
 .DS_Store
 venv/
 package.json
+*.db
+*.db.wal

@@ -1,2 +1,4 @@
 ./sites
 .DS_Store
+*.db
+*.db.wal

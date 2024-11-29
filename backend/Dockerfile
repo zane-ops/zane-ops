@@ -17,5 +17,7 @@ WORKDIR /code
 
 EXPOSE 8000
 
+RUN mkdir -p ./duckdb 
+
 # runs the dev server
 CMD bash -c "source /venv/bin/activate && uv pip install -r requirements.txt && python manage.py create_log_cleanup_schedule && python manage.py runserver"

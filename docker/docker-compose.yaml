@@ -49,6 +49,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - duckdb-data:/code/duckdb
     depends_on:
       - db
       - redis
@@ -166,6 +167,7 @@ volumes:
   redisinsight:
   caddy-data:
   pgadmin-data:
+  duckdb-data:
 networks:
   zane:
     external: true

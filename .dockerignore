@@ -33,3 +33,5 @@ dist-ssr/
 
 #ignoring auto generated files 
 ./src/routeTree.gen.ts
+*.db
+*.db.wal
