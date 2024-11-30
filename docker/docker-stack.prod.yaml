@@ -82,6 +82,12 @@ services:
         aliases:
           - zane.frontend
           - zane.front.zaneops.internal
+        healthcheck:
+    test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+      interval: 1m
+      timeout: 5s
+      start_period: 5s
+      retries: 3
   api:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
     deploy:
@@ -102,6 +108,12 @@ services:
         limits:
           cpus: "0.5"
           memory: 500M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
+      interval: 1m
+      timeout: 3m
+      start_period: 30s
+      retries: 3
     networks:
       zane:
         aliases:

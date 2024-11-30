@@ -57,6 +57,12 @@ services:
     restart: always
     environment:
       ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
+      interval: 1m
+      timeout: 3m
+      start_period: 30s
+      retries: 3
   temporal-main-worker:
     build:
       context: ../backend
