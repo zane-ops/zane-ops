@@ -2075,9 +2075,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
 
 class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
-    def test_apply_simple_changes(
-        self,
-    ):
+    def test_apply_simple_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
