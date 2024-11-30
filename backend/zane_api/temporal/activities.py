@@ -1011,8 +1011,7 @@ class DockerSwarmActivities:
             await next_deployment.asave()
 
             return await DockerDeploymentDetails.afrom_deployment(
-                deployment=next_deployment,
-                auth_token=deployment.auth_token,
+                deployment=next_deployment
             )
         return None
 
@@ -1541,12 +1540,9 @@ class DockerSwarmActivities:
                                     if settings.ENVIRONMENT == settings.PRODUCTION_ENV
                                     else "http"
                                 )
-                                full_url = f"{scheme}://{docker_deployment.url + healthcheck.value}"
+                                full_url = f"{scheme}://{swarm_service.name}:{deployment.service.http_port.forwarded}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
-                                    headers={
-                                        "Authorization": f"Token {deployment.auth_token}"
-                                    },
                                     timeout=min(healthcheck_time_left, 5),
                                 )
                                 if response.status_code == status.HTTP_200_OK:
@@ -1824,7 +1820,6 @@ class DockerSwarmActivities:
                     project_id=deployment.service.project_id,
                     url=deployment.url,
                 ),
-                auth_token=deployment.auth_token,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(

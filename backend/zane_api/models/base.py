@@ -338,6 +338,10 @@ class DockerRegistryService(BaseService):
         return self.ports.filter(host__isnull=True).first()
 
     @property
+    async def ahttp_port(self) -> PortConfiguration | None:
+        return await self.ports.filter(host__isnull=True).afirst()
+
+    @property
     def last_queued_deployment(self) -> Union["DockerDeployment", None]:
         return (
             self.deployments.filter(

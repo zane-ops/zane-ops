@@ -79,6 +79,11 @@ class MonitorDockerDeploymentActivities:
         details: HealthcheckDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         try:
+            deployment: DockerDeployment = await (
+                DockerDeployment.objects.filter(hash=details.deployment.hash)
+                .select_related("service")
+                .afirst()
+            )
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=details.deployment.hash,
@@ -86,7 +91,7 @@ class MonitorDockerDeploymentActivities:
                     service_id=details.deployment.service_id,
                 )
             )
-        except docker.errors.NotFound:
+        except (docker.errors.NotFound, DockerDeployment.DoesNotExist):
             raise ApplicationError(
                 "Cannot run a healthcheck on an nonexistent deployment.",
                 non_retryable=True,
@@ -185,12 +190,10 @@ class MonitorDockerDeploymentActivities:
                                     if settings.ENVIRONMENT == settings.PRODUCTION_ENV
                                     else "http"
                                 )
-                                full_url = f"{scheme}://{details.deployment.url + healthcheck.value}"
+                                service_http_port = await deployment.service.ahttp_port
+                                full_url = f"{scheme}://{swarm_service.name}:{service_http_port.forwarded}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
-                                    headers={
-                                        "Authorization": f"Token {details.auth_token}"
-                                    },
                                     timeout=healthcheck_timeout,
                                 )
                                 if response.status_code == status.HTTP_200_OK:
