@@ -58,7 +58,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
                 "log": "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": "2024-06-30T03:16:14Z",
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -162,7 +162,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
         self.assertIsNotNone(log.time)
         self.assertEqual(
-            "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
+            simple_logs[0]["log"],
             log.content,
         )
         self.assertIsNotNone(log.service_id)
