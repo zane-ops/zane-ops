@@ -250,7 +250,7 @@ class DockerRegistryService(BaseService):
         return [
             {
                 "key": "ZANE",
-                "value": "1",
+                "value": "true",
                 "comment": "Is the service deployed on zaneops?",
             },
             {

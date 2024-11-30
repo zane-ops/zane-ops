@@ -1324,7 +1324,7 @@ class DockerSwarmActivities:
             # zane-specific-envs
             envs.extend(
                 [
-                    f"ZANE=1",
+                    f"ZANE=true",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                     f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
                     f"ZANE_DEPLOYMENT_TYPE=docker",
