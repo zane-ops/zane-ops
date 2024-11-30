@@ -37,7 +37,6 @@ class DockerDeploymentDetails:
     queued_at: str
     workflow_id: str
     service: DockerServiceSnapshot
-    auth_token: Optional[str] = None
     url: Optional[str] = None
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
