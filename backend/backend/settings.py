@@ -78,7 +78,7 @@ ALLOWED_HOSTS = (
         "host.docker.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
+    else [f"127.0.0.1", f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
 )
 
 SESSION_COOKIE_DOMAIN = None
