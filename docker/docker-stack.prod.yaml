@@ -82,8 +82,8 @@ services:
         aliases:
           - zane.frontend
           - zane.front.zaneops.internal
-        healthcheck:
-    test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
       interval: 1m
       timeout: 5s
       start_period: 5s
