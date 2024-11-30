@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
-  createLazyFileRoute,
+  createFileRoute,
   useRouterState
 } from "@tanstack/react-router";
 import {
@@ -48,7 +48,7 @@ import { capitalizeText, formatURL, formattedTime } from "~/utils";
 
 import type { JSX } from "react";
 
-export const Route = createLazyFileRoute(
+export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash"
 )({
   component: withAuthRedirect(DeploymentLayout)

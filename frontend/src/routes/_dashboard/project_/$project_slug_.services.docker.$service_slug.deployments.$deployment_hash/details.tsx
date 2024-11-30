@@ -1,6 +1,6 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createLazyFileRoute(
+export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/deployments/$deployment_hash/details"
 )({
   component: () => (

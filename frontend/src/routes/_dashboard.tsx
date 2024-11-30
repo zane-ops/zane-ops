@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
-  createLazyFileRoute,
+  createFileRoute,
   useNavigate
 } from "@tanstack/react-router";
 import {
@@ -43,7 +43,7 @@ import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
-export const Route = createLazyFileRoute("/_dashboard")({
+export const Route = createFileRoute("/_dashboard")({
   component: () => (
     <div className="min-h-screen flex flex-col justify-between">
       <Header />
