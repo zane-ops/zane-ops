@@ -13,6 +13,7 @@ from temporalio.client import (
     ScheduleSpec,
     ScheduleUpdateInput,
     ScheduleUpdate,
+    ScheduleAlreadyRunningError,
 )
 from temporalio.service import RPCError
 
@@ -51,9 +52,18 @@ async def create_logs_schedule():
         await handle.update(update_schedule_simple, rpc_timeout=timedelta(seconds=5))
     except RPCError:
         # probably because the schedule doesn't exist
-        await client.create_schedule(
-            schedule_id, schedule, rpc_timeout=timedelta(seconds=5)
-        )
+        try:
+            await client.create_schedule(
+                schedule_id,
+                schedule,
+                rpc_timeout=timedelta(seconds=5),
+            )
+        except ScheduleAlreadyRunningError:
+            # because the schedule already exists and is running, we can ignore it
+            pass
+    except ScheduleAlreadyRunningError:
+        # because the schedule already exists  and is running, we can ignore it
+        pass
 
 
 class Command(BaseCommand):
