@@ -16,12 +16,16 @@ export default defineConfig({
     }
   },
   plugins: [
+    TanStackRouterVite({
+      experimental: {
+        enableCodeSplitting: true
+      }
+    }),
     react({
       babel: {
         plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]]
       }
-    }),
-    TanStackRouterVite()
+    })
   ],
   resolve: {
     alias: {

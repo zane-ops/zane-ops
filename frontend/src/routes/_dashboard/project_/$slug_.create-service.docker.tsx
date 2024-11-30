@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, createLazyFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   AlertCircle,
   ArrowRight,
@@ -34,7 +34,7 @@ import { dockerHubQueries, projectQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
 
-export const Route = createLazyFileRoute(
+export const Route = createFileRoute(
   "/_dashboard/project/$slug/create-service/docker"
 )({
   component: withAuthRedirect(Docker)

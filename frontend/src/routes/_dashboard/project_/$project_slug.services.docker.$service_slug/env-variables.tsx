@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Ban,
   Check,
@@ -49,7 +49,7 @@ import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 
-export const Route = createLazyFileRoute(
+export const Route = createFileRoute(
   "/_dashboard/project/$project_slug/services/docker/$service_slug/env-variables"
 )({
   component: withAuthRedirect(EnvVariablesPage)

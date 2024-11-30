@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 
-export const Route = createLazyFileRoute("/login")({
+export const Route = createFileRoute("/login")({
   component: Login
 });
 

@@ -8,9 +8,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 
+import { Loader } from "~/components/loader";
 import { routeTree } from "./routeTree.gen";
-
-const router = createRouter({ routeTree });
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +19,13 @@ const queryClient = new QueryClient({
       retry: 3
     }
   }
+});
+
+const router = createRouter({
+  routeTree,
+  defaultStaleTime: 3_600_000, // 1hr in milliseconds
+  defaultPreload: "intent",
+  defaultPendingComponent: () => <Loader />
 });
 
 const rootElement = document.getElementById("root")!;
