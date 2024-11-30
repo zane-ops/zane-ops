@@ -250,7 +250,7 @@ class DockerRegistryService(BaseService):
         return [
             {
                 "key": "ZANE",
-                "value": "1",
+                "value": "true",
                 "comment": "Is the service deployed on zaneops?",
             },
             {
@@ -336,6 +336,10 @@ class DockerRegistryService(BaseService):
     @property
     def http_port(self) -> PortConfiguration | None:
         return self.ports.filter(host__isnull=True).first()
+
+    @property
+    async def ahttp_port(self) -> PortConfiguration | None:
+        return await self.ports.filter(host__isnull=True).afirst()
 
     @property
     def last_queued_deployment(self) -> Union["DockerDeployment", None]:
@@ -681,6 +685,10 @@ class DockerDeployment(BaseDeployment):
                 f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}",
             ]
         return aliases
+
+    @property
+    def network_alias(self):
+        return f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
 
     class Meta:
         ordering = ("-queued_at",)

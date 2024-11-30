@@ -641,7 +641,8 @@ function LongLogContent({
             buttonVariants({
               variant: "link"
             }),
-            "inline-flex p-0 mx-2 underline h-auto rounded items-center cursor-pointer gap-1"
+            "inline-flex p-0 mx-2 underline h-auto rounded items-center cursor-pointer gap-1",
+            "dark:text-primary text-link"
           )}
         >
           <span>{isFullContentShown ? "see less" : "see more"}</span>

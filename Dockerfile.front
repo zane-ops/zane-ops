@@ -3,5 +3,7 @@ FROM caddy:2.8-alpine
 
 WORKDIR /var/www/html
 
+RUN apk update && apk add --no-cache curl
+
 COPY ./frontend/dist/ .
 COPY ./frontend/Caddyfile /etc/caddy/Caddyfile

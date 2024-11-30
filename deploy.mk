@@ -37,10 +37,8 @@ setup: ### Launch initial setup before installing zaneops
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/attach-proxy-networks.sh > ./attach-proxy-networks.sh
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
-	@chmod a+x ./attach-proxy-networks.sh
 	@chmod -R a+x ./temporalio/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
@@ -70,36 +68,39 @@ setup: ### Launch initial setup before installing zaneops
 deploy: ### Install and deploy zaneops
 	@echo -e "====== \x1b[94mDeploying ZaneOps \x1b[92mwith HTTPS 🔒\x1b[0m ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane;
-	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
-	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
-	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
-	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
-	@set -a; . ./.env; set +a && echo -e "Once everything is ok, zaneops will be accessible at \x1b[96mhttps://$$ZANE_APP_DOMAIN\x1b[0m"
+	@echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
+	@echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"
+	@echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"
+	@echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"
+	@set -a; . ./.env; set +a && echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96mhttps://$$ZANE_APP_DOMAIN\x1b[0m"
 	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 deploy-with-http: ### Install and deploy zaneops with the HTTP port enabled : better suited for tests and local installation
 	@echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m  ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
-	@. ./attach-proxy-networks.sh
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
-	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
-	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
-	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
-	@set -a; . ./.env; set +a && echo -e "Once everything is ok, zaneops will be accessible at \x1b[96mhttp://$$ZANE_APP_DOMAIN\x1b[0m"
+	@echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
+	@echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"
+	@echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"
+	@echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"
+	@set -a; . ./.env; set +a && echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96mhttp://$$ZANE_APP_DOMAIN\x1b[0m"
 	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
 
 stop: ### Take down zaneops and scale down all services created in zaneops
-	@echo "Taking down zaneops..."
-	docker stack rm zane
-	@echo "Scaling down services created in zaneops..., use \`make deploy\` to restart them"
+	@echo -e "====== \x1b[94mTaking down zaneops...\x1b[0m ======"
+	@docker stack rm zane
+	@echo -e "Scaling down services created in zaneops..., use \x1b[96mmake deploy\x1b[0m to restart them"
 	@docker service ls --filter "label=zane-managed=true" -q | xargs -P 0 -I {} docker service scale --detach {}=0
+	@echo -e "====== \x1b[94mDONE ✅\x1b[0m ======"
 
 delete-resources: ### Delete all resources created by zaneops
-	@echo "Taking down zaneops..."
+	@echo -e "====== \x1b[91mDELETING ZaneOps and all its created resources...\x1b[0m ======"
 	docker stack rm zane
 	@echo "Removing zane-ops volumes..."
 	@echo "Waiting for all containers related to services to be removed..."
@@ -121,3 +122,4 @@ delete-resources: ### Delete all resources created by zaneops
 	docker network rm zane
 	@echo "Cleaning up unused docker resources..."
 	docker system prune -f --volumes
+	@echo -e "====== \x1b[94mDONE deleting ZaneOps, it is safe to delete this folder ✅\x1b[0m ======"

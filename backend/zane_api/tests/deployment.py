@@ -2075,9 +2075,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
 
 class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
-    def test_apply_simple_changes(
-        self,
-    ):
+    def test_apply_simple_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
@@ -4337,10 +4335,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 service=service,
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.INITIALIZED,
             )
 
@@ -4403,10 +4399,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )()
             await new_deployment.asave()
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.VOLUMES_CREATED,
             )
 
@@ -4478,10 +4472,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             fake_service_list.get.return_value = fake_service
             self.fake_docker_client.services = fake_service_list
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
             )
 
@@ -4533,10 +4525,12 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 ],
                 any_order=True,
             )
-            fake_service.scale.assert_has_calls(
-                [call(1)],
-                any_order=True,
+            fake_service.update.assert_called()
+            scaled_up = any(
+                call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+                for call in fake_service.update.call_args_list
             )
+            self.assertTrue(scaled_up)
 
     async def test_cancel_deployment_at_swarm_service_created(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
@@ -4550,10 +4544,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )(),
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
             )
 
@@ -4606,10 +4598,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             new_deployment.url = f"{p.slug}-{service.slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
             await new_deployment.asave()
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
             )
 
@@ -4701,10 +4691,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )()
             await new_deployment.asave()
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
             )
 
@@ -4771,10 +4759,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 service=service,
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.FINISHED,
             )
 
@@ -4828,10 +4814,8 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 )(),
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
             )
 

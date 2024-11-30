@@ -14,7 +14,7 @@ from django.core.cache import cache
 from django.test import AsyncClient
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from docker.types import EndpointSpec, Resources
+from docker.types import EndpointSpec, Resources, NetworkAttachmentConfig
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -715,6 +715,7 @@ class FakeDockerClient:
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
             resources: Resources = None,
+            networks: List[NetworkAttachmentConfig] = None,
         ):
             self.attrs = {
                 "Spec": {
@@ -730,6 +731,7 @@ class FakeDockerClient:
             self.endpoint = endpoint
             self.resources = resources
             self.id = name
+            self.networks = networks or []
             self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
@@ -918,6 +920,7 @@ class FakeDockerClient:
             env=envs,
             endpoint=endpoint_spec,
             resources=resources,
+            networks=kwargs.get("networks", []),
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):
