@@ -246,6 +246,17 @@ LOGGING = {
 }
 
 
+if DEBUG and not os.environ.get("SILENT"):
+    LOGGING["loggers"].update(
+        {
+            "django.db.backends": {
+                "level": "DEBUG",
+                "handlers": ["console"],
+            },
+        }
+    )
+
+
 # Django Rest framework
 
 REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
