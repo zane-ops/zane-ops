@@ -716,15 +716,6 @@ class DockerSwarmActivities:
         return network.id
 
     @activity.defn
-    async def attach_network_to_proxy(self, network_id: str):
-        proxy_service = ZaneProxyClient.get_service()
-        service_spec = proxy_service.attrs["Spec"]
-        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
-        network_ids = set(net["Target"] for net in current_networks)
-        network_ids.add(network_id)
-        await asyncio.to_thread(proxy_service.update, networks=list(network_ids))
-
-    @activity.defn
     async def get_archived_project_services(
         self, project_details: ArchivedProjectDetails
     ) -> List[ArchivedServiceDetails]:
@@ -834,49 +825,6 @@ class DockerSwarmActivities:
             volume.remove(force=True)
         print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
         await SimpleLog.objects.filter(service_id=service_details.original_id).adelete()
-
-    @activity.defn
-    async def detach_network_from_proxy(
-        self, project_details: ArchivedProjectDetails
-    ) -> Optional[str]:
-        try:
-            network_associated_to_project: Network = self.docker_client.networks.get(
-                get_network_resource_name(project_id=project_details.original_id)
-            )
-        except docker.errors.NotFound:
-            raise ApplicationError(
-                f"Network `{get_network_resource_name(project_id=project_details.original_id)}`"
-                f" for project `{project_details.original_id}` does not exist.",
-                non_retryable=True,
-            )
-
-        proxy_service = ZaneProxyClient.get_service()
-        service_spec = proxy_service.attrs["Spec"]
-        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
-        network_ids = set(net["Target"] for net in current_networks)
-
-        if network_associated_to_project.id in network_ids:
-            network_ids.remove(network_associated_to_project.id)
-            proxy_service.update(networks=list(network_ids))
-
-        async def wait_for_service_to_update():
-            is_network_found = True
-            while is_network_found:
-                tasks = proxy_service.tasks(filters={"desired-state": "running"})
-                network_names = []
-                for task in tasks:
-                    network_names += [
-                        net["Network"]["Spec"]["Name"]
-                        for net in task["NetworksAttachments"]
-                    ]
-
-                is_network_found = network_associated_to_project.name in network_names
-                if is_network_found:
-                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    continue
-
-        await wait_for_service_to_update()
-        return network_associated_to_project.id
 
     @activity.defn
     async def remove_project_network(self, project_details: ArchivedProjectDetails):
@@ -1419,7 +1367,11 @@ class DockerSwarmActivities:
                 networks=[
                     NetworkAttachmentConfig(
                         target=get_network_resource_name(service.project_id),
-                        aliases=[alias for alias in deployment.network_aliases],
+                        aliases=[alias for alias in service.network_aliases],
+                    ),
+                    NetworkAttachmentConfig(
+                        target="zane",
+                        aliases=[deployment.network_alias],
                     ),
                 ],
                 restart_policy=RestartPolicy(

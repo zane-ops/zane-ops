@@ -53,14 +53,6 @@ class CreateProjectResourcesWorkflow:
             retry_policy=retry_policy,
         )
 
-        print(f"Running activity `attach_network_to_proxy({network_id=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.attach_network_to_proxy,
-            network_id,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
-        )
-
         return network_id
 
 
@@ -111,14 +103,6 @@ class RemoveProjectResourcesWorkflow:
                 )
                 for service in services
             ]
-        )
-
-        print(f"Running activity `detach_network_from_proxy({payload=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.detach_network_from_proxy,
-            payload,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
         )
 
         print(f"Running activity `remove_project_network({payload=})`")
@@ -642,10 +626,8 @@ def get_workflows_and_activities():
             monitor_activities.monitor_close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,
-            swarm_activities.attach_network_to_proxy,
             swarm_activities.create_project_network,
             swarm_activities.unexpose_docker_service_from_http,
-            swarm_activities.detach_network_from_proxy,
             swarm_activities.remove_project_network,
             swarm_activities.cleanup_docker_service_resources,
             swarm_activities.get_archived_project_services,

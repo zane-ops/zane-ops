@@ -41,6 +41,7 @@ class DockerDeploymentDetails:
     url: Optional[str] = None
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
+    network_alias: Optional[str] = None
 
     @classmethod
     def from_deployment(
@@ -69,6 +70,7 @@ class DockerDeploymentDetails:
                 for change in deployment.changes.all()
             ],
             workflow_id=deployment.workflow_id,
+            network_alias=deployment.network_alias,
         )
 
     @classmethod
@@ -100,20 +102,12 @@ class DockerDeploymentDetails:
                 async for change in deployment.changes.all()
             ],
             workflow_id=deployment.workflow_id,
+            network_alias=deployment.network_alias,
         )
 
     @property
     def queued_at_as_datetime(self):
         return datetime.fromisoformat(self.queued_at)
-
-    @property
-    def network_aliases(self):
-        aliases = []
-        if self.service is not None and len(self.service.network_aliases) > 0:
-            aliases = self.service.network_aliases + [
-                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}",
-            ]
-        return aliases
 
 
 @dataclass
