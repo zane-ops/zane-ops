@@ -1,3 +1,11 @@
+x-backend-vars: &env-vars
+  REDIS_URL: redis://zane.valkey:6379/0
+  DB_HOST: zane.db
+  DB_PORT: 5432
+  CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+  ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+  TEMPORALIO_SERVER_URL: zane.temporal:7233
+  
 services:
   proxy-test:
     image: ghcr.io/zane-ops/proxy:canary
@@ -44,7 +52,7 @@ services:
     command: >
       bash -c "source /venv/bin/activate &&
                uv pip install -r requirements.txt &&
-               python manage.py create_log_cleanup_schedule && python manage.py runserver"
+               python manage.py create_log_cleanup_schedule && python manage.py runserver 0.0.0.0:8000"
     container_name: zane-api
     volumes:
       - ../backend:/code
@@ -53,16 +61,22 @@ services:
       - db
       - redis
       - temporal-server
-    network_mode: host
     restart: always
     environment:
-      ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+      <<: *env-vars
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
       interval: 1m
       timeout: 3m
       start_period: 30s
       retries: 3
+    ports:
+      - "8000:8000"
+    networks:
+      zane:
+        aliases:
+          - zane.api
+          - zane.api.zaneops.internal
   temporal-main-worker:
     build:
       context: ../backend
@@ -80,10 +94,11 @@ services:
       - db
       - redis
       - temporal-server
-    network_mode: host
     environment:
+      <<: *env-vars
       BACKEND_COMPONENT: WORKER
-      ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+    networks:
+      - zane
   temporal-schedule-worker:
     build:
       context: ../backend
@@ -101,11 +116,12 @@ services:
       - db
       - redis
       - temporal-server
-    network_mode: host
     environment:
+      <<: *env-vars
       BACKEND_COMPONENT: WORKER
       TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
-      ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+    networks:
+      - zane
   redis:
     image: valkey/valkey:7.2.5-alpine
     container_name: zane-redis
@@ -116,7 +132,7 @@ services:
     networks:
       zane:
         aliases:
-          - zane.cache
+          - zane.valkey
   db:
     image: postgres:12-alpine
     container_name: zane-db
