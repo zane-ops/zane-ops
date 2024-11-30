@@ -176,7 +176,7 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: ["CMD", "bash", "-c", "temporal operator cluster health --address $(hostname -i):7233"]
+      test: ["CMD", "bash", "-c", "temporal operator cluster health --address $$(hostname -i):7233"]
       interval: 30s
       timeout: 3m
       start_period: 15s
