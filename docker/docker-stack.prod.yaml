@@ -175,6 +175,12 @@ services:
           - zane.temporal
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD", "bash", "-c", "temporal operator cluster health --address $(hostname -i):7233"]
+      interval: 30s
+      timeout: 3m
+      start_period: 15s
+      retries: 3
   temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
