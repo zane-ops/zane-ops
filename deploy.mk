@@ -69,20 +69,24 @@ deploy: ### Install and deploy zaneops
 	@echo -e "====== \x1b[94mDeploying ZaneOps \x1b[92mwith HTTPS 🔒\x1b[0m ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane;
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
-	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
-	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
-	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
-	@set -a; . ./.env; set +a && echo -e "Once everything is ok, zaneops will be accessible at \x1b[96mhttps://$$ZANE_APP_DOMAIN\x1b[0m"
+	@echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
+	@echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"
+	@echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"
+	@echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"
+	@set -a; . ./.env; set +a && echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96mhttps://$$ZANE_APP_DOMAIN\x1b[0m"
 	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 deploy-with-http: ### Install and deploy zaneops with the HTTP port enabled : better suited for tests and local installation
 	@echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m  ======"
 	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
-	@echo "🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
-	@echo -e "You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\"zane.stack=true\"\x1b[0m"
-	@echo -e "Wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
-	@set -a; . ./.env; set +a && echo -e "Once everything is ok, zaneops will be accessible at \x1b[96mhttp://$$ZANE_APP_DOMAIN\x1b[0m"
+	@echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
+	@echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"
+	@echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"
+	@echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"
+	@echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"
+	@set -a; . ./.env; set +a && echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96mhttp://$$ZANE_APP_DOMAIN\x1b[0m"
 	@echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 create-user: ### Create the first user to login in into the dashboard
