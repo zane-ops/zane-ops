@@ -90,8 +90,8 @@ create-user: ### Create the first user to login in into the dashboard
 
 stop: ### Take down zaneops and scale down all services created in zaneops
 	@echo -e "====== \x1b[94mTaking down zaneops...\x1b[0m ======"
-	docker stack rm zane
-	@echo "Scaling down services created in zaneops..., use \`make deploy\` to restart them"
+	@docker stack rm zane
+	@echo -e "Scaling down services created in zaneops..., use \x1b[96mmake deploy\x1b[0m to restart them"
 	@docker service ls --filter "label=zane-managed=true" -q | xargs -P 0 -I {} docker service scale --detach {}=0
 	@echo -e "====== \x1b[94mDONE ✅\x1b[0m ======"
 
