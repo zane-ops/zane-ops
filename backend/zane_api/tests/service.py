@@ -998,7 +998,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                 latest_deployment.status,
             )
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1006,7 +1005,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1084,7 +1082,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1092,7 +1089,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1170,7 +1166,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1178,7 +1173,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1300,7 +1294,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1308,7 +1301,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1353,7 +1345,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1361,7 +1352,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
