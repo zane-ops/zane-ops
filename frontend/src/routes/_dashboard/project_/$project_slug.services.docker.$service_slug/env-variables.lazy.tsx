@@ -19,6 +19,7 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import {
@@ -125,8 +126,7 @@ function EnvVariablesPage() {
               <p className="text-muted-foreground py-4 border-y border-border">
                 ZaneOps provides additional system environment variables to all
                 builds and deployments. variables marked with&nbsp;
-                <code>&#123;&#123;&#125;&#125;</code> are specific to each
-                deployment.
+                <Code>{`{{}}`}</Code> are specific to each deployment.
               </p>
               <div className="flex flex-col gap-2">
                 {system_env_variables.map((env) => (
