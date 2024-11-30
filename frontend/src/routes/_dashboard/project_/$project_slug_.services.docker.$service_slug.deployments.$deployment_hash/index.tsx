@@ -580,7 +580,7 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
             <AnsiHtml
               aria-hidden="true"
               className={cn(
-                "text-start z-10 mix-blend-color dark:mix-blend-color-dodge  relative",
+                "text-start z-10 relative",
                 "col-start-1 col-end-1 row-start-1 row-end-1",
                 "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
               )}
@@ -588,7 +588,7 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
             />
             <pre
               className={cn(
-                "text-start -z-1 mix-blend-color dark:mix-blend-color-dodge text-transparent relative",
+                "text-start -z-1 text-transparent relative",
                 "col-start-1 col-end-1 row-start-1 row-end-1",
                 "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
               )}
@@ -624,7 +624,7 @@ function LongLogContent({
     <>
       <pre
         className={cn(
-          "text-start z-10 mix-blend-color dark:mix-blend-color-dodge  relative",
+          "text-start z-10  relative",
           "col-start-1 col-end-1 row-start-1 row-end-1",
           "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
         )}
