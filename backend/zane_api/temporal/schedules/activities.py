@@ -185,13 +185,8 @@ class MonitorDockerDeploymentActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                scheme = (
-                                    "https"
-                                    if settings.ENVIRONMENT == settings.PRODUCTION_ENV
-                                    else "http"
-                                )
                                 service_http_port = await deployment.service.ahttp_port
-                                full_url = f"{scheme}://{swarm_service.name}:{service_http_port.forwarded}{healthcheck.value}"
+                                full_url = f"http://{swarm_service.name}:{service_http_port.forwarded}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=healthcheck_timeout,
