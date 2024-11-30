@@ -57,6 +57,12 @@ services:
       zane:
         aliases:
           - zane.proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
   frontend:
     image: ghcr.io/zane-ops/frontend:${IMAGE_VERSION}
     deploy:
@@ -84,7 +90,7 @@ services:
           - zane.front.zaneops.internal
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
-      interval: 1m
+      interval: 30s
       timeout: 5s
       start_period: 5s
       retries: 3
@@ -110,7 +116,7 @@ services:
           memory: 500M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
-      interval: 1m
+      interval: 30s
       timeout: 3m
       start_period: 30s
       retries: 3
@@ -127,6 +133,7 @@ services:
       - db
       - valkey
       - proxy
+      - temporal-server
   temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
