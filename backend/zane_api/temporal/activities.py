@@ -26,6 +26,7 @@ with workflow.unsafe.imports_passed_through():
         SimpleLog,
     )
     from docker.models.networks import Network
+    from docker.models.services import Service
     from urllib3.exceptions import HTTPError
     from requests import RequestException
     import requests
@@ -51,6 +52,7 @@ with workflow.unsafe.imports_passed_through():
     )
 
 from ..dtos import (
+    DockerServiceSnapshot,
     URLDto,
     HealthCheckDto,
     VolumeDto,
@@ -186,7 +188,7 @@ async def deployment_log(
             service_id = deployment.service_id
         case _:
             raise TypeError(f"unsupported type {type(deployment)}")
-
+    # Regex pattern to match ANSI color codes
     await SimpleLog.objects.acreate(
         source=SimpleLog.LogSource.SYSTEM,
         level=SimpleLog.LogLevel.INFO,
@@ -194,6 +196,7 @@ async def deployment_log(
         time=current_time,
         deployment_id=deployment_id,
         service_id=service_id,
+        content_text=SimpleLog.escape_ansi(message),
     )
 
 
@@ -713,15 +716,6 @@ class DockerSwarmActivities:
         return network.id
 
     @activity.defn
-    async def attach_network_to_proxy(self, network_id: str):
-        proxy_service = ZaneProxyClient.get_service()
-        service_spec = proxy_service.attrs["Spec"]
-        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
-        network_ids = set(net["Target"] for net in current_networks)
-        network_ids.add(network_id)
-        await asyncio.to_thread(proxy_service.update, networks=list(network_ids))
-
-    @activity.defn
     async def get_archived_project_services(
         self, project_details: ArchivedProjectDetails
     ) -> List[ArchivedServiceDetails]:
@@ -833,49 +827,6 @@ class DockerSwarmActivities:
         await SimpleLog.objects.filter(service_id=service_details.original_id).adelete()
 
     @activity.defn
-    async def detach_network_from_proxy(
-        self, project_details: ArchivedProjectDetails
-    ) -> Optional[str]:
-        try:
-            network_associated_to_project: Network = self.docker_client.networks.get(
-                get_network_resource_name(project_id=project_details.original_id)
-            )
-        except docker.errors.NotFound:
-            raise ApplicationError(
-                f"Network `{get_network_resource_name(project_id=project_details.original_id)}`"
-                f" for project `{project_details.original_id}` does not exist.",
-                non_retryable=True,
-            )
-
-        proxy_service = ZaneProxyClient.get_service()
-        service_spec = proxy_service.attrs["Spec"]
-        current_networks = service_spec.get("TaskTemplate", {}).get("Networks", [])
-        network_ids = set(net["Target"] for net in current_networks)
-
-        if network_associated_to_project.id in network_ids:
-            network_ids.remove(network_associated_to_project.id)
-            proxy_service.update(networks=list(network_ids))
-
-        async def wait_for_service_to_update():
-            is_network_found = True
-            while is_network_found:
-                tasks = proxy_service.tasks(filters={"desired-state": "running"})
-                network_names = []
-                for task in tasks:
-                    network_names += [
-                        net["Network"]["Spec"]["Name"]
-                        for net in task["NetworksAttachments"]
-                    ]
-
-                is_network_found = network_associated_to_project.name in network_names
-                if is_network_found:
-                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    continue
-
-        await wait_for_service_to_update()
-        return network_associated_to_project.id
-
-    @activity.defn
     async def remove_project_network(self, project_details: ArchivedProjectDetails):
         try:
             network_associated_to_project: Network = self.docker_client.networks.get(
@@ -895,7 +846,7 @@ class DockerSwarmActivities:
         try:
             await deployment_log(
                 deployment,
-                f"Preparing deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+                f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
             docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
                 hash=deployment.hash, service_id=deployment.service.id
@@ -914,7 +865,7 @@ class DockerSwarmActivities:
     async def toggle_cancelling_status(self, deployment: DockerDeploymentDetails):
         await deployment_log(
             deployment,
-            f"Handling cancellation request for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+            f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
         await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
             status=DockerDeployment.DeploymentStatus.CANCELLING,
@@ -929,7 +880,7 @@ class DockerSwarmActivities:
         )
         await deployment_log(
             deployment,
-            f"Deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}"
+            f"Deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
             f" finished with status {Colors.GREY}{DockerDeployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
         )
 
@@ -1006,7 +957,7 @@ class DockerSwarmActivities:
             )
             await deployment_log(
                 healthcheck_result,
-                f"Deployment {Colors.YELLOW}{healthcheck_result.deployment_hash}{Colors.ENDC}"
+                f"Deployment {Colors.ORANGE}{healthcheck_result.deployment_hash}{Colors.ENDC}"
                 f" finished with status {status_color}{deployment.status}{Colors.ENDC}.",
             )
             return deployment.status
@@ -1032,6 +983,9 @@ class DockerSwarmActivities:
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
                 url=latest_production_deployment.url,
+                service_snapshot=DockerServiceSnapshot.from_dict(
+                    latest_production_deployment.service_snapshot
+                ),
             )
         return None
 
@@ -1057,8 +1011,7 @@ class DockerSwarmActivities:
             await next_deployment.asave()
 
             return await DockerDeploymentDetails.afrom_deployment(
-                deployment=next_deployment,
-                auth_token=deployment.auth_token,
+                deployment=next_deployment
             )
         return None
 
@@ -1092,7 +1045,7 @@ class DockerSwarmActivities:
     ) -> List[VolumeDto]:
         await deployment_log(
             deployment,
-            f"Creating volumes for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+            f"Creating volumes for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
         service = deployment.service
         created_volumes: List[VolumeDto] = []
@@ -1109,7 +1062,7 @@ class DockerSwarmActivities:
 
         await deployment_log(
             deployment,
-            f"Volumes created succesfully for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}  ✅",
+            f"Volumes created succesfully for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}  ✅",
         )
 
         return created_volumes
@@ -1118,7 +1071,7 @@ class DockerSwarmActivities:
     async def delete_created_volumes(self, deployment: DeploymentCreateVolumesResult):
         await deployment_log(
             deployment,
-            f"Deleting created volumes for deployment {Colors.YELLOW}{deployment.deployment_hash}{Colors.ENDC}...",
+            f"Deleting created volumes for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}...",
         )
         for volume in deployment.created_volumes:
             try:
@@ -1132,7 +1085,7 @@ class DockerSwarmActivities:
 
         await deployment_log(
             deployment,
-            f"Volumes deleted succesfully for deployment {Colors.YELLOW}{deployment.deployment_hash}{Colors.ENDC}  ✅",
+            f"Volumes deleted succesfully for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
         )
 
     @activity.defn
@@ -1149,7 +1102,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
         try:
-            swarm_service = self.docker_client.services.get(
+            swarm_service: Service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=deployment.hash,
                     project_id=deployment.project_id,
@@ -1161,7 +1114,21 @@ class DockerSwarmActivities:
             # The service for that deployment was removed probably
             return
         else:
-            swarm_service.scale(0)
+            service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "sleeping"
+            update_attributes = dict(
+                mode={"Replicated": {"Replicas": 0}}, labels=service_labels
+            )
+
+            # This is to fix a bug with exposed ports conflicting with a new deployment, the
+            # new deployment creates a service that needs the ports of the service to be available,
+            # but it is still used by the old deployment.
+            # To fix this we scale down and remove the ports from the old services
+            # But only when the `service_snapshot` is provided because that mean we can reconstructs the open ports of the old deployment
+            if deployment.service_snapshot is not None:
+                update_attributes.update(endpoint_spec=EndpointSpec())
+
+            swarm_service.update(**update_attributes)
 
             async def wait_for_service_to_be_down():
                 print(f"waiting for service `{swarm_service.name=}` to be down...")
@@ -1186,8 +1153,6 @@ class DockerSwarmActivities:
             )
 
             if docker_deployment is not None:
-                docker_deployment.status = DockerDeployment.DeploymentStatus.SLEEPING
-                await docker_deployment.asave()
                 try:
                     await pause_schedule(
                         id=deployment.monitor_schedule_id,
@@ -1196,6 +1161,11 @@ class DockerSwarmActivities:
                 except RPCError:
                     # The schedule probably doesn't exist
                     pass
+                finally:
+                    docker_deployment.status = (
+                        DockerDeployment.DeploymentStatus.SLEEPING
+                    )
+                    await docker_deployment.asave()
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
@@ -1212,7 +1182,25 @@ class DockerSwarmActivities:
             # The service for that deployment was removed probably
             return
         else:
-            swarm_service.scale(1)
+            service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "active"
+            update_attributes = dict(
+                mode={"Replicated": {"Replicas": 1}}, labels=service_labels
+            )
+
+            # If we scaled this deployment by removing the port, we recreate the exposed ports
+            if deployment.service_snapshot is not None:
+                exposed_ports: dict[int, int] = {}
+                new_endpoint_spec = EndpointSpec()
+
+                # We don't expose HTTP ports with docker because they will be handled by caddy directly
+                for port in deployment.service_snapshot.non_http_ports:
+                    exposed_ports[port.host] = port.forwarded
+                if len(exposed_ports) > 0:
+                    new_endpoint_spec = EndpointSpec(ports=exposed_ports)
+                update_attributes.update(endpoint_spec=new_endpoint_spec)
+
+            swarm_service.update(**update_attributes)
 
             # Change back the status to be accurate
             docker_deployment: DockerDeployment | None = (
@@ -1242,7 +1230,7 @@ class DockerSwarmActivities:
         service = deployment.service
         await deployment_log(
             deployment,
-            f"Pulling image {Colors.YELLOW}{service.image}{Colors.ENDC}...",
+            f"Pulling image {Colors.ORANGE}{service.image}{Colors.ENDC}...",
         )
         try:
             self.docker_client.images.pull(
@@ -1258,7 +1246,7 @@ class DockerSwarmActivities:
         else:
             await deployment_log(
                 deployment,
-                f"Finished pulling image {Colors.YELLOW}{service.image}{Colors.ENDC} ✅",
+                f"Finished pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} ✅",
             )
 
     @activity.defn
@@ -1283,7 +1271,7 @@ class DockerSwarmActivities:
             # zane-specific-envs
             envs.extend(
                 [
-                    f"ZANE=1",
+                    f"ZANE=true",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                     f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
                     f"ZANE_DEPLOYMENT_TYPE=docker",
@@ -1356,7 +1344,7 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Creating service for the deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+                f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
             self.docker_client.services.create(
                 image=service.image,
@@ -1373,11 +1361,16 @@ class DockerSwarmActivities:
                     service.project_id,
                     deployment_hash=deployment.hash,
                     service=deployment.service.id,
+                    status="active",
                 ),
                 networks=[
                     NetworkAttachmentConfig(
                         target=get_network_resource_name(service.project_id),
-                        aliases=[alias for alias in deployment.network_aliases],
+                        aliases=[alias for alias in service.network_aliases],
+                    ),
+                    NetworkAttachmentConfig(
+                        target="zane",
+                        aliases=[deployment.network_alias],
                     ),
                 ],
                 restart_policy=RestartPolicy(
@@ -1404,7 +1397,7 @@ class DockerSwarmActivities:
             )
             await deployment_log(
                 deployment,
-                f"Service created succesfully for the deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC} ✅",
+                f"Service created succesfully for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} ✅",
             )
 
     @activity.defn
@@ -1449,7 +1442,7 @@ class DockerSwarmActivities:
         )
         await deployment_log(
             deployment,
-            f"Running healthchecks for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+            f"Running healthchecks for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
         while (monotonic() - start_time) < healthcheck_timeout:
             healthcheck_attempts += 1
@@ -1457,9 +1450,9 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC}"
-                f" | healthcheck_time_left={Colors.YELLOW}{format_seconds(healthcheck_time_left)}{Colors.ENDC} 💓",
+                f" | healthcheck_time_left={Colors.ORANGE}{format_seconds(healthcheck_time_left)}{Colors.ENDC} 💓",
             )
 
             task_list = swarm_service.tasks(
@@ -1542,17 +1535,9 @@ class DockerSwarmActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                scheme = (
-                                    "https"
-                                    if settings.ENVIRONMENT == settings.PRODUCTION_ENV
-                                    else "http"
-                                )
-                                full_url = f"{scheme}://{docker_deployment.url + healthcheck.value}"
+                                full_url = f"http://{swarm_service.name}:{deployment.service.http_port.forwarded}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
-                                    headers={
-                                        "Authorization": f"Token {deployment.auth_token}"
-                                    },
                                     timeout=min(healthcheck_time_left, 5),
                                 )
                                 if response.status_code == status.HTTP_200_OK:
@@ -1566,13 +1551,11 @@ class DockerSwarmActivities:
                                 deployment_status_reason = response.content.decode(
                                     "utf-8"
                                 )
-
                         except (HTTPError, RequestException) as e:
                             deployment_status = (
                                 DockerDeployment.DeploymentStatus.UNHEALTHY
                             )
                             deployment_status_reason = str(e)
-                            break
 
                 healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
@@ -1588,17 +1571,29 @@ class DockerSwarmActivities:
                     )
                     await deployment_log(
                         deployment,
-                        f"Healtcheck for deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
-                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
+                        f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                    )
+                    await deployment_log(
+                        deployment,
+                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                        f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC}",
                     )
                     return deployment_status, deployment_status_reason
 
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
-                f"| FAILED, Retrying in {Colors.YELLOW}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+                f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+            )
+            await deployment_log(
+                deployment,
+                f"Healtcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+                f"| FAILED, Retrying in {Colors.ORANGE}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
@@ -1609,7 +1604,13 @@ class DockerSwarmActivities:
         )
         await deployment_log(
             deployment,
-            f"Healtcheck for deployment {Colors.YELLOW}{docker_deployment.hash}{Colors.ENDC}"
+            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+            f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
+            f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC} ✅",
+        )
+        await deployment_log(
+            deployment,
+            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
             f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
         )
@@ -1634,7 +1635,7 @@ class DockerSwarmActivities:
         if service.http_port is not None:
             await deployment_log(
                 deployment,
-                f"Configuring service URLs for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC}...",
+                f"Configuring service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
             previous_deployment: DockerDeployment | None = await (
                 DockerDeployment.objects.filter(
@@ -1655,7 +1656,7 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Service URLs for deployment {Colors.YELLOW}{deployment.hash}{Colors.ENDC} configured successfully ✅",
+                f"Service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} configured successfully ✅",
             )
 
     @activity.defn
@@ -1814,7 +1815,6 @@ class DockerSwarmActivities:
                     project_id=deployment.service.project_id,
                     url=deployment.url,
                 ),
-                auth_token=deployment.auth_token,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1841,4 +1841,5 @@ class DockerSwarmActivities:
                 args=healthcheck_details,
                 id=docker_deployment.monitor_schedule_id,
                 interval=timedelta(seconds=interval_seconds),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             )

@@ -123,7 +123,7 @@ class CreateDockerServiceAPIView(APIView):
                         project=project,
                     )
 
-                    service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+                    service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
 
                     initial_changes = [
                         DockerDeploymentChange(
@@ -530,11 +530,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.service_snapshot = DockerServiceSerializer(service).data
             new_deployment.save()
 
-            token = Token.objects.get(user=request.user)
-            payload = DockerDeploymentDetails.from_deployment(
-                deployment=new_deployment,
-                auth_token=token.key,
-            )
+            payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
                 lambda: start_workflow(
@@ -616,11 +612,7 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.service_snapshot = DockerServiceSerializer(service).data
         new_deployment.save()
 
-        token = Token.objects.get(user=request.user)
-        payload = DockerDeploymentDetails.from_deployment(
-            new_deployment,
-            auth_token=token.key,
-        )
+        payload = DockerDeploymentDetails.from_deployment(new_deployment)
 
         transaction.on_commit(
             lambda: start_workflow(
@@ -1113,6 +1105,7 @@ class ToggleDockerServiceAPIView(APIView):
             project_id=project.id,
             service_id=service.id,
             status=production_deployment.status,
+            service_snapshot=production_deployment.service_snapshot,
         )
         transaction.on_commit(
             lambda: start_workflow(

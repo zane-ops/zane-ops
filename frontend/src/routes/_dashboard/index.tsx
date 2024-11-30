@@ -251,7 +251,7 @@ export function ProjectList() {
           <TableBody>
             {empty && noActiveProjects ? (
               <TableCell colSpan={5} className="text-center py-4">
-                <section className="flex gap-3 flex-col items-center justify-center flex-grow py-20">
+                <section className="flex gap-3 flex-col items-center justify-center grow py-20">
                   <div>
                     <h1 className="text-2xl font-bold">Welcome to ZaneOps</h1>
                     <h2 className="text-lg">You don't have any project yet</h2>
@@ -267,7 +267,7 @@ export function ProjectList() {
 
             {noArchivedProject && (
               <TableCell colSpan={5} className="text-center py-4">
-                <section className="flex gap-3 flex-col items-center justify-center flex-grow py-16">
+                <section className="flex gap-3 flex-col items-center justify-center grow py-16">
                   <h1 className="text-2xl font-bold">No archived project</h1>
                 </section>
               </TableCell>

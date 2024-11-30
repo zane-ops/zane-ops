@@ -148,6 +148,29 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
 
+    def test_create_service_slug_accept_underscores(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zane-ops", owner=owner)
+
+        create_service_payload = {
+            "slug": "hello_nginx",
+            "image": "nginxdemos/hello:latest",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={"project_slug": p.slug, "service_slug": "hello_nginx"},
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
     def test_create_service_set_network_alias(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="kiss-cam", owner=owner)
@@ -376,15 +399,13 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_create_service_with_healtheck_path_success(self):
-        deployment_url_pattern = re.compile(
-            rf"^(?!{re.escape(settings.CADDY_PROXY_ADMIN_HOST)}).*{re.escape(settings.ROOT_DOMAIN)}"
-        )
+        deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add(
             responses.GET,
             url=re.compile(deployment_url_pattern),
             status=status.HTTP_200_OK,
         )
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
 
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             with_healthcheck=True
@@ -397,15 +418,13 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_create_service_with_healtheck_path_error(self):
-        deployment_url_pattern = re.compile(
-            rf"^(?!{re.escape(settings.CADDY_PROXY_ADMIN_HOST)}).*{re.escape(settings.ROOT_DOMAIN)}"
-        )
+        deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add(
             responses.GET,
             url=re.compile(deployment_url_pattern),
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
 
         with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 0, 0, 31]
@@ -979,7 +998,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                 latest_deployment.status,
             )
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -987,7 +1005,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1065,7 +1082,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1073,7 +1089,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1151,7 +1166,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1159,7 +1173,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1281,7 +1294,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1289,7 +1301,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(
@@ -1334,7 +1345,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
 
             self.fake_docker_client.services.get = lambda _id: FakeService()
 
-            token = await Token.objects.aget(user=owner)
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
             healthcheck_details = HealthcheckDeploymentDetails(
                 deployment=SimpleDeploymentDetails(
@@ -1342,7 +1352,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
                 ),
-                auth_token=token.key,
                 healthcheck=(
                     HealthCheckDto.from_dict(
                         dict(

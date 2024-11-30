@@ -149,7 +149,7 @@ function SettingsPage() {
           </div>
         </section>
 
-        <section id="danger-zone" className="flex gap-1 scroll-mt-20">
+        <section id="danger" className="flex gap-1 scroll-mt-20">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
               <FlameIcon size={15} className="flex-none text-red-500" />
@@ -166,7 +166,7 @@ function SettingsPage() {
         <nav className="sticky top-20">
           <ul className="flex flex-col gap-2 text-grey">
             <li>
-              <Link to="./#details">Details</Link>
+              <Link to="./#main">Details</Link>
             </li>
             <li>
               <Link to="./#source">Source</Link>
@@ -181,7 +181,7 @@ function SettingsPage() {
               <Link to="./#volumes">Volumes</Link>
             </li>
             <li className="text-red-400">
-              <a href="#danger-zone">Danger Zone</a>
+              <Link to="./#danger">Danger Zone</Link>
             </li>
           </ul>
         </nav>
@@ -549,7 +549,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
     non_field_errors = non_field_errors.concat(errors.new_value);
   }
 
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const newCredentialsValue =
     serviceCredentialsChange?.new_value as DockerService["credentials"];
 
@@ -623,7 +623,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
               defaultValue={credentials?.username}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
             />
@@ -647,7 +647,7 @@ function ServiceImageCredentialsForm({ className }: ServiceFormProps) {
                 defaultValue={credentials?.password}
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                   "disabled:border-transparent"
                 )}
               />
@@ -954,7 +954,7 @@ function ServicePortItem({
           <AccordionTrigger
             className={cn(
               "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
-              "[&[data-state=open]]:rounded-b-none",
+              "data-[state=open]:rounded-b-none",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
                   change_type === "UPDATE",
@@ -1058,7 +1058,7 @@ function ServicePortItem({
 
 function NewServicePortForm() {
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
     project_slug,
@@ -1391,7 +1391,7 @@ function ServiceURLFormItem({
           <AccordionTrigger
             className={cn(
               "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
-              "[&[data-state=open]]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
+              "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
                   change_type === "UPDATE",
@@ -1640,7 +1640,7 @@ function ServiceURLFormItem({
 function NewServiceURLForm() {
   const [isRedirect, setIsRedirect] = React.useState(false);
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
     project_slug,
@@ -1945,19 +1945,19 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
   const startingCommandChange = service?.unapplied_changes.find(
     (change) => change.field === "command"
   );
+  const isEmptyChange =
+    startingCommandChange !== undefined &&
+    startingCommandChange.new_value === null;
 
-  const command =
-    (startingCommandChange?.new_value as string) ?? service?.command;
+  const command = isEmptyChange
+    ? ""
+    : (startingCommandChange?.new_value as string) ?? service?.command;
 
   const errors = getFormErrorsFromResponseData(
     updateStartingCommandMutation.data
   );
 
-  const isEmptyChange =
-    startingCommandChange !== undefined &&
-    startingCommandChange.new_value === null;
-
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   return (
     <Form.Root
@@ -2010,7 +2010,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
               disabled={startingCommandChange !== undefined}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
               defaultValue={command}
@@ -2079,7 +2079,7 @@ function ServiceCommandForm({ className }: ServiceFormProps) {
 
 function ServiceHealthcheckForm({ className }: ServiceFormProps) {
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const serviceSingleQuery = useQuery(
     serviceQueries.single({
@@ -2207,8 +2207,8 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               >
                 <SelectTrigger
                   className={cn(
-                    "data-[disabled]:bg-secondary/60 data-[disabled]:dark:bg-secondary-foreground",
-                    "data-[disabled]:opacity-100 data-[disabled]:border-transparent",
+                    "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
+                    "data-disabled:opacity-100 data-disabled:border-transparent",
                     healthcheckType === "none" && "text-muted-foreground"
                   )}
                 >
@@ -2243,7 +2243,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
                 }
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                   "disabled:border-transparent"
                 )}
                 defaultValue={healthcheck?.value}
@@ -2276,7 +2276,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               }
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
             />
@@ -2307,7 +2307,7 @@ function ServiceHealthcheckForm({ className }: ServiceFormProps) {
               }
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "disabled:dark:bg-secondary-foreground disabled:opacity-100",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
                 "disabled:border-transparent"
               )}
             />
@@ -2511,7 +2511,7 @@ function ServiceVolumeItem({
 
   const errors = getFormErrorsFromResponseData(data);
   const [accordionValue, setAccordionValue] = React.useState("");
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
 
   return (
@@ -2801,7 +2801,7 @@ type VolumeMode = DockerService["volumes"][number]["mode"];
 
 function NewServiceVolumeForm() {
   const { project_slug, service_slug } = Route.useParams();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data, reset } = useRequestServiceChangeMutation({
     project_slug,

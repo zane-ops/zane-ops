@@ -1,17 +1,25 @@
+from datetime import timedelta
 import requests
 from rest_framework import status
 from temporalio import workflow, activity
 from temporalio.exceptions import ApplicationError
 
-from ..shared import HealthcheckDeploymentDetails, DeploymentHealthcheckResult
+
+from ..shared import (
+    LogsCleanupResult,
+    HealthcheckDeploymentDetails,
+    DeploymentHealthcheckResult,
+    SimpleDeploymentDetails,
+)
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
+    from django.utils import timezone
     import docker
     import docker.errors
     from django import db
-    from ...models import DockerDeployment, HealthCheck
-    from ...utils import DockerSwarmTaskState, DockerSwarmTask
+    from ...models import DockerDeployment, HealthCheck, SimpleLog
+    from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors
 
 docker_client: docker.DockerClient | None = None
 
@@ -29,6 +37,25 @@ def get_swarm_service_name_for_deployment(
     service_id: str,
 ):
     return f"srv-{project_id}-{service_id}-{deployment_hash}"
+
+
+async def deployment_log(
+    deployment: SimpleDeploymentDetails,
+    message: str,
+):
+    current_time = timezone.now()
+    print(f"[{current_time.isoformat()}]: {message}")
+
+    # Regex pattern to match ANSI color codes
+    await SimpleLog.objects.acreate(
+        source=SimpleLog.LogSource.SYSTEM,
+        level=SimpleLog.LogLevel.INFO,
+        content=message,
+        time=current_time,
+        deployment_id=deployment.hash,
+        service_id=deployment.service_id,
+        content_text=SimpleLog.escape_ansi(message),
+    )
 
 
 class MonitorDockerDeploymentActivities:
@@ -52,6 +79,11 @@ class MonitorDockerDeploymentActivities:
         details: HealthcheckDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         try:
+            deployment: DockerDeployment = await (
+                DockerDeployment.objects.filter(hash=details.deployment.hash)
+                .select_related("service")
+                .afirst()
+            )
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=details.deployment.hash,
@@ -59,7 +91,7 @@ class MonitorDockerDeploymentActivities:
                     service_id=details.deployment.service_id,
                 )
             )
-        except docker.errors.NotFound:
+        except (docker.errors.NotFound, DockerDeployment.DoesNotExist):
             raise ApplicationError(
                 "Cannot run a healthcheck on an nonexistent deployment.",
                 non_retryable=True,
@@ -153,17 +185,10 @@ class MonitorDockerDeploymentActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                scheme = (
-                                    "https"
-                                    if settings.ENVIRONMENT == settings.PRODUCTION_ENV
-                                    else "http"
-                                )
-                                full_url = f"{scheme}://{details.deployment.url + healthcheck.value}"
+                                service_http_port = await deployment.service.ahttp_port
+                                full_url = f"http://{swarm_service.name}:{service_http_port.forwarded}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
-                                    headers={
-                                        "Authorization": f"Token {details.auth_token}"
-                                    },
                                     timeout=healthcheck_timeout,
                                 )
                                 if response.status_code == status.HTTP_200_OK:
@@ -185,7 +210,29 @@ class MonitorDockerDeploymentActivities:
                             deployment_status_reason = str(e)
 
                 print(
-                    f"Healtcheck for {details.deployment.hash=} | finished with {deployment_status=} ✅"
+                    f"Healtcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
+                )
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                )
+                status_color = (
+                    Colors.GREEN
+                    if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                    else Colors.RED
+                )
+
+                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
+                    status_flag = "✅"
+                elif deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                    status_flag = "❌"
+                else:
+                    status_flag = "🏁"
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
                 )
                 return deployment_status, deployment_status_reason
 
@@ -203,6 +250,16 @@ class MonitorDockerDeploymentActivities:
                 non_retryable=True,
             )
         else:
-            deployment.status_reason = healthcheck_result.reason
-            deployment.status = healthcheck_result.status
-            await deployment.asave()
+            if deployment.status != DockerDeployment.DeploymentStatus.SLEEPING:
+                deployment.status_reason = healthcheck_result.reason
+                deployment.status = healthcheck_result.status
+                await deployment.asave()
+
+
+class CleanupActivities:
+    @activity.defn
+    async def cleanup_simple_logs(self) -> LogsCleanupResult:
+        deleted_count, _ = await SimpleLog.objects.filter(
+            time__lt=timezone.now() - timedelta(days=30)
+        ).adelete()
+        return LogsCleanupResult(deleted_count=deleted_count)

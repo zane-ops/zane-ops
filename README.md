@@ -19,11 +19,11 @@
 
 ## 🚀 Installation
 
-Follow the [instructions](https://zane.fredkiss.dev/docs/get-started/) in the documentation to install and setup zaneops.
+Follow the [instructions](https://zaneops.dev/get-started/) in the documentation to install and setup zaneops.
 
 ## 📸 Some Screenshots
 
-You can view all the in-app screenshots in the [documentation](https://zane.fredkiss.dev/docs/screenshots/), but here's a quick showcase:
+You can view all the in-app screenshots in the [documentation](https://zaneops.dev/screenshots/), but here's a quick showcase:
 
 
 1. Login
@@ -73,47 +73,40 @@ You can view all the in-app screenshots in the [documentation](https://zane.fred
 <summary>Click to see the roadmap</summary>
 
 - **beta** :
-   - [ ] Docker services frontend 
-     - [ ] Details page 
-     - [ ] Env variables page
-     - [ ] Settings page
-     - [ ] Single deployment page
-     - [ ] Single deployment application logs page
+   - [x] Docker services frontend 
+     - [x] Details page 
+     - [x] Env variables page
+     - [x] Settings page
+     - [x] Single deployment application logs page
+     - [ ] Single deployment page details 
      - [ ] Single deployment http logs page
-     - [ ] deploy & redeploy deployments
+     - [x] deploy & redeploy deployments
    - [ ] Project frontend
      - [ ] settings page 
-   - [ ] CLI
-     - [ ] install & setup zaneops
-     - [ ] shutting down & uninstalling ZaneOps
-     - [ ] upgrading ZaneOps
-     - [ ] authenticate with token (require token UI+API in ZaneOps)
-     - [ ] Deploy a service using the CLI
-   - [ ] Tons of docs
-     - [ ] Using the CLI
+   - [ ] Tons of tutorials
      - [ ] Examples of deploying different kind of apps
+  - [x] Rewrite from celery to temporal (not sure)
 
 - **v1** :
 
-  - [ ] Rewrite from celery to temporal (not sure)
   - [ ] Managing environments (stating, production, and ephemeral envs)
   - [ ] Support workers (A.K.A sleeping services)
   - [ ] Git services API
     - [ ] create service from a public repo
     - [ ] deploy service  
+      - [ ] Building service with Dockerfile
       - [ ] Building service with nixpacks  
     - [ ] archive service
-    - [ ] Pull Request environments
+    - [ ] Pull Request environments & deploying automatically
     - [ ] Auto-comments with deployment status on github
   - [ ] Git services frontend & API (same as docker services)
 
-- **v2** :
-
+<!-- - **v2** :
   - [ ] Static websites support
   - [ ] CRONs support for services
   - [ ] Template support
     - [ ] Allow also for seeding templates
-  - [ ] Multi-server support
+  - [ ] Multi-server support -->
 </details>
 
 

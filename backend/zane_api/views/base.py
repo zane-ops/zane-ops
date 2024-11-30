@@ -1,8 +1,12 @@
 from collections import OrderedDict
 from typing import Any
+import base64
 
 from drf_standardized_errors.handler import ExceptionHandler
 from rest_framework import exceptions, status
+from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from django.conf import settings
 
 EMPTY_RESPONSE = {}
 EMPTY_PAGINATED_RESPONSE = OrderedDict(
@@ -70,3 +74,23 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
             continue
         schema["required"] = sorted(schema["properties"].keys())
     return result
+
+
+class InternalZaneAppPermission(BasePermission):
+    """
+    Allow only internal zaneops apps like fluentd.
+    This is so that critical internal endpoints are still secure even though they are open to the internet.
+    """
+
+    def has_permission(self, request: Request, view: Any) -> bool:
+        auth = request.headers.get("Authorization", "").split(" ")  # type: list[str]
+
+        if len(auth) != 2:
+            return False
+
+        _type, credentials = auth
+        if _type != "Basic":
+            return False
+
+        credentials = base64.b64decode(credentials).decode("utf-8")
+        return credentials == f"zaneops:{settings.SECRET_KEY}"

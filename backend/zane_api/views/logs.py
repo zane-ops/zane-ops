@@ -10,6 +10,9 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from .base import InternalZaneAppPermission
+from ..utils import Colors
+
 from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
 from .serializers import (
@@ -26,8 +29,8 @@ from ..serializers import SimpleLogSerializer
 
 
 @extend_schema(exclude=True)
-class LogTailAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+class LogIngestAPIView(APIView):
+    permission_classes = [InternalZaneAppPermission]
     throttle_scope = "log_collect"
     throttle_classes = [ScopedRateThrottle]
     serializer_class = DockerContainerLogsResponseSerializer
@@ -143,6 +146,7 @@ class LogTailAPIView(APIView):
                                     time=log["time"],
                                     deployment_id=deployment_id,
                                     service_id=service_id,
+                                    content_text=SimpleLog.escape_ansi(log["log"]),
                                 )
                             )
             SimpleLog.objects.bulk_create(simple_logs)
@@ -154,6 +158,11 @@ class LogTailAPIView(APIView):
                     "http_logs_inserted": len(http_logs),
                 }
             )
+            print("====== LOGS INGEST ======")
+            print(
+                f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}"
+            )
+            print(f"HTTP logs inserted = {Colors.BLUE}{len(http_logs)}{Colors.ENDC}")
             return Response(response.data, status=status.HTTP_200_OK)
 
 

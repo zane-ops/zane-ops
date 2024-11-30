@@ -14,7 +14,7 @@ from django.core.cache import cache
 from django.test import AsyncClient
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from docker.types import EndpointSpec, Resources
+from docker.types import EndpointSpec, Resources, NetworkAttachmentConfig
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -47,7 +47,14 @@ class CustomAPIClient(APIClient):
         self.parent = parent
 
     def post(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -55,14 +62,24 @@ class CustomAPIClient(APIClient):
             path=path,
             data=data,
             format=format,
+            headers=headers,
+            follow=follow,
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            **extra,
         )
         return response
 
     def put(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -74,11 +91,21 @@ class CustomAPIClient(APIClient):
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            follow=follow,
+            headers=headers,
+            **extra,
         )
         return response
 
     def patch(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -89,11 +116,21 @@ class CustomAPIClient(APIClient):
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            follow=follow,
+            headers=headers,
+            **extra,
         )
         return response
 
     def delete(
-        self, path, data=None, format=None, content_type=None, follow=False, **extra
+        self,
+        path,
+        data=None,
+        format=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
     ):
         if type(data) is not str:
             data = json.dumps(data)
@@ -104,6 +141,9 @@ class CustomAPIClient(APIClient):
             content_type=(
                 content_type if content_type is not None else "application/json"
             ),
+            follow=follow,
+            headers=headers,
+            **extra,
         )
         return response
 
@@ -113,7 +153,15 @@ class AsyncCustomAPIClient(AsyncClient):
         super().__init__(enforce_csrf_checks=False, **defaults)
         self.parent = parent
 
-    async def post(self, path, data=None, content_type=None, follow=False, **extra):
+    async def post(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
         async with self.parent.acaptureCommitCallbacks(execute=True):
@@ -123,10 +171,21 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
-    async def put(self, path, data=None, content_type=None, follow=False, **extra):
+    async def put(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
 
@@ -137,10 +196,21 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
-    async def patch(self, path, data=None, content_type=None, follow=False, **extra):
+    async def patch(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
 
@@ -151,10 +221,21 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
-    async def delete(self, path, data=None, content_type=None, follow=False, **extra):
+    async def delete(
+        self,
+        path,
+        data=None,
+        content_type=None,
+        follow=False,
+        headers=None,
+        **extra,
+    ):
         if type(data) is not str:
             data = json.dumps(data)
         async with self.parent.acaptureCommitCallbacks(execute=True):
@@ -164,6 +245,9 @@ class AsyncCustomAPIClient(AsyncClient):
                 content_type=(
                     content_type if content_type is not None else "application/json"
                 ),
+                follow=follow,
+                headers=headers,
+                **extra,
             )
         return response
 
@@ -245,12 +329,12 @@ class AuthAPITestCase(APITestCase):
         return user
 
     @asynccontextmanager
-    async def workflowEnvironment(self):
+    async def workflowEnvironment(self, task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE):
         env = await WorkflowEnvironment.start_time_skipping()
         await env.__aenter__()
         worker = Worker(
             env.client,
-            task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+            task_queue=task_queue,
             **get_workflows_and_activities(),
         )
         await worker.__aenter__()
@@ -492,7 +576,7 @@ class AuthAPITestCase(APITestCase):
             slug="caddy"
         )
 
-        service.network_alias = f"{service.slug}-{service.unprefixed_id}"
+        service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
         await service.asave()
 
         other_changes = other_changes if other_changes is not None else []
@@ -631,6 +715,7 @@ class FakeDockerClient:
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
             resources: Resources = None,
+            networks: List[NetworkAttachmentConfig] = None,
         ):
             self.attrs = {
                 "Spec": {
@@ -646,6 +731,7 @@ class FakeDockerClient:
             self.endpoint = endpoint
             self.resources = resources
             self.id = name
+            self.networks = networks or []
             self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
@@ -670,10 +756,13 @@ class FakeDockerClient:
         def remove(self):
             self.parent.services_remove(self.name)
 
-        def update(self, networks: list):
-            self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
-                {"Target": network} for network in networks
-            ]
+        def update(self, **kwargs):
+            if "networks" in kwargs:
+                self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
+                    {"Target": network} for network in kwargs["networks"]
+                ]
+            if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
+                self.swarm_tasks = []
 
         def tasks(self, *args, **kwargs):
             return self.swarm_tasks
@@ -831,6 +920,7 @@ class FakeDockerClient:
             env=envs,
             endpoint=endpoint_spec,
             resources=resources,
+            networks=kwargs.get("networks", []),
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):

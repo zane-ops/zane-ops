@@ -19,6 +19,7 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { Code } from "~/components/code";
 import { withAuthRedirect } from "~/components/helper/auth-redirect";
 import { Loader } from "~/components/loader";
 import {
@@ -125,8 +126,7 @@ function EnvVariablesPage() {
               <p className="text-muted-foreground py-4 border-y border-border">
                 ZaneOps provides additional system environment variables to all
                 builds and deployments. variables marked with&nbsp;
-                <code>&#123;&#123;&#125;&#125;</code> are specific to each
-                deployment.
+                <Code>{`{{}}`}</Code> are specific to each deployment.
               </p>
               <div className="flex flex-col gap-2">
                 {system_env_variables.map((env) => (
@@ -315,7 +315,13 @@ function EnVariableRow({
       ) : (
         <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
           {isEnvValueShown ? (
-            <p className="whitespace-nowrap overflow-x-auto">{value}</p>
+            <p className="whitespace-nowrap overflow-x-auto">
+              {value.length > 0 ? (
+                value
+              ) : (
+                <span className="text-grey font-mono">{`<empty>`}</span>
+              )}
+            </p>
           ) : (
             <span className="relative top-1">*********</span>
           )}
@@ -465,7 +471,7 @@ function EnVariableRow({
 function NewEnvVariableForm() {
   const { project_slug, service_slug } = Route.useParams();
   const queryClient = useQueryClient();
-  const formRef = React.useRef<React.ElementRef<"form">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { mutate, isPending, data } = useMutation({
     mutationFn: async (input: {

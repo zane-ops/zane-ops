@@ -50,7 +50,7 @@ function CreateService() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex h-[70vh] flex-grow justify-center items-center">
+      <div className="flex h-[70vh] grow justify-center items-center">
         <div className="card  flex lg:w-[30%] md:w-[50%] w-full flex-col gap-6">
           <h1 className="text-3xl font-bold">New Service</h1>
           <div className="flex flex-col gap-3">

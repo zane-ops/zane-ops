@@ -5,6 +5,8 @@ from . import views
 
 app_name = "zane_api"
 
+DJANGO_SLUG_REGEX = r"[-a-zA-Z0-9_]+"
+
 urlpatterns = [
     re_path(r"^auth/me/?$", views.AuthedView.as_view(), name="auth.me"),
     re_path(
@@ -23,12 +25,12 @@ urlpatterns = [
         name="projects.archived.list",
     ),
     re_path(
-        r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/$",
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/$",
         views.ProjectDetailsView.as_view(),
         name="projects.details",
     ),
     re_path(
-        r"^projects/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-list/$",
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/service-list/$",
         views.ProjectServiceListView.as_view(),
         name="projects.service_list",
     ),
@@ -49,13 +51,13 @@ urlpatterns = [
         name="docker.check_port_mapping",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/create-service/docker/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/create-service/docker/?$",
         views.CreateDockerServiceAPIView.as_view(),
         name="services.docker.create",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/request-service-changes/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
         name="services.docker.request_deployment_changes",
     ),
@@ -64,92 +66,87 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += [
         re_path(
-            r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/request-service-changes/docker"
-            r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/_bulk/?$",
+            rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/request-service-changes/docker"
+            rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/_bulk/?$",
             views.BulkRequestDockerServiceDeploymentChangesAPIView.as_view(),
-        ),
-        re_path(
-            "^_proxy/register-zane-to-proxy/?$",
-            views.RegisterZaneProxyAPIView.as_view(),
-            name="proxy.register_zane",
         ),
     ]
 
 
 urlpatterns += [
     re_path(
-        "^_proxy/check-certiticates/?$",
+        r"^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
         name="proxy.check_certificates",
     ),
     re_path(
-        "^logs/tail/?$",
-        views.LogTailAPIView.as_view(),
-        name="logs.tail",
+        "^logs/ingest/?$",
+        views.LogIngestAPIView.as_view(),
+        name="logs.ingest",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-service-changes/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/cancel-service-changes/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
         views.CancelDockerServiceDeploymentChangesAPIView.as_view(),
         name="services.docker.cancel_deployment_changes",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deploy-service/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/deploy-service/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ApplyDockerServiceDeploymentChangesAPIView.as_view(),
         name="services.docker.deploy_service",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deploy-service/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/deploy-service/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         views.RedeployDockerServiceAPIView.as_view(),
         name="services.docker.redeploy_service",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/cancel-deployment/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/cancel-deployment/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         views.CancelDockerServiceDeploymentAPIView.as_view(),
         name="services.docker.cancel_deployment",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/archive-service/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/archive-service/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ArchiveDockerServiceAPIView.as_view(),
         name="services.docker.archive",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/toggle-service/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/toggle-service/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ToggleDockerServiceAPIView.as_view(),
         name="services.docker.toggle",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.DockerServiceDetailsAPIView.as_view(),
         name="services.docker.details",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deployments/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/?$",
         views.DockerServiceDeploymentsAPIView.as_view(),
         name="services.docker.deployments_list",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         views.DockerServiceDeploymentSingleAPIView.as_view(),
         name="services.docker.deployment_single",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/logs/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/logs/?$",
         views.DockerServiceDeploymentLogsAPIView.as_view(),
         name="services.docker.deployment_logs",
     ),
     re_path(
-        r"^projects/(?P<project_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/service-details/docker"
-        r"/(?P<service_slug>[a-z0-9]+(?:-[a-z0-9]+)*)/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/?$",
         views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
         name="services.docker.deployment_http_logs",
     ),

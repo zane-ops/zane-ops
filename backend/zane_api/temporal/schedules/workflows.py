@@ -3,8 +3,12 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from .activities import MonitorDockerDeploymentActivities
-from ..shared import HealthcheckDeploymentDetails, DeploymentHealthcheckResult
+from .activities import MonitorDockerDeploymentActivities, CleanupActivities
+from ..shared import (
+    HealthcheckDeploymentDetails,
+    DeploymentHealthcheckResult,
+    LogsCleanupResult,
+)
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
@@ -54,3 +58,23 @@ class MonitorDockerDeploymentWorkflow:
             retry_policy=retry_policy,
         )
         return deployment_status, deployment_status_reason
+
+
+@workflow.defn(name="cleanup-app-logs")
+class CleanupAppLogsWorkflow:
+    @workflow.run
+    async def run(self) -> LogsCleanupResult:
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+        print(f"Running activity `monitor_close_faulty_db_connections()`")
+        await workflow.execute_activity_method(
+            MonitorDockerDeploymentActivities.monitor_close_faulty_db_connections,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+        return await workflow.execute_activity_method(
+            CleanupActivities.cleanup_simple_logs,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )

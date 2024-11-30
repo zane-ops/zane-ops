@@ -23,6 +23,12 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { MenubarContentItem } from "~/components/ui/menubar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { useCancelDockerServiceDeploymentMutation } from "~/lib/hooks/use-cancel-docker-service-deployment-mutation";
 import { useRedeployDockerServiceMutation } from "~/lib/hooks/use-redeploy-docker-service-mutation";
@@ -30,6 +36,7 @@ import { cn } from "~/lib/utils";
 import {
   capitalizeText,
   formatElapsedTime,
+  formattedTime,
   mergeTimeAgoFormatterAndFormattedDate
 } from "~/utils";
 
@@ -117,21 +124,21 @@ export function DockerDeploymentCard({
   return (
     <div
       className={cn(
-        "flex flex-col md:flex-row items-start gap-4 md:gap-0 border group  px-3 py-4 rounded-md  bg-opacity-10 justify-between md:items-center relative",
+        "flex flex-col md:flex-row items-start gap-4 md:gap-0 border group  px-3 py-4 rounded-md justify-between md:items-center relative",
         {
-          "border-blue-600 bg-blue-600":
+          "border-blue-600 bg-blue-600/10":
             status === "STARTING" ||
             status === "RESTARTING" ||
             status === "PREPARING" ||
             status === "CANCELLING",
-          "border-green-600 bg-green-600": status === "HEALTHY",
-          "border-red-600 bg-red-600":
+          "border-green-600 bg-green-600/10": status === "HEALTHY",
+          "border-red-600 bg-red-600/10":
             status === "UNHEALTHY" || status === "FAILED",
-          "border-gray-600 bg-gray-600":
+          "border-gray-600 bg-gray-600/10":
             status === "REMOVED" ||
             status === "CANCELLED" ||
             status === "QUEUED",
-          "border-yellow-600 bg-yellow-600": status === "SLEEPING"
+          "border-yellow-600 bg-yellow-600/10": status === "SLEEPING"
         }
       )}
     >
@@ -161,17 +168,29 @@ export function DockerDeploymentCard({
               <LoaderIcon className="animate-spin" size={15} />
             )}
           </h3>
-          <p className="text-sm text-gray-500/80 dark:text-gray-400 text-nowrap">
-            {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
-          </p>
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <time
+                  dateTime={queued_at.toISOString()}
+                  className="text-sm relative z-10 text-gray-500/80 dark:text-gray-400 text-nowrap"
+                >
+                  {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
+                </time>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-balance">
+                {formattedTime(queued_at)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Commit message & timer */}
         <div className="flex flex-col items-start gap-1">
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
-              className="after:absolute after:inset-0"
               to={`./deployments/${hash}`}
+              className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
               {capitalizeText(commit_message)}
             </Link>
@@ -185,7 +204,7 @@ export function DockerDeploymentCard({
               </small>
             )}
           </h3>
-          <div className="flex text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
+          <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
               <Timer size={15} className="flex-none" />
               {started_at && !finished_at ? (

@@ -2075,9 +2075,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
 
 class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
-    def test_apply_simple_changes(
-        self,
-    ):
+    def test_apply_simple_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
@@ -2952,7 +2950,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                     new_value={
                         "container_path": "/delete",
                         "host_path": "/delete",
-                        "mode": Volume.VolumeMode.READ_WRITE,
+                        "mode": Volume.VolumeMode.READ_ONLY,
                     },
                 ),
             ]
@@ -3623,10 +3621,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ],
             any_order=True,
         )
-        fake_service.scale.assert_has_calls(
-            [call(1)],
-            any_order=True,
+        fake_service.update.assert_called()
+        scaled_up = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+            for call in fake_service.update.call_args_list
         )
+        self.assertTrue(scaled_up)
 
     async def test_update_url_delete_old_url_from_caddy(self):
         p, service = await self.acreate_and_deploy_caddy_docker_service()
@@ -3797,8 +3797,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        self.assertEqual(2, fake_service.scale.call_count)
-        fake_service.scale.assert_called_with(0)
+        fake_service.update.assert_called()
+        scaled_down = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_down)
 
     async def test_dont_do_zero_downtime_when_updating_with_host_ports(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
@@ -3862,8 +3866,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        self.assertEqual(2, fake_service.scale.call_count)
-        fake_service.scale.assert_called_with(0)
+        fake_service.update.assert_called()
+        scaled_down = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_down)
 
     async def test_update_service_remove_previous_monitor_task(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
@@ -4208,7 +4216,12 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        fake_service.scale.assert_called_with(0)
+        fake_service.update.assert_called()
+        scaled_up = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_up)
         monitor_schedule = self.get_workflow_schedule_by_id(
             first_deployment.monitor_schedule_id
         )
@@ -4277,7 +4290,12 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
                 project_id=first_deployment.service.project_id,
             )
         )
-        fake_service.scale.assert_called_with(1)
+        fake_service.update.assert_called()
+        scaled_up = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertTrue(scaled_up)
         monitor_schedule = self.get_workflow_schedule_by_id(
             first_deployment.monitor_schedule_id
         )
@@ -4317,10 +4335,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 service=service,
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.INITIALIZED,
             )
 
@@ -4383,10 +4399,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )()
             await new_deployment.asave()
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.VOLUMES_CREATED,
             )
 
@@ -4458,10 +4472,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             fake_service_list.get.return_value = fake_service
             self.fake_docker_client.services = fake_service_list
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
             )
 
@@ -4513,10 +4525,12 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 ],
                 any_order=True,
             )
-            fake_service.scale.assert_has_calls(
-                [call(1)],
-                any_order=True,
+            fake_service.update.assert_called()
+            scaled_up = any(
+                call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+                for call in fake_service.update.call_args_list
             )
+            self.assertTrue(scaled_up)
 
     async def test_cancel_deployment_at_swarm_service_created(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
@@ -4530,10 +4544,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )(),
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
             )
 
@@ -4586,10 +4598,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             new_deployment.url = f"{p.slug}-{service.slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
             await new_deployment.asave()
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
             )
 
@@ -4681,10 +4691,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )()
             await new_deployment.asave()
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
             )
 
@@ -4751,10 +4759,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 service=service,
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.FINISHED,
             )
 
@@ -4798,7 +4804,6 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
     @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
     async def test_cancel_deployment_simple(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            await asyncio.sleep(5)
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -4809,10 +4814,8 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 )(),
             )
 
-            token = await Token.objects.aget(user=owner)
             payload = await DockerDeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
-                auth_token=token.key,
                 pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
             )
 

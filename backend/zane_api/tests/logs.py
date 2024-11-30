@@ -4,7 +4,15 @@ import uuid
 
 from django.urls import reverse
 from rest_framework import status
+from datetime import timedelta
+from django.utils import timezone
+from django.conf import settings
+from temporalio.testing import WorkflowEnvironment
+import base64
+from temporalio.common import RetryPolicy
 
+
+from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
 
@@ -25,7 +33,11 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         json_log = json.loads(simple_proxy_logs[0]["log"])
 
         response = self.client.post(
-            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            data=simple_proxy_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -135,7 +147,13 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
             },
         ]
 
-        response = self.client.post(reverse("zane_api:logs.tail"), data=simple_logs)
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+        )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(len(simple_logs), deployment.logs.count())
@@ -210,6 +228,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=(
                         SimpleLog.LogLevel.INFO
                         if i % 2 == 0
@@ -245,6 +264,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=(
                         SimpleLog.LogLevel.INFO
                         if i % 2 == 0
@@ -279,10 +299,12 @@ class SimpleLogViewTests(AuthAPITestCase):
             [
                 SimpleLog(
                     time=time,
+                    created_at=time,
                     content=content,
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=(
                         SimpleLog.LogLevel.INFO
                         if i % 2 == 0
@@ -325,6 +347,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=SimpleLog.LogLevel.INFO,
                 )
                 for (time, content) in self.sample_log_contents
@@ -357,6 +380,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     service_id=service.id,
                     deployment_id=deployment.hash,
                     source=SimpleLog.LogSource.SERVICE,
+                    content_text=SimpleLog.escape_ansi(content),
                     level=SimpleLog.LogLevel.INFO,
                 )
                 for (time, content) in self.sample_log_contents
@@ -379,6 +403,67 @@ class SimpleLogViewTests(AuthAPITestCase):
             service_id=service.id
         ).acount()
         self.assertEqual(0, logs_for_service)
+
+
+class SimpleLogScheduleTests(AuthAPITestCase):
+    async def test_delete_logs_older_than_30_days(self):
+        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+            p, service = await self.acreate_and_deploy_redis_docker_service()
+            deployment: DockerDeployment = await service.deployments.afirst()
+
+            now = timezone.now()
+            sample_logs = [
+                (
+                    now - timedelta(days=45),
+                    '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+                ),
+                (
+                    now - timedelta(days=31),
+                    '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+                ),
+                (
+                    now - timedelta(days=29),
+                    '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+                ),
+                (
+                    now - timedelta(days=7),
+                    '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+                ),
+            ]
+
+            await SimpleLog.objects.abulk_create(
+                [
+                    SimpleLog(
+                        time=time,
+                        content=content,
+                        service_id=service.id,
+                        deployment_id=deployment.hash,
+                        source=SimpleLog.LogSource.SERVICE,
+                        content_text=SimpleLog.escape_ansi(content),
+                        level=SimpleLog.LogLevel.INFO,
+                    )
+                    for (time, content) in sample_logs
+                ]
+            )
+
+        async with self.workflowEnvironment(
+            task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE
+        ) as env:  # type: WorkflowEnvironment
+            result = await env.client.execute_workflow(
+                workflow=CleanupAppLogsWorkflow.run,
+                id="cleanup-app-logs",
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+
+            self.assertEqual(2, result.deleted_count)
+            no_of_logs_older_than_a_month = await SimpleLog.objects.filter(
+                time__lt=timezone.now() - timedelta(days=30)
+            ).acount()
+            self.assertEqual(0, no_of_logs_older_than_a_month)
 
 
 class HttpLogViewTests(AuthAPITestCase):
@@ -664,7 +749,11 @@ class HttpLogViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(
-            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            data=simple_proxy_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -709,7 +798,11 @@ class HttpLogViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(
-            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            data=simple_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -1011,7 +1104,11 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         ]
 
         response = self.client.post(
-            reverse("zane_api:logs.tail"), data=simple_proxy_logs
+            reverse("zane_api:logs.ingest"),
+            data=simple_proxy_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(0, SimpleLog.objects.count())
@@ -1117,7 +1214,10 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         ]
 
         response = await self.async_client.post(
-            reverse("zane_api:logs.tail"),
+            reverse("zane_api:logs.ingest"),
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
             data=first_deploy_proxy_logs + second_deploy_proxy_logs,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)

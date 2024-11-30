@@ -1,3 +1,4 @@
+import re
 import time
 import uuid
 from typing import Union, Optional
@@ -8,6 +9,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
+from django.utils import timezone
 
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
@@ -248,7 +250,7 @@ class DockerRegistryService(BaseService):
         return [
             {
                 "key": "ZANE",
-                "value": "1",
+                "value": "true",
                 "comment": "Is the service deployed on zaneops?",
             },
             {
@@ -334,6 +336,10 @@ class DockerRegistryService(BaseService):
     @property
     def http_port(self) -> PortConfiguration | None:
         return self.ports.filter(host__isnull=True).first()
+
+    @property
+    async def ahttp_port(self) -> PortConfiguration | None:
+        return await self.ports.filter(host__isnull=True).afirst()
 
     @property
     def last_queued_deployment(self) -> Union["DockerDeployment", None]:
@@ -680,6 +686,10 @@ class DockerDeployment(BaseDeployment):
             ]
         return aliases
 
+    @property
+    def network_alias(self):
+        return f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+
     class Meta:
         ordering = ("-queued_at",)
         indexes = [
@@ -842,7 +852,7 @@ class GitDeployment(BaseDeployment):
 
 class Log(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     service_id = models.CharField(null=True)
     deployment_id = models.CharField(null=True)
     time = models.DateTimeField()
@@ -862,6 +872,7 @@ class SimpleLog(Log):
         SERVICE = "SERVICE", _("Service Logs")
 
     content = models.JSONField(null=True)
+    content_text = models.TextField(null=True, blank=True)
     level = models.CharField(
         max_length=10,
         choices=LogLevel.choices,
@@ -872,6 +883,11 @@ class SimpleLog(Log):
         choices=LogSource.choices,
         default=LogSource.SERVICE,
     )
+
+    @classmethod
+    def escape_ansi(cls, content: str):
+        ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        return ANSI_ESCAPE_PATTERN.sub("", content)
 
     class Meta:
         indexes = [

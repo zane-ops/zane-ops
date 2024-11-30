@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "description": "Backend for ZaneOps",
   "scripts": {
-    "dev": "source ./venv/bin/activate && python manage.py runserver 0.0.0.0:8000",
-    "test": "source ./venv/bin/activate && python manage.py test --parallel",
-    "test:filter": "source ./venv/bin/activate && python manage.py test --parallel -k",
-    "makemigration": "source ./venv/bin/activate && python manage.py makemigrations",
-    "migrate": "source ./venv/bin/activate && python manage.py migrate",
-    "openapi": "source ./venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",
-    "freeze": "source ./venv/bin/activate && uv pip freeze > requirements.txt"
+    "dev": ". ./venv/bin/activate && python manage.py runserver 0.0.0.0:8000",
+    "test": ". ./venv/bin/activate && python manage.py test --parallel",
+    "test:filter": ". ./venv/bin/activate && python manage.py test --parallel -k",
+    "makemigration": ". ./venv/bin/activate && python manage.py makemigrations",
+    "migrate": ". ./venv/bin/activate && python manage.py migrate",
+    "openapi": ". ./venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",
+    "freeze": ". ./venv/bin/activate && uv pip freeze > requirements.txt"
   }
 }
