@@ -33,26 +33,21 @@ class ArchivedProjectDetails:
 class DockerDeploymentDetails:
     hash: str
     slot: str
-    auth_token: str
     unprefixed_hash: str
     queued_at: str
     workflow_id: str
     service: DockerServiceSnapshot
+    auth_token: Optional[str] = None
     url: Optional[str] = None
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
     network_alias: Optional[str] = None
 
     @classmethod
-    def from_deployment(
-        cls,
-        deployment: DockerDeployment,
-        auth_token: str,
-    ):
+    def from_deployment(cls, deployment: DockerDeployment):
         return cls(
             hash=deployment.hash,
             slot=deployment.slot,
-            auth_token=auth_token,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
             url=deployment.url,
@@ -77,14 +72,12 @@ class DockerDeploymentDetails:
     async def afrom_deployment(
         cls,
         deployment: DockerDeployment,
-        auth_token: str,
         pause_at_step: Enum = None,
     ):
         return cls(
             pause_at_step=pause_at_step.value if pause_at_step is not None else 0,
             hash=deployment.hash,
             slot=deployment.slot,
-            auth_token=auth_token,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
             url=deployment.url,
@@ -151,7 +144,6 @@ class ArchivedServiceDetails:
 @dataclass
 class HealthcheckDeploymentDetails:
     deployment: SimpleDeploymentDetails
-    auth_token: str
     healthcheck: Optional[HealthCheckDto] = None
 
 

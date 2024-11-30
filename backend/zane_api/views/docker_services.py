@@ -530,11 +530,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
             new_deployment.service_snapshot = DockerServiceSerializer(service).data
             new_deployment.save()
 
-            token = Token.objects.get(user=request.user)
-            payload = DockerDeploymentDetails.from_deployment(
-                deployment=new_deployment,
-                auth_token=token.key,
-            )
+            payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
                 lambda: start_workflow(
@@ -616,11 +612,7 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.service_snapshot = DockerServiceSerializer(service).data
         new_deployment.save()
 
-        token = Token.objects.get(user=request.user)
-        payload = DockerDeploymentDetails.from_deployment(
-            new_deployment,
-            auth_token=token.key,
-        )
+        payload = DockerDeploymentDetails.from_deployment(new_deployment)
 
         transaction.on_commit(
             lambda: start_workflow(
