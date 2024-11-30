@@ -23,9 +23,8 @@ const queryClient = new QueryClient({
 
 const router = createRouter({
   routeTree,
-  defaultStaleTime: 30_000,
+  defaultStaleTime: 3_600_000, // 1hr in milliseconds
   defaultPreload: "intent",
-  defaultPreloadStaleTime: 30_000,
   defaultPendingComponent: () => <Loader />
 });
 
