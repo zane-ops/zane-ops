@@ -4525,10 +4525,12 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 ],
                 any_order=True,
             )
-            fake_service.scale.assert_has_calls(
-                [call(1)],
-                any_order=True,
+            fake_service.update.assert_called()
+            scaled_up = any(
+                call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
+                for call in fake_service.update.call_args_list
             )
+            self.assertTrue(scaled_up)
 
     async def test_cancel_deployment_at_swarm_service_created(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
