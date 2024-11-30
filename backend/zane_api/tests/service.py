@@ -399,15 +399,13 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_create_service_with_healtheck_path_success(self):
-        deployment_url_pattern = re.compile(
-            rf"^(?!{re.escape(settings.CADDY_PROXY_ADMIN_HOST)}).*{re.escape(settings.ROOT_DOMAIN)}"
-        )
+        deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add(
             responses.GET,
             url=re.compile(deployment_url_pattern),
             status=status.HTTP_200_OK,
         )
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
 
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             with_healthcheck=True
@@ -420,15 +418,13 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_create_service_with_healtheck_path_error(self):
-        deployment_url_pattern = re.compile(
-            rf"^(?!{re.escape(settings.CADDY_PROXY_ADMIN_HOST)}).*{re.escape(settings.ROOT_DOMAIN)}"
-        )
+        deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add(
             responses.GET,
             url=re.compile(deployment_url_pattern),
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
 
         with patch("zane_api.temporal.activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 0, 0, 31]
