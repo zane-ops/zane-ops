@@ -152,7 +152,7 @@ DEFAULT_502_FALLBACK = """
 <head>
   <meta charset='utf-8'>
   <meta content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no' name='viewport'>
-  <title>Deployment Not Found</title>
+  <title>Deployment Unavailable</title>
   <style>
     :root {
       --colorDefaultTextColor: #A3A9AC;
