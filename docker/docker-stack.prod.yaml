@@ -118,7 +118,7 @@ services:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
       interval: 30s
       timeout: 3m
-      start_period: 30s
+      start_period: 10s
       retries: 3
     networks:
       zane:
