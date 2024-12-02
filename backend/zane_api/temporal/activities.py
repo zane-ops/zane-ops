@@ -12,7 +12,6 @@ from .main import create_schedule, delete_schedule, pause_schedule, unpause_sche
 
 with workflow.unsafe.imports_passed_through():
     from .schedules import MonitorDockerDeploymentWorkflow
-    from django import db
     import docker
     import docker.errors
     from ..models import (
@@ -50,6 +49,7 @@ with workflow.unsafe.imports_passed_through():
         cache_result,
         convert_value_to_bytes,
     )
+    from django.db import close_old_connections
 
 from ..dtos import (
     DockerServiceSnapshot,
@@ -699,6 +699,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_project_network(self, payload: ProjectDetails) -> str:
+        close_old_connections()
         try:
             project = await Project.objects.aget(id=payload.id)
         except Project.DoesNotExist:
@@ -719,6 +720,7 @@ class DockerSwarmActivities:
     async def get_archived_project_services(
         self, project_details: ArchivedProjectDetails
     ) -> List[ArchivedServiceDetails]:
+        close_old_connections()
         try:
             archived_project: ArchivedProject = await ArchivedProject.objects.aget(
                 pk=project_details.id
@@ -767,6 +769,7 @@ class DockerSwarmActivities:
     async def cleanup_docker_service_resources(
         self, service_details: ArchivedServiceDetails
     ):
+        close_old_connections()
         for deployment in service_details.deployments:
             service_name = get_swarm_service_name_for_deployment(
                 deployment_hash=deployment.hash,
@@ -828,6 +831,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def remove_project_network(self, project_details: ArchivedProjectDetails):
+        close_old_connections()
         try:
             network_associated_to_project: Network = self.docker_client.networks.get(
                 get_network_resource_name(project_id=project_details.original_id)
@@ -843,6 +847,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def prepare_deployment(self, deployment: DockerDeploymentDetails):
+        close_old_connections()
         try:
             await deployment_log(
                 deployment,
@@ -863,6 +868,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def toggle_cancelling_status(self, deployment: DockerDeploymentDetails):
+        close_old_connections()
         await deployment_log(
             deployment,
             f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
@@ -873,6 +879,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
+        close_old_connections()
         await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
             status=DockerDeployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
@@ -888,6 +895,7 @@ class DockerSwarmActivities:
     async def finish_and_save_deployment(
         self, healthcheck_result: DeploymentHealthcheckResult
     ) -> str:
+        close_old_connections()
         try:
             deployment: DockerDeployment = (
                 await DockerDeployment.objects.filter(
@@ -966,6 +974,7 @@ class DockerSwarmActivities:
     async def get_previous_production_deployment(
         self, deployment: DockerDeploymentDetails
     ) -> Optional[SimpleDeploymentDetails]:
+        close_old_connections()
         latest_production_deployment: DockerDeployment | None = await (
             DockerDeployment.objects.filter(
                 Q(service_id=deployment.service.id)
@@ -991,6 +1000,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
+        close_old_connections()
         next_deployment: DockerDeployment = (
             await DockerDeployment.objects.filter(
                 Q(service_id=deployment.service.id)
@@ -1019,6 +1029,7 @@ class DockerSwarmActivities:
     async def cleanup_previous_production_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
+        close_old_connections()
         docker_deployment: DockerDeployment | None = (
             await DockerDeployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service_id
@@ -1043,6 +1054,7 @@ class DockerSwarmActivities:
     async def create_docker_volumes_for_service(
         self, deployment: DockerDeploymentDetails
     ) -> List[VolumeDto]:
+        close_old_connections()
         await deployment_log(
             deployment,
             f"Creating volumes for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
@@ -1069,6 +1081,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def delete_created_volumes(self, deployment: DeploymentCreateVolumesResult):
+        close_old_connections()
         await deployment_log(
             deployment,
             f"Deleting created volumes for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}...",
@@ -1089,18 +1102,8 @@ class DockerSwarmActivities:
         )
 
     @activity.defn
-    async def close_faulty_db_connections(self):
-        """
-        This is to fix a bug we encountered when the worker hadn't run any job for a long time,
-        after that time, Django lost the DB connections, what is needed is to close the connection
-        so that Django can recreate the connection.
-        https://stackoverflow.com/questions/31504591/interfaceerror-connection-already-closed-using-django-celery-scrapy
-        """
-        for conn in db.connections.all():
-            conn.close_if_unusable_or_obsolete()
-
-    @activity.defn
     async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
+        close_old_connections()
         try:
             swarm_service: Service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
@@ -1169,6 +1172,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
+        close_old_connections()
         try:
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
@@ -1227,6 +1231,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def pull_image_for_deployment(self, deployment: DockerDeploymentDetails):
+        close_old_connections()
         service = deployment.service
         await deployment_log(
             deployment,
@@ -1253,6 +1258,7 @@ class DockerSwarmActivities:
     async def create_swarm_service_for_docker_deployment(
         self, deployment: DockerDeploymentDetails
     ):
+        close_old_connections()
         service = deployment.service
 
         try:
@@ -1405,6 +1411,7 @@ class DockerSwarmActivities:
         self,
         deployment: DockerDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
+        close_old_connections()
         docker_deployment: DockerDeployment = (
             await DockerDeployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service.id
