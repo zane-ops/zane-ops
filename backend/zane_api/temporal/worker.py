@@ -4,6 +4,7 @@ from temporalio.service import KeepAliveConfig
 from temporalio.worker import Worker
 
 from .workflows import get_workflows_and_activities
+from concurrent.futures import ThreadPoolExecutor
 
 
 async def run_worker():
@@ -14,13 +15,15 @@ async def run_worker():
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
     print(f"worker connected ✅")
-    worker = Worker(
-        client,
-        task_queue=settings.TEMPORALIO_WORKER_TASK_QUEUE,
-        debug_mode=True,
-        **get_workflows_and_activities(),
-    )
-    print(
-        f"running worker on task queue `{settings.TEMPORALIO_WORKER_TASK_QUEUE}`...🔄"
-    )
-    await worker.run()
+    with ThreadPoolExecutor(max_workers=10) as activity_executor:
+        worker = Worker(
+            client,
+            task_queue=settings.TEMPORALIO_WORKER_TASK_QUEUE,
+            debug_mode=True,
+            **get_workflows_and_activities(),
+            activity_executor=activity_executor,
+        )
+        print(
+            f"running worker on task queue `{settings.TEMPORALIO_WORKER_TASK_QUEUE}`...🔄"
+        )
+        await worker.run()
