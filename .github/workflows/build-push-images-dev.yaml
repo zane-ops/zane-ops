@@ -36,7 +36,9 @@ jobs:
             type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/proxy:canary
           cache-to: type=inline
-          build-args: ENVIRONMENT=prod COMMIT_SHA=${{ github.sha }}
+          build-args: |
+            ENVIRONMENT=prod 
+            COMMIT_SHA=${{ github.sha }}
   build-push-frontend:
     name: Build and Push Zane Frontend
     runs-on: ubuntu-latest
