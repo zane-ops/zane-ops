@@ -174,10 +174,9 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
         "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "5434"),
-        # Activate persistent connections on production
-        "CONN_MAX_AGE": None if ENVIRONMENT == PRODUCTION_ENV else 0,
-        "CONN_HEALTH_CHECKS": True,
         "OPTIONS": {
+            # Activate long time connections on production
+            "max_lifetime": 86_400,  # 1 day
             "pool": {
                 "min_size": 5,
                 "max_size": 10,
