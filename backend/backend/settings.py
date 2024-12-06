@@ -175,8 +175,6 @@ DATABASES = {
         "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "5434"),
         "OPTIONS": {
-            # Activate long time connections on production
-            "max_lifetime": 86_400,  # 1 day
             "pool": {
                 "min_size": 5,
                 "max_size": 10,
