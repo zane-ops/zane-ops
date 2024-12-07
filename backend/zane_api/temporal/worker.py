@@ -33,11 +33,16 @@ async def close_old_db_connections():
 
 class MainActivityInterceptor(ActivityInboundInterceptor):
     async def execute_activity(self, input: ExecuteActivityInput):
-        print("=== Closing dead DB connections before activity execution ===")
-        await close_old_db_connections()
-        result = await super().execute_activity(input)
-        print("=== Closing dead DB connections after activity execution ===")
-        await close_old_db_connections()
+        result = None
+        try:
+            result = await super().execute_activity(input)
+        except db.utils.InterfaceError:
+            print("=== Closing dead DB connections before retry ===")
+            await close_old_db_connections()
+            result = await super().execute_activity(input)
+        finally:
+            print("=== Closing dead DB connections after activity execution ===")
+            await close_old_db_connections()
         return result
 
 
