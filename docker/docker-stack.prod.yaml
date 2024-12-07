@@ -344,6 +344,10 @@ services:
     environment:
       <<: *env-vars
       DB_HOST: zane.db
+      POOL_MODE: transaction
+      MAX_DB_CONNECTIONS: 60
+      DEFAULT_POOL_SIZE: 20
+      AUTH_TYPE: scram-sha-256
     depends_on:
       - db  
     networks:
