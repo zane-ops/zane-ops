@@ -11,8 +11,6 @@ from temporalio import workflow
 
 from .workflows import get_workflows_and_activities
 
-# from concurrent.futures import ThreadPoolExecutor
-# import asyncio
 
 with workflow.unsafe.imports_passed_through():
     from django import db
@@ -64,14 +62,12 @@ async def run_worker():
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
     print(f"worker connected ✅")
-    # with ThreadPoolExecutor(max_workers=50) as activity_executor:
     worker = Worker(
         client,
         task_queue=settings.TEMPORALIO_WORKER_TASK_QUEUE,
         debug_mode=True,
         **get_workflows_and_activities(),
         interceptors=[MainInterceptor()],
-        # activity_executor=activity_executor,
     )
     print(
         f"running worker on task queue `{settings.TEMPORALIO_WORKER_TASK_QUEUE}`...🔄"
