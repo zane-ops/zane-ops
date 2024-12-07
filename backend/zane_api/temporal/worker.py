@@ -36,7 +36,7 @@ class MainActivityInterceptor(ActivityInboundInterceptor):
         result = None
         try:
             result = await super().execute_activity(input)
-        except db.utils.InterfaceError:
+        except (db.utils.InterfaceError, db.utils.OperationalError):
             print("=== Closing dead DB connections before retry ===")
             await close_old_db_connections()
             result = await super().execute_activity(input)
