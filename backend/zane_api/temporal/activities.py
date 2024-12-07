@@ -49,8 +49,6 @@ with workflow.unsafe.imports_passed_through():
         cache_result,
         convert_value_to_bytes,
     )
-    from django import db
-    from asgiref.sync import sync_to_async
 
 from ..dtos import (
     DockerServiceSnapshot,
@@ -697,13 +695,6 @@ class ZaneProxyClient:
 class DockerSwarmActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
-
-    @activity.defn
-    async def close_old_db_connections(self):
-        # Remove dead non async connections
-        db.close_old_connections()
-        # Remove dead async connections
-        await sync_to_async(db.close_old_connections)()
 
     @activity.defn
     async def create_project_network(self, payload: ProjectDetails) -> str:
