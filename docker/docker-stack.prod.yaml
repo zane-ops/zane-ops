@@ -1,7 +1,7 @@
 x-backend-vars: &env-vars
   ENVIRONMENT: PRODUCTION
   REDIS_URL: redis://zane.valkey:6379/0
-  DB_HOST: zane.db
+  DB_HOST: zane.pgbouncer
   DB_PORT: 5432
   DB_NAME: zane
   DB_USER: ${ZANE_DB_USER:-zane}
@@ -339,6 +339,30 @@ services:
       retries: 5
       start_period: 5s
       timeout: 10s
+  pgbouncer:  
+    image: edoburu/pgbouncer:v1.23.1-p3
+    environment:
+      <<: *env-vars
+      DB_HOST: zane.db
+    depends_on:
+      - db  
+    networks:
+      zane:
+        aliases:
+          - zane.pgbouncer
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 500M
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
