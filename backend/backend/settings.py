@@ -176,12 +176,6 @@ DATABASES = {
         "PORT": os.environ.get("DB_PORT", "5434"),
         "CONN_MAX_AGE": None if ENVIRONMENT == PRODUCTION_ENV else 0,
         "CONN_HEALTHCHECK": True,
-        # "OPTIONS": {
-        #     "pool": {
-        #         "min_size": 5,
-        #         "max_size": 10,
-        #     },
-        # },
     }
 }
 
