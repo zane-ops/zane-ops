@@ -354,6 +354,12 @@ services:
       zane:
         aliases:
           - zane.pgbouncer
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', 'localhost']
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 10s
     deploy:
       replicas: 1
       restart_policy:
