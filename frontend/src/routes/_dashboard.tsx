@@ -12,6 +12,7 @@ import {
   ChevronsUpDown,
   CircleUser,
   Folder,
+  GitCommitVertical,
   Globe,
   Hammer,
   HeartHandshake,
@@ -228,46 +229,58 @@ function Header() {
   );
 }
 
-const socialLinksIconWidth = 15;
 const socialLinks = [
   {
     name: "Feedback",
     url: "https://github.com/zane-ops/zane-ops/discussions",
-    icon: <Send width={socialLinksIconWidth} />
+    icon: <Send size={15} />
   },
   {
     name: "Docs",
     url: "https://zaneops.dev",
-    icon: <BookOpen width={socialLinksIconWidth} />
+    icon: <BookOpen size={15} />
   },
   {
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
-    icon: <HeartHandshake width={socialLinksIconWidth} />
+    icon: <HeartHandshake size={15} />
   },
   {
     name: "Twitter",
     url: "https://twitter.com/zaneopsdev",
-    icon: <Twitter width={socialLinksIconWidth} />
+    icon: <Twitter size={15} />
   }
 ];
 
 function Footer() {
   return (
     <>
-      <footer className="flex border-t border-opacity-65 border-border bg-toggle p-8 text-sm items-center gap-4 md:gap-10">
-        {socialLinks.map((link) => (
+      <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
+        <div className="items-center gap-4 md:gap-10 flex flex-wrap">
+          {socialLinks.map((link) => (
+            <a
+              key={link.name}
+              className="flex underline items-center gap-2"
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {link.icon}
+              {link.name}
+            </a>
+          ))}
+        </div>
+        {import.meta.env.VITE_COMMIT_SHA && (
           <a
-            key={link.name}
             className="flex underline items-center gap-2"
-            href={link.url}
+            href={`https://github.com/zane-ops/zane-ops/tree/${import.meta.env.VITE_COMMIT_SHA}`}
             target="_blank"
             rel="noopener noreferrer"
           >
-            {link.icon}
-            {link.name}
+            <GitCommitVertical size={15} />
+            commit #{import.meta.env.VITE_COMMIT_SHA.substring(0, 7)}
           </a>
-        ))}
+        )}
       </footer>
     </>
   );
