@@ -88,9 +88,10 @@ function ServiceDetailsLayout(): React.JSX.Element {
     serviceImage += ":latest";
   }
   let extraServiceUrls: DockerService["urls"] = [];
-  let _;
+
   if (service && service.urls.length > 1) {
-    [_, ...extraServiceUrls] = service.urls;
+    let [_, ...rest] = service.urls;
+    extraServiceUrls = rest;
   }
 
   return (

@@ -38,7 +38,9 @@ jobs:
           tags: ghcr.io/zane-ops/proxy:canary,ghcr.io/zane-ops/proxy:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:canary
           cache-to: type=inline
-          build-args: ENVIRONMENT=prod
+          build-args: |
+            ENVIRONMENT=prod 
+            COMMIT_SHA=${{ github.sha }}
   build-push-frontend:
     name: Build and Push Zane Frontend
     runs-on: ubuntu-latest
@@ -61,7 +63,7 @@ jobs:
         run: |
           npm install -g pnpm@8
           pnpm install --frozen-lockfile
-          pnpm --prefix frontend run build
+          VITE_COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -82,6 +84,7 @@ jobs:
           tags: ghcr.io/zane-ops/frontend:canary,ghcr.io/zane-ops/frontend:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:canary
           cache-to: type=inline
+          build-args: COMMIT_SHA=${{ github.sha }}
   build-push-backend:
     name: Build and Push Zane Backend
     runs-on: ubuntu-latest
@@ -113,6 +116,7 @@ jobs:
           tags: ghcr.io/zane-ops/backend:canary,ghcr.io/zane-ops/backend:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/backend:canary
           cache-to: type=inline
+          build-args: COMMIT_SHA=${{ github.sha }}
 
   build-push-temporal:
     name: Build and Push Zane Temporalio image

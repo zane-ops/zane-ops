@@ -100,6 +100,7 @@ CORS_ALLOW_ALL_ORIGINS = ENVIRONMENT != PRODUCTION_ENV
 if ENVIRONMENT == PRODUCTION_ENV:
     CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -139,6 +140,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "zane_api.middleware.AddCommitShaHeadersMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -173,6 +175,8 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
         "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "5434"),
+        "CONN_MAX_AGE": None if ENVIRONMENT == PRODUCTION_ENV else 0,
+        "CONN_HEALTHCHECK": True,
     }
 }
 
