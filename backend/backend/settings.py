@@ -140,6 +140,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "zane_api.middleware.AddCommitShaHeadersMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
