@@ -39,11 +39,14 @@ import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader, metaTitle } from "~/utils";
 
+import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
 import { ensureAuthedUser } from "~/lib/ensure-authed-user";
 import type { Route } from "./+types/dashboard";
 
-export const meta: Route.MetaFunction = () => [metaTitle("Dashboard")];
+export function meta() {
+  return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export async function clientLoader() {
   return await ensureAuthedUser();
@@ -52,6 +55,7 @@ export async function clientLoader() {
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between">
+      <NavigationProgress />
       <Header user={loaderData} />
       <main className="grow container p-6">
         <Outlet />

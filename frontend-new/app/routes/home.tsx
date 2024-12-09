@@ -26,6 +26,7 @@ import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import { Button } from "~/components/ui/button";
 import {
@@ -42,6 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries, projectSearchSchema } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -163,6 +165,11 @@ export default function ProjectList({}: Route.ComponentProps) {
     setSearchParams(searchParams, { replace: true });
   }, 300);
 
+  const isFetchingProjects = useSpinDelay(
+    query.isFetching,
+    SPIN_DELAY_DEFAULT_OPTIONS
+  );
+
   return (
     <main>
       <section>
@@ -173,7 +180,7 @@ export default function ProjectList({}: Route.ComponentProps) {
 
         <div className="flex my-3 flex-wrap items-center md:gap-3 gap-1">
           <div className="flex md:my-5 md:w-[30%] w-full items-center">
-            {query.isFetching ? (
+            {isFetchingProjects ? (
               <LoaderIcon size={20} className="animate-spin relative left-4" />
             ) : (
               <Search size={20} className="relative left-4" />

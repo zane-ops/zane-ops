@@ -11,21 +11,25 @@ import { TailwindIndicator } from "~/components/tailwind-indicator";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 
-export const links: Route.LinksFunction = () => [
-  {
-    rel: "icon",
-    href: "/logo/ZaneOps-SYMBOL-BLACK.svg",
-    media: "(prefers-color-scheme: light)"
-  },
-  {
-    rel: "icon",
-    href: "/logo/ZaneOps-SYMBOL-WHITE.svg",
-    media: "(prefers-color-scheme: dark)"
-  },
-  { rel: "stylesheet", href: stylesheet }
-];
+export function links() {
+  return [
+    {
+      rel: "icon",
+      href: "/logo/ZaneOps-SYMBOL-BLACK.svg",
+      media: "(prefers-color-scheme: light)"
+    },
+    {
+      rel: "icon",
+      href: "/logo/ZaneOps-SYMBOL-WHITE.svg",
+      media: "(prefers-color-scheme: dark)"
+    },
+    { rel: "stylesheet", href: stylesheet }
+  ] satisfies ReturnType<Route.LinksFunction>;
+}
 
-export const meta: Route.MetaFunction = () => [{ title: "ZaneOps" }];
+export function meta() {
+  return [{ title: "ZaneOps" }] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
