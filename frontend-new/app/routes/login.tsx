@@ -48,7 +48,7 @@ export default function LoginPage() {
           redirectTo = redirect_to;
         }
 
-        navigate(redirectTo);
+        await navigate(redirectTo);
         return;
       }
     }

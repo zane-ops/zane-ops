@@ -97,6 +97,7 @@ CSRF_TRUSTED_ORIGINS = (
         f"http://{ZANE_APP_DOMAIN}",
         "http://localhost:5678",
         "http://localhost:5173",
+        "http://localhost:10088",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
     else [f"https://{ZANE_APP_DOMAIN}"]
