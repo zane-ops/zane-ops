@@ -12,9 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { metaTitle } from "~/utils";
 import type { Route } from "./+types/login";
 
-export const meta: Route.MetaFunction = () => [{ title: "Login | ZaneOps" }];
+export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
 export async function clientLoader(args: Route.ClientLoaderArgs) {
   const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
