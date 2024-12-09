@@ -45,6 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <Scripts />
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
@@ -57,7 +58,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         </QueryClientProvider>
         <ScrollRestoration />
-        <Scripts />
       </body>
     </html>
   );

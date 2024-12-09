@@ -18,7 +18,7 @@ import {
   Settings,
   Twitter
 } from "lucide-react";
-import { Link, Outlet, redirect, useNavigate } from "react-router";
+import { Link, Outlet, useNavigate } from "react-router";
 import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";

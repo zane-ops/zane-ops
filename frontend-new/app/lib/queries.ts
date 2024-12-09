@@ -7,6 +7,7 @@ import {
   type skipToken
 } from "@tanstack/react-query";
 import { z } from "zod";
+import { zfd } from "zod-form-data";
 import { type ApiResponse, apiClient } from "~/api/client";
 import {
   DEFAULT_LOGS_PER_PAGE,
@@ -14,6 +15,7 @@ import {
   DEPLOYMENT_STATUSES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
+import { wait } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 
@@ -50,24 +52,26 @@ export const dockerHubQueries = {
     })
 };
 
-export const projectSearchSchema = z.object({
-  slug: z.string().optional().catch(""),
-  page: z.number().optional().catch(1),
-  per_page: z.number().optional().catch(10),
-  sort_by: z
-    .array(
-      z.enum([
-        "slug",
-        "-slug",
-        "updated_at",
-        "-updated_at",
-        "archived_at",
-        "-archived_at"
-      ])
-    )
-    .optional()
-    .catch(["-updated_at"]),
-  status: z.enum(["active", "archived"]).optional().catch("active")
+export const projectSearchSchema = zfd.formData({
+  slug: z.string().optional().catch(undefined),
+  page: z.number().optional().catch(undefined),
+  per_page: z.number().optional().catch(undefined),
+  sort_by: zfd.repeatable(
+    z
+      .array(
+        z.enum([
+          "slug",
+          "-slug",
+          "updated_at",
+          "-updated_at",
+          "archived_at",
+          "-archived_at"
+        ])
+      )
+      .optional()
+      .catch(undefined)
+  ),
+  status: z.enum(["active", "archived"]).optional().catch(undefined)
 });
 
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
@@ -76,7 +80,8 @@ export const projectQueries = {
   list: (filters: ProjectSearch = {}) =>
     queryOptions({
       queryKey: ["PROJECT_LIST", filters] as const,
-      queryFn: ({ signal }) => {
+      queryFn: async ({ signal }) => {
+        !import.meta.env.PROD && (await wait(1500));
         return apiClient.GET("/api/projects/", {
           params: {
             query: {
@@ -90,6 +95,7 @@ export const projectQueries = {
           signal
         });
       },
+      placeholderData: keepPreviousData,
       enabled: filters.status !== "archived",
       refetchInterval: (query) => {
         if (query.state.data?.data) {
@@ -286,7 +292,7 @@ export const deploymentLogSearchSchema = z.object({
   isMaximized: z.coerce.boolean().optional().catch(false)
 });
 
-export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
+export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
 
 export const deploymentQueries = {
   single: ({
@@ -345,7 +351,7 @@ export const deploymentQueries = {
     service_slug: string;
     type?: "docker" | "git";
     deployment_hash: string;
-    filters?: Omit<DeploymentLogFitlers, "isMaximized">;
+    filters?: Omit<DeploymentLogFilters, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
   }) =>
