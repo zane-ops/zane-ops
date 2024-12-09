@@ -65,7 +65,7 @@ const resources = [
           strokeLinecap="round"
         />
       </svg>
-    ),
+    )
   },
   {
     href: "https://rmx.as/discord",
@@ -84,6 +84,6 @@ const resources = [
           strokeWidth="1.5"
         />
       </svg>
-    ),
-  },
+    )
+  }
 ];
