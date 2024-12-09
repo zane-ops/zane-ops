@@ -127,7 +127,6 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_SINGLE", slug] as const,
       queryFn: async ({ signal }) => {
-        !import.meta.env.PROD && (await wait(1500));
         return apiClient.GET("/api/projects/{slug}/", {
           params: {
             path: {
@@ -147,7 +146,6 @@ export const projectQueries = {
         filters
       ] as const,
       queryFn: async ({ signal }) => {
-        !import.meta.env.PROD && (await wait(1500));
         return apiClient.GET("/api/projects/{slug}/service-list/", {
           params: {
             query: {
