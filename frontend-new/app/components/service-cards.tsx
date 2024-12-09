@@ -110,6 +110,7 @@ export function DockerServiceCard({
             <h2 className="text-lg leading-tight">
               <Link
                 to={`services/docker/${slug}`}
+                prefetch="viewport"
                 className="hover:underline after:inset-0 after:absolute"
               >
                 {slug}

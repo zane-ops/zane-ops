@@ -119,7 +119,7 @@ function Header({ user }: HeaderProps) {
             <Search className="relative left-10" />
             <Input
               className="px-14 my-1  text-sm focus-visible:right-0"
-              placeholder="Search for Service, Worker, CRON, etc..."
+              placeholder="Search for Service or Project"
             />
           </div>
           <a

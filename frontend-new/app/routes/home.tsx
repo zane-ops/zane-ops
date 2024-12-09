@@ -336,7 +336,7 @@ export default function ProjectList({}: Route.ComponentProps) {
                         "flex gap-2",
                         status === "active" && "hover:underline"
                       )}
-                      prefetch="intent"
+                      prefetch="viewport"
                       to={
                         status !== "active" ? "#" : `/project/${project.slug}`
                       }

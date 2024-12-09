@@ -1,10 +1,9 @@
-import { Separator } from "@radix-ui/react-separator";
 import { useQuery } from "@tanstack/react-query";
-import { Loader, LoaderIcon, PlusIcon, Search } from "lucide-react";
+import { LoaderIcon, PlusIcon, Search } from "lucide-react";
+import * as React from "react";
 import {
   Link,
   isRouteErrorResponse,
-  useNavigate,
   useRouteError,
   useSearchParams
 } from "react-router";
@@ -21,6 +20,7 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Separator } from "~/components/ui/separator";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
@@ -44,47 +44,32 @@ export async function clientLoader({
 
   const queryString = searchParams.get("query") ?? "";
 
-  const serviceList = queryClient.getQueriesData({
-    exact: false,
-    predicate: (query) =>
-      query.queryKey.includes(
-        projectQueries.serviceList(params.projectSlug, {
-          query: queryString
-        }).queryKey[0]
-      ) &&
-      query.queryKey.includes(
-        projectQueries.serviceList(params.projectSlug, {
-          query: queryString
-        }).queryKey[1]
-      )
-  });
+  let project = queryClient.getQueryData(
+    projectQueries.single(params.projectSlug).queryKey
+  );
 
-  let project =
-    queryClient.getQueryData(
-      projectQueries.single(params.projectSlug).queryKey
-    ) ??
-    (await queryClient.ensureQueryData(
-      projectQueries.single(params.projectSlug)
-    ));
+  if (!project) {
+    // fetch the data on first load to prevent showing the loading fallback
+    [project] = await Promise.all([
+      queryClient.ensureQueryData(projectQueries.single(params.projectSlug)),
+      queryClient.ensureQueryData(
+        projectQueries.serviceList(params.projectSlug, {
+          query: queryString
+        })
+      )
+    ]);
+  }
 
   if (!project.data) {
     throw new Response("Not Found", { status: 404, statusText: "Not Found" });
   }
 
-  // fetch the data on first load to prevent showing the loading fallback
-  if (serviceList.length === 0) {
-    await queryClient.ensureQueryData(
-      projectQueries.serviceList(params.projectSlug, {
-        query: queryString
-      })
-    );
-  } else {
-    queryClient.prefetchQuery(
-      projectQueries.serviceList(params.projectSlug, {
-        query: queryString
-      })
-    );
-  }
+  // prefetch in advance but do not block navigation
+  queryClient.prefetchQuery(
+    projectQueries.serviceList(params.projectSlug, {
+      query: queryString
+    })
+  );
 
   return { project: project.data };
 }
@@ -114,13 +99,17 @@ export default function ProjectDetail({
     SPIN_DELAY_DEFAULT_OPTIONS
   );
 
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
   return (
     <main>
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to="/" prefetch="intent">
+                Projects
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -132,16 +121,16 @@ export default function ProjectDetail({
       <>
         <div className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap  gap-3 justify-between ">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl capitalize font-medium">{project.slug}</h1>
+            <h1 className="text-3xl font-medium">{project.slug}</h1>
 
             <Button asChild variant="secondary" className="flex gap-2">
-              <Link to="create-service">
+              <Link to="create-service" prefetch="intent">
                 New Service <PlusIcon size={18} />
               </Link>
             </Button>
           </div>
           <div className="flex my-3 flex-wrap w-full md:w-auto  justify-end items-center md:gap-3 gap-1">
-            <div className="flex md:my-5 lg:w-2/3 md:w-3/5 w-full items-center">
+            <div className="flex md:my-5 w-full items-center">
               {isFetchingServices ? (
                 <LoaderIcon
                   size={20}
@@ -153,8 +142,9 @@ export default function ProjectDetail({
               <Input
                 onChange={(e) => filterServices(e.currentTarget.value)}
                 defaultValue={query}
-                className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
+                className="pl-14 pr-5 -mx-5 w-full my-1 text-sm focus-visible:right-0"
                 placeholder="Ex: ZaneOps"
+                ref={inputRef}
               />
             </div>
           </div>
@@ -174,7 +164,16 @@ export default function ProjectDetail({
                       Your search for`{query}` did not return any results.
                     </h3>
                     <Button asChild variant="outline">
-                      <Link to=".">Clear filters</Link>
+                      <Link
+                        to="."
+                        onClick={() => {
+                          if (inputRef.current) {
+                            inputRef.current.value = "";
+                          }
+                        }}
+                      >
+                        Clear filters
+                      </Link>
                     </Button>
                   </div>
                 ) : (
