@@ -109,7 +109,7 @@ export function DockerServiceCard({
           <div className="w-[calc(100%-38px)]">
             <h2 className="text-lg leading-tight">
               <Link
-                to={`services/docker/${slug}`}
+                to={`services/${slug}`}
                 prefetch="viewport"
                 className="hover:underline after:inset-0 after:absolute"
               >
@@ -221,7 +221,7 @@ export function GitServiceCard({
           <div className="w-[calc(100%-38px)]">
             <h2 className="text-lg leading-tight">
               <Link
-                to={`services/git/${slug}`}
+                to={`services/${slug}`}
                 className="hover:underline after:inset-0 after:absolute"
               >
                 {slug}

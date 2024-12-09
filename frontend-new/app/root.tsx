@@ -5,9 +5,20 @@ import {
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import * as React from "react";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import {
+  Link,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  isRouteErrorResponse,
+  useRouteError
+} from "react-router";
 import { Loader } from "~/components/loader";
+import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
+import { Button } from "~/components/ui/button";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 
@@ -73,4 +84,42 @@ export default function App() {
 
 export function HydrateFallback() {
   return <Loader />;
+}
+
+export function ErrorBoundary() {
+  let message = "Oops!";
+  let details = "An unexpected error occurred.";
+  let stack: string | undefined;
+  const error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    message = error.status === 404 ? "Oops!" : "Error";
+    details =
+      error.status === 404
+        ? "Looks like you're lost 😛"
+        : error.statusText || details;
+  } else if (import.meta.env.DEV && error && error instanceof Error) {
+    details = error.message;
+    stack = error.stack;
+  }
+
+  return (
+    <div className="flex flex-col gap-5 h-screen items-center justify-center px-5">
+      <Logo className="md:flex" />
+      <div className="flex-col flex gap-3 items-center">
+        <h1 className="text-3xl font-bold">{message}</h1>
+        <p className="text-lg">{details}</p>
+      </div>
+
+      {stack ? (
+        <pre className="w-full p-4 overflow-x-auto rounded-md bg-red-400/20">
+          <code>{stack}</code>
+        </pre>
+      ) : (
+        <Link to="/">
+          <Button>Go home</Button>
+        </Link>
+      )}
+    </div>
+  );
 }
