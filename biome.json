@@ -27,7 +27,7 @@
   "files": {
     "ignore": [
       "./frontend/src/api/v1.ts",
-      "./frontend-new/src/api/v1.ts",
+      "./frontend-new/app/api/v1.ts",
       "./frontend/src/routeTree.gen.ts",
       "./frontend/dist/**",
       "./frontend-new/node_modules/**",
