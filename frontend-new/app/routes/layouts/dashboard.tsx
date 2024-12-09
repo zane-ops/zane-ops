@@ -40,24 +40,19 @@ import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader, metaTitle } from "~/utils";
 
 import { Button } from "~/components/ui/button";
-import { queryClient } from "~/root";
+import { ensureAuthedUser } from "~/lib/ensure-authed-user";
 import type { Route } from "./+types/dashboard";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Dashboard")];
 
 export async function clientLoader() {
-  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
-  const user = userQuery.data?.user;
-  if (!user) {
-    throw redirect("/login");
-  }
-  return { user };
+  return await ensureAuthedUser();
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between">
-      <Header user={loaderData.user} />
+      <Header user={loaderData} />
       <main className="grow container p-6">
         <Outlet />
       </main>
@@ -67,7 +62,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 }
 
 type HeaderProps = {
-  user: Route.ComponentProps["loaderData"]["user"];
+  user: Route.ComponentProps["loaderData"];
 };
 
 function Header({ user }: HeaderProps) {
