@@ -7,4 +7,8 @@
 		# Add X-Robots-Tag header
 		header / X-Robots-Tag "noindex"
 	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
 }
