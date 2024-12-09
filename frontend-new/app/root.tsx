@@ -5,7 +5,14 @@ import {
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import * as React from "react";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import {
+  Link,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration
+} from "react-router";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -49,6 +56,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
+          <div className="flex items-center gap-2 ">
+            <Link prefetch="intent" className="text-link underline" to="/login">
+              Login
+            </Link>
+            <Link prefetch="intent" className="text-link underline" to="/">
+              Home
+            </Link>
+          </div>
           {children}
           {!import.meta.env.PROD && (
             <>
