@@ -37,11 +37,13 @@ import {
 } from "~/components/ui/sheet";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { deleteCookie, getCsrfTokenHeader } from "~/utils";
+import { deleteCookie, getCsrfTokenHeader, metaTitle } from "~/utils";
 
 import { Button } from "~/components/ui/button";
 import { queryClient } from "~/root";
 import type { Route } from "./+types/dashboard";
+
+export const meta: Route.MetaFunction = () => [metaTitle("Dashboard")];
 
 export async function clientLoader() {
   const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);

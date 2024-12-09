@@ -210,3 +210,7 @@ export function formatDateForTimeZone(date: Date, timeZone: string) {
     fractionalSecondDigits: 3
   }).format(date);
 }
+
+export function metaTitle(title: string) {
+  return { title: `${title} | ZaneOps` } as const;
+}

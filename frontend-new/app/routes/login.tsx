@@ -7,9 +7,7 @@ import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import { useActionState } from "react";
-import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
-import { MetaTitle } from "~/components/meta-title";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
