@@ -1,10 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Link,
-  Outlet,
-  createFileRoute,
-  useNavigate
-} from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlarmCheck,
   BookOpen,
@@ -24,6 +18,7 @@ import {
   Settings,
   Twitter
 } from "lucide-react";
+import { Link, Outlet, redirect, useNavigate } from "react-router";
 import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
@@ -44,22 +39,37 @@ import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
-export const Route = createFileRoute("/_dashboard")({
-  component: () => (
+import { Button } from "~/components/ui/button";
+import { queryClient } from "~/root";
+import type { Route } from "./+types/dashboard";
+
+export async function clientLoader() {
+  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const user = userQuery.data?.user;
+  if (!user) {
+    throw redirect("/login");
+  }
+  return { user };
+}
+
+export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
+  return (
     <div className="min-h-screen flex flex-col justify-between">
-      <Header />
+      <Header user={loaderData.user} />
       <main className="grow container p-6">
         <Outlet />
       </main>
       <Footer />
     </div>
-  )
-});
+  );
+}
 
-function Header() {
-  const query = useQuery(userQueries.authedUser);
+type HeaderProps = {
+  user: Route.ComponentProps["loaderData"]["user"];
+};
+
+function Header({ user }: HeaderProps) {
   const navigate = useNavigate();
-  const user = query.data?.data?.user;
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
     mutationFn: async () => {
@@ -76,14 +86,11 @@ function Header() {
         queryKey: userQueries.authedUser.queryKey
       });
       deleteCookie("csrftoken");
-      navigate({ to: "/login" });
+      navigate("/login");
       return null;
     }
   });
 
-  if (!user) {
-    return null;
-  }
   return (
     <>
       {!import.meta.env.PROD && (
@@ -101,22 +108,12 @@ function Header() {
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
-          <Menubar className="border-none w-fit text-black bg-primary">
-            <MenubarMenu>
-              <MenubarTrigger className="flex  justify-center text-sm items-center gap-1">
-                Create
-                <ChevronsUpDown className="w-4" />
-              </MenubarTrigger>
-              <MenubarContent className=" border border-border min-w-6">
-                <Link to="/create-project">
-                  <MenubarContentItem icon={Folder} text="Project" />
-                </Link>
-                <MenubarContentItem icon={Globe} text="Web Service" />
-                <MenubarContentItem icon={Hammer} text="Worker" />
-                <MenubarContentItem icon={AlarmCheck} text="CRON" />
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
+          <Button asChild>
+            <Link to="/create-project" prefetch="intent">
+              Create project
+            </Link>
+          </Button>
+
           <div className="flex w-full justify-center items-center">
             <Search className="relative left-10" />
             <Input

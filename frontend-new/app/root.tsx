@@ -5,14 +5,8 @@ import {
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import * as React from "react";
-import {
-  Link,
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration
-} from "react-router";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { Loader } from "~/components/loader";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -33,19 +27,17 @@ export const links: Route.LinksFunction = () => [
 
 export const meta: Route.MetaFunction = () => [{ title: "ZaneOps" }];
 
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      placeholderData: keepPreviousData,
+      retry: 3
+    }
+  }
+});
+
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [queryClient] = React.useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-            placeholderData: keepPreviousData,
-            retry: 3
-          }
-        }
-      })
-  );
   return (
     <html lang="en">
       <head>
@@ -56,14 +48,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <div className="flex items-center gap-2 ">
-            <Link prefetch="intent" className="text-link underline" to="/login">
-              Login
-            </Link>
-            <Link prefetch="intent" className="text-link underline" to="/">
-              Home
-            </Link>
-          </div>
           {children}
           {!import.meta.env.PROD && (
             <>
@@ -84,5 +68,5 @@ export default function App() {
 }
 
 export function HydrateFallback() {
-  return <p>Loading Game...</p>;
+  return <Loader />;
 }
