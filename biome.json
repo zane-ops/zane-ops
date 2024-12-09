@@ -29,7 +29,9 @@
       "./frontend/src/api/v1.ts",
       "./frontend/src/routeTree.gen.ts",
       "./frontend/dist/**",
-      "./docs/dist/**",
+      "./frontend-new/node_modules/**",
+      "./frontend-new/build/**",
+      "./frontend-new/.react-router/**",
       "node_modules/**"
     ]
   }

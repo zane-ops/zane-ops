@@ -6,6 +6,14 @@ import babel from "vite-plugin-babel";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true
+      }
+    }
+  },
   css: {
     postcss: {
       plugins: [tailwindcss, autoprefixer]
