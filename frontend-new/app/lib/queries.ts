@@ -15,7 +15,6 @@ import {
   DEPLOYMENT_STATUSES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
-import { wait } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 
@@ -81,7 +80,6 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_LIST", filters] as const,
       queryFn: async ({ signal }) => {
-        !import.meta.env.PROD && (await wait(1500));
         return apiClient.GET("/api/projects/", {
           params: {
             query: {
