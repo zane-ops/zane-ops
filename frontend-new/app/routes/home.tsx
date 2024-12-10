@@ -81,9 +81,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       queryClient.ensureQueryData(projectQueries.list(filters)),
       queryClient.ensureQueryData(projectQueries.archived(filters))
     ]);
-  } else {
-    queryClient.prefetchQuery(projectQueries.list(filters));
-    queryClient.prefetchQuery(projectQueries.archived(filters));
   }
 
   return;

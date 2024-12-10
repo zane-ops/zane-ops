@@ -61,25 +61,19 @@ export async function clientLoader({
     ]);
   }
 
-  if (!project) {
-    throw notFound();
-  }
-
-  // prefetch in advance but do not block navigation
-  queryClient.prefetchQuery(
-    projectQueries.serviceList(params.projectSlug, {
-      query: queryString
-    })
-  );
-
   return { project };
 }
 
 export default function ProjectDetail({
   params,
-  loaderData: { project }
+  loaderData
 }: Route.ComponentProps) {
   const { projectSlug: slug } = params;
+
+  const { data: project } = useQuery({
+    ...projectQueries.single(params.projectSlug),
+    initialData: loaderData.project
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 

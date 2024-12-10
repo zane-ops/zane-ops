@@ -14,6 +14,7 @@ import {
   DEFAULT_QUERY_REFETCH_INTERVAL,
   DEPLOYMENT_STATUSES
 } from "~/lib/constants";
+import { notFound } from "~/lib/helpers";
 import type { Writeable } from "~/lib/types";
 import { devOnlyArtificialDelay, wait } from "~/utils";
 
@@ -138,6 +139,9 @@ export const projectQueries = {
           },
           signal
         });
+        if (!data) {
+          throw notFound();
+        }
         return data;
       },
       placeholderData: keepPreviousData

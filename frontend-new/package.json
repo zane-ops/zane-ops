@@ -29,7 +29,7 @@
     "@react-router/node": "^7.0.2",
     "@react-router/serve": "^7.0.2",
     "@tanem/react-nprogress": "^5.0.53",
-    "@tanstack/react-query": "^5.22.2",
+    "@tanstack/react-query": "^5.62.3",
     "@tanstack/react-virtual": "^3.10.9",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
@@ -54,7 +54,7 @@
   "devDependencies": {
     "@react-router/dev": "^7.0.2",
     "@tailwindcss/vite": "4.0.0-beta.6",
-    "@tanstack/react-query-devtools": "^5.24.0",
+    "@tanstack/react-query-devtools": "^5.62.3",
     "@types/node": "^20",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
