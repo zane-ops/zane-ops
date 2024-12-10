@@ -1,12 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { redirect, useNavigate, useSearchParams } from "react-router";
-import { type RequestInput, apiClient } from "~/api/client";
+import { Form, redirect, useNavigation } from "react-router";
+import { apiClient } from "~/api/client";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { useActionState } from "react";
 import { Logo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
@@ -26,50 +24,41 @@ export async function clientLoader(args: Route.ClientLoaderArgs) {
   return;
 }
 
-export default function LoginPage() {
-  const navigate = useNavigate();
-  const [sp] = useSearchParams();
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+  const searchParams = new URL(request.url).searchParams;
 
-  const queryClient = useQueryClient();
-  const { mutateAsync, data } = useMutation({
-    mutationFn: async (input: RequestInput<"post", "/api/auth/login/">) => {
-      const { error, data } = await apiClient.POST("/api/auth/login/", {
-        body: input
-      });
-      if (error) {
-        return error;
-      }
-      if (data?.success) {
-        queryClient.removeQueries(userQueries.authedUser);
-
-        const redirect_to = sp.get("redirect_to");
-        let redirectTo = "/";
-        if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-          redirectTo = redirect_to;
-        }
-
-        await navigate(redirectTo);
-        return;
-      }
-    }
+  const credentials = {
+    username: formData.get("username")!.toString(),
+    password: formData.get("password")!.toString()
+  };
+  const { error: errors, data } = await apiClient.POST("/api/auth/login/", {
+    body: credentials
   });
+  if (errors) {
+    return {
+      errors,
+      userData: credentials
+    };
+  }
+  if (data?.success) {
+    queryClient.removeQueries(userQueries.authedUser);
 
-  const [state, formAction, isPending] = useActionState(
-    async (prev: any, formData: FormData) => {
-      const credentials = {
-        username: formData.get("username")!.toString(),
-        password: formData.get("password")!.toString()
-      };
-      const errors = await mutateAsync(credentials);
+    const redirect_to = searchParams.get("redirect_to");
+    let redirectTo = "/";
+    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
+      redirectTo = redirect_to;
+    }
 
-      if (errors) {
-        return credentials;
-      }
-    },
-    null
-  );
+    throw redirect(redirectTo);
+  }
+}
 
-  const errors = getFormErrorsFromResponseData(data);
+export default function LoginPage({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const isPending =
+    navigation.state === "loading" || navigation.state === "submitting";
+  const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   return (
     <>
@@ -87,8 +76,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form
-          action={formAction}
+        <Form
+          method="POST"
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
           <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
@@ -111,7 +100,7 @@ export default function LoginPage() {
                 id="username"
                 name="username"
                 placeholder="ex: JohnDoe"
-                defaultValue={state?.username}
+                defaultValue={actionData?.userData?.username}
                 type="text"
                 aria-describedby="username-error"
               />
@@ -128,7 +117,7 @@ export default function LoginPage() {
                 type="password"
                 name="password"
                 id="password"
-                defaultValue={state?.password}
+                defaultValue={actionData?.userData?.password}
               />
               {errors.password && (
                 <span id="password-error" className="text-red-500 text-sm">
@@ -151,7 +140,7 @@ export default function LoginPage() {
               )}
             </SubmitButton>
           </div>
-        </form>
+        </Form>
       </main>
     </>
   );

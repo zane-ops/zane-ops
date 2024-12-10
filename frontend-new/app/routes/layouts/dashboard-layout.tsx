@@ -1,4 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlarmCheck,
   BookOpen,
@@ -18,8 +17,7 @@ import {
   Settings,
   Twitter
 } from "lucide-react";
-import { Link, Outlet, useNavigate } from "react-router";
-import { apiClient } from "~/api/client";
+import { Link, Outlet, redirect, useFetcher } from "react-router";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
@@ -37,19 +35,32 @@ import {
 } from "~/components/ui/sheet";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { deleteCookie, getCsrfTokenHeader, metaTitle } from "~/utils";
+import { metaTitle } from "~/utils";
 
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
-import { ensureAuthedUser } from "~/lib/helpers";
+import { queryClient } from "~/root";
 import type { Route } from "./+types/dashboard-layout";
 
 export function meta() {
   return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader() {
-  return await ensureAuthedUser();
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const user = userQuery.data?.user;
+
+  if (!user) {
+    let redirectPathName = `/login`;
+    const url = new URL(request.url);
+    if (url.pathname !== "/" && url.pathname !== "/login") {
+      const params = new URLSearchParams([["redirect_to", url.pathname]]);
+      redirectPathName = `/login?${params.toString()}`;
+    }
+
+    throw redirect(redirectPathName);
+  }
+  return user;
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
@@ -70,27 +81,7 @@ type HeaderProps = {
 };
 
 function Header({ user }: HeaderProps) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: async () => {
-      const { error } = await apiClient.DELETE("/api/auth/logout/", {
-        headers: {
-          ...(await getCsrfTokenHeader())
-        }
-      });
-      if (error) {
-        return error;
-      }
-
-      queryClient.removeQueries({
-        queryKey: userQueries.authedUser.queryKey
-      });
-      deleteCookie("csrftoken");
-      navigate("/login");
-      return null;
-    }
-  });
+  let fetcher = useFetcher();
 
   return (
     <>
@@ -131,6 +122,12 @@ function Header({ user }: HeaderProps) {
           </a>
         </div>
 
+        <fetcher.Form
+          method="post"
+          action="/logout"
+          id="logout-form"
+          className="hidden"
+        />
         <Menubar className="border-none md:block hidden w-fit">
           <MenubarMenu>
             <MenubarTrigger className="flex justify-center items-center gap-2">
@@ -141,11 +138,14 @@ function Header({ user }: HeaderProps) {
             <MenubarContent className="border min-w-0 mx-9  border-border">
               <MenubarContentItem icon={Settings} text="Settings" />
               <button
-                onClick={() => mutate()}
                 className="w-full"
-                disabled={isPending}
+                onClick={(e) => {
+                  e.currentTarget.form?.requestSubmit();
+                }}
+                form="logout-form"
+                disabled={fetcher.state !== "idle"}
               >
-                {isPending ? (
+                {fetcher.state !== "idle" ? (
                   "Logging out..."
                 ) : (
                   <MenubarContentItem icon={LogOut} text="Logout" />
@@ -213,11 +213,16 @@ function Header({ user }: HeaderProps) {
               </div>
 
               <button
+                type="submit"
+                form="logout-form"
                 className="p-2 rounded-md border border-card-foreground text-center"
-                onClick={() => mutate()}
-                disabled={isPending}
+                disabled={fetcher.state !== "idle"}
               >
-                {isPending ? "Logging out..." : <div>Log Out</div>}
+                {fetcher.state !== "idle" ? (
+                  "Logging out..."
+                ) : (
+                  <div>Log Out</div>
+                )}
               </button>
             </SheetContent>
           </Sheet>

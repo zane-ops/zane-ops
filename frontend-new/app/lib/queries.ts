@@ -16,7 +16,7 @@ import {
 } from "~/lib/constants";
 import { notFound } from "~/lib/helpers";
 import type { Writeable } from "~/lib/types";
-import { devOnlyArtificialDelay, wait } from "~/utils";
+import { devOnlyArtificialDelay } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 

@@ -19,6 +19,7 @@ import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
 import { Button } from "~/components/ui/button";
+import { Toaster } from "~/components/ui/sonner";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 
@@ -47,7 +48,9 @@ export const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       placeholderData: keepPreviousData,
-      retry: 3
+      retry(failureCount, error) {
+        return !(error instanceof Response) && failureCount < 3;
+      }
     }
   }
 });
@@ -65,6 +68,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         <QueryClientProvider client={queryClient}>
           {children}
+          <Toaster />
           {!import.meta.env.PROD && (
             <>
               <ReactQueryDevtools />
