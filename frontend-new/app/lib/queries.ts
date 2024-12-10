@@ -15,6 +15,7 @@ import {
   DEPLOYMENT_STATUSES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
+import { devOnlyArtificialDelay, wait } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 
@@ -80,6 +81,7 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_LIST", filters] as const,
       queryFn: async ({ signal }) => {
+        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET("/api/projects/", {
           params: {
             query: {
@@ -127,6 +129,7 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_SINGLE", slug] as const,
       queryFn: async ({ signal }) => {
+        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET("/api/projects/{slug}/", {
           params: {
             path: {
@@ -209,6 +212,7 @@ export const serviceQueries = {
         service_slug
       ] as const,
       queryFn: async ({ signal }) => {
+        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/",
           {
@@ -247,8 +251,8 @@ export const serviceQueries = {
         "DEPLOYMENT_LIST",
         filters
       ] as const,
-      queryFn: ({ signal }) => {
-        return apiClient.GET(
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/",
           {
             params: {
@@ -265,9 +269,10 @@ export const serviceQueries = {
             signal
           }
         );
+        return data;
       },
       refetchInterval: (query) => {
-        if (query.state.data?.data) {
+        if (query.state.data) {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;

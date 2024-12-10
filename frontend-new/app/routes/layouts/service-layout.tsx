@@ -11,7 +11,8 @@ import {
   Outlet,
   isRouteErrorResponse,
   useLocation,
-  useNavigate
+  useNavigate,
+  useRevalidator
 } from "react-router";
 import { DeployButtonSection } from "~/components/deploy-button-section";
 import { StatusBadge } from "~/components/status-badge";
@@ -48,20 +49,20 @@ export function meta({ params, error }: Route.MetaArgs) {
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
 }
 
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  let formData = await request.formData();
+  // let title = await formData.get("title");
+  // let project = await someApi.updateProject({ title });
+  // return project;
+}
+
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  let service =
-    queryClient.getQueryData(
-      serviceQueries.single({
-        project_slug: params.projectSlug,
-        service_slug: params.serviceSlug
-      }).queryKey
-    ) ??
-    (await queryClient.ensureQueryData(
-      serviceQueries.single({
-        project_slug: params.projectSlug,
-        service_slug: params.serviceSlug
-      })
-    ));
+  let service = await queryClient.ensureQueryData(
+    serviceQueries.single({
+      project_slug: params.projectSlug,
+      service_slug: params.serviceSlug
+    })
+  );
 
   if (!service) {
     throw notFound();
@@ -80,6 +81,7 @@ export default function ServiceDetailsLayout({
   loaderData: { service },
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ComponentProps) {
+  const revalidator = useRevalidator();
   const location = useLocation();
   const navigate = useNavigate();
 
