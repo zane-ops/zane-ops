@@ -15,7 +15,7 @@ import type { Route } from "./+types/login";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
-export async function clientLoader(args: Route.ClientLoaderArgs) {
+export async function clientLoader() {
   const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
   const user = userQuery.data?.user;
   if (user) {
