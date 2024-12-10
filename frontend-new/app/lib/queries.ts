@@ -80,7 +80,7 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_LIST", filters] as const,
       queryFn: async ({ signal }) => {
-        return apiClient.GET("/api/projects/", {
+        const { data } = await apiClient.GET("/api/projects/", {
           params: {
             query: {
               ...filters,
@@ -92,11 +92,12 @@ export const projectQueries = {
           },
           signal
         });
+        return data;
       },
       placeholderData: keepPreviousData,
       enabled: filters.status !== "archived",
       refetchInterval: (query) => {
-        if (query.state.data?.data) {
+        if (query.state.data) {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
@@ -105,8 +106,8 @@ export const projectQueries = {
   archived: (filters: ProjectSearch) =>
     queryOptions({
       queryKey: ["ARCHIVED_PROJECT_LIST", filters] as const,
-      queryFn: ({ signal }) => {
-        return apiClient.GET("/api/archived-projects/", {
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/archived-projects/", {
           params: {
             query: {
               ...filters,
@@ -118,6 +119,7 @@ export const projectQueries = {
           },
           signal
         });
+        return data;
       },
       enabled: filters.status === "archived"
     }),
@@ -125,7 +127,7 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_SINGLE", slug] as const,
       queryFn: async ({ signal }) => {
-        return apiClient.GET("/api/projects/{slug}/", {
+        const { data } = await apiClient.GET("/api/projects/{slug}/", {
           params: {
             path: {
               slug
@@ -133,6 +135,7 @@ export const projectQueries = {
           },
           signal
         });
+        return data;
       },
       placeholderData: keepPreviousData
     }),

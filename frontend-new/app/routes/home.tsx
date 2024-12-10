@@ -115,8 +115,8 @@ export default function ProjectList({}: Route.ComponentProps) {
 
   const query = status === "active" ? projectActiveQuery : projectArchivedQuery;
 
-  const projectList = query.data?.data?.results ?? [];
-  const totalProjects = query.data?.data?.count ?? 0;
+  const projectList = query.data?.results ?? [];
+  const totalProjects = query.data?.count ?? 0;
   const totalPages = Math.ceil(totalProjects / per_page);
 
   const noResults =

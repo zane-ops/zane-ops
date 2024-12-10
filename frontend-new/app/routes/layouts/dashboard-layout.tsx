@@ -41,7 +41,7 @@ import { deleteCookie, getCsrfTokenHeader, metaTitle } from "~/utils";
 
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
-import { ensureAuthedUser } from "~/lib/ensure-authed-user";
+import { ensureAuthedUser } from "~/lib/helpers";
 import type { Route } from "./+types/dashboard-layout";
 
 export function meta() {

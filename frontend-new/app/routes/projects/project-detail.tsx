@@ -22,6 +22,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
+import { isNotFoundError, notFound } from "~/lib/helpers";
 import { projectQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { metaTitle, timeAgoFormatter } from "~/utils";
@@ -30,7 +31,7 @@ import { type Route } from "./+types/project-detail";
 export function meta({ error }: Route.MetaArgs) {
   const title = !error
     ? `Project Detail`
-    : isRouteErrorResponse(error) && error.status === 404
+    : isNotFoundError(error)
       ? "Error 404 - Project does not exist"
       : "Oops";
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
@@ -60,8 +61,8 @@ export async function clientLoader({
     ]);
   }
 
-  if (!project.data) {
-    throw new Response("Not Found", { status: 404, statusText: "Not Found" });
+  if (!project) {
+    throw notFound();
   }
 
   // prefetch in advance but do not block navigation
@@ -71,7 +72,7 @@ export async function clientLoader({
     })
   );
 
-  return { project: project.data };
+  return { project };
 }
 
 export default function ProjectDetail({

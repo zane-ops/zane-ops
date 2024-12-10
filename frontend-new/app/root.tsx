@@ -98,7 +98,7 @@ export function ErrorBoundary() {
       error.status === 404
         ? "Looks like you're lost 😛"
         : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
+  } else if (error && error instanceof Error) {
     details = error.message;
     stack = error.stack;
   }
