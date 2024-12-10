@@ -8,9 +8,9 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 import { useDebounce } from "use-debounce";
-import { type RequestInput, apiClient } from "~/api/client";
+import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Breadcrumb,
@@ -39,7 +39,10 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateServicePage({ params }: Route.ComponentProps) {
+export default function CreateServicePage({
+  params,
+  actionData
+}: Route.ComponentProps) {
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
   >("FORM");
@@ -83,7 +86,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
 
       {currentStep === "FORM" && (
         <StepServiceForm
-          slug={params.projectSlug}
+          actionData={actionData}
           onSuccess={(slug) => {
             setCurrentStep("CREATED");
             setServiceSlug(slug);
@@ -93,18 +96,19 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
 
       {currentStep === "CREATED" && (
         <StepServiceCreated
-          slug={params.projectSlug}
+          actionData={actionData}
+          projectSlug={params.projectSlug}
+          serviceSlug={serviceSlug}
           onSuccess={(hash) => {
             setCurrentStep("DEPLOYED");
             setDeploymentHash(hash);
           }}
-          serviceSlug={serviceSlug}
         />
       )}
 
       {currentStep === "DEPLOYED" && (
         <StepServiceDeployed
-          slug={params.projectSlug}
+          projectSlug={params.projectSlug}
           serviceSlug={serviceSlug}
           deploymentHash={deploymentHash}
         />
@@ -113,12 +117,90 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
   );
 }
 
+async function createService(projectSlug: string, formData: FormData) {
+  const userData = {
+    slug: formData.get("slug")?.toString().trim() ?? "",
+    image: formData.get("image")?.toString() ?? "",
+    credentials: {
+      password: formData.get("credentials.password")?.toString(),
+      username: formData.get("credentials.username")?.toString().trim()
+    }
+  };
+
+  const { error: errors, data } = await apiClient.POST(
+    "/api/projects/{project_slug}/create-service/docker/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug
+        }
+      },
+      body: userData
+    }
+  );
+
+  return {
+    errors,
+    serviceSlug: data?.slug,
+    deploymentHash: undefined,
+    userData
+  };
+}
+
+async function deployService(projectSlug: string, formData: FormData) {
+  const serviceSlug = formData.get("service_slug")?.toString()!;
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          service_slug: serviceSlug
+        }
+      }
+    }
+  );
+
+  return {
+    errors,
+    serviceSlug,
+    deploymentHash: data?.hash,
+    userData: undefined
+  };
+}
+
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const formData = await request.formData();
+
+  const step = formData.get("step")?.toString();
+  switch (step) {
+    case "create-service": {
+      return createService(params.projectSlug, formData);
+    }
+    case "deploy-service": {
+      return deployService(params.projectSlug, formData);
+    }
+    default: {
+      throw new Error("Unexpected step");
+    }
+  }
+}
+
 type StepServiceFormProps = {
-  slug: string;
   onSuccess: (slug: string) => void;
+  actionData?: Route.ComponentProps["actionData"];
 };
 
-function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
+function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
 
@@ -127,65 +209,18 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
     dockerHubQueries.images(debouncedValue)
   );
 
-  const { mutateAsync, data } = useMutation({
-    onSuccess: (data) => {
-      if (data.data) {
-        onSuccess(data.data.slug);
-      }
-    },
-    mutationFn: async (
-      input: RequestInput<
-        "post",
-        "/api/projects/{project_slug}/create-service/docker/"
-      >
-    ) => {
-      const { error, data } = await apiClient.POST(
-        "/api/projects/{project_slug}/create-service/docker/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug: slug
-            }
-          },
-          body: input
-        }
-      );
-
-      return { error, data };
-    }
-  });
-
-  const [state, formAction, isPending] = React.useActionState(
-    async (prev: any, formData: FormData) => {
-      const data = {
-        slug: formData.get("slug")?.toString().trim() ?? "",
-        image: formData.get("image")?.toString() ?? "",
-        credentials: {
-          password: formData.get("credentials.password")?.toString(),
-          username: formData.get("credentials.username")?.toString().trim()
-        }
-      };
-      const { error } = await mutateAsync(data);
-
-      if (error) {
-        return data;
-      }
-    },
-    null
-  );
-
-  const errors = getFormErrorsFromResponseData(data?.error);
+  const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   const imageList = imageListData?.data?.images ?? [];
+  const navigation = useNavigation();
+  const isPending = navigation.state === "submitting";
+
+  if (actionData?.serviceSlug) {
+    onSuccess(actionData.serviceSlug);
+  }
 
   return (
-    <form
-      action={formAction}
-      className="flex my-10 grow justify-center items-center"
-    >
+    <Form method="post" className="flex my-10 grow justify-center items-center">
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>
 
@@ -206,7 +241,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
             name="slug"
             id="slug"
             type="text"
-            defaultValue={state?.slug}
+            defaultValue={actionData?.userData?.slug}
             aria-describedby="slug-error"
           />
           {errors.slug && (
@@ -293,7 +328,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
             type="text"
             id="credentials.username"
             name="credentials.username"
-            defaultValue={state?.credentials.username}
+            defaultValue={actionData?.userData?.credentials.username}
             aria-describedby="credentials.username-error"
           />
 
@@ -314,7 +349,7 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
             type="password"
             name="credentials.password"
             id="credentials.password"
-            defaultValue={state?.credentials.password}
+            defaultValue={actionData?.userData?.credentials.password}
             aria-describedby="credentials.password-error"
           />
           {errors.credentials?.password && (
@@ -327,7 +362,12 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           )}
         </div>
 
-        <SubmitButton className="p-3 rounded-lg gap-2" isPending={isPending}>
+        <SubmitButton
+          className="p-3 rounded-lg gap-2"
+          isPending={isPending}
+          name="step"
+          value="create-service"
+        >
           {isPending ? (
             <>
               <span>Creating Service...</span>
@@ -338,58 +378,33 @@ function StepServiceForm({ slug, onSuccess }: StepServiceFormProps) {
           )}
         </SubmitButton>
       </div>
-    </form>
+    </Form>
   );
 }
 
 type StepServiceCreatedProps = {
-  slug: string;
+  actionData?: Route.ComponentProps["actionData"];
   serviceSlug: string;
+  projectSlug: string;
   onSuccess: (deploymentHash: string) => void;
 };
 
 function StepServiceCreated({
-  slug,
   serviceSlug,
+  projectSlug,
+  actionData,
   onSuccess
 }: StepServiceCreatedProps) {
-  const queryClient = useQueryClient();
-  const { isPending, mutateAsync, data } = useMutation({
-    onSuccess: (data) => {
-      if (data.data) {
-        onSuccess(data.data.hash);
-        queryClient.invalidateQueries({
-          predicate(query) {
-            const [prefix] = projectQueries.serviceList(slug).queryKey;
-            return query.queryKey[0] === prefix && query.queryKey[1] === slug;
-          }
-        });
-      }
-    },
-    mutationFn: async () => {
-      const { error, data } = await apiClient.PUT(
-        "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
-        {
-          headers: {
-            ...(await getCsrfTokenHeader())
-          },
-          params: {
-            path: {
-              project_slug: slug,
-              service_slug: serviceSlug
-            }
-          }
-        }
-      );
+  const navigation = useNavigation();
+  const errors = getFormErrorsFromResponseData(actionData?.errors);
+  const isPending =
+    navigation.state === "loading" || navigation.state === "submitting";
 
-      return { error, data };
-    }
-  });
-
-  const errors = getFormErrorsFromResponseData(data?.error);
-
+  if (actionData?.deploymentHash) {
+    onSuccess(actionData.deploymentHash);
+  }
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col h-[70vh] justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -398,12 +413,11 @@ function StepServiceCreated({
         </Alert>
       )}
 
-      <form
-        action={async () => {
-          await mutateAsync();
-        }}
+      <Form
+        method="post"
         className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
       >
+        <input type="hidden" name="service_slug" value={serviceSlug} />
         <Alert variant="success">
           <CheckIcon className="h-5 w-5" />
           <AlertTitle className="text-lg">Success</AlertTitle>
@@ -417,6 +431,8 @@ function StepServiceCreated({
           <SubmitButton
             className="p-3 rounded-lg gap-2 flex-1"
             isPending={isPending}
+            name="step"
+            value="deploy-service"
           >
             {isPending ? (
               <>
@@ -430,26 +446,26 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={`/project/${slug}/services/${serviceSlug}`}
+              to={`/project/${projectSlug}/services/${serviceSlug}`}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
             </Link>
           </Button>
         </div>
-      </form>
+      </Form>
     </div>
   );
 }
 
 type StepServiceDeployedProps = {
-  slug: string;
+  projectSlug: string;
   serviceSlug: string;
   deploymentHash: string;
 };
 
 function StepServiceDeployed({
-  slug,
+  projectSlug,
   serviceSlug,
   deploymentHash
 }: StepServiceDeployedProps) {
@@ -468,7 +484,7 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${slug}/services/${serviceSlug}/deployments/${deploymentHash}`}
+              to={`/project/${projectSlug}/services/${serviceSlug}/deployments/${deploymentHash}`}
               className="flex gap-2  items-center"
             >
               Inspect deployment <ArrowRightIcon size={20} />
