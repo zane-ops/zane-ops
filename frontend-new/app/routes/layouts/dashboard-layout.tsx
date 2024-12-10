@@ -42,7 +42,7 @@ import { deleteCookie, getCsrfTokenHeader, metaTitle } from "~/utils";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
 import { ensureAuthedUser } from "~/lib/ensure-authed-user";
-import type { Route } from "./+types/dashboard";
+import type { Route } from "./+types/dashboard-layout";
 
 export function meta() {
   return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
