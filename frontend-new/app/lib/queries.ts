@@ -14,8 +14,8 @@ import {
   DEFAULT_QUERY_REFETCH_INTERVAL,
   DEPLOYMENT_STATUSES
 } from "~/lib/constants";
-import { notFound } from "~/lib/helpers";
 import type { Writeable } from "~/lib/types";
+import { notFound } from "~/lib/utils";
 import { devOnlyArtificialDelay } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds

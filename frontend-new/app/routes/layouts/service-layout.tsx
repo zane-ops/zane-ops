@@ -32,9 +32,9 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { isNotFoundError, notFound } from "~/lib/helpers";
 import { type DockerService, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
+import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formatURL, metaTitle, pluralize } from "~/utils";

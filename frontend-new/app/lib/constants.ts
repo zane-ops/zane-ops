@@ -18,6 +18,6 @@ export const DEFAULT_LOGS_PER_PAGE = 50;
 export const MAX_VISIBLE_LOG_CHARS_LIMIT = 1_000;
 
 export const SPIN_DELAY_DEFAULT_OPTIONS: Parameters<typeof useSpinDelay>[1] = {
-  delay: 300,
+  delay: 250,
   minDuration: 200
 };

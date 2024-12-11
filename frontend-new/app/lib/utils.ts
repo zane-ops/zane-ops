@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { type ErrorResponse, isRouteErrorResponse } from "react-router";
 import { twMerge } from "tailwind-merge";
 import type {
   DotNotationToObject,
@@ -83,4 +84,12 @@ export function getFormErrorsFromResponseData<T extends Input>(
   }
 
   return errors as any;
+}
+
+export function notFound(message: string = "Not Found") {
+  return new Response(message, { status: 404, statusText: message });
+}
+
+export function isNotFoundError(error: unknown): error is ErrorResponse {
+  return isRouteErrorResponse(error) && error.status === 404;
 }
