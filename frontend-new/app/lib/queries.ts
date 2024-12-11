@@ -57,9 +57,9 @@ export const projectSearchSchema = zfd.formData({
   slug: z.string().optional().catch(undefined),
   page: zfd.numeric().optional().catch(undefined),
   per_page: zfd.numeric().optional().catch(undefined),
-  sort_by: zfd.repeatable(
-    z
-      .array(
+  sort_by: zfd
+    .repeatable(
+      z.array(
         z.enum([
           "slug",
           "-slug",
@@ -69,9 +69,9 @@ export const projectSearchSchema = zfd.formData({
           "-archived_at"
         ])
       )
-      .optional()
-      .catch(undefined)
-  ),
+    )
+    .optional()
+    .catch(undefined),
   status: z.enum(["active", "archived"]).optional().catch(undefined)
 });
 
