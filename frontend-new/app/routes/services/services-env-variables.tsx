@@ -39,7 +39,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -137,24 +136,24 @@ export default function ServiceEnvVariablesPage({
         </Accordion>
       </section>
       <section className="flex flex-col gap-4">
-        {/* {env_variables.size > 0 && (
-      <>
-        <ul className="flex flex-col gap-1">
-          {[...env_variables.entries()].map(([, env]) => (
-            <li key={env.name}>
-              <EnVariableRow
-                name={env.name}
-                value={env.value}
-                id={env.id}
-                change_id={env.change_id}
-                change_type={env.change_type}
-              />
-            </li>
-          ))}
-        </ul>
-        <hr className="border-border" />
-      </>
-    )} */}
+        {env_variables.size > 0 && (
+          <>
+            <ul className="flex flex-col gap-1">
+              {[...env_variables.entries()].map(([, env]) => (
+                <li key={env.name}>
+                  <EnVariableRow
+                    name={env.name}
+                    value={env.value}
+                    id={env.id}
+                    change_id={env.change_id}
+                    change_type={env.change_type}
+                  />
+                </li>
+              ))}
+            </ul>
+            <hr className="border-border" />
+          </>
+        )}
         <h3 className="text-lg">Add new variable</h3>
         <NewEnvVariableForm />
       </section>
@@ -169,9 +168,6 @@ export async function clientAction({
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
-  console.log({
-    formData
-  });
   switch (intent) {
     case "create-env-variable": {
       return createEnvVariable({
@@ -181,7 +177,25 @@ export async function clientAction({
       });
     }
     case "update-env-variable": {
-      // return deployService(params.projectSlug, formData);
+      return updateEnvVariable({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        formData
+      });
+    }
+    case "cancel-env-change": {
+      return cancelEnvVariable({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        formData
+      });
+    }
+    case "delete-env-variable": {
+      return deleteEnvVariable({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        formData
+      });
     }
     default: {
       throw new Error("Unexpected intent");
@@ -242,6 +256,152 @@ async function createEnvVariable({
   }
 }
 
+async function updateEnvVariable({
+  project_slug,
+  service_slug,
+  formData
+}: {
+  project_slug: string;
+  service_slug: string;
+  formData: FormData;
+}) {
+  const userData = {
+    key: (formData.get("key") ?? "").toString(),
+    value: (formData.get("value") ?? "").toString()
+  };
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          service_slug
+        }
+      },
+      body: {
+        type: "UPDATE",
+        item_id: (formData.get("item_id") ?? "").toString(),
+        field: "env_variables",
+        new_value: userData
+      }
+    }
+  );
+  if (errors) {
+    return {
+      errors,
+      userData
+    };
+  }
+
+  if (data) {
+    await queryClient.invalidateQueries({
+      ...serviceQueries.single({ project_slug, service_slug }),
+      exact: true
+    });
+    return { data };
+  }
+}
+
+async function deleteEnvVariable({
+  project_slug,
+  service_slug,
+  formData
+}: {
+  project_slug: string;
+  service_slug: string;
+  formData: FormData;
+}) {
+  const toasId = toast.loading(`Sending change request...`);
+  const { error: error } = await apiClient.PUT(
+    "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          service_slug
+        }
+      },
+      body: {
+        type: "DELETE",
+        item_id: (formData.get("item_id") ?? "").toString(),
+        field: "env_variables"
+      }
+    }
+  );
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    toast.error("Error", {
+      description: fullErrorMessage,
+      id: toasId,
+      closeButton: true
+    });
+    return;
+  }
+
+  await queryClient.invalidateQueries({
+    ...serviceQueries.single({ project_slug, service_slug }),
+    exact: true
+  });
+  toast.success("Success", {
+    description: "Done",
+    id: toasId,
+    closeButton: true
+  });
+}
+
+async function cancelEnvVariable({
+  project_slug,
+  service_slug,
+  formData
+}: {
+  project_slug: string;
+  service_slug: string;
+  formData: FormData;
+}) {
+  const toasId = toast.loading(`Cancelling env variable change...`);
+  const { error } = await apiClient.DELETE(
+    "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          service_slug,
+          change_id: (formData.get("change_id") ?? "").toString()
+        }
+      }
+    }
+  );
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    toast.error("Error", {
+      description: fullErrorMessage,
+      id: toasId,
+      closeButton: true
+    });
+    return;
+  }
+
+  await queryClient.invalidateQueries({
+    ...serviceQueries.single({ project_slug, service_slug }),
+    exact: true
+  });
+  toast.success("Success", {
+    description: "Done",
+    id: toasId,
+    closeButton: true
+  });
+  return;
+}
+
 function EnVariableRow({
   isLocked = false,
   name,
@@ -255,30 +415,8 @@ function EnVariableRow({
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
 
-  // const cancelEnvChangeMutation = useCancelDockerServiceChangeMutation(
-  //   project_slug,
-  //   service_slug
-  // );
-
-  // const {
-  //   mutate: editEnvVariable,
-  //   isPending: isUpdatingVariableValue,
-  //   data: editVariableData,
-  //   reset: resetEditionState
-  // } = useRequestServiceChangeMutation({
-  //   project_slug,
-  //   service_slug,
-  //   field: "env_variables"
-  // });
-
-  // const { mutateAsync: removeVariable } = useRequestServiceChangeMutation({
-  //   project_slug,
-  //   service_slug,
-  //   field: "env_variables"
-  // });
-
-  const errors = getFormErrorsFromResponseData({});
-
+  const cancelFetcher = useFetcher<typeof clientAction>();
+  const deleteFetcher = useFetcher<typeof clientAction>();
   const idPrefix = React.useId();
 
   return (
@@ -296,159 +434,114 @@ function EnVariableRow({
         }
       )}
     >
-      <div
-        className={cn(
-          "col-span-3 md:col-span-2 flex flex-col",
-          isEditing && "md:relative md:top-3"
-        )}
-      >
-        <span className="font-mono break-all">{name}</span>
-        {comment && <small className="text-muted-foreground">{comment}</small>}
-      </div>
       {isEditing && id ? (
-        <Form
-          className="col-span-3 md:col-span-5 flex md:items-start gap-3 md:flex-row flex-col pr-4"
-          // action={(formData) => {
-          //   editEnvVariable(
-          //     {
-          //       type: "UPDATE",
-          //       new_value: {
-          //         value: formData.get("value")?.toString() ?? "",
-          //         key: name
-          //       },
-          //       item_id: id
-          //     },
-          //     {
-          //       onSuccess(errors) {
-          //         if (!errors) {
-          //           setIsEditing(false);
-          //         }
-          //       }
-          //     }
-          //   );
-          // }}
-        >
-          <fieldset className="flex-1 inline-flex flex-col gap-1">
-            <label id={`${idPrefix}-value`} className="sr-only">
-              variable value
-            </label>
-            <Input
-              placeholder="value"
-              defaultValue={value}
-              name="value"
-              className="font-mono"
-              aria-labelledby={`${idPrefix}-value-error`}
-            />
-            {errors.new_value?.value && (
-              <span
-                id={`${idPrefix}-value-error`}
-                className="text-red-500 text-sm"
-              >
-                {errors.new_value?.value}
-              </span>
-            )}
-          </fieldset>
-
-          <div className="flex gap-3">
-            <SubmitButton
-              isPending={isUpdatingVariableValue}
-              variant="outline"
-              className="bg-inherit"
-            >
-              {isUpdatingVariableValue ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span className="sr-only">Updating variable value...</span>
-                </>
-              ) : (
-                <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span className="sr-only">Update variable value</span>
-                </>
-              )}
-            </SubmitButton>
-            <Button
-              onClick={() => {
-                setIsEditing(false);
-                // resetEditionState();
-              }}
-              variant="outline"
-              className="bg-inherit"
-              type="button"
-            >
-              <XIcon size={15} className="flex-none" />
-              <span className="sr-only">Cancel</span>
-            </Button>
-          </div>
-        </Form>
+        <EditVariableForm
+          name={name}
+          value={value}
+          id={id}
+          quitEditMode={() => setIsEditing(false)}
+        />
       ) : (
-        <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
-          {isEnvValueShown ? (
-            <p className="whitespace-nowrap overflow-x-auto">
-              {value.length > 0 ? (
-                value
-              ) : (
-                <span className="text-grey font-mono">{`<empty>`}</span>
-              )}
-            </p>
-          ) : (
-            <span className="relative top-1">*********</span>
-          )}
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  onClick={() => setIsEnvValueShown(!isEnvValueShown)}
-                  className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                >
-                  {isEnvValueShown ? (
-                    <EyeOffIcon size={15} className="flex-none" />
-                  ) : (
-                    <EyeIcon size={15} className="flex-none" />
-                  )}
-                  <span className="sr-only">
-                    {isEnvValueShown ? "Hide" : "Reveal"} variable value
-                  </span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isEnvValueShown ? "Hide" : "Reveal"} variable value
-              </TooltipContent>
-            </Tooltip>
+        <>
+          <div
+            className={cn(
+              "col-span-3 md:col-span-2 flex flex-col",
+              isEditing && "md:relative md:top-3"
+            )}
+          >
+            <span className="font-mono break-all">{name}</span>
+            {comment && (
+              <small className="text-muted-foreground">{comment}</small>
+            )}
+          </div>
+          <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
+            {isEnvValueShown ? (
+              <p className="whitespace-nowrap overflow-x-auto">
+                {value.length > 0 ? (
+                  value
+                ) : (
+                  <span className="text-grey font-mono">{`<empty>`}</span>
+                )}
+              </p>
+            ) : (
+              <span className="relative top-1">*********</span>
+            )}
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setIsEnvValueShown(!isEnvValueShown)}
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    {isEnvValueShown ? (
+                      <EyeOffIcon size={15} className="flex-none" />
+                    ) : (
+                      <EyeIcon size={15} className="flex-none" />
+                    )}
+                    <span className="sr-only">
+                      {isEnvValueShown ? "Hide" : "Reveal"} variable value
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isEnvValueShown ? "Hide" : "Reveal"} variable value
+                </TooltipContent>
+              </Tooltip>
 
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "px-2.5 py-0.5",
-                    "focus-visible:opacity-100 group-hover:opacity-100",
-                    hasCopied ? "opacity-100" : "md:opacity-0"
-                  )}
-                  onClick={() => {
-                    navigator.clipboard.writeText(value).then(() => {
-                      // show pending state (which is success state), until the user has stopped clicking the button
-                      startTransition(() => wait(1000));
-                    });
-                  }}
-                >
-                  {hasCopied ? (
-                    <CheckIcon size={15} className="flex-none" />
-                  ) : (
-                    <CopyIcon size={15} className="flex-none" />
-                  )}
-                  <span className="sr-only">Copy variable value</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Copy variable value</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "px-2.5 py-0.5",
+                      "focus-visible:opacity-100 group-hover:opacity-100",
+                      hasCopied ? "opacity-100" : "md:opacity-0"
+                    )}
+                    onClick={() => {
+                      navigator.clipboard.writeText(value).then(() => {
+                        // show pending state (which is success state), until the user has stopped clicking the button
+                        startTransition(() => wait(1000));
+                      });
+                    }}
+                  >
+                    {hasCopied ? (
+                      <CheckIcon size={15} className="flex-none" />
+                    ) : (
+                      <CopyIcon size={15} className="flex-none" />
+                    )}
+                    <span className="sr-only">Copy variable value</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy variable value</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </>
       )}
 
       {!isLocked && !isEditing && (
         <div className="flex justify-end">
+          {change_id !== undefined && (
+            <cancelFetcher.Form
+              method="post"
+              id={`${idPrefix}-cancel-form`}
+              className="hidden"
+            >
+              <input type="hidden" name="intent" value="cancel-env-change" />
+              <input type="hidden" name="change_id" value={change_id} />
+            </cancelFetcher.Form>
+          )}
+          {id && (
+            <deleteFetcher.Form
+              method="post"
+              id={`${idPrefix}-delete-form`}
+              className="hidden"
+            >
+              <input type="hidden" name="intent" value="delete-env-variable" />
+              <input type="hidden" name="item_id" value={id} />
+            </deleteFetcher.Form>
+          )}
           <Menubar className="border-none h-auto w-fit">
             <MenubarMenu>
               <MenubarTrigger
@@ -469,28 +562,19 @@ function EnVariableRow({
               >
                 {change_id !== undefined ? (
                   <>
-                    <MenubarContentItem
-                      icon={Undo2Icon}
-                      text="Revert change"
-                      className="text-red-400"
-                      // onClick={() =>
-                      //   toast.promise(
-                      //     cancelEnvChangeMutation.mutateAsync(change_id),
-                      //     {
-                      //       loading: `Cancelling env variable change...`,
-                      //       success: "Success",
-                      //       error: "Error",
-                      //       closeButton: true,
-                      //       description(data) {
-                      //         if (data instanceof Error) {
-                      //           return data.message;
-                      //         }
-                      //         return "Done.";
-                      //       }
-                      //     }
-                      //   )
-                      // }
-                    />
+                    <button
+                      form={`${idPrefix}-cancel-form`}
+                      disabled={cancelFetcher.state !== "idle"}
+                      onClick={(e) => {
+                        e.currentTarget.form?.requestSubmit();
+                      }}
+                    >
+                      <MenubarContentItem
+                        icon={Undo2Icon}
+                        text="Revert change"
+                        className="text-red-400"
+                      />
+                    </button>
                   </>
                 ) : (
                   id && (
@@ -500,31 +584,19 @@ function EnVariableRow({
                         text="Edit"
                         onClick={() => setIsEditing(true)}
                       />
-                      <MenubarContentItem
-                        icon={Trash2Icon}
-                        text="Remove"
-                        className="text-red-400"
-                        // onClick={() =>
-                        //   toast.promise(
-                        //     removeVariable({
-                        //       type: "DELETE",
-                        //       item_id: id
-                        //     }),
-                        //     {
-                        //       loading: `Sending change request...`,
-                        //       success: "Success",
-                        //       error: "Error",
-                        //       closeButton: true,
-                        //       description(data) {
-                        //         if (data instanceof Error) {
-                        //           return data.message;
-                        //         }
-                        //         return "Done.";
-                        //       }
-                        //     }
-                        //   )
-                        // }
-                      />
+                      <button
+                        form={`${idPrefix}-delete-form`}
+                        disabled={deleteFetcher.state !== "idle"}
+                        onClick={(e) => {
+                          e.currentTarget.form?.requestSubmit();
+                        }}
+                      >
+                        <MenubarContentItem
+                          icon={Trash2Icon}
+                          text="Remove"
+                          className="text-red-400"
+                        />
+                      </button>
                     </>
                   )
                 )}
@@ -534,6 +606,109 @@ function EnVariableRow({
         </div>
       )}
     </div>
+  );
+}
+
+type EditVariableFormProps = {
+  name: string;
+  value: string;
+  id: string;
+  quitEditMode: () => void;
+};
+
+function EditVariableForm({
+  name,
+  value,
+  id,
+  quitEditMode
+}: EditVariableFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const idPrefix = React.useId();
+  const isUpdatingVariableValue = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  React.useEffect(() => {
+    if (fetcher.data?.data) {
+      quitEditMode();
+    }
+  }, [fetcher.data]);
+
+  return (
+    <fetcher.Form
+      method="post"
+      className="col-span-3 md:col-span-7 flex flex-col md:flex-row items-start gap-4 pr-4"
+    >
+      <input type="hidden" name="item_id" value={id} />
+
+      <fieldset className={cn("inline-flex flex-col gap-1 w-2/7")}>
+        <label id={`${idPrefix}-name`} className="sr-only">
+          variable name
+        </label>
+        <Input
+          placeholder="VARIABLE_NAME"
+          defaultValue={name}
+          name="key"
+          className="font-mono"
+          aria-labelledby={`${idPrefix}-name-error`}
+        />
+        {errors.new_value?.key && (
+          <span id={`${idPrefix}-name-error`} className="text-red-500 text-sm">
+            {errors.new_value?.key}
+          </span>
+        )}
+      </fieldset>
+
+      <fieldset className="flex-1 inline-flex flex-col gap-1">
+        <label id={`${idPrefix}-value`} className="sr-only">
+          variable value
+        </label>
+        <Input
+          placeholder="value"
+          defaultValue={value}
+          name="value"
+          className="font-mono"
+          aria-labelledby={`${idPrefix}-value-error`}
+        />
+        {errors.new_value?.value && (
+          <span id={`${idPrefix}-value-error`} className="text-red-500 text-sm">
+            {errors.new_value?.value}
+          </span>
+        )}
+      </fieldset>
+
+      <div className="flex gap-3">
+        <SubmitButton
+          isPending={isUpdatingVariableValue}
+          variant="outline"
+          className="bg-inherit"
+          name="intent"
+          value="update-env-variable"
+        >
+          {isUpdatingVariableValue ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span className="sr-only">Updating variable value...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span className="sr-only">Update variable value</span>
+            </>
+          )}
+        </SubmitButton>
+        <Button
+          onClick={() => {
+            quitEditMode();
+          }}
+          variant="outline"
+          className="bg-inherit"
+          type="button"
+        >
+          <XIcon size={15} className="flex-none" />
+          <span className="sr-only">Cancel</span>
+        </Button>
+      </div>
+    </fetcher.Form>
   );
 }
 
