@@ -1,0 +1,14 @@
+:10088 {
+	# Set the root directory for static files
+	handle {
+		root * ./build/client
+		file_server
+		try_files {path} /index.html
+		# Add X-Robots-Tag header
+		header / X-Robots-Tag "noindex"
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+}

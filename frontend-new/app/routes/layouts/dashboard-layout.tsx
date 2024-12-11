@@ -1,10 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Link,
-  Outlet,
-  createFileRoute,
-  useNavigate
-} from "@tanstack/react-router";
 import {
   AlarmCheck,
   BookOpen,
@@ -24,7 +17,7 @@ import {
   Settings,
   Twitter
 } from "lucide-react";
-import { apiClient } from "~/api/client";
+import { Link, Outlet, redirect, useFetcher } from "react-router";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
@@ -42,48 +35,54 @@ import {
 } from "~/components/ui/sheet";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { deleteCookie, getCsrfTokenHeader } from "~/utils";
+import { metaTitle } from "~/utils";
 
-export const Route = createFileRoute("/_dashboard")({
-  component: () => (
+import { NavigationProgress } from "~/components/navigation-progress";
+import { Button } from "~/components/ui/button";
+import { queryClient } from "~/root";
+import type { Route } from "./+types/dashboard-layout";
+
+export function meta() {
+  return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const user = userQuery.data?.user;
+
+  if (!user) {
+    let redirectPathName = `/login`;
+    const url = new URL(request.url);
+    if (url.pathname !== "/" && url.pathname !== "/login") {
+      const params = new URLSearchParams([["redirect_to", url.pathname]]);
+      redirectPathName = `/login?${params.toString()}`;
+    }
+
+    throw redirect(redirectPathName);
+  }
+  return user;
+}
+
+export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
+  return (
     <div className="min-h-screen flex flex-col justify-between">
-      <Header />
+      <NavigationProgress />
+      <Header user={loaderData} />
       <main className="grow container p-6">
         <Outlet />
       </main>
       <Footer />
     </div>
-  )
-});
+  );
+}
 
-function Header() {
-  const query = useQuery(userQueries.authedUser);
-  const navigate = useNavigate();
-  const user = query.data?.data?.user;
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: async () => {
-      const { error } = await apiClient.DELETE("/api/auth/logout/", {
-        headers: {
-          ...(await getCsrfTokenHeader())
-        }
-      });
-      if (error) {
-        return error;
-      }
+type HeaderProps = {
+  user: Route.ComponentProps["loaderData"];
+};
 
-      queryClient.removeQueries({
-        queryKey: userQueries.authedUser.queryKey
-      });
-      deleteCookie("csrftoken");
-      navigate({ to: "/login" });
-      return null;
-    }
-  });
+function Header({ user }: HeaderProps) {
+  let fetcher = useFetcher();
 
-  if (!user) {
-    return null;
-  }
   return (
     <>
       {!import.meta.env.PROD && (
@@ -101,27 +100,17 @@ function Header() {
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
-          <Menubar className="border-none w-fit text-black bg-primary">
-            <MenubarMenu>
-              <MenubarTrigger className="flex  justify-center text-sm items-center gap-1">
-                Create
-                <ChevronsUpDown className="w-4" />
-              </MenubarTrigger>
-              <MenubarContent className=" border border-border min-w-6">
-                <Link to="/create-project">
-                  <MenubarContentItem icon={Folder} text="Project" />
-                </Link>
-                <MenubarContentItem icon={Globe} text="Web Service" />
-                <MenubarContentItem icon={Hammer} text="Worker" />
-                <MenubarContentItem icon={AlarmCheck} text="CRON" />
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
+          <Button asChild>
+            <Link to="/create-project" prefetch="intent">
+              Create project
+            </Link>
+          </Button>
+
           <div className="flex w-full justify-center items-center">
             <Search className="relative left-10" />
             <Input
               className="px-14 my-1  text-sm focus-visible:right-0"
-              placeholder="Search for Service, Worker, CRON, etc..."
+              placeholder="Search for Service or Project"
             />
           </div>
           <a
@@ -133,6 +122,12 @@ function Header() {
           </a>
         </div>
 
+        <fetcher.Form
+          method="post"
+          action="/logout"
+          id="logout-form"
+          className="hidden"
+        />
         <Menubar className="border-none md:block hidden w-fit">
           <MenubarMenu>
             <MenubarTrigger className="flex justify-center items-center gap-2">
@@ -143,11 +138,14 @@ function Header() {
             <MenubarContent className="border min-w-0 mx-9  border-border">
               <MenubarContentItem icon={Settings} text="Settings" />
               <button
-                onClick={() => mutate()}
                 className="w-full"
-                disabled={isPending}
+                onClick={(e) => {
+                  e.currentTarget.form?.requestSubmit();
+                }}
+                form="logout-form"
+                disabled={fetcher.state !== "idle"}
               >
-                {isPending ? (
+                {fetcher.state !== "idle" ? (
                   "Logging out..."
                 ) : (
                   <MenubarContentItem icon={LogOut} text="Logout" />
@@ -215,11 +213,16 @@ function Header() {
               </div>
 
               <button
+                type="submit"
+                form="logout-form"
                 className="p-2 rounded-md border border-card-foreground text-center"
-                onClick={() => mutate()}
-                disabled={isPending}
+                disabled={fetcher.state !== "idle"}
               >
-                {isPending ? "Logging out..." : <div>Log Out</div>}
+                {fetcher.state !== "idle" ? (
+                  "Logging out..."
+                ) : (
+                  <div>Log Out</div>
+                )}
               </button>
             </SheetContent>
           </Sheet>
