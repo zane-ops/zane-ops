@@ -9,6 +9,10 @@ import {
 export default [
   route("login", "./routes/login.tsx"),
   route("logout", "./routes/logout.tsx"),
+  route(
+    "project/:projectSlug/services/:serviceSlug/deploy-service",
+    "./routes/services/deploy-service.tsx"
+  ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/home.tsx"),

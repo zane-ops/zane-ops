@@ -1,20 +1,21 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpIcon,
   ChevronRight,
   Container,
   KeyRound,
+  LoaderIcon,
   Rocket,
-  Settings
+  Settings,
+  TriangleAlert
 } from "lucide-react";
 import {
   Link,
   Outlet,
-  isRouteErrorResponse,
+  useFetcher,
   useLocation,
-  useNavigate,
-  useRevalidator
+  useNavigate
 } from "react-router";
-import { DeployButtonSection } from "~/components/deploy-button-section";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Breadcrumb,
@@ -24,7 +25,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -32,7 +33,6 @@ import {
 } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { isNotFoundError, notFound } from "~/lib/helpers";
-import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 import { type DockerService, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
@@ -47,13 +47,6 @@ export function meta({ params, error }: Route.MetaArgs) {
       ? "Error 404 - Project does not exist"
       : "Oops";
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
-}
-
-export async function clientAction({ request }: Route.ClientActionArgs) {
-  let formData = await request.formData();
-  // let title = await formData.get("title");
-  // let project = await someApi.updateProject({ title });
-  // return project;
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -78,17 +71,19 @@ const TABS = {
 } as const;
 
 export default function ServiceDetailsLayout({
-  loaderData: { service },
+  loaderData,
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ComponentProps) {
-  const revalidator = useRevalidator();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { mutateAsync: deploy } = useDeployDockerServiceMutation(
-    project_slug,
-    service_slug
-  );
+  const { data: service } = useQuery({
+    ...serviceQueries.single({
+      project_slug,
+      service_slug
+    }),
+    initialData: loaderData.service
+  });
 
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
   if (location.pathname.match(/env\-variables\/?$/)) {
@@ -198,7 +193,7 @@ export default function ServiceDetailsLayout({
             )}
           </div>
 
-          <DeployButtonSection service={service} deploy={deploy} />
+          <DeployServiceForm service={service} />
         </section>
 
         <Button
@@ -276,5 +271,50 @@ export default function ServiceDetailsLayout({
         </Tabs>
       </>
     </>
+  );
+}
+
+type DeployServiceFormProps = {
+  className?: string;
+  service: Route.ComponentProps["loaderData"]["service"];
+};
+
+function DeployServiceForm({ className, service }: DeployServiceFormProps) {
+  const fetcher = useFetcher();
+  const isDeploying = fetcher.state !== "idle";
+
+  return (
+    <div className={cn("flex items-center gap-2 flex-wrap", className)}>
+      {service.unapplied_changes.length > 0 && (
+        <Button variant="warning" className="flex-1 md:flex-auto">
+          <TriangleAlert size={15} />
+          <span className="mx-1">
+            {service.unapplied_changes.length}&nbsp;
+            {pluralize("unapplied change", service.unapplied_changes.length)}
+          </span>
+        </Button>
+      )}
+
+      <fetcher.Form
+        method="post"
+        action="./deploy-service"
+        className="flex flex-1 md:flex-auto"
+      >
+        <SubmitButton
+          isPending={isDeploying}
+          variant="secondary"
+          className="w-full"
+        >
+          {isDeploying ? (
+            <>
+              <span>Deploying</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            "Deploy now"
+          )}
+        </SubmitButton>
+      </fetcher.Form>
+    </div>
   );
 }

@@ -231,6 +231,10 @@ export const serviceQueries = {
             signal
           }
         );
+
+        if (!data) {
+          throw notFound();
+        }
         return data;
       },
       refetchInterval: (query) => {

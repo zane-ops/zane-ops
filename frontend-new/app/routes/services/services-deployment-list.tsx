@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { CalendarIcon, CheckIcon, ChevronDown, LoaderIcon } from "lucide-react";
 import * as React from "react";
 import { type DateRange } from "react-day-picker";
-import { Link, useSearchParams } from "react-router";
+import { Link, useFetcher, useSearchParams } from "react-router";
 import type { Writeable } from "zod";
 import { DockerDeploymentCard } from "~/components/deployment-cards";
 import { Pagination } from "~/components/pagination";
@@ -24,7 +24,6 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -53,6 +52,25 @@ export async function clientLoader({
   return { deploymentList };
 }
 
+function DeployForm() {
+  const fetcher = useFetcher();
+  const isDeploying = fetcher.state !== "idle";
+  return (
+    <fetcher.Form method="post" action="./deploy-service">
+      <SubmitButton isPending={isDeploying}>
+        {isDeploying ? (
+          <>
+            <span>Deploying</span>
+            <LoaderIcon className="animate-spin" size={15} />
+          </>
+        ) : (
+          "Deploy now"
+        )}
+      </SubmitButton>
+    </fetcher.Form>
+  );
+}
+
 export default function DeploymentListPage({
   params: { projectSlug: project_slug, serviceSlug: service_slug },
   loaderData
@@ -76,8 +94,6 @@ export default function DeploymentListPage({
     ...serviceQueries.deploymentList({ project_slug, service_slug, filters }),
     initialData: loaderData.deploymentList
   });
-  const { isPending: isDeploying, mutate: deploy } =
-    useDeployDockerServiceMutation(project_slug, service_slug);
 
   const date: DateRange = {
     from: filters.queued_at_after,
@@ -87,9 +103,9 @@ export default function DeploymentListPage({
   const noFilters =
     !search.page &&
     !search.per_page &&
-    !search.status &&
     !search.queued_at_after &&
-    !search.queued_at_before;
+    !search.queued_at_before &&
+    (search.status ?? []).length === 0;
 
   const currentProductionDeployment = deploymentList.find(
     (dpl) => dpl.is_current_production
@@ -128,18 +144,7 @@ export default function DeploymentListPage({
           <div className=" flex gap-1 flex-col items-center mt-40">
             <h1 className="text-2xl font-bold">No Deployments made yet</h1>
             <h2 className="text-lg">Your service is offline</h2>
-            <form action={() => deploy({})}>
-              <SubmitButton isPending={isDeploying}>
-                {isDeploying ? (
-                  <>
-                    <span>Deploying</span>
-                    <LoaderIcon className="animate-spin" size={15} />
-                  </>
-                ) : (
-                  "Deploy now"
-                )}
-              </SubmitButton>
-            </form>
+            <DeployForm />
           </div>
         </div>
       ) : (
