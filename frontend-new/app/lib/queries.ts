@@ -55,8 +55,8 @@ export const dockerHubQueries = {
 
 export const projectSearchSchema = zfd.formData({
   slug: z.string().optional().catch(undefined),
-  page: z.number().optional().catch(undefined),
-  per_page: z.number().optional().catch(undefined),
+  page: zfd.numeric().optional().catch(undefined),
+  per_page: zfd.numeric().optional().catch(undefined),
   sort_by: zfd.repeatable(
     z
       .array(
@@ -182,13 +182,15 @@ export type ProjectServiceListSearch = z.infer<
   typeof projectServiceListSearchSchema
 >;
 
-export const serviceDeploymentListFilters = z.object({
-  page: z.number().optional().catch(1).optional(),
-  per_page: z.number().optional().catch(10).optional(),
-  status: z
-    .array(z.enum(DEPLOYMENT_STATUSES))
-    .optional()
-    .catch(DEPLOYMENT_STATUSES as Writeable<typeof DEPLOYMENT_STATUSES>),
+export const serviceDeploymentListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional(),
+  status: zfd.repeatable(
+    z
+      .array(z.enum(DEPLOYMENT_STATUSES))
+      .optional()
+      .catch(DEPLOYMENT_STATUSES as Writeable<typeof DEPLOYMENT_STATUSES>)
+  ),
   queued_at_before: z.coerce.date().optional().catch(undefined),
   queued_at_after: z.coerce.date().optional().catch(undefined)
 });
@@ -256,6 +258,7 @@ export const serviceQueries = {
         filters
       ] as const,
       queryFn: async ({ signal }) => {
+        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/",
           {
@@ -273,6 +276,10 @@ export const serviceQueries = {
             signal
           }
         );
+
+        if (!data) {
+          throw notFound();
+        }
         return data;
       },
       refetchInterval: (query) => {
