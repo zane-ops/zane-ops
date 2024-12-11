@@ -68,7 +68,7 @@ export default function ServiceEnvVariablesPage({
 
   const env_variables: Map<string, EnvVariableUI> = new Map();
   for (const env of service?.env_variables ?? []) {
-    env_variables.set(env.key, {
+    env_variables.set(env.id, {
       id: env.id,
       name: env.key,
       value: env.value
@@ -81,7 +81,7 @@ export default function ServiceEnvVariablesPage({
       key: string;
       value: string;
     };
-    env_variables.set(keyValue.key, {
+    env_variables.set(ch.item_id ?? ch.id, {
       change_id: ch.id,
       id: ch.item_id,
       name: keyValue.key,
