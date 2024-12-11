@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { type VariantProps, cva } from "class-variance-authority";
 import { format } from "date-fns";
-import { CalendarIcon, CheckIcon, ChevronDown, LoaderIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckIcon,
+  ChevronDown,
+  LoaderIcon,
+  XIcon
+} from "lucide-react";
 import * as React from "react";
 import { type DateRange } from "react-day-picker";
 import { Link, useFetcher, useSearchParams } from "react-router";
@@ -149,14 +155,14 @@ export default function DeploymentListPage({
         </div>
       ) : (
         <>
-          <div className="flex mt-8 gap-2">
+          <div className="flex flex-col md:flex-row mt-8 gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   id="date"
-                  variant={"outline"}
+                  variant="outline"
                   className={cn(
-                    "w-[300px] justify-start text-left font-normal",
+                    "w-full md:w-[300px] justify-start text-left font-normal",
                     !date && "text-muted-foreground"
                   )}
                 >
@@ -201,7 +207,7 @@ export default function DeploymentListPage({
                 />
               </PopoverContent>
             </Popover>
-            <div className="w-fit">
+            <div className="w-full md:w-fit">
               <DeploymentStatusesMultiSelect
                 options={DEPLOYMENT_STATUSES as unknown as string[]}
                 onValueChange={(values) => {
@@ -218,6 +224,19 @@ export default function DeploymentListPage({
                 maxCount={3}
               />
             </div>
+
+            {!noFilters && (
+              <Button variant="outline" asChild>
+                <Link
+                  to="./"
+                  replace
+                  className="inline-flex gap-1 w-full md:w-min justify-start"
+                >
+                  <XIcon size={15} />
+                  <span>Reset filters</span>
+                </Link>
+              </Button>
+            )}
           </div>
           <div className="flex flex-col gap-4 mt-6">
             {noResultsFound ? (
@@ -229,7 +248,9 @@ export default function DeploymentListPage({
                   Change or clear the filters to view deployments.
                 </h3>
                 <Button asChild variant="outline">
-                  <Link to=".">Clear filters</Link>
+                  <Link to="./" replace>
+                    Clear filters
+                  </Link>
                 </Button>
               </div>
             ) : (
