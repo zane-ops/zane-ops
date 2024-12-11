@@ -548,7 +548,7 @@ function NewEnvVariableForm() {
   const isPending = fetcher.state !== "idle";
 
   React.useEffect(() => {
-    // only focus on the right input in case of error
+    // only focus on the correct input in case of error
     if (fetcher.state === "idle" && fetcher.data) {
       const nameInput = formRef.current?.[
         "variable-name"
