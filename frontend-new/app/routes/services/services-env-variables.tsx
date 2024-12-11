@@ -14,7 +14,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, data, redirect, useActionData, useFetcher } from "react-router";
+import { Form, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Code } from "~/components/code";
@@ -40,7 +40,6 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
-import { useRequestServiceChangeMutation } from "~/lib/hooks/use-request-service-change-mutation";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -255,8 +254,6 @@ function EnVariableRow({
   const [isEnvValueShown, setIsEnvValueShown] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
-
-  // const { project_slug, service_slug } = Route.useParams();
 
   // const cancelEnvChangeMutation = useCancelDockerServiceChangeMutation(
   //   project_slug,
