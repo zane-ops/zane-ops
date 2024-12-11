@@ -626,16 +626,38 @@ function EditVariableForm({
   const idPrefix = React.useId();
   const isUpdatingVariableValue = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   React.useEffect(() => {
-    if (fetcher.data?.data) {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data) {
+      const nameInput = formRef.current?.[
+        "variable-name"
+      ] as HTMLInputElement | null;
+
+      if (fetcher.data.errors) {
+        const valueInput = formRef.current?.[
+          "variable-value"
+        ] as HTMLInputElement | null;
+
+        if (errors.new_value?.key) {
+          nameInput?.focus();
+        }
+        if (errors.new_value?.value) {
+          valueInput?.focus();
+        }
+
+        return;
+      }
+
       quitEditMode();
     }
-  }, [fetcher.data]);
+  }, [fetcher.state, fetcher.data, errors]);
 
   return (
     <fetcher.Form
       method="post"
+      ref={formRef}
       className="col-span-3 md:col-span-7 flex flex-col md:flex-row items-start gap-4 pr-4"
     >
       <input type="hidden" name="item_id" value={id} />
@@ -647,6 +669,7 @@ function EditVariableForm({
         <Input
           placeholder="VARIABLE_NAME"
           defaultValue={name}
+          id="variable-name"
           name="key"
           className="font-mono"
           aria-labelledby={`${idPrefix}-name-error`}
@@ -663,7 +686,9 @@ function EditVariableForm({
           variable value
         </label>
         <Input
+          autoFocus
           placeholder="value"
+          id="variable-value"
           defaultValue={value}
           name="value"
           className="font-mono"
@@ -758,7 +783,6 @@ function NewEnvVariableForm() {
           variable name
         </label>
         <Input
-          autoFocus
           placeholder="VARIABLE_NAME"
           className="font-mono"
           id="variable-name"
