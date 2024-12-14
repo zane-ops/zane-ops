@@ -19,7 +19,10 @@ export default [
     route("create-project", "./routes/projects/create-project.tsx"),
 
     ...prefix("project/:projectSlug", [
-      index("./routes/projects/project-detail.tsx"),
+      route("", "./routes/projects/project-layout.tsx", [
+        index("./routes/projects/project-service-list.tsx"),
+        route("settings", "./routes/projects/project-settings.tsx")
+      ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(
         "create-service/docker",
