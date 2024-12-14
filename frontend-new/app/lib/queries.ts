@@ -16,7 +16,6 @@ import {
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
-import { devOnlyArtificialDelay } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 
@@ -82,7 +81,6 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_LIST", filters] as const,
       queryFn: async ({ signal }) => {
-        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET("/api/projects/", {
           params: {
             query: {
@@ -130,7 +128,6 @@ export const projectQueries = {
     queryOptions({
       queryKey: ["PROJECT_SINGLE", slug] as const,
       queryFn: async ({ signal }) => {
-        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET("/api/projects/{slug}/", {
           params: {
             path: {
@@ -154,20 +151,28 @@ export const projectQueries = {
         filters
       ] as const,
       queryFn: async ({ signal }) => {
-        return apiClient.GET("/api/projects/{slug}/service-list/", {
-          params: {
-            query: {
-              ...filters
+        const { data } = await apiClient.GET(
+          "/api/projects/{slug}/service-list/",
+          {
+            params: {
+              query: {
+                ...filters
+              },
+              path: {
+                slug
+              }
             },
-            path: {
-              slug
-            }
-          },
-          signal
-        });
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
       },
       refetchInterval: (query) => {
-        if (query.state.data?.data) {
+        if (query.state.data) {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
@@ -218,7 +223,6 @@ export const serviceQueries = {
         service_slug
       ] as const,
       queryFn: async ({ signal }) => {
-        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/",
           {
@@ -262,7 +266,6 @@ export const serviceQueries = {
         filters
       ] as const,
       queryFn: async ({ signal }) => {
-        await devOnlyArtificialDelay();
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/",
           {

@@ -214,10 +214,3 @@ export function formatDateForTimeZone(date: Date, timeZone: string) {
 export function metaTitle(title: string) {
   return { title: `${title} | ZaneOps` } as const;
 }
-
-export async function devOnlyArtificialDelay(min = 100, max = 1500) {
-  if (!import.meta.env.PROD) {
-    const delay = Math.abs(Math.floor(Math.random() * (max - min + 1)) + min);
-    await wait(delay);
-  }
-}
