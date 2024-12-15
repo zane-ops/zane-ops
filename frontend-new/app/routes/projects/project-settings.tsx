@@ -4,32 +4,22 @@ import {
   FlameIcon,
   InfoIcon,
   LoaderIcon,
-  PencilLineIcon,
-  XIcon
+  Trash2Icon
 } from "lucide-react";
-import * as React from "react";
-import {
-  Form,
-  data,
-  redirect,
-  useActionData,
-  useFetcher,
-  useNavigation
-} from "react-router";
+import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries, serviceQueries } from "~/lib/queries";
+import { projectQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/project-settings";
 
 export default function ProjectSettingsPage({
-  loaderData,
   params,
   matches: {
     "2": {
@@ -66,7 +56,7 @@ export default function ProjectSettingsPage({
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-red-400">Danger Zone</h2>
-            {/* <ServiceDangerZoneForm className="w-full max-w-4xl" /> */}
+            <ProjectDangerZoneForm />
           </div>
         </section>
       </div>
@@ -86,7 +76,7 @@ export async function clientAction({
       return updateProject(params.projectSlug, formData);
     }
     case "archive_project": {
-      break;
+      return archiveProject(params.projectSlug);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -128,6 +118,31 @@ async function updateProject(project_slug: string, formData: FormData) {
     );
     throw redirect(`/project/${userData.slug}/settings`);
   }
+}
+
+async function archiveProject(project_slug: string) {
+  const apiResponse = await apiClient.DELETE("/api/projects/{slug}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: {
+        slug: project_slug
+      }
+    }
+  });
+
+  if (apiResponse.error) {
+    return {
+      errors: apiResponse.error
+    };
+  }
+
+  queryClient.invalidateQueries(projectQueries.single(project_slug));
+  queryClient.invalidateQueries(projectQueries.list());
+
+  toast.success("Project archived successfully!", { closeButton: true });
+  throw redirect(`/`);
 }
 
 type ProjectDetailsFormProps = {
@@ -203,6 +218,53 @@ function ProjectDetailsForm({
           <>
             <CheckIcon size={15} className="flex-none" />
             <span>Update</span>
+          </>
+        )}
+      </SubmitButton>
+    </fetcher.Form>
+  );
+}
+
+function ProjectDangerZoneForm() {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  return (
+    <fetcher.Form method="post" className="flex flex-col gap-2 items-start">
+      <h3 className="text-lg text-red-400">Archive this project</h3>
+      <p>
+        Archiving this project will also archive all its services, This cannot
+        be undone.
+      </p>
+
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <SubmitButton
+        variant="destructive"
+        className={cn(
+          "inline-flex gap-1 items-center",
+          isPending ? "bg-red-400" : "bg-red-500"
+        )}
+        value="archive_project"
+        name="intent"
+        isPending={isPending}
+      >
+        {isPending ? (
+          <>
+            <LoaderIcon className="animate-spin flex-none" size={15} />
+            <span>Archiving...</span>
+          </>
+        ) : (
+          <>
+            <Trash2Icon size={15} className="flex-none" />
+            <span>Archive project</span>
           </>
         )}
       </SubmitButton>
