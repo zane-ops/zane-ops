@@ -1,20 +1,14 @@
 import {
-  AlarmCheck,
   BookOpen,
   ChevronDown,
-  ChevronsUpDown,
   CircleUser,
-  Folder,
   GitCommitVertical,
-  Globe,
-  Hammer,
   HeartHandshake,
   HelpCircle,
   LogOut,
   Menu,
   Search,
   Send,
-  Settings,
   Twitter
 } from "lucide-react";
 import { Link, Outlet, redirect, useFetcher } from "react-router";
@@ -29,6 +23,7 @@ import {
 } from "~/components/ui/menubar";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTrigger
@@ -37,6 +32,7 @@ import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
+import * as React from "react";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
 import { queryClient } from "~/root";
@@ -82,6 +78,8 @@ type HeaderProps = {
 
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
+
+  const isSheetOpen = React.useState(false);
 
   return (
     <>
@@ -136,7 +134,7 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
-              <MenubarContentItem icon={Settings} text="Settings" />
+              {/* <MenubarContentItem icon={Settings} text="Settings" /> */}
               <button
                 className="w-full"
                 onClick={(e) => {
@@ -189,21 +187,14 @@ function Header({ user }: HeaderProps) {
                 </div>
 
                 <div className="flex items-center  w-full">
-                  <Menubar className="border-none w-full text-black bg-primary">
-                    <MenubarMenu>
-                      <MenubarTrigger className="flex w-full justify-between text-sm items-center gap-1">
-                        Create
-                        <ChevronsUpDown className="w-4" />
-                      </MenubarTrigger>
-
-                      <MenubarContent className=" border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border ">
-                        <MenubarContentItem icon={Folder} text="Project" />
-                        <MenubarContentItem icon={Globe} text="Web Service" />
-                        <MenubarContentItem icon={Hammer} text="Worker" />
-                        <MenubarContentItem icon={AlarmCheck} text="CRON" />
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </Menubar>
+                  <SheetClose asChild>
+                    <Button
+                      asChild
+                      className="flex w-full justify-between text-sm items-center gap-1"
+                    >
+                      <Link to="/create-project">Create Project</Link>
+                    </Button>
+                  </SheetClose>
                 </div>
               </div>
 
@@ -212,18 +203,20 @@ function Header({ user }: HeaderProps) {
                 <CircleUser className="w-8 opacity-70" />
               </div>
 
-              <button
-                type="submit"
-                form="logout-form"
-                className="p-2 rounded-md border border-card-foreground text-center"
-                disabled={fetcher.state !== "idle"}
-              >
-                {fetcher.state !== "idle" ? (
-                  "Logging out..."
-                ) : (
-                  <div>Log Out</div>
-                )}
-              </button>
+              <SheetClose asChild>
+                <button
+                  type="submit"
+                  form="logout-form"
+                  className="p-2 rounded-md border border-card-foreground text-center"
+                  disabled={fetcher.state !== "idle"}
+                >
+                  {fetcher.state !== "idle" ? (
+                    "Logging out..."
+                  ) : (
+                    <div>Log Out</div>
+                  )}
+                </button>
+              </SheetClose>
             </SheetContent>
           </Sheet>
         </div>
