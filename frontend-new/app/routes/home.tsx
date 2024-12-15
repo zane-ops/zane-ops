@@ -238,9 +238,9 @@ export default function ProjectList({}: Route.ComponentProps) {
                       >
                         Name
                         {slugDirection === "ascending" ? (
-                          <ArrowDown size={15} />
+                          <ArrowDown size={15} className="flex-none" />
                         ) : (
-                          <ArrowUp size={15} />
+                          <ArrowUp size={15} className="flex-none" />
                         )}
                       </button>
                     </TooltipTrigger>
@@ -250,7 +250,9 @@ export default function ProjectList({}: Route.ComponentProps) {
                   </Tooltip>
                 </TooltipProvider>
               </TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Description
+              </TableHead>
               <TableHead>
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
@@ -261,13 +263,13 @@ export default function ProjectList({}: Route.ComponentProps) {
                             ? handleSort("updated_at")
                             : handleSort("archived_at")
                         }
-                        className="flex cursor-pointer items-center gap-2"
+                        className="flex cursor-pointer items-center gap-2 w-max"
                       >
                         {status === "active" ? "Last Updated" : "Archived At"}
                         {updatedAtDirection === "ascending" ? (
-                          <ArrowDown size={15} />
+                          <ArrowDown size={15} className="flex-none" />
                         ) : (
-                          <ArrowUp size={15} />
+                          <ArrowUp size={15} className="flex-none" />
                         )}
                       </button>
                     </TooltipTrigger>
@@ -342,7 +344,9 @@ export default function ProjectList({}: Route.ComponentProps) {
                       {project.slug}
                     </Link>
                   </TableCell>
-                  <TableCell>{project.description}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {project.description}
+                  </TableCell>
                   {"updated_at" in project ? (
                     <TableCell>{formattedDate(project.updated_at)}</TableCell>
                   ) : (
