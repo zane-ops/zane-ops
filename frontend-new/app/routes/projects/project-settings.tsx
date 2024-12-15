@@ -233,9 +233,9 @@ function ProjectDangerZoneForm() {
   return (
     <fetcher.Form method="post" className="flex flex-col gap-2 items-start">
       <h3 className="text-lg text-red-400">Archive this project</h3>
-      <p>
-        Archiving this project will also archive all its services, This cannot
-        be undone.
+      <p className="text-red-300">
+        Archiving this project will also archive all its services and delete all
+        the deployments related to the services, This cannot be undone.
       </p>
 
       {errors.non_field_errors && (
