@@ -1,8 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, LoaderIcon } from "lucide-react";
-import React from "react";
-import { Form, Link, redirect, useNavigate, useNavigation } from "react-router";
-import { type RequestInput, apiClient } from "~/api/client";
+import { AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { Form, Link, redirect, useNavigation } from "react-router";
+import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Breadcrumb,
@@ -91,7 +89,7 @@ function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
 
         {errors.non_field_errors && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircleIcon className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{errors.non_field_errors}</AlertDescription>
           </Alert>

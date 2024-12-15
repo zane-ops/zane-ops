@@ -373,10 +373,13 @@ export default function ProjectList({}: Route.ComponentProps) {
                   )}
 
                   <TableCell className="flex justify-end">
-                    <div className="w-fit flex items-center gap-3">
+                    <Link
+                      to={`/project/${project.slug}/settings`}
+                      className="w-fit flex items-center gap-3 hover:underline"
+                    >
                       Settings
                       <Settings width={18} />
-                    </div>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))
