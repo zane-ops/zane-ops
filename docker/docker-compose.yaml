@@ -182,12 +182,24 @@ services:
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: meilisearch
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili-data:/meili_data
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: "development"
+
 volumes:
   db-data:
   redis-data:
   redisinsight:
   caddy-data:
   pgadmin-data:
+  meili-data:
 networks:
   zane:
     external: true
