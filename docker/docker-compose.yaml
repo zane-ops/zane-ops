@@ -182,12 +182,21 @@ services:
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
+  solr:
+    image: solr:9.7-slim
+    volumes:
+      - solr-data:/var/solr
+      - ./solr/entrypoint.sh:/opt/solr/solr/entrypoint.sh
+    ports:
+      - 8983:8983
+    entrypoint: /opt/solr/solr/entrypoint.sh
 volumes:
   db-data:
   redis-data:
   redisinsight:
   caddy-data:
   pgadmin-data:
+  solr-data:
 networks:
   zane:
     external: true
