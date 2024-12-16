@@ -192,7 +192,17 @@ services:
     environment:
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: "development"
-
+  quickwit:
+    image: quickwit/quickwit:latest
+    container_name: quickwit
+    ports:
+      - "7280:7280"
+    command: run
+    volumes:
+      - qw-data:/quickwit/qwdata
+      - ./quickwit/quickwit.yaml:/quickwit/config/quickwit.yaml
+    networks:
+        zane:
 volumes:
   db-data:
   redis-data:
@@ -200,6 +210,7 @@ volumes:
   caddy-data:
   pgadmin-data:
   meili-data:
+  qw-data:
 networks:
   zane:
     external: true
