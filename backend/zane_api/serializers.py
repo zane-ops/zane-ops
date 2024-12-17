@@ -67,6 +67,21 @@ class ProjectSerializer(ModelSerializer):
         ]
 
 
+class ProjectSearchSerializer(Serializer):
+    id = serializers.CharField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    slug = serializers.SlugField(required=True)
+    type = serializers.ChoiceField(choices=["project"], default="project")
+
+
+class ServiceSearchSerializer(Serializer):
+    id = serializers.CharField(required=True)
+    project_slug = serializers.SlugField(required=True)
+    slug = serializers.SlugField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    type = serializers.ChoiceField(choices=["service"], default="service")
+
+
 class ArchivedProjectSerializer(ModelSerializer):
     class Meta:
         model = models.ArchivedProject
