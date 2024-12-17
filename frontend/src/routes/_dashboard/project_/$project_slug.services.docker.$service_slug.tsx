@@ -5,6 +5,7 @@ import {
   useRouterState
 } from "@tanstack/react-router";
 import {
+  ArrowUpIcon,
   ChevronRight,
   Container,
   KeyRound,
@@ -37,8 +38,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useDeployDockerServiceMutation } from "~/lib/hooks/use-deploy-docker-service-mutation";
 
+import { DeployButtonSection } from "~/components/deploy-button-section";
 import { type DockerService, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
+import { cn } from "~/lib/utils";
 import { formatURL, pluralize } from "~/utils";
 
 export const Route = createFileRoute(
@@ -61,8 +64,10 @@ function ServiceDetailsLayout(): React.JSX.Element {
   const serviceSingleQuery = useQuery(
     serviceQueries.single({ project_slug, service_slug })
   );
-  const { isPending: isDeploying, mutate: deploy } =
-    useDeployDockerServiceMutation(project_slug, service_slug);
+  const { mutateAsync: deploy } = useDeployDockerServiceMutation(
+    project_slug,
+    service_slug
+  );
 
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
   if (location.pathname.match(/env\-variables\/?$/)) {
@@ -83,9 +88,10 @@ function ServiceDetailsLayout(): React.JSX.Element {
     serviceImage += ":latest";
   }
   let extraServiceUrls: DockerService["urls"] = [];
-  let _;
+
   if (service && service.urls.length > 1) {
-    [_, ...extraServiceUrls] = service.urls;
+    let [_, ...rest] = service.urls;
+    extraServiceUrls = rest;
   }
 
   return (
@@ -134,7 +140,10 @@ function ServiceDetailsLayout(): React.JSX.Element {
       ) : (
         <>
           <MetaTitle title={service.slug} />
-          <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+          <section
+            id="header"
+            className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
+          >
             <div className="mt-10">
               <h1 className="text-2xl">{service.slug}</h1>
               <p className="flex gap-1 items-center">
@@ -146,7 +155,7 @@ function ServiceDetailsLayout(): React.JSX.Element {
                   <a
                     href={formatURL(service.urls[0])}
                     target="_blank"
-                    className="underline text-link text-sm"
+                    className="underline text-link text-sm break-all"
                   >
                     {formatURL(service.urls[0])}
                   </a>
@@ -157,7 +166,7 @@ function ServiceDetailsLayout(): React.JSX.Element {
                           <StatusBadge
                             className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
                             color="gray"
-                            isPing={false}
+                            pingState="hidden"
                           >
                             <span>
                               {`+${service.urls.length - 1} ${pluralize("url", service.urls.length - 1)}`}
@@ -193,41 +202,26 @@ function ServiceDetailsLayout(): React.JSX.Element {
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {service.unapplied_changes.length > 0 && (
-                <Button variant="warning" className="flex-1 md:flex-auto">
-                  <TriangleAlert size={15} />
-                  <span className="mx-1">
-                    {service.unapplied_changes.length}{" "}
-                    {pluralize(
-                      "unapplied change",
-                      service.unapplied_changes.length
-                    )}
-                  </span>
-                </Button>
-              )}
+            <DeployButtonSection service={service} deploy={deploy} />
+          </section>
 
-              <form
-                action={() => deploy({})}
-                className="flex flex-1 md:flex-auto"
-              >
-                <SubmitButton
-                  isPending={isDeploying}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  {isDeploying ? (
-                    <>
-                      <span>Deploying</span>
-                      <LoaderIcon className="animate-spin" size={15} />
-                    </>
-                  ) : (
-                    "Deploy"
-                  )}
-                </SubmitButton>
-              </form>
-            </div>
-          </div>
+          <Button
+            variant="outline"
+            className={cn(
+              "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
+              "bg-grey text-white dark:text-black"
+            )}
+            onClick={() => {
+              const main = document.querySelector("main");
+              main?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+            }}
+          >
+            <span>Back to top</span> <ArrowUpIcon size={15} />
+          </Button>
+
           <Tabs
             value={currentSelectedTab}
             className="w-full mt-5"

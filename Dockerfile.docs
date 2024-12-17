@@ -1,7 +1,0 @@
-# Webapp based on caddy
-FROM caddy:2.8-alpine
-
-WORKDIR /var/www/html
-
-COPY ./docs/dist/ ./docs
-COPY ./docs/Caddyfile /etc/caddy/Caddyfile

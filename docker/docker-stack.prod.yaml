@@ -1,7 +1,7 @@
 x-backend-vars: &env-vars
   ENVIRONMENT: PRODUCTION
   REDIS_URL: redis://zane.valkey:6379/0
-  DB_HOST: zane.db
+  DB_HOST: zane.pgbouncer
   DB_PORT: 5432
   DB_NAME: zane
   DB_USER: ${ZANE_DB_USER:-zane}
@@ -57,6 +57,12 @@ services:
       zane:
         aliases:
           - zane.proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
   frontend:
     image: ghcr.io/zane-ops/frontend:${IMAGE_VERSION}
     deploy:
@@ -82,6 +88,12 @@ services:
         aliases:
           - zane.frontend
           - zane.front.zaneops.internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
   api:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
     deploy:
@@ -102,6 +114,12 @@ services:
         limits:
           cpus: "0.5"
           memory: 500M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
+      interval: 30s
+      timeout: 3m
+      start_period: 10s
+      retries: 3
     networks:
       zane:
         aliases:
@@ -115,6 +133,7 @@ services:
       - db
       - valkey
       - proxy
+      - temporal-server
   temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
@@ -156,6 +175,12 @@ services:
           - zane.temporal
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD", "bash", "-c", "temporal operator cluster health --address $$(hostname -i):7233"]
+      interval: 30s
+      timeout: 3m
+      start_period: 15s
+      retries: 3
   temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
@@ -190,7 +215,7 @@ services:
           memory: 500M
     networks:
       - zane
-  temporal-worker:
+  temporal-main-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
     command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
     volumes:
@@ -203,6 +228,40 @@ services:
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    networks:
+      - zane
+  temporal-schedule-worker:
+    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+    command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+      - temporal-server
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
+      TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
     deploy:
       replicas: 1
       update_config:
@@ -278,8 +337,42 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       retries: 5
-      start_period: 30s
+      start_period: 5s
       timeout: 10s
+  pgbouncer:  
+    image: edoburu/pgbouncer:v1.23.1-p3
+    environment:
+      <<: *env-vars
+      DB_HOST: zane.db
+      POOL_MODE: transaction
+      MAX_DB_CONNECTIONS: 100
+      DEFAULT_POOL_SIZE: 50
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      - db  
+    networks:
+      zane:
+        aliases:
+          - zane.pgbouncer
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', 'localhost']
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 10s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 500M
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
@@ -290,7 +383,8 @@ services:
         aliases:
           - zane.fluentd
     environment:
-      - API_HOST=zane.api.zaneops.internal
+      API_HOST: zane.api.zaneops.internal
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
     deploy:
       replicas: 1
       restart_policy:

@@ -4,6 +4,10 @@ Please provide a brief summary of the changes. If it fixes a bug or resolves a f
 
 fixes #
 
+
+> [!WARNING]
+> Please do not delete the sections below
+
 ### ⚠️ If you modify backend code, be sure to run these commands : 
 
 ```bash
@@ -15,6 +19,7 @@ pnpm run freeze # will update the `requirements.txt` file if you added new packa
 ### ⚠️ If you modify frontend code, be sure to run these commands : 
 
 ```bash
+pnpm install --frozen-lockfile # Install the packages at the exact version listed in the lockfile
 pnpm run format # format the files using biome
 ```
 

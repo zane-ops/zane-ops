@@ -54,21 +54,6 @@
         }
       }
     },
-    "tls": {
-      "automation": {
-        "policies": [
-          {
-            "on_demand": true
-          }
-        ],
-        "on_demand": {
-          "permission": {
-            "@id": "tls-endpoint",
-            "endpoint": "http://zane.api.zaneops.internal:8000/api/_proxy/check-certiticates",
-            "module": "http"
-          }
-        }
-      }
-    }
+    "tls": {}
   }
 }

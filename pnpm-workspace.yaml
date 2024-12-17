@@ -3,4 +3,3 @@ packages:
   - "backend/"
   - "cli/"
   - "docker/"
-  - "docs/"

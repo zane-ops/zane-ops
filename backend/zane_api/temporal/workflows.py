@@ -25,6 +25,8 @@ with workflow.unsafe.imports_passed_through():
     from .schedules import (
         MonitorDockerDeploymentWorkflow,
         MonitorDockerDeploymentActivities,
+        CleanupActivities,
+        CleanupAppLogsWorkflow,
     )
 
 
@@ -37,25 +39,11 @@ class CreateProjectResourcesWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.close_faulty_db_connections,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
-        )
-
         print(f"Running activity `create_project_network({payload=})`")
         network_id = await workflow.execute_activity_method(
             DockerSwarmActivities.create_project_network,
             payload,
             start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
-        )
-
-        print(f"Running activity `attach_network_to_proxy({network_id=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.attach_network_to_proxy,
-            network_id,
-            start_to_close_timeout=timedelta(seconds=30),
             retry_policy=retry_policy,
         )
 
@@ -69,12 +57,6 @@ class RemoveProjectResourcesWorkflow:
         print(f"\nRunning workflow `RemoveProjectResourcesWorkflow` with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.close_faulty_db_connections,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
         )
 
         print(f"Running activity `get_archived_project_services({payload=})`")
@@ -109,14 +91,6 @@ class RemoveProjectResourcesWorkflow:
                 )
                 for service in services
             ]
-        )
-
-        print(f"Running activity `detach_network_from_proxy({payload=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.detach_network_from_proxy,
-            payload,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
         )
 
         print(f"Running activity `remove_project_network({payload=})`")
@@ -181,11 +155,6 @@ class DeployDockerServiceWorkflow:
 
         print(
             f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
-        )
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.close_faulty_db_connections,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=self.retry_policy,
         )
 
         pause_at_step = (
@@ -565,12 +534,6 @@ class ArchiveDockerServiceWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.close_faulty_db_connections,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
-        )
-
         print(f"Running activity `unexpose_docker_service_from_http({service=})`")
         await workflow.execute_activity_method(
             DockerSwarmActivities.unexpose_docker_service_from_http,
@@ -597,12 +560,6 @@ class ToggleDockerServiceWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.close_faulty_db_connections,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
-        )
-
         if deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_back_service_deployment,
@@ -622,6 +579,7 @@ class ToggleDockerServiceWorkflow:
 def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
+    cleanup_activites = CleanupActivities()
     return dict(
         workflows=[
             ArchiveDockerServiceWorkflow,
@@ -630,18 +588,16 @@ def get_workflows_and_activities():
             DeployDockerServiceWorkflow,
             MonitorDockerDeploymentWorkflow,
             ToggleDockerServiceWorkflow,
+            CleanupAppLogsWorkflow,
         ],
         activities=[
             swarm_activities.toggle_cancelling_status,
             swarm_activities.save_cancelled_deployment,
-            swarm_activities.close_faulty_db_connections,
             monitor_activities.monitor_close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,
-            swarm_activities.attach_network_to_proxy,
             swarm_activities.create_project_network,
             swarm_activities.unexpose_docker_service_from_http,
-            swarm_activities.detach_network_from_proxy,
             swarm_activities.remove_project_network,
             swarm_activities.cleanup_docker_service_resources,
             swarm_activities.get_archived_project_services,
@@ -665,5 +621,6 @@ def get_workflows_and_activities():
             swarm_activities.create_deployment_healthcheck_schedule,
             monitor_activities.save_deployment_status,
             monitor_activities.run_deployment_monitor_healthcheck,
+            cleanup_activites.cleanup_simple_logs,
         ],
     )

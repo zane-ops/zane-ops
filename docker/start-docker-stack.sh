@@ -15,26 +15,14 @@ trap cleanup SIGTERM
 echo "Deploying the stack..."
 docker-compose down --remove-orphans
 docker-compose up -d --remove-orphans
-
-echo "Launching the proxy..."
 docker stack deploy --with-registry-auth --compose-file ./docker-stack.yaml zane
-source ./attach-proxy-networks.sh
-
 
 echo "Scaling up all zane-ops services..."
-
 # File containing the services to scale up
-exclude_label="zane-allow-sleeping=true"
-services=$(docker service ls --filter "label=zane-managed=true" --format "{{.ID}}" | xargs -I {} sh -c 'docker service inspect {} | grep -q "'$exclude_label'" || echo {}')
-echo "$services" | while IFS= read -r service; do
-  if [[ -n "$service" ]]; then
-    echo "Scaling down service: $service"
-    docker service scale --detach $service=1
-  fi
-done
+docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q |  xargs -P 0 -I {} docker service scale --detach {}=1
 
 # Wait until Ctrl+C is pressed
-echo "Server launched at http://localhost:5678/"
+echo -e "Server launched at \x1b[96mhttp://localhost:5678/\x1b[0m"
 echo "Press Ctrl+C to stop everything..."
 while true; do
   sleep 1

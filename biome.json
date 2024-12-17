@@ -28,6 +28,8 @@
     "ignore": [
       "./frontend/src/api/v1.ts",
       "./frontend/src/routeTree.gen.ts",
+      "./frontend/dist/**",
+      "./docs/dist/**",
       "node_modules/**"
     ]
   }

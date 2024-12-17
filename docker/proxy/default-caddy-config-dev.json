@@ -54,26 +54,6 @@
         }
       }
     },
-    "tls": {
-      "automation": {
-        "policies": [
-          {
-            "issuers": [
-              {
-                "module": "internal"
-              }
-            ],
-            "on_demand": true
-          }
-        ],
-        "on_demand": {
-          "permission": {
-            "@id": "tls-endpoint",
-            "endpoint": "http://host.docker.internal:8000/api/_proxy/check-certiticates",
-            "module": "http"
-          }
-        }
-      }
-    }
+    "tls": {}
   }
 }

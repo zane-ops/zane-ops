@@ -78,9 +78,17 @@ ALLOWED_HOSTS = (
         "host.docker.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
+    else [f"127.0.0.1", f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
 )
-SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}" if ENVIRONMENT == PRODUCTION_ENV else None
+
+SESSION_COOKIE_DOMAIN = None
+
+if ENVIRONMENT == PRODUCTION_ENV:
+    is_same_subdomain = ZANE_APP_DOMAIN.endswith(ROOT_DOMAIN)
+    if is_same_subdomain:
+        SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
+    else:
+        SESSION_COOKIE_DOMAIN = ZANE_APP_DOMAIN
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
@@ -91,6 +99,7 @@ CSRF_TRUSTED_ORIGINS = (
 CORS_ALLOW_ALL_ORIGINS = ENVIRONMENT != PRODUCTION_ENV
 if ENVIRONMENT == PRODUCTION_ENV:
     CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+
 
 CACHES = {
     "default": {
@@ -131,6 +140,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "zane_api.middleware.AddCommitShaHeadersMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -165,6 +175,8 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
         "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "5434"),
+        "CONN_MAX_AGE": None if ENVIRONMENT == PRODUCTION_ENV else 0,
+        "CONN_HEALTHCHECK": True,
     }
 }
 
@@ -224,28 +236,19 @@ LOGGING = {
         }
     },
     "loggers": {
-        "django.db.backends": {
+        "gunicorn.error": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "gunicorn.access": {
             "level": "DEBUG",
             "handlers": ["console"],
+            "propagate": True,
         },
     },
 }
 
-if DEBUG:
-    LOGGING["loggers"].update(
-        {
-            "gunicorn.error": {
-                "handlers": ["console"],
-                "level": "INFO",
-                "propagate": True,
-            },
-            "gunicorn.access": {
-                "level": "DEBUG",
-                "handlers": ["console"],
-                "propagate": True,
-            },
-        }
-    )
 
 # Django Rest framework
 
@@ -362,6 +365,10 @@ DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
 TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = timedelta(minutes=30)
 TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
 TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"
+TEMPORALIO_SCHEDULE_TASK_QUEUE = "schedule-task-queue"
+TEMPORALIO_WORKER_TASK_QUEUE = os.environ.get(
+    "TEMPORALIO_WORKER_TASK_QUEUE", TEMPORALIO_MAIN_TASK_QUEUE
+)
 TEMPORALIO_WORKER_NAMESPACE = "zane"
 
 if BACKEND_COMPONENT == "API":
@@ -370,4 +377,5 @@ if BACKEND_COMPONENT == "API":
         zane_app_domain=ZANE_APP_DOMAIN,
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        internal_tls=DEBUG,
     )
