@@ -5,6 +5,7 @@ x-backend-vars: &env-vars
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
+  QUICKWIT_API_URL: http://zane.quickwit:7280
   
 services:
   proxy-test:
@@ -203,6 +204,8 @@ services:
       - ./quickwit/quickwit.yaml:/quickwit/config/quickwit.yaml
     networks:
         zane:
+          aliases:
+            - zane.quickwit
 volumes:
   db-data:
   redis-data:
