@@ -479,6 +479,125 @@ def register_zaneops_app_on_proxy(
     return
 
 
+def create_quickwit_index_if_not_exists(quickwit_url: str, log_index_name: str):
+    # Define the schema for the index
+    response = requests.get(f"{quickwit_url}/api/v1/indexes/{log_index_name}")
+
+    if response.status_code == 200:
+        print(
+            f"Index {Colors.BLUE}{log_index_name}{Colors.ENDC} already exists, skipping creation."
+        )
+        return
+    elif response.status_code == 404:
+        schema = {
+            "index_id": log_index_name,
+            "version": "0.8",
+            "doc_mapping": {
+                "field_mappings": [
+                    {
+                        "name": "id",
+                        "tokenizer": "raw",
+                        "type": "text",
+                        "fast": False,
+                        "record": "basic",
+                        "fieldnorms": False,
+                    },
+                    {
+                        "name": "created_at",
+                        "type": "datetime",
+                        "input_formats": ["iso8601", "unix_timestamp"],
+                        "fast": True,
+                    },
+                    {
+                        "name": "time",
+                        "type": "datetime",
+                        "input_formats": ["iso8601", "unix_timestamp"],
+                        "fast": True,
+                    },
+                    {
+                        "name": "service_id",
+                        "type": "text",
+                        "fast": {"normalizer": "raw"},
+                        "tokenizer": "raw",
+                        "record": "basic",
+                        "fieldnorms": False,
+                    },
+                    {
+                        "name": "deployment_id",
+                        "type": "text",
+                        "fast": {"normalizer": "raw"},
+                        "tokenizer": "raw",
+                        "record": "basic",
+                        "fieldnorms": False,
+                    },
+                    {
+                        "name": "content",
+                        "type": "text",
+                        "fast": False,
+                    },
+                    {
+                        "name": "content_text",
+                        "type": "text",
+                        "record": "position",
+                        "fast": {"normalizer": "lowercase"},
+                    },
+                    {
+                        "name": "level",
+                        "type": "text",
+                        "fast": {"normalizer": "raw"},
+                        "tokenizer": "raw",
+                        "record": "basic",
+                        "fieldnorms": False,
+                    },
+                    {
+                        "name": "source",
+                        "type": "text",
+                        "fast": {"normalizer": "raw"},
+                        "tokenizer": "raw",
+                        "record": "basic",
+                        "fieldnorms": False,
+                    },
+                ],
+                "timestamp_field": "time",
+            },
+            "search_settings": {"default_search_fields": ["content_text"]},
+            "retention": {"period": "30 days", "schedule": "daily"},
+        }
+
+        # Send a request to create the index
+        response = requests.post(f"{quickwit_url}/api/v1/indexes", json=schema)
+
+    if response.status_code == 200:
+        print(
+            f"{Colors.GREEN}Successfully created Quickwit index {Colors.BLUE}{log_index_name}{Colors.ENDC}"
+        )
+    else:
+        print(
+            f"{Colors.RED}Failed to create Quickwit index {Colors.BLUE}{log_index_name}{Colors.ENDC}: {response.json()}"
+        )
+
+
+def remote_quickwit_index_if_exists(quickwit_url: str, log_index_name: str):
+    response = requests.get(f"{quickwit_url}/api/v1/indexes/{log_index_name}")
+
+    if response.status_code == 404:
+        print(
+            f"Index {Colors.BLUE}{log_index_name}{Colors.ENDC} doest not exists, skipping deletion."
+        )
+        return
+    elif response.status_code == 200:
+        response = requests.delete(f"{quickwit_url}/api/v1/indexes/{log_index_name}")
+
+    if response.status_code == 200:
+        print(
+            f"{Colors.GREEN}Successfully deleted Quickwit index {Colors.BLUE}{log_index_name}{Colors.ENDC}"
+        )
+    else:
+        print(
+            f"{Colors.RED}Failed to create Quickwit index {Colors.BLUE}{log_index_name}{Colors.ENDC}: {response.json()}"
+        )
+
+
 class Colors:
     GREEN = "\033[92m"
     BLUE = "\033[94m"

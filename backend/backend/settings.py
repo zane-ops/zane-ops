@@ -20,7 +20,10 @@ import uvloop
 from dotenv_vault import load_dotenv
 
 from .api_description import API_DESCRIPTION
-from .bootstrap import register_zaneops_app_on_proxy
+from .bootstrap import (
+    register_zaneops_app_on_proxy,
+    create_quickwit_index_if_not_exists,
+)
 
 loop = uvloop.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -376,6 +379,8 @@ TEMPORALIO_WORKER_TASK_QUEUE = os.environ.get(
     "TEMPORALIO_WORKER_TASK_QUEUE", TEMPORALIO_MAIN_TASK_QUEUE
 )
 TEMPORALIO_WORKER_NAMESPACE = "zane"
+LOGS_INDEX_NAME = "logs"
+QUICKWIT_API_URL = os.environ.get("QUICKWIT_API_URL", "http://localhost:7280")
 
 if BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
@@ -385,3 +390,8 @@ if BACKEND_COMPONENT == "API":
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
     )
+
+    if not TESTING:
+        create_quickwit_index_if_not_exists(
+            log_index_name=LOGS_INDEX_NAME, quickwit_url=QUICKWIT_API_URL
+        )
