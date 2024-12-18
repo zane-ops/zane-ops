@@ -25,10 +25,9 @@ jobs:
         env:
           CADDY_ADMIN: 0.0.0.0:2020
       quickwit:
-        image: quickwit/quickwit:latest
+        image: fredkiss3/quickwit-ci-cd
         ports:
           - "7280:7280"
-        options: --entrypoint 'quickwit run'
     
     steps:
       - uses: actions/checkout@v2

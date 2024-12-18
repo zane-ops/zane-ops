@@ -194,7 +194,7 @@ services:
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: "development"
   quickwit:
-    image: quickwit/quickwit:latest
+    image: quickwit/quickwit:v0.8.2
     container_name: quickwit
     ports:
       - "7280:7280"
