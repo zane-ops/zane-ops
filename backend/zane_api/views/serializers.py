@@ -1109,3 +1109,12 @@ class GitServiceCardSerializer(BaseServiceCardSerializer):
     repository = serializers.CharField(required=True)
     last_commit_message = serializers.CharField(required=False)
     branch = serializers.CharField(required=True)
+
+
+# ==============================
+#       Resources Search       #
+# ==============================
+
+
+class ResourceSearchParamSerializer(serializers.Serializer):
+    query = serializers.CharField(required=False)

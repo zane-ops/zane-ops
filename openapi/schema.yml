@@ -2659,6 +2659,70 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
+  /api/search-resources/:
+    get:
+      operationId: searchResources
+      summary: search for resources (project, service ...)
+      parameters:
+      - in: query
+        name: query
+        schema:
+          type: string
+          minLength: 1
+      tags:
+      - search-resources
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResourcesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResourceResponse'
+          description: ''
 components:
   schemas:
     ApplyDeploymentChangesCommitMessageErrorComponent:
@@ -4476,6 +4540,11 @@ components:
       - ping
     PaginatedArchivedProjectList:
       type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
       properties:
         count:
           type: integer
@@ -4494,13 +4563,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
+    PaginatedDockerServiceDeploymentList:
+      type: object
       required:
       - count
       - next
       - previous
       - results
-    PaginatedDockerServiceDeploymentList:
-      type: object
       properties:
         count:
           type: integer
@@ -4519,30 +4588,34 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DockerServiceDeployment'
+    PaginatedHttpLogList:
+      type: object
+      required:
+      - next
+      - previous
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HttpLog'
+    PaginatedProjectList:
+      type: object
       required:
       - count
       - next
       - previous
       - results
-    PaginatedHttpLogList:
-      type: object
-      properties:
-        next:
-          type: string
-          nullable: true
-        previous:
-          type: string
-          nullable: true
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/HttpLog'
-      required:
-      - next
-      - previous
-      - results
-    PaginatedProjectList:
-      type: object
       properties:
         count:
           type: integer
@@ -4561,28 +4634,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+    PaginatedSimpleLogList:
+      type: object
       required:
-      - count
       - next
       - previous
       - results
-    PaginatedSimpleLogList:
-      type: object
       properties:
         next:
           type: string
           nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
         previous:
           type: string
           nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
         results:
           type: array
           items:
             $ref: '#/components/schemas/SimpleLog'
-      required:
-      - next
-      - previous
-      - results
     ParseError:
       type: object
       properties:
@@ -4731,6 +4803,31 @@ components:
         description:
           type: string
           minLength: 1
+    ProjectSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ProjectSearchTypeEnum'
+          default: project
+      required:
+      - created_at
+      - id
+      - slug
+      - type
+    ProjectSearchTypeEnum:
+      enum:
+      - project
+      type: string
+      description: '* `project` - project'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
@@ -6045,7 +6142,22 @@ components:
           minimum: 0.1
         memory:
           $ref: '#/components/schemas/MemoryLimitRequestRequest'
+    ResourceResponse:
+      oneOf:
+      - $ref: '#/components/schemas/ServiceSearch'
+      - $ref: '#/components/schemas/ProjectSearch'
+      discriminator:
+        propertyName: type
+        mapping:
+          null: '#/components/schemas/ProjectSearch'
     SearchDockerRegistryErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SearchResourcesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -6072,6 +6184,35 @@ components:
           minimum: 1
       required:
       - forwarded
+    ServiceSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        project_slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ServiceSearchTypeEnum'
+          default: service
+      required:
+      - created_at
+      - id
+      - project_slug
+      - slug
+      - type
+    ServiceSearchTypeEnum:
+      enum:
+      - service
+      type: string
+      description: '* `service` - service'
     ServiceStatusEnum:
       enum:
       - HEALTHY
