@@ -25,7 +25,7 @@ jobs:
         env:
           CADDY_ADMIN: 0.0.0.0:2020
       quickwit:
-        image: fredkiss3/quickwit-ci-cd
+        image: fredkiss3/quickwit-ci-cd:v0.8.2
         ports:
           - "7280:7280"
     
