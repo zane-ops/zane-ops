@@ -1064,7 +1064,7 @@ class DeploymentLogsPagination(pagination.CursorPagination):
 class DeploymentLogsResponseSerializer(serializers.Serializer):
     previous = serializers.CharField(required=False)
     next = serializers.CharField(required=False)
-    results = serializers.Field(child=serializers.RuntimeLogSerializer())
+    results = serializers.ListSerializer(child=serializers.RuntimeLogSerializer())
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
