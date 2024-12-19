@@ -40,7 +40,7 @@ from ..temporal import (
 )
 from backend.bootstrap import (
     create_quickwit_index_if_not_exists,
-    remote_quickwit_index_if_exists,
+    remove_quickwit_index_if_exists,
 )
 from ..utils import find_item_in_list, random_word
 from django.conf import settings
@@ -293,6 +293,12 @@ class APITestCase(TestCase):
 
         self.addCleanup(patch.stopall)
         self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
+        self.addCleanup(
+            lambda: remove_quickwit_index_if_exists(
+                log_index_name=self.LOGS_INDEX_NAME,
+                quickwit_url=settings.QUICKWIT_API_URL,
+            )
+        )
 
     def tearDown(self):
         cache.clear()

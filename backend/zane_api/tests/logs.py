@@ -185,8 +185,24 @@ class SimpleLogViewTests(AuthAPITestCase):
             '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
-            '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+            datetime.datetime(2024, 12, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '{"level":"info","ts":1734635931.911247,"logger":"http.log.access","msg":"handled request","request":{"remote_ip":"10.0.1.57","remote_port":"59916","client_ip":"10.0.1.57","proto":"HTTP/1.1","method":"GET","host":"sandbox-caddy-demo-docker.127-0-0-1.sslip.io","uri":"/","headers":{"Upgrade-Insecure-Requests":["1"],"X-Request-Id":["04f1b598-fb0b-49ca-bbf5-6cd70ad305e8"],"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"],"Dnt":["1"],"Accept-Encoding":["gzip, deflate"],"Sec-Gpc":["1"],"X-Forwarded-Host":["sandbox-caddy-demo-docker.127-0-0-1.sslip.io"],"Priority":["u=0, i"],"Referer":["http://sandbox-caddy-demo-docker.127-0-0-1.sslip.io/api-reference/openapi/"],"X-Forwarded-For":["10.0.0.2"],"X-Forwarded-Proto":["http"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0"],"Accept-Language":["en-GB,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],"Cookie":["REDACTED"]}},"bytes_read":0,"user_id":"","duration":0.002727297,"size":29996,"status":200,"resp_headers":{"Server":["Caddy"],"Vary":["Accept-Encoding"],"Etag":["\\"d5ztbs3p8mbkn58\\""],"Content-Type":["text/html; charset=utf-8"],"Last-Modified":["Sat, 30 Nov 2024 20:57:56 GMT"],"Accept-Ranges":["bytes"],"Content-Length":["29996"]}}',
+        ),
+        (
+            datetime.datetime(2024, 12, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '{"level":"info","ts":1734635927.307818,"logger":"http.log.access","msg":"handled request","request":{"remote_ip":"10.0.1.57","remote_port":"59916","client_ip":"10.0.1.57","proto":"HTTP/1.1","method":"GET","host":"sandbox-caddy-demo-docker.127-0-0-1.sslip.io","uri":"/api-reference/openapi/","headers":{"Upgrade-Insecure-Requests":["1"],"X-Forwarded-For":["10.0.0.2"],"X-Request-Id":["4e490c1d-06d4-494c-940d-a47580ee7be4"],"Dnt":["1"],"Referer":["http://sandbox-caddy-demo-docker.127-0-0-1.sslip.io/screenshots/"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0"],"Accept-Language":["en-GB,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"],"Accept-Encoding":["gzip, deflate"],"Cookie":["REDACTED"],"X-Forwarded-Proto":["http"],"Priority":["u=0, i"],"Sec-Gpc":["1"],"X-Forwarded-Host":["sandbox-caddy-demo-docker.127-0-0-1.sslip.io"]}},"bytes_read":0,"user_id":"","duration":0.000806585,"size":2632,"status":200,"resp_headers":{"Content-Type":["text/html; charset=utf-8"],"Last-Modified":["Sat, 30 Nov 2024 20:57:54 GMT"],"Accept-Ranges":["bytes"],"Content-Length":["2632"],"Server":["Caddy"],"Vary":["Accept-Encoding"],"Etag":["\\"d5ztbr6mhog0214\\""]}}',
+        ),
+        (
+            datetime.datetime(2024, 12, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '{"level":"info","ts":1734635927.2966347,"logger":"http.log.access","msg":"handled request","request":{"remote_ip":"10.0.1.57","remote_port":"59916","client_ip":"10.0.1.57","proto":"HTTP/1.1","method":"GET","host":"sandbox-caddy-demo-docker.127-0-0-1.sslip.io","uri":"/api-reference/openapi","headers":{"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"],"X-Forwarded-For":["10.0.0.2"],"X-Forwarded-Proto":["http"],"Sec-Gpc":["1"],"X-Forwarded-Host":["sandbox-caddy-demo-docker.127-0-0-1.sslip.io"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0"],"Accept-Encoding":["gzip, deflate"],"Cookie":["REDACTED"],"Priority":["u=0, i"],"Upgrade-Insecure-Requests":["1"],"X-Request-Id":["b1299d8f-6992-47a9-ad3d-e8748f1b78ef"],"Accept-Language":["en-GB,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],"Dnt":["1"],"Referer":["http://sandbox-caddy-demo-docker.127-0-0-1.sslip.io/screenshots/"]}},"bytes_read":0,"user_id":"","duration":0.000334876,"size":59,"status":308,"resp_headers":{"Server":["Caddy"],"Location":["/api-reference/openapi/"],"Content-Type":["text/html; charset=utf-8"]}}',
+        ),
+        (
+            datetime.datetime(2024, 12, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '{"level":"info","ts":1734635926.830525,"logger":"http.log.access","msg":"handled request","request":{"remote_ip":"10.0.1.57","remote_port":"59916","client_ip":"10.0.1.57","proto":"HTTP/1.1","method":"GET","host":"sandbox-caddy-demo-docker.127-0-0-1.sslip.io","uri":"/images/logs-max-light.png","headers":{"X-Forwarded-Proto":["http"],"X-Forwarded-For":["10.0.0.2"],"Priority":["u=5, i"],"Sec-Gpc":["1"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0"],"Dnt":["1"],"Referer":["http://sandbox-caddy-demo-docker.127-0-0-1.sslip.io/screenshots/"],"Accept-Encoding":["gzip, deflate"],"Accept":["image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"],"Accept-Language":["en-GB,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],"Cookie":["REDACTED"],"X-Forwarded-Host":["sandbox-caddy-demo-docker.127-0-0-1.sslip.io"],"X-Request-Id":["c9d6b730-f48b-4fb4-8296-7c4189851e3b"]}},"bytes_read":0,"user_id":"","duration":0.032420153,"size":1329945,"status":200,"resp_headers":{"Last-Modified":["Sat, 30 Nov 2024 20:57:53 GMT"],"Accept-Ranges":["bytes"],"Content-Length":["1329945"],"Server":["Caddy"],"Cache-Control":["public, max-age=31536000, immutable"],"Vary":["Accept-Encoding"],"Etag":["\\"d5ztbqq347i8si6x\\""],"Content-Type":["image/png"]}}',
+        ),
+        (
+            datetime.datetime(2024, 12, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            '{"level":"info","ts":1734635926.824431,"logger":"http.log.access","msg":"handled request","request":{"remote_ip":"10.0.1.57","remote_port":"59866","client_ip":"10.0.1.57","proto":"HTTP/1.1","method":"GET","host":"sandbox-caddy-demo-docker.127-0-0-1.sslip.io","uri":"/images/logs-rainbow-light.png","headers":{"Sec-Gpc":["1"],"X-Forwarded-Host":["sandbox-caddy-demo-docker.127-0-0-1.sslip.io"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0"],"Accept":["image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"],"Dnt":["1"],"X-Request-Id":["f8cec7bb-200c-42d1-b7de-a3fc8c4a3bde"],"X-Forwarded-For":["10.0.0.2"],"X-Forwarded-Proto":["http"],"Accept-Encoding":["gzip, deflate"],"Accept-Language":["en-GB,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],"Cookie":["REDACTED"],"Priority":["u=5, i"],"Referer":["http://sandbox-caddy-demo-docker.127-0-0-1.sslip.io/screenshots/"]}},"bytes_read":0,"user_id":"","duration":0.027112225,"size":1352496,"status":200,"resp_headers":{"Vary":["Accept-Encoding"],"Etag":["\\"d5ztbqq347i8szlc\\""],"Content-Type":["image/png"],"Last-Modified":["Sat, 30 Nov 2024 20:57:53 GMT"],"Accept-Ranges":["bytes"],"Content-Length":["1352496"],"Server":["Caddy"],"Cache-Control":["public, max-age=31536000, immutable"]}}',
         ),
     ]
 
@@ -194,6 +210,51 @@ class SimpleLogViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Make HTTP request
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(simple_logs), len(response.json()["results"]))
+
+    def test_paginate(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        # Insert logs
         simple_logs = [
             {
                 "log": content,
@@ -228,32 +289,42 @@ class SimpleLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
+            QUERY_STRING="per_page=5",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(len(simple_logs), len(response.json()["results"]))
+        data = response.json()
+        self.assertEqual(5, len(data["results"]))
+        self.assertIsNotNone(data["next"])
 
-    def test_paginate(self):
+    def test_paginate_get_next_page(self):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        SimpleLog.objects.bulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=(
-                        SimpleLog.LogLevel.INFO
-                        if i % 2 == 0
-                        else SimpleLog.LogLevel.ERROR
-                    ),
-                )
-                for i, (time, content) in enumerate(self.sample_log_contents)
-            ]
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = self.client.get(
             reverse(
@@ -267,9 +338,26 @@ class SimpleLogViewTests(AuthAPITestCase):
             QUERY_STRING="per_page=5",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        data = response.json()
-        self.assertIsNotNone(data["next"])
-        self.assertEqual(5, len(data["results"]))
+        first_page = response.json()
+        self.assertEqual(5, len(first_page["results"]))
+        next_cursor = first_page["next"]
+        self.assertIsNotNone(first_page["next"])
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"per_page=5&cursor={next_cursor}",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        second_page = response.json()
+        self.assertEqual(5, len(second_page["results"]))
+        self.assertNotEqual(first_page["results"], second_page["results"])
 
     def test_complex_filter(self):
         p, service = self.create_and_deploy_redis_docker_service()
