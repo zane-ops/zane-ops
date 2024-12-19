@@ -1,3 +1,4 @@
+import base64
 import dataclasses
 import json
 import time
@@ -1046,10 +1047,30 @@ class DeploymentLogsQuerySerializer(serializers.Serializer):
         ),
         required=False,
     )
-    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    cursor = serializers.CharField(required=False)
     per_page = serializers.IntegerField(
         required=False, min_value=1, max_value=100, default=50
     )
+
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
+
+
+class CursorSerializer(serializers.Serializer):
+    time = serializers.DateTimeField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    direction = serializers.ChoiceField(choices=["forward", "backward"], required=True)
 
 
 class DeploymentLogsPagination(pagination.CursorPagination):
@@ -1062,9 +1083,10 @@ class DeploymentLogsPagination(pagination.CursorPagination):
 
 
 class DeploymentLogsResponseSerializer(serializers.Serializer):
-    previous = serializers.CharField(required=False)
-    next = serializers.CharField(required=False)
+    previous = serializers.CharField(default=None, allow_null=True)
+    next = serializers.CharField(default=None, allow_null=True)
     results = serializers.ListSerializer(child=serializers.RuntimeLogSerializer())
+    query_time_ms = serializers.FloatField(required=False)
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):

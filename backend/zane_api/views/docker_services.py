@@ -13,13 +13,13 @@ from drf_spectacular.utils import (
 )
 from faker import Faker
 from rest_framework import status, exceptions
-from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
+from ..quickwit import QuickwitClient
 from .base import (
     EMPTY_RESPONSE,
     ResourceConflict,
@@ -31,6 +31,7 @@ from .helpers import (
     compute_docker_changes_from_snapshots,
 )
 from .serializers import (
+    DeploymentLogsResponseSerializer,
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
     DockerServiceUpdateRequestSerializer,
@@ -45,7 +46,6 @@ from .serializers import (
     DockerDeploymentFieldChangeRequestSerializer,
     DeploymentListPagination,
     DeploymentLogsPagination,
-    DeploymentLogsFilterSet,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
     ResourceLimitChangeSerializer,
@@ -865,17 +865,11 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
 
 
 class DockerServiceDeploymentLogsAPIView(APIView):
-    serializer_class = RuntimeLogSerializer
-    # pagination_class = DeploymentLogsPagination
-    # filter_backends = [DjangoFilterBackend]
-    # filterset_class = DeploymentLogsFilterSet
+    serializer_class = DeploymentLogsResponseSerializer
 
     @extend_schema(
         summary="Get deployment logs",
         parameters=[DeploymentLogsQuerySerializer],
-        # responses={
-        #     200:
-        # }
     )
     def get(
         self,
@@ -905,7 +899,8 @@ class DockerServiceDeploymentLogsAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
         else:
-            return Response(EMPTY_CURSOR_RESPONSE)
+            results = QuickwitClient.search(request, deployment_hash)
+            return Response(results)
 
 
 class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
