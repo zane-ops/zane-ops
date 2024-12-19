@@ -4,15 +4,10 @@ import uuid
 
 from django.urls import reverse
 from rest_framework import status
-from datetime import timedelta
-from django.utils import timezone
 from django.conf import settings
-from temporalio.testing import WorkflowEnvironment
 import base64
-from temporalio.common import RetryPolicy
 import requests
 
-from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
 from django.conf import settings
@@ -20,36 +15,6 @@ from ..utils import jprint
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
-    def test_collect_proxy_source_logs(self):
-        simple_proxy_logs = [
-            {
-                "source": "stdout",
-                "log": '{"level":"info","ts":1719324985.9711,"logger":"http.log.access","msg":"handled request","request":{"remote_ip":"10.0.0.2","remote_port":"37420","client_ip":"10.0.0.2","proto":"HTTP/2.0","method":"GET","host":"app.zaneops.local","uri":"/api/projects/?slug=&page=1&per_page=10&sort_by=-updated_at&status=active","headers":{"Cookie":["REDACTED"],"Te":["trailers"],"Sec-Fetch-Site":["same-origin"],"Priority":["u=4"],"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0"],"Accept":["*/*"],"Accept-Language":["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],"Dnt":["1"],"Accept-Encoding":["gzip, deflate, br, zstd"],"Referer":["https://app.zaneops.local/?slug=&page=1&per_page=10"],"Sec-Fetch-Dest":["empty"],"Content-Type":["application/json"],"Sec-Fetch-Mode":["cors"],"Sec-Gpc":["1"]},"tls":{"resumed":false,"version":772,"cipher_suite":4865,"proto":"h2","server_name":"app.zaneops.local"}},"bytes_read":0,"user_id":"","duration":0.041519349,"size":238,"status":200,"resp_headers":{"Alt-Svc":["h3=\\":443\\"; ma=2592000"],"Allow":["GET, POST, HEAD, OPTIONS"],"X-Frame-Options":["DENY"],"Vary":["Accept, Cookie"],"Server":["Caddy","WSGIServer/0.2 CPython/3.11.7"],"Content-Type":["application/json"],"Cross-Origin-Opener-Policy":["same-origin"],"Content-Length":["238"],"X-Content-Type-Options":["nosniff"],"Referrer-Policy":["same-origin"],"Date":["Tue, 25 Jun 2024 14:16:25 GMT"]}}',
-                "container_id": "8320676fc77bb91b54f0dff7015c08148fd3021db7038c8d0c18ec7378e1979e",
-                "container_name": "/zane_proxy.1.kj2d879vqbnpishh4d66i47do",
-                "time": "2024-06-25T14:16:25+0000",
-                "service": "proxy",
-                "tag": json.dumps({"service_id": "zane.proxy"}),
-            }
-        ]
-        json_log = json.loads(simple_proxy_logs[0]["log"])
-
-        response = self.client.post(
-            reverse("zane_api:logs.ingest"),
-            data=simple_proxy_logs,
-            headers={
-                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
-            },
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        self.assertEqual(1, SimpleLog.objects.count())
-        log: SimpleLog = SimpleLog.objects.first()
-        self.assertEqual(SimpleLog.LogSource.PROXY, log.source)
-        self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
-        self.assertIsNotNone(log.time)
-        self.assertEqual(json_log, log.content)
-
     def test_collect_service_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
 
@@ -412,67 +377,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             service_id=service.id
         ).acount()
         self.assertEqual(0, logs_for_service)
-
-
-class SimpleLogScheduleTests(AuthAPITestCase):
-    async def test_delete_logs_older_than_30_days(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            p, service = await self.acreate_and_deploy_redis_docker_service()
-            deployment: DockerDeployment = await service.deployments.afirst()
-
-            now = timezone.now()
-            sample_logs = [
-                (
-                    now - timedelta(days=45),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-                (
-                    now - timedelta(days=31),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-                (
-                    now - timedelta(days=29),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-                (
-                    now - timedelta(days=7),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-            ]
-
-            await SimpleLog.objects.abulk_create(
-                [
-                    SimpleLog(
-                        time=time,
-                        content=content,
-                        service_id=service.id,
-                        deployment_id=deployment.hash,
-                        source=SimpleLog.LogSource.SERVICE,
-                        content_text=SimpleLog.escape_ansi(content),
-                        level=SimpleLog.LogLevel.INFO,
-                    )
-                    for (time, content) in sample_logs
-                ]
-            )
-
-        async with self.workflowEnvironment(
-            task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE
-        ) as env:  # type: WorkflowEnvironment
-            result = await env.client.execute_workflow(
-                workflow=CleanupAppLogsWorkflow.run,
-                id="cleanup-app-logs",
-                retry_policy=RetryPolicy(
-                    maximum_attempts=1,
-                ),
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
-            )
-
-            self.assertEqual(2, result.deleted_count)
-            no_of_logs_older_than_a_month = await SimpleLog.objects.filter(
-                time__lt=timezone.now() - timedelta(days=30)
-            ).acount()
-            self.assertEqual(0, no_of_logs_older_than_a_month)
 
 
 class HttpLogViewTests(AuthAPITestCase):

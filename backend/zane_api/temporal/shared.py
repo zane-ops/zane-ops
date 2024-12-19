@@ -156,8 +156,3 @@ class DeployDockerServiceWorkflowResult:
 @dataclass
 class CancelDeploymentSignalInput:
     deployment_hash: str
-
-
-@dataclass
-class LogsCleanupResult:
-    deleted_count: int

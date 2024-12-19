@@ -52,8 +52,7 @@ services:
       dockerfile: ../backend/Dockerfile
     command: >
       bash -c "source /venv/bin/activate &&
-               uv pip install -r requirements.txt &&
-               python manage.py create_log_cleanup_schedule && python manage.py runserver 0.0.0.0:8000"
+               uv pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     container_name: zane-api
     volumes:
       - ../backend:/code
