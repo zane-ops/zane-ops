@@ -1,7 +1,9 @@
 x-backend-vars: &env-vars
   REDIS_URL: redis://zane.valkey:6379/0
-  DB_HOST: zane.db
+  DB_HOST: zane.pgbouncer
   DB_PORT: 5432
+  DB_USER: postgres
+  DB_PASSWORD: password
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
@@ -195,6 +197,21 @@ services:
         zane:
           aliases:
             - zane.quickwit
+  pgbouncer:  
+    image: edoburu/pgbouncer:v1.23.1-p3
+    environment:
+      <<: *env-vars
+      DB_HOST: zane.db
+      POOL_MODE: transaction
+      MAX_DB_CONNECTIONS: 100
+      DEFAULT_POOL_SIZE: 50
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      - db  
+    networks:
+      zane:
+        aliases:
+          - zane.pgbouncer
 volumes:
   db-data:
   redis-data:
