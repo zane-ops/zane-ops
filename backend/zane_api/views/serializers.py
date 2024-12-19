@@ -36,6 +36,7 @@ from ..temporal import (
 )
 from ..utils import EnhancedJSONEncoder, convert_value_to_bytes, format_storage_value
 from ..validators import validate_url_path, validate_env_name
+from ..dtos import RuntimeLogLevel, RuntimeLogSource
 
 
 # ==============================
@@ -1018,17 +1019,37 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 
 class DeploymentLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(method="filter_content", strip=False)
-    source = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogSource.choices)
-    level = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogLevel.choices)
+    query = django_filters.CharFilter(strip=False)
+    source = django_filters.MultipleChoiceFilter(
+        choices=[RuntimeLogSource.SERVICE, RuntimeLogSource.SYSTEM]
+    )
+    level = django_filters.MultipleChoiceFilter(
+        choices=[RuntimeLogLevel.INFO, RuntimeLogLevel.ERROR]
+    )
 
-    @staticmethod
-    def filter_content(queryset: QuerySet, name: str, value: str):
-        return queryset.filter(content_text__icontains=value)
 
-    class Meta:
-        model = SimpleLog
-        fields = ["level", "content", "time", "source"]
+class DeploymentLogsQuerySerializer(serializers.Serializer):
+    time_before = serializers.DateTimeField(required=False)
+    time_after = serializers.DateTimeField(required=False)
+    query = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
+    source = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[RuntimeLogSource.SERVICE, RuntimeLogSource.SYSTEM]
+        ),
+        required=False,
+    )
+    level = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[RuntimeLogLevel.INFO, RuntimeLogLevel.ERROR]
+        ),
+        required=False,
+    )
+    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
 
 
 class DeploymentLogsPagination(pagination.CursorPagination):
@@ -1038,6 +1059,12 @@ class DeploymentLogsPagination(pagination.CursorPagination):
         "-time",
         "-created_at",
     )
+
+
+class DeploymentLogsResponseSerializer(serializers.Serializer):
+    previous = serializers.CharField(required=False)
+    next = serializers.CharField(required=False)
+    results = serializers.Field(child=serializers.RuntimeLogSerializer())
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):

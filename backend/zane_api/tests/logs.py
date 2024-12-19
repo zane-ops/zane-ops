@@ -14,8 +14,8 @@ from django.conf import settings
 from ..utils import jprint
 
 
-class SimpleLogCollectViewTests(AuthAPITestCase):
-    def test_collect_service_logs(self):
+class SimpleIngestCollectViewTests(AuthAPITestCase):
+    def test_ingest_service_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
 
         deployment: DockerDeployment = service.deployments.first()
@@ -194,24 +194,30 @@ class SimpleLogViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = SimpleLog.objects.bulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=(
-                        SimpleLog.LogLevel.INFO
-                        if i % 2 == 0
-                        else SimpleLog.LogLevel.ERROR
-                    ),
-                )
-                for i, (time, content) in enumerate(self.sample_log_contents)
-            ]
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = self.client.get(
             reverse(
