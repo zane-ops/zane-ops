@@ -505,12 +505,14 @@ def create_quickwit_index_if_not_exists(quickwit_url: str, log_index_name: str):
                     {
                         "name": "created_at",
                         "type": "datetime",
+                        "fast_precision": "nanoseconds",
                         "input_formats": ["iso8601", "unix_timestamp"],
                         "fast": True,
                     },
                     {
                         "name": "time",
                         "type": "datetime",
+                        "fast_precision": "nanoseconds",
                         "input_formats": ["iso8601", "unix_timestamp"],
                         "fast": True,
                     },
@@ -577,7 +579,7 @@ def create_quickwit_index_if_not_exists(quickwit_url: str, log_index_name: str):
         )
 
 
-def remote_quickwit_index_if_exists(quickwit_url: str, log_index_name: str):
+def remove_quickwit_index_if_exists(quickwit_url: str, log_index_name: str):
     response = requests.get(f"{quickwit_url}/api/v1/indexes/{log_index_name}")
 
     if response.status_code == 404:
@@ -590,7 +592,7 @@ def remote_quickwit_index_if_exists(quickwit_url: str, log_index_name: str):
 
     if response.status_code == 200:
         print(
-            f"{Colors.GREEN}Successfully deleted Quickwit index {Colors.BLUE}{log_index_name}{Colors.ENDC}"
+            f"{Colors.GREEN}Successfully removed Quickwit index {Colors.BLUE}{log_index_name}{Colors.ENDC}"
         )
     else:
         print(
