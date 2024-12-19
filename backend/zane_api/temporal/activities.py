@@ -6,7 +6,6 @@ from typing import List, Optional, TypedDict
 from rest_framework import status
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
-from temporalio.service import RPCError
 
 from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 
@@ -803,10 +802,7 @@ class DockerSwarmActivities:
 
                 swarm_service.remove()
                 print(f"Removed service. YAY !! 🎉")
-                try:
-                    await delete_schedule(deployment.monitor_schedule_id)
-                except RPCError:
-                    pass
+                await delete_schedule(deployment.monitor_schedule_id)
         print("deleting volume list...")
         docker_volume_list = self.docker_client.volumes.list(
             filters={
@@ -1030,13 +1026,9 @@ class DockerSwarmActivities:
             docker_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
             await docker_deployment.asave()
 
-            try:
-                await delete_schedule(
-                    id=docker_deployment.monitor_schedule_id,
-                )
-            except RPCError:
-                # The schedule probably doesn't exist
-                pass
+            await delete_schedule(
+                id=docker_deployment.monitor_schedule_id,
+            )
 
     @activity.defn
     async def create_docker_volumes_for_service(
@@ -1141,19 +1133,12 @@ class DockerSwarmActivities:
             )
 
             if docker_deployment is not None:
-                try:
-                    await pause_schedule(
-                        id=deployment.monitor_schedule_id,
-                        note="Paused to prevent zero-downtime deployment",
-                    )
-                except RPCError:
-                    # The schedule probably doesn't exist
-                    pass
-                finally:
-                    docker_deployment.status = (
-                        DockerDeployment.DeploymentStatus.SLEEPING
-                    )
-                    await docker_deployment.asave()
+                await pause_schedule(
+                    id=deployment.monitor_schedule_id,
+                    note="Paused to prevent zero-downtime deployment",
+                )
+                docker_deployment.status = DockerDeployment.DeploymentStatus.SLEEPING
+                await docker_deployment.asave()
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
@@ -1204,14 +1189,10 @@ class DockerSwarmActivities:
             if docker_deployment is not None:
                 docker_deployment.status = DockerDeployment.DeploymentStatus.STARTING
                 await docker_deployment.asave()
-                try:
-                    await unpause_schedule(
-                        id=docker_deployment.monitor_schedule_id,
-                        note="Unpaused due to failed healthcheck",
-                    )
-                except RPCError:
-                    # The schedule probably doesn't exist
-                    pass
+                await unpause_schedule(
+                    id=docker_deployment.monitor_schedule_id,
+                    note="Unpaused due to failed healthcheck",
+                )
 
     @activity.defn
     async def pull_image_for_deployment(self, deployment: DockerDeploymentDetails):
