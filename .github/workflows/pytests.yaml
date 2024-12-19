@@ -24,6 +24,10 @@ jobs:
           - "2020:2020"
         env:
           CADDY_ADMIN: 0.0.0.0:2020
+      quickwit:
+        image: fredkiss3/quickwit-ci-cd:v0.8.2
+        ports:
+          - "7280:7280"
     
     steps:
       - uses: actions/checkout@v2
@@ -36,13 +40,11 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install uv==0.4.2
-          uv venv
-          uv pip install -r requirements.txt
+          pip install uv==0.5.10
+          uv venv --python 3.11.7
+          source .venv/bin/activate && uv pip install -r ./requirements.txt
 
       - name: Run tests
         run: |
           cd backend
-          source .venv/bin/activate
-          # echo "Disabling tests for now"
-          python manage.py test --parallel
+          source .venv/bin/activate && python manage.py test --parallel

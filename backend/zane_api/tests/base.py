@@ -38,7 +38,12 @@ from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import find_item_in_list
+from backend.bootstrap import (
+    create_quickwit_index_if_not_exists,
+    remote_quickwit_index_if_exists,
+)
+from ..utils import find_item_in_list, random_word
+from django.conf import settings
 
 
 class CustomAPIClient(APIClient):
@@ -259,13 +264,16 @@ class AsyncCustomAPIClient(AsyncClient):
         }
     },
     # DEBUG=True,  # uncomment for debugging temporalio workflows
-    CELERY_TASK_ALWAYS_EAGER=True,
-    CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
-    CELERY_BROKER_URL="memory://",
-    CELERY_TASK_STORE_EAGER_RESULT=True,
 )
 class APITestCase(TestCase):
     def setUp(self):
+        self.LOGS_INDEX_NAME = f"{settings.LOGS_INDEX_NAME}-{random_word()}"
+        settings_ctx = override_settings(LOGS_INDEX_NAME=self.LOGS_INDEX_NAME)
+        settings_ctx.__enter__()
+        create_quickwit_index_if_not_exists(
+            log_index_name=self.LOGS_INDEX_NAME,
+            quickwit_url=settings.QUICKWIT_API_URL,
+        )
         self.client = CustomAPIClient(parent=self)
         self.async_client = AsyncCustomAPIClient(parent=self)
         self.fake_docker_client = FakeDockerClient()
@@ -284,6 +292,7 @@ class APITestCase(TestCase):
         ).start()
 
         self.addCleanup(patch.stopall)
+        self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
 
     def tearDown(self):
         cache.clear()

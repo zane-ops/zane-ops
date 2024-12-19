@@ -51,29 +51,39 @@ async def create_schedule(
 
 
 async def pause_schedule(id: str, note: str = None):
-    client = await get_temporalio_client()
-    handle = client.get_schedule_handle(
-        f"schedule-{id}",
-    )
+    try:
+        client = await get_temporalio_client()
+        handle = client.get_schedule_handle(
+            f"schedule-{id}",
+        )
 
-    await handle.pause(note=note)
+        await handle.pause(note=note)
+    except RPCError:
+        pass
 
 
 async def unpause_schedule(id: str, note: str = None):
-    client = await get_temporalio_client()
-    handle = client.get_schedule_handle(
-        f"schedule-{id}",
-    )
+    try:
+        client = await get_temporalio_client()
+        handle = client.get_schedule_handle(
+            f"schedule-{id}",
+        )
 
-    await handle.unpause(note=note)
+        await handle.unpause(note=note)
+    except RPCError:
+        pass
 
 
-async def delete_schedule(id: str):
-    client = await get_temporalio_client()
-    handle = client.get_schedule_handle(
-        f"schedule-{id}",
-    )
-    await handle.delete()
+async def delete_schedule(id: str, prefix="schedule-"):
+    try:
+        client = await get_temporalio_client()
+        handle = client.get_schedule_handle(
+            f"{prefix}{id}",
+        )
+        await handle.delete()
+    except RPCError:
+        # The schedule probably doesn't exist
+        pass
 
 
 @async_to_sync

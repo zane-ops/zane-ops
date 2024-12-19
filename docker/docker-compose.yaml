@@ -1,10 +1,13 @@
 x-backend-vars: &env-vars
   REDIS_URL: redis://zane.valkey:6379/0
-  DB_HOST: zane.db
+  DB_HOST: zane.pgbouncer
   DB_PORT: 5432
+  DB_USER: postgres
+  DB_PASSWORD: password
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
+  QUICKWIT_API_URL: http://zane.quickwit:7280
   
 services:
   proxy-test:
@@ -51,8 +54,7 @@ services:
       dockerfile: ../backend/Dockerfile
     command: >
       bash -c "source /venv/bin/activate &&
-               uv pip install -r requirements.txt &&
-               python manage.py create_log_cleanup_schedule && python manage.py runserver 0.0.0.0:8000"
+               uv pip install -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     container_name: zane-api
     volumes:
       - ../backend:/code
@@ -182,12 +184,42 @@ services:
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
+  quickwit:
+    image: quickwit/quickwit:v0.8.2
+    container_name: quickwit
+    ports:
+      - "7280:7280"
+    command: run
+    volumes:
+      - qw-data:/quickwit/qwdata
+      - ./quickwit/quickwit.yaml:/quickwit/config/quickwit.yaml
+    networks:
+        zane:
+          aliases:
+            - zane.quickwit
+  pgbouncer:  
+    image: edoburu/pgbouncer:v1.23.1-p3
+    environment:
+      <<: *env-vars
+      DB_HOST: zane.db
+      POOL_MODE: transaction
+      MAX_DB_CONNECTIONS: 100
+      DEFAULT_POOL_SIZE: 50
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      - db  
+    networks:
+      zane:
+        aliases:
+          - zane.pgbouncer
 volumes:
   db-data:
   redis-data:
   redisinsight:
   caddy-data:
   pgadmin-data:
+  meili-data:
+  qw-data:
 networks:
   zane:
     external: true

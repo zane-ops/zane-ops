@@ -22,13 +22,12 @@ setup: ### Initial setup of the project
 	else \
     	docker network create --attachable --driver overlay --label zane.stack=true zane; \
 	fi
-	python3 -m venv ./backend/venv
-	echo 'activating the virtualenv...'
-	chmod a+x ./backend/venv/bin/activate
-	. ./backend/venv/bin/activate
-	echo 'installing dependencies...'
-	pip install uv==0.4.2
-	uv pip install -r ./backend/requirements.txt
+	echo "Creating a virual environment"
+	curl -LsSf https://astral.sh/uv/install.sh | sh
+	source $$HOME/.local/bin/env
+	uv venv --python 3.11.7 --allow-existing ./backend/venv 
+	echo 'activating the virtualenv and installing dependencies...'
+	. ./backend/venv/bin/activate && uv pip install -r ./backend/requirements.txt
 	pnpm install --frozen-lockfile
 	chmod -R a+rx ./docker/temporalio/*.sh
 	
