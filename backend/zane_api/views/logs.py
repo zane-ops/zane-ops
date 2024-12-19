@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
+import requests
 from rest_framework import status, permissions, exceptions
 from rest_framework.generics import ListAPIView
 from rest_framework.request import Request
@@ -11,7 +12,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
-from ..utils import Colors
+from ..utils import Colors, jprint
+from ..dtos import RuntimeLogLevel, RuntimeLogSource
 
 from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
@@ -25,7 +27,10 @@ from ..models import (
     SimpleLog,
     HttpLog,
 )
-from ..serializers import SimpleLogSerializer
+from ..serializers import RuntimeLogSerializer, SimpleLogSerializer
+from uuid import uuid4
+from django.conf import settings
+from django.utils import timezone
 
 
 @extend_schema(exclude=True)
@@ -40,8 +45,8 @@ class LogIngestAPIView(APIView):
         if serializer.is_valid(raise_exception=True):
             logs = serializer.data
 
-            simple_logs: list[SimpleLog] = []
-            http_logs: list[HttpLog] = []
+            simple_logs: list[dict] = []
+            http_logs: list[dict] = []
 
             for log in logs:
                 try:
@@ -116,18 +121,30 @@ class LogIngestAPIView(APIView):
                                                 )
                                             )
                                             continue
-                                simple_logs.append(
-                                    SimpleLog(
-                                        source=SimpleLog.LogSource.PROXY,
-                                        level=(
-                                            SimpleLog.LogLevel.INFO
-                                            if log["source"] == "stdout"
-                                            else SimpleLog.LogLevel.ERROR
-                                        ),
-                                        content=content,
-                                        time=log["time"],
-                                    )
-                                )
+                                # simple_logs.append(
+                                #     RuntimeLogSerializer(
+                                #         dict(
+                                #             source=SimpleLog.LogSource.PROXY,
+                                #             level=(
+                                #                 "INFO"
+                                #                 if log["source"] == "stdout"
+                                #                 else "ERROR"
+                                #             ),
+                                #             content=content,
+                                #             time=log["time"],
+                                #         )
+                                #     ).data
+                                #     # SimpleLog(
+                                #     #     source=SimpleLog.LogSource.PROXY,
+                                #     #     level=(
+                                #     #         SimpleLog.LogLevel.INFO
+                                #     #         if log["source"] == "stdout"
+                                #     #         else SimpleLog.LogLevel.ERROR
+                                #     #     ),
+                                #     #     content=content,
+                                #     #     time=log["time"],
+                                #     # )
+                                # )
 
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
@@ -135,22 +152,42 @@ class LogIngestAPIView(APIView):
                         case _:
                             deployment_id = json_tag["deployment_id"]
                             simple_logs.append(
-                                SimpleLog(
-                                    source=SimpleLog.LogSource.SERVICE,
+                                dict(
+                                    id=str(uuid4()),
+                                    source=RuntimeLogSource.SERVICE,
                                     level=(
-                                        SimpleLog.LogLevel.INFO
+                                        RuntimeLogLevel.INFO
                                         if log["source"] == "stdout"
-                                        else SimpleLog.LogLevel.ERROR
+                                        else RuntimeLogLevel.ERROR
                                     ),
                                     content=log["log"],
                                     time=log["time"],
+                                    created_at=timezone.now().isoformat(),
                                     deployment_id=deployment_id,
                                     service_id=service_id,
                                     content_text=SimpleLog.escape_ansi(log["log"]),
                                 )
                             )
-            SimpleLog.objects.bulk_create(simple_logs)
-            HttpLog.objects.bulk_create(http_logs)
+                            # SimpleLog(
+                            #     source=SimpleLog.LogSource.SERVICE,
+                            #     level=(
+                            #         SimpleLog.LogLevel.INFO
+                            #         if log["source"] == "stdout"
+                            #         else SimpleLog.LogLevel.ERROR
+                            #     ),
+                            #     content=log["log"],
+                            #     time=log["time"],
+                            #     deployment_id=deployment_id,
+                            #     service_id=service_id,
+                            #     content_text=SimpleLog.escape_ansi(log["log"]),
+                            # )
+            # SimpleLog.objects.bulk_create(simple_logs)
+            # HttpLog.objects.bulk_create(http_logs)
+            response = requests.post(
+                f"{settings.QUICKWIT_API_URL}/api/v1/{settings.LOGS_INDEX_NAME}/ingest?commit=force",
+                headers={"Content-Type": "application/json"},
+                data="\n".join(json.dumps(log) for log in simple_logs),
+            )
 
             response = DockerContainerLogsResponseSerializer(
                 {

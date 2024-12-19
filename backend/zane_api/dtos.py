@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Literal
+from enum import Enum
 
 
 @dataclass
@@ -213,3 +214,14 @@ class DeploymentChangeDto:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(**data)
+
+
+class RuntimeLogLevel:
+    ERROR = "ERROR"
+    INFO = "INFO"
+
+
+class RuntimeLogSource:
+    SYSTEM = "SYSTEM"
+    PROXY = "PROXY"
+    SERVICE = "SERVICE"

@@ -10,11 +10,13 @@ from django.conf import settings
 from temporalio.testing import WorkflowEnvironment
 import base64
 from temporalio.common import RetryPolicy
-
+import requests
 
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
+from django.conf import settings
+from ..utils import jprint
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
@@ -156,16 +158,23 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(len(simple_logs), deployment.logs.count())
-        log: SimpleLog = deployment.logs.first()
-        self.assertEqual(SimpleLog.LogSource.SERVICE, log.source)
-        self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
-        self.assertIsNotNone(log.time)
+        response = requests.post(
+            url=f"{settings.QUICKWIT_API_URL}/api/v1/{self.LOGS_INDEX_NAME}/search",
+            json={
+                "query": f"deployment_id:{deployment.hash}",
+                "sort_by": "-created_at",
+            },
+        )
+        deployment_logs = response.json()
+        jprint(deployment_logs)
+
+        self.assertEqual(len(simple_logs), deployment_logs["num_hits"])
+        first_log = deployment_logs["hits"][0]
         self.assertEqual(
             simple_logs[0]["log"],
-            log.content,
+            first_log["content"],
         )
-        self.assertIsNotNone(log.service_id)
+        self.assertIsNotNone(first_log["service_id"])
 
 
 class SimpleLogViewTests(AuthAPITestCase):

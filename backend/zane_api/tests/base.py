@@ -267,9 +267,11 @@ class AsyncCustomAPIClient(AsyncClient):
 )
 class APITestCase(TestCase):
     def setUp(self):
-        index_name = f"{settings.LOGS_INDEX_NAME}-{random_word()}"
+        self.LOGS_INDEX_NAME = f"{settings.LOGS_INDEX_NAME}-{random_word()}"
+        settings_ctx = override_settings(LOGS_INDEX_NAME=self.LOGS_INDEX_NAME)
+        settings_ctx.__enter__()
         create_quickwit_index_if_not_exists(
-            log_index_name=index_name,
+            log_index_name=self.LOGS_INDEX_NAME,
             quickwit_url=settings.QUICKWIT_API_URL,
         )
         self.client = CustomAPIClient(parent=self)
@@ -290,12 +292,7 @@ class APITestCase(TestCase):
         ).start()
 
         self.addCleanup(patch.stopall)
-        self.addCleanup(
-            lambda: remote_quickwit_index_if_exists(
-                log_index_name=index_name,
-                quickwit_url=settings.QUICKWIT_API_URL,
-            )
-        )
+        self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
 
     def tearDown(self):
         cache.clear()
