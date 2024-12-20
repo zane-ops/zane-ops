@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from .base import InternalZaneAppPermission
 from ..utils import Colors
 from ..dtos import RuntimeLogLevel, RuntimeLogSource
+import traceback
 
 
 from .helpers import ZaneServices
@@ -28,6 +29,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
+from datetime import timezone as tz
 
 
 @extend_schema(exclude=True)
@@ -92,13 +94,27 @@ class LogIngestAPIView(APIView):
                                             full_url = urlparse(
                                                 f"https://{req['host']}{req['uri']}"
                                             )
+
+                                            try:
+                                                log["time"] = int(log["time"])
+                                                log_time = datetime.fromtimestamp(
+                                                    log["time"]
+                                                    / 1e9,  # convert nanoseconds to seconds,
+                                                    tz.utc,
+                                                )
+                                            except ValueError:
+                                                # this log is probably formatted as an ISO string
+                                                log_time = datetime.fromisoformat(
+                                                    log["time"]
+                                                )
+                                            except Exception as e:
+                                                print("Error parsing log time : ", e)
+                                                traceback.print_exc()
+                                                continue
+
                                             http_logs.append(
                                                 HttpLog(
-                                                    time=datetime.fromtimestamp(
-                                                        log["time"]
-                                                        / 1e9,  # convert nanoseconds to seconds,
-                                                        timezone.utc,
-                                                    ),
+                                                    time=log_time,
                                                     service_id=log_content.get(
                                                         "zane_service_id"
                                                     ),
