@@ -143,8 +143,8 @@ jaeger:
 metastore_uri: postgres://postgres:password@zane.db:5432/quickwit
 metastore:
   postgres:
-    min_connections: 10
-    max_connections: 50
+    min_connections: 5
+    max_connections: 10
     acquire_connection_timeout: 30s
     idle_connection_timeout: 1h
     max_connection_lifetime: 1d
