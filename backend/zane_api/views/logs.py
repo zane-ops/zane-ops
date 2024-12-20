@@ -27,6 +27,7 @@ from ..models import (
 from uuid import uuid4
 from django.conf import settings
 from django.utils import timezone
+from datetime import datetime, timezone
 
 
 @extend_schema(exclude=True)
@@ -93,7 +94,11 @@ class LogIngestAPIView(APIView):
                                             )
                                             http_logs.append(
                                                 HttpLog(
-                                                    time=log["time"],
+                                                    time=datetime.fromtimestamp(
+                                                        log["time"]
+                                                        / 1e9,  # convert nanoseconds to seconds,
+                                                        timezone.utc,
+                                                    ),
                                                     service_id=log_content.get(
                                                         "zane_service_id"
                                                     ),
@@ -140,21 +145,23 @@ class LogIngestAPIView(APIView):
                                 )
                             )
             HttpLog.objects.bulk_create(http_logs)
+
             response = requests.post(
                 f"{settings.QUICKWIT_API_URL}/api/v1/{settings.LOGS_INDEX_NAME}/ingest?commit=force",
                 headers={"Content-Type": "application/json"},
                 data="\n".join(json.dumps(log) for log in simple_logs),
             )
+            response.raise_for_status()
 
-            response = DockerContainerLogsResponseSerializer(
+            data = DockerContainerLogsResponseSerializer(
                 {
                     "simple_logs_inserted": len(simple_logs),
                     "http_logs_inserted": len(http_logs),
                 }
-            )
+            ).data
             print("====== LOGS INGEST ======")
             print(
                 f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}"
             )
             print(f"HTTP logs inserted = {Colors.BLUE}{len(http_logs)}{Colors.ENDC}")
-            return Response(response.data, status=status.HTTP_200_OK)
+            return Response(data, status=status.HTTP_200_OK)

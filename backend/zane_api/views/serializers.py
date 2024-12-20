@@ -936,7 +936,7 @@ class DockerContainerLogSerializer(serializers.Serializer):
     log = serializers.CharField(required=True, allow_blank=True, trim_whitespace=False)
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
-    time = serializers.DateTimeField(required=True)
+    time = serializers.CharField(required=True)
     tag = serializers.CharField(required=True)
     SOURCES = (
         ("stdout", _("standard ouput")),
@@ -1068,8 +1068,7 @@ class DeploymentLogsQuerySerializer(serializers.Serializer):
 
 
 class CursorSerializer(serializers.Serializer):
-    time = serializers.DateTimeField(required=True)
-    created_at = serializers.DateTimeField(required=True)
+    time = serializers.IntegerField(required=True)
     direction = serializers.ChoiceField(choices=["forward", "backward"], required=True)
 
 
