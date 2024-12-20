@@ -117,10 +117,10 @@ class QuickwitClient:
                             level=result["level"],
                             source=result["source"],
                             time=datetime.fromtimestamp(
-                                result["time"] / 1e9, timezone.utc
+                                result["time"] / 1e6, timezone.utc
                             ).isoformat(),
                             created_at=datetime.fromtimestamp(
-                                result["created_at"] / 1e9, timezone.utc
+                                result["created_at"] / 1e6, timezone.utc
                             ).isoformat(),
                         )
                         for result in results
