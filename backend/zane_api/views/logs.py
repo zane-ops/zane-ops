@@ -27,7 +27,7 @@ from ..models import (
 from uuid import uuid4
 from django.conf import settings
 from django.utils import timezone
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 @extend_schema(exclude=True)
