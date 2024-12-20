@@ -46,7 +46,7 @@ curl "http://127.0.0.1:2019/load" \
 	-d @docker/proxy/default-caddy-config-dev.json
 
 echo "Flushing the main app database..."
-source ./backend/venv/bin/activate && echo yes | SILENT=true python ./backend/manage.py flush
+source ./backend/venv/bin/activate && python ./backend/manage.py flush --noinput
 
 
 echo "Recreating the superuser..."
