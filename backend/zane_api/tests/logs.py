@@ -112,6 +112,14 @@ class SimpleIngestCollectViewTests(AuthAPITestCase):
                 ),
                 "source": "stdout",
             },
+            {
+                "container_name": "/srv-prj_v6nBYFktpca-srv_dkr_Jky5k4jWB39-dpl_dkr_Nv8dh4Uwufq.1.pyualwe9r3xunj7byxmjj29df",
+                "source": "stdout",
+                "log": '10.0.1.223 - - [20/Dec/2024:22:18:04 +0000] "GET / HTTP/1.1" 200 12127 "http://localhost:5678/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0" "10.0.0.2"',
+                "container_id": "e56cd3cc671d77983ffdc90a61e0b2e36a5d0b2f6986ec3001999b21f9bc76fa",
+                "time": 1734733084912385000,
+                "tag": f'{{"service_id": "{service.id}", "deployment_id": "{deployment.hash}"}}',
+            },
         ]
 
         response = self.client.post(
