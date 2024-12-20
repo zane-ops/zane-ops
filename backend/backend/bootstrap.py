@@ -505,15 +505,17 @@ def create_quickwit_index_if_not_exists(quickwit_url: str, log_index_name: str):
                     {
                         "name": "created_at",
                         "type": "datetime",
-                        "fast_precision": "nanoseconds",
                         "input_formats": ["iso8601", "unix_timestamp"],
+                        "output_format": "unix_timestamp_micros",
+                        "fast_precision": "nanoseconds",
                         "fast": True,
                     },
                     {
                         "name": "time",
                         "type": "datetime",
-                        "fast_precision": "nanoseconds",
                         "input_formats": ["iso8601", "unix_timestamp"],
+                        "output_format": "unix_timestamp_micros",
+                        "fast_precision": "nanoseconds",
                         "fast": True,
                     },
                     {
