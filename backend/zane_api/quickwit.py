@@ -20,10 +20,22 @@ class QuickwitClient:
         if form.is_valid(raise_exception=True):
             per_page = form.data["per_page"]
             cursor = form.data.get("cursor")
+            level: list[str] = form.data.get("level")
+            source: list[str] = form.data.get("source")
+            query: str = form.data.get("query", "*")
 
             base_search_query = f"deployment_id:{deployment_hash}"
-            search_query_with_cursor = base_search_query
 
+            if level:
+                base_search_query = (
+                    f"{base_search_query} AND level:IN [{' '.join(level)}]"
+                )
+            if source:
+                base_search_query = (
+                    f"{base_search_query} AND source:IN [{' '.join(source)}]"
+                )
+
+            search_query_with_cursor = base_search_query
             if cursor:
                 cursor = base64.b64decode(cursor).decode()
                 cursor = json.loads(cursor)
@@ -86,7 +98,7 @@ class QuickwitClient:
                 backward_response.raise_for_status()
 
                 print(f"{previous_query=}")
-                jprint(backward_response.json())
+                jprint(response.json())
 
                 backward_results: list[dict] = backward_response.json()["hits"]
                 if len(backward_results) > 1:
