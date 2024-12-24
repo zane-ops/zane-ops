@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
 from ..utils import Colors
+from datetime import datetime
 
 from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
@@ -149,8 +150,10 @@ class LogIngestAPIView(APIView):
                                     content_text=SimpleLog.escape_ansi(log["log"]),
                                 )
                             )
+            start_time = datetime.now()
             SimpleLog.objects.bulk_create(simple_logs)
             HttpLog.objects.bulk_create(http_logs)
+            end_time = datetime.now()
 
             response = DockerContainerLogsResponseSerializer(
                 {
@@ -159,6 +162,7 @@ class LogIngestAPIView(APIView):
                 }
             )
             print("====== LOGS INGEST ======")
+            print(f"Took {end_time - start_time}")
             print(
                 f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}"
             )
