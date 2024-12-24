@@ -413,7 +413,7 @@ export function CommandMenu() {
         </div>
       </div>
 
-      {open && (
+      {open && resources.length > 0 && (
         <div className="absolute top-12 left-0 w-full z-50 shadow-lg  rounded-md">
           <Command>
             <CommandList>
@@ -422,7 +422,7 @@ export function CommandMenu() {
                 heading={<span>Resources ({resources.length})</span>}
               >
                 {resources.map((resource) => (
-                  <CommandItem className=" block">
+                  <CommandItem key={resource.id} className=" block">
                     <p>{resource.slug}</p>
                     <p className="text-secondary text-xs">
                       {resource.type === "project" ? (
