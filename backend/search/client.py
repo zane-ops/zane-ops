@@ -4,12 +4,25 @@ from zane_api.utils import Colors
 
 
 class SearchClient:
+    """
+    TODO :
+    - limit the system logs to less than 30k characters
+    - we might need to explore breaking service logs into pieces if they exceed the limit when indexing
+    - add retention policy for logs in ElasticSearch to 30 days max :
+        - look into index lifecycle management and rollover indices
+        - delete log cleanup temporalio job
+    """
+
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
     def search(self, index_name: str, **kwargs):
         """
-        TODO
+        TODO :
+          - Run a parallel search with an exact search and a full text search
+          - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
+          - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+          - look into highlighting the search results to show in the frontend directly : https://www.elastic.co/guide/en/elasticsearch/reference/current/highlighting.html
         """
         pass
 
