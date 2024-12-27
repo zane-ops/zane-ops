@@ -1,6 +1,44 @@
-from typing import Generator
+from typing import Any, Dict, Generator, Literal, Optional
 from elasticsearch import Elasticsearch, helpers
 from zane_api.utils import Colors
+from dataclasses import dataclass
+
+
+@dataclass
+class SearchQuery:
+    deployment_id: str
+    level: str
+    source: str
+    query: str
+    cursor: Optional[str] = None
+
+
+class RuntimeLogLevel:
+    ERROR = "ERROR"
+    INFO = "INFO"
+
+
+class RuntimeLogSource:
+    SYSTEM = "SYSTEM"
+    PROXY = "PROXY"
+    SERVICE = "SERVICE"
+
+
+@dataclass
+class RuntimeLogDto:
+    id: str
+    created_at: str
+    time: str
+    level: Literal["ERROR", "INFO"]
+    source: Literal["SYSTEM", "PROXY", "SERVICE"]
+    service_id: Optional[str] = None
+    deployment_id: Optional[str] = None
+    content: Optional[str] = None
+    content_text: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
 
 
 class SearchClient:
@@ -16,15 +54,31 @@ class SearchClient:
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
-    def search(self, index_name: str, **kwargs):
+    def search(self, index_name: str, query: SearchQuery):
         """
         TODO :
           - Run a parallel search with an exact search and a full text search
           - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
           - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-          - look into highlighting the search results to show in the frontend directly : https://www.elastic.co/guide/en/elasticsearch/reference/current/highlighting.html
         """
-        pass
+        # self.es.search(
+        #     index=index_name,
+        #     size=50,
+        #     sort=[
+        #         {"time": {"format": "strict_date_optional_time_nanos", "order": "desc"}}
+        #     ],
+        #     query={
+        #         "bool": {
+        #             "filter": [
+        #                 {"term": {"deployment_id": "dpl_dkr_fDFBezn86yr"}},
+        #                 {"term": {"level": "ERROR"}},
+        #                 {"term": {"source": "SERVICE"}},
+        #                 {"wildcard": {"content.text.keyword": {"value": f"*{''}*"}}},
+        #             ]
+        #         }
+        #     },
+        # )
+        raise NotImplementedError("search method not implemented yet")
 
     def count(self, index_name: str):
         return self.es.count(index=index_name)["count"]
