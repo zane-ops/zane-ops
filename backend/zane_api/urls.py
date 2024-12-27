@@ -155,4 +155,9 @@ urlpatterns += [
         views.ProxyLogsAPIView.as_view(),
         name="proxy.logs",
     ),
+    re_path(
+        r"^search-resources/?$",
+        views.ResouceSearchAPIView.as_view(),
+        name="resources.search",
+    ),
 ]
