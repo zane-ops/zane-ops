@@ -54,8 +54,6 @@ from ..serializers import (
     ProjectSerializer,
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
-    ProjectSearchSerializer,
-    ServiceSearchSerializer,
 )
 from ..temporal import (
     CreateProjectResourcesWorkflow,
