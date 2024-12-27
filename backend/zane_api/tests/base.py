@@ -21,6 +21,8 @@ from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
+from search.client import SearchClient
+
 from ..models import (
     Project,
     DockerDeploymentChange,
@@ -38,7 +40,7 @@ from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import find_item_in_list
+from ..utils import find_item_in_list, random_word
 
 
 class CustomAPIClient(APIClient):
@@ -269,6 +271,15 @@ class APITestCase(TestCase):
         self.client = CustomAPIClient(parent=self)
         self.async_client = AsyncCustomAPIClient(parent=self)
         self.fake_docker_client = FakeDockerClient()
+        self.search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+        self.ELASTICSEARCH_LOG_INDEX = (
+            f"{settings.ELASTICSEARCH_LOG_INDEX}-{random_word()}"
+        )
+        settings_ctx = override_settings(
+            ELASTICSEARCH_LOG_INDEX=self.ELASTICSEARCH_LOG_INDEX
+        )
+        self.search_client.create_log_index_if_not_exists(self.ELASTICSEARCH_LOG_INDEX)
+        settings_ctx.__enter__()
 
         # these functions are always patched
         patch(
@@ -284,6 +295,10 @@ class APITestCase(TestCase):
         ).start()
 
         self.addCleanup(patch.stopall)
+        self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
+        self.addCleanup(
+            lambda: self.search_client.delete_index(self.ELASTICSEARCH_LOG_INDEX)
+        )
 
     def tearDown(self):
         cache.clear()

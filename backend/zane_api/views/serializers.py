@@ -1060,20 +1060,6 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
 
 
 # ==============================
-#         Proxy Logs           #
-# ==============================
-
-
-class ProxyLogsFilterSet(django_filters.FilterSet):
-    time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(lookup_expr="icontains")
-
-    class Meta:
-        model = SimpleLog
-        fields = ["level", "content", "time"]
-
-
-# ==============================
 #     Project Service List     #
 # ==============================
 
