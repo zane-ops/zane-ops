@@ -37,7 +37,6 @@ from .serializers import (
     DockerServiceCardSerializer,
     GitServiceCardSerializer,
     ServiceListParamSerializer,
-    ResourceSearchParamSerializer,
 )
 from ..models import (
     Project,
