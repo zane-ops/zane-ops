@@ -63,6 +63,7 @@ pycparser==2.22
 pycurl==7.45.3
 pygments==2.17.2
 pyopenssl==24.1.0
+python-crontab==3.2.0
 python-dateutil==2.9.0.post0
 python-dotenv==0.21.1
 python-dotenv-vault==0.6.4
