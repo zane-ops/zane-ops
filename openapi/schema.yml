@@ -25,113 +25,6 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
-  /api/_proxy/logs/:
-    get:
-      operationId: _proxy_logs_list
-      summary: Get caddy proxy logs
-      parameters:
-      - in: query
-        name: content
-        schema:
-          type: string
-      - name: cursor
-        required: false
-        in: query
-        description: The pagination cursor value.
-        schema:
-          type: string
-      - in: query
-        name: level
-        schema:
-          type: string
-          enum:
-          - ERROR
-          - INFO
-        description: |-
-          * `ERROR` - Error
-          * `INFO` - Info
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: query
-        name: time_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: time_before
-        schema:
-          type: string
-          format: date-time
-      tags:
-      - _proxy
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/_proxyLogsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedSimpleLogList'
-          description: ''
   /api/archived-projects/:
     get:
       operationId: getArchivedProjectList
@@ -2105,19 +1998,14 @@ paths:
           description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
     get:
-      operationId: projects_service_details_docker_deployments_logs_list
+      operationId: projects_service_details_docker_deployments_logs_retrieve
       summary: Get deployment logs
       parameters:
       - in: query
-        name: content
+        name: cursor
         schema:
           type: string
-      - name: cursor
-        required: false
-        in: query
-        description: The pagination cursor value.
-        schema:
-          type: string
+          minLength: 1
       - in: path
         name: deployment_hash
         schema:
@@ -2129,27 +2017,30 @@ paths:
         schema:
           type: array
           items:
-            type: string
             enum:
-            - ERROR
             - INFO
-        description: |-
-          * `ERROR` - Error
-          * `INFO` - Info
-        explode: true
-        style: form
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
+            - ERROR
+            type: string
+            description: |-
+              * `INFO` - INFO
+              * `ERROR` - ERROR
+      - in: query
+        name: per_page
         schema:
           type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
       - in: path
         name: project_slug
         schema:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
+      - in: query
+        name: query
+        schema:
+          type: string
       - in: path
         name: service_slug
         schema:
@@ -2161,17 +2052,13 @@ paths:
         schema:
           type: array
           items:
-            type: string
             enum:
-            - PROXY
             - SERVICE
             - SYSTEM
-        description: |-
-          * `SYSTEM` - System Logs
-          * `PROXY` - Proxy Logs
-          * `SERVICE` - Service Logs
-        explode: true
-        style: form
+            type: string
+            description: |-
+              * `SERVICE` - SERVICE
+              * `SYSTEM` - SYSTEM
       - in: query
         name: time_after
         schema:
@@ -2191,7 +2078,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -2246,7 +2133,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSimpleLogList'
+                $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
   /api/projects/{project_slug}/toggle-service/docker/{service_slug}/:
     put:
@@ -4476,6 +4363,11 @@ components:
       - ping
     PaginatedArchivedProjectList:
       type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
       properties:
         count:
           type: integer
@@ -4494,13 +4386,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
+    PaginatedDockerServiceDeploymentList:
+      type: object
       required:
       - count
       - next
       - previous
       - results
-    PaginatedDockerServiceDeploymentList:
-      type: object
       properties:
         count:
           type: integer
@@ -4519,30 +4411,34 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DockerServiceDeployment'
+    PaginatedHttpLogList:
+      type: object
+      required:
+      - next
+      - previous
+      - results
+      properties:
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cD00ODY%3D"
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HttpLog'
+    PaginatedProjectList:
+      type: object
       required:
       - count
       - next
       - previous
       - results
-    PaginatedHttpLogList:
-      type: object
-      properties:
-        next:
-          type: string
-          nullable: true
-        previous:
-          type: string
-          nullable: true
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/HttpLog'
-      required:
-      - next
-      - previous
-      - results
-    PaginatedProjectList:
-      type: object
       properties:
         count:
           type: integer
@@ -4561,28 +4457,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
-      required:
-      - count
-      - next
-      - previous
-      - results
-    PaginatedSimpleLogList:
-      type: object
-      properties:
-        next:
-          type: string
-          nullable: true
-        previous:
-          type: string
-          nullable: true
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/SimpleLog'
-      required:
-      - next
-      - previous
-      - results
     ParseError:
       type: object
       properties:
@@ -4981,122 +4855,13 @@ components:
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - content
-          type: string
-          description: '* `content` - content'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsLogsListError:
+    ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          level: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent'
-          content: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent'
-          time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent'
-          source: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent'
-    ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - level
-          type: string
-          description: '* `level` - level'
-        code:
-          enum:
-          - invalid_choice
-          - invalid_list
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `invalid_list` - invalid_list
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - source
-          type: string
-          description: '* `source` - source'
-        code:
-          enum:
-          - invalid_choice
-          - invalid_list
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `invalid_list` - invalid_list
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - time
-          type: string
-          description: '* `time` - time'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsLogsListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsListError'
-      required:
-      - errors
-      - type
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -6045,6 +5810,59 @@ components:
           minimum: 0.1
         memory:
           $ref: '#/components/schemas/MemoryLimitRequestRequest'
+    RuntimeLog:
+      type: object
+      properties:
+        id:
+          type: string
+        service_id:
+          type: string
+          nullable: true
+        deployment_id:
+          type: string
+          nullable: true
+        time:
+          type: string
+          format: date-time
+        content:
+          nullable: true
+        content_text:
+          type: string
+          nullable: true
+        level:
+          $ref: '#/components/schemas/LevelEnum'
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+      required:
+      - content
+      - content_text
+      - deployment_id
+      - id
+      - level
+      - service_id
+      - source
+      - time
+    RuntimeLogsSearch:
+      type: object
+      properties:
+        previous:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuntimeLog'
+        query_time_ms:
+          type: number
+          format: double
+      required:
+      - next
+      - previous
+      - query_time_ms
+      - results
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -6086,44 +5904,6 @@ components:
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
         * `DEPLOYING` - Deploying
-    SimpleLog:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        content:
-          nullable: true
-        content_text:
-          type: string
-          nullable: true
-        time:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-        level:
-          $ref: '#/components/schemas/LevelEnum'
-        deployment_id:
-          type: string
-          nullable: true
-        service_id:
-          type: string
-          nullable: true
-        source:
-          $ref: '#/components/schemas/SourceEnum'
-      required:
-      - content
-      - content_text
-      - created_at
-      - deployment_id
-      - id
-      - level
-      - service_id
-      - source
-      - time
     SlotEnum:
       enum:
       - BLUE
@@ -6135,12 +5915,10 @@ components:
     SourceEnum:
       enum:
       - SYSTEM
-      - PROXY
       - SERVICE
       type: string
       description: |-
         * `SYSTEM` - System Logs
-        * `PROXY` - Proxy Logs
         * `SERVICE` - Service Logs
     SystemEnvVariables:
       type: object
@@ -6555,95 +6333,6 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
-    _proxyLogsListContentErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - content
-          type: string
-          description: '* `content` - content'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    _proxyLogsListError:
-      oneOf:
-      - $ref: '#/components/schemas/_proxyLogsListLevelErrorComponent'
-      - $ref: '#/components/schemas/_proxyLogsListContentErrorComponent'
-      - $ref: '#/components/schemas/_proxyLogsListTimeErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          level: '#/components/schemas/_proxyLogsListLevelErrorComponent'
-          content: '#/components/schemas/_proxyLogsListContentErrorComponent'
-          time: '#/components/schemas/_proxyLogsListTimeErrorComponent'
-    _proxyLogsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/_proxyLogsListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/_proxyLogsListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    _proxyLogsListLevelErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - level
-          type: string
-          description: '* `level` - level'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    _proxyLogsListTimeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - time
-          type: string
-          description: '* `time` - time'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    _proxyLogsListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/_proxyLogsListError'
-      required:
-      - errors
-      - type
   securitySchemes:
     cookieAuth:
       type: apiKey

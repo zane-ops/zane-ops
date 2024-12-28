@@ -74,7 +74,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     source:
       searchParams.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: searchParams.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
-    content: searchParams.content ?? ""
+    query: searchParams.query ?? ""
   } satisfies DeploymentLogFitlers;
 
   const isEmptySearchParams =
@@ -82,7 +82,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
     !searchParams.time_before &&
     (searchParams.source?.length === 0 || !searchParams.source) &&
     (searchParams.level?.length === 0 || !searchParams.level) &&
-    (searchParams.content ?? "").length === 0;
+    (searchParams.query ?? "").length === 0;
 
   const queryClient = useQueryClient();
 
@@ -363,7 +363,7 @@ const HeaderSection = React.memo(function HeaderSection({
         time_before: search.time_before,
         source: search.source,
         level: search.level,
-        content: search.content,
+        query: search.query,
         isMaximized: search.isMaximized
       };
     }
@@ -382,7 +382,7 @@ const HeaderSection = React.memo(function HeaderSection({
     !searchParams.time_before &&
     (searchParams.source ?? []).length === 0 &&
     (searchParams.level ?? []).length === 0 &&
-    (searchParams.content ?? "").length === 0;
+    (searchParams.query ?? "").length === 0;
 
   const clearFilters = () => {
     startTransition(() =>
@@ -400,13 +400,13 @@ const HeaderSection = React.memo(function HeaderSection({
     }
   };
 
-  const searchLogsForContent = useDebouncedCallback((content: string) => {
+  const searchLogsForContent = useDebouncedCallback((query: string) => {
     startTransition(() =>
       navigate({
         search: {
           ...searchParams,
           isMaximized: searchParams.isMaximized,
-          content
+          query
         },
         replace: true
       })
@@ -485,12 +485,12 @@ const HeaderSection = React.memo(function HeaderSection({
           <Input
             className="px-14 w-full md:min-w-150 text-sm  bg-muted/40 dark:bg-card/30"
             placeholder="Search for log contents"
-            name="content"
-            defaultValue={searchParams.content}
+            name="query"
+            defaultValue={searchParams.query}
             ref={inputRef}
             onChange={(ev) => {
               const newQuery = ev.currentTarget.value;
-              if (newQuery !== (searchParams.content ?? "")) {
+              if (newQuery !== (searchParams.query ?? "")) {
                 searchLogsForContent(newQuery);
               }
             }}
@@ -551,7 +551,7 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
   const date = new Date(time);
 
   const search = Route.useSearch({
-    select: (search) => search.content ?? ""
+    select: (search) => search.query ?? ""
   });
 
   const logTime = formatLogTime(date);

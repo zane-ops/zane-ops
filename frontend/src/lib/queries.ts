@@ -282,7 +282,7 @@ export const deploymentLogSearchSchema = z.object({
     .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
-  content: z.string().optional(),
+  query: z.string().optional(),
   isMaximized: z.coerce.boolean().optional().catch(false)
 });
 
@@ -412,7 +412,8 @@ export const deploymentQueries = {
           next: null,
           previous: null,
           results: [],
-          cursor: null
+          cursor: null,
+          query_time_ms: 0
         };
 
         if (data) {
