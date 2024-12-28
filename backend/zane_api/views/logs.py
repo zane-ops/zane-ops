@@ -24,6 +24,9 @@ from ..models import (
     HttpLog,
 )
 from ..serializers import SimpleLogSerializer
+from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
+from search.client import SearchClient
+from django.conf import settings
 
 
 @extend_schema(exclude=True)
@@ -35,10 +38,11 @@ class LogIngestAPIView(APIView):
 
     def post(self, request: Request):
         serializer = DockerContainerLogsRequestSerializer(data=request.data)
+        refresh = request.query_params.get("refresh", "false") == "true"
         if serializer.is_valid(raise_exception=True):
             logs = serializer.data
 
-            simple_logs: list[SimpleLog] = []
+            simple_logs: list[RuntimeLogDto] = []
             http_logs: list[HttpLog] = []
 
             for log in logs:
@@ -114,29 +118,51 @@ class LogIngestAPIView(APIView):
                                                 )
                                             )
                                             continue
-
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass
                         case _:
                             deployment_id = json_tag["deployment_id"]
                             simple_logs.append(
-                                SimpleLog(
-                                    source=SimpleLog.LogSource.SERVICE,
-                                    level=(
-                                        SimpleLog.LogLevel.INFO
-                                        if log["source"] == "stdout"
-                                        else SimpleLog.LogLevel.ERROR
-                                    ),
-                                    content=log["log"],
+                                RuntimeLogDto(
                                     time=log["time"],
-                                    deployment_id=deployment_id,
+                                    level=(
+                                        RuntimeLogLevel.INFO
+                                        if log["source"] == "stdout"
+                                        else RuntimeLogLevel.ERROR
+                                    ),
+                                    source=RuntimeLogSource.SERVICE,
                                     service_id=service_id,
+                                    deployment_id=deployment_id,
+                                    content=log["log"],
                                     content_text=SimpleLog.escape_ansi(log["log"]),
                                 )
+                                # SimpleLog(
+                                #     source=SimpleLog.LogSource.SERVICE,
+                                #     level=(
+                                #         SimpleLog.LogLevel.INFO
+                                #         if log["source"] == "stdout"
+                                #         else SimpleLog.LogLevel.ERROR
+                                #     ),
+                                #     content=log["log"],
+                                #     time=log["time"],
+                                #     deployment_id=deployment_id,
+                                #     service_id=service_id,
+                                #     content_text=SimpleLog.escape_ansi(log["log"]),
+                                # )
                             )
             start_time = datetime.now()
-            SimpleLog.objects.bulk_create(simple_logs)
+            search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+            search_client.bulk_insert(
+                map(
+                    lambda log: dict(
+                        _index=settings.ELASTICSEARCH_LOG_INDEX,
+                        **log.to_es_dict(),
+                    ),
+                    simple_logs,
+                ),
+                refresh=refresh,
+            )
             HttpLog.objects.bulk_create(http_logs)
             end_time = datetime.now()
 

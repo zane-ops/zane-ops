@@ -296,9 +296,9 @@ class APITestCase(TestCase):
 
         self.addCleanup(patch.stopall)
         self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
-        self.addCleanup(
-            lambda: self.search_client.delete_index(self.ELASTICSEARCH_LOG_INDEX)
-        )
+        # self.addCleanup(
+        #     lambda: self.search_client.delete_index(self.ELASTICSEARCH_LOG_INDEX)
+        # )
 
     def tearDown(self):
         cache.clear()

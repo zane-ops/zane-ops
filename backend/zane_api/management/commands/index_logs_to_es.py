@@ -69,7 +69,7 @@ class Command(BaseCommand):
                         "source": log["source"],
                     }
 
-            client.bulk_insert(settings.ELASTICSEARCH_LOG_INDEX, documents())
+            client.bulk_insert(documents())
             total_documents_indexed += len(logs)
             self.stdout.write(
                 self.style.SUCCESS(

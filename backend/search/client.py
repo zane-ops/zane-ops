@@ -1,44 +1,32 @@
-from typing import Any, Dict, Generator, Literal, Optional
+from typing import Generator, Optional
 from elasticsearch import Elasticsearch, helpers
 from zane_api.utils import Colors
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from .dtos import RuntimeLogLevel, RuntimeLogSource, RuntimeLogDto
 
 
 @dataclass
 class SearchQuery:
-    deployment_id: str
-    level: str
-    source: str
-    query: str
+    level: list[str] = field(
+        default_factory=lambda: [RuntimeLogLevel.ERROR, RuntimeLogLevel.INFO]
+    )
+    source: list[str] = field(
+        default_factory=lambda: [RuntimeLogSource.SYSTEM, RuntimeLogSource.SERVICE]
+    )
+    limit: int = 50
+    deployment_id: Optional[str] = None
+    term: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     cursor: Optional[str] = None
 
 
-class RuntimeLogLevel:
-    ERROR = "ERROR"
-    INFO = "INFO"
-
-
-class RuntimeLogSource:
-    SYSTEM = "SYSTEM"
-    PROXY = "PROXY"
-    SERVICE = "SERVICE"
-
-
 @dataclass
-class RuntimeLogDto:
-    id: str
-    created_at: str
-    time: str
-    level: Literal["ERROR", "INFO"]
-    source: Literal["SYSTEM", "PROXY", "SERVICE"]
-    service_id: Optional[str] = None
-    deployment_id: Optional[str] = None
-    content: Optional[str] = None
-    content_text: Optional[str] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
+class SearchResponse:
+    total: int
+    logs: list[RuntimeLogDto]
+    next: Optional[str] = None
+    previous: Optional[str] = None
 
 
 class SearchClient:
@@ -55,30 +43,56 @@ class SearchClient:
         self.es = Elasticsearch(host, api_key="")
 
     def search(self, index_name: str, query: SearchQuery):
-        """
-        TODO :
-          - Run a parallel search with an exact search and a full text search
-          - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
-          - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-        """
-        # self.es.search(
-        #     index=index_name,
-        #     size=50,
-        #     sort=[
-        #         {"time": {"format": "strict_date_optional_time_nanos", "order": "desc"}}
-        #     ],
-        #     query={
-        #         "bool": {
-        #             "filter": [
-        #                 {"term": {"deployment_id": "dpl_dkr_fDFBezn86yr"}},
-        #                 {"term": {"level": "ERROR"}},
-        #                 {"term": {"source": "SERVICE"}},
-        #                 {"wildcard": {"content.text.keyword": {"value": f"*{''}*"}}},
-        #             ]
-        #         }
-        #     },
-        # )
-        raise NotImplementedError("search method not implemented yet")
+        # """
+        # TODO :
+        #   - Run a parallel search with an exact search and a full text search
+        #   - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
+        #   - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+        # """
+
+        filters = []
+
+        if query.deployment_id:
+            filters.append({"term": {"deployment_id": query.deployment_id}})
+        if query.level:
+            filters.append({"terms": {"level": query.level}})
+        if query.source:
+            filters.append({"terms": {"source": query.source}})
+        # if query.term:
+        #     filters.append(
+        #         {"wildcard": {"content.text.keyword": {"value": f"*{query.term}*"}}}
+        #     )
+
+        result = self.es.search(
+            index=index_name,
+            size=50,
+            sort=[
+                {"time": {"format": "strict_date_optional_time_nanos", "order": "desc"}}
+            ],
+            query={"bool": {"filter": filters}},
+        )
+
+        logs = [
+            RuntimeLogDto.from_dict(
+                {
+                    "id": hit["_id"],
+                    "time": hit["_source"]["time"],
+                    "level": hit["_source"]["level"],
+                    "source": hit["_source"]["source"],
+                    "service_id": hit["_source"]["service_id"],
+                    "deployment_id": hit["_source"]["deployment_id"],
+                    "content": hit["_source"]["content"]["raw"],
+                    "content_text": hit["_source"]["content"]["text"],
+                }
+            )
+            for hit in result["hits"]["hits"]
+        ]
+        return SearchResponse(
+            total=result["hits"]["total"]["value"],
+            logs=logs,
+            next=None,
+            previous=None,
+        )
 
     def count(self, index_name: str):
         return self.es.count(index=index_name)["count"]
@@ -127,15 +141,11 @@ class SearchClient:
                 f"Index {Colors.BLUE}{index_name}{Colors.ENDC} already exists in ElasticSearch, skipping creation ⏭️"
             )
 
-    def bulk_insert(self, index_name: str, docs: list | Generator):
-        print(f"Inserting documents in {Colors.BLUE}{index_name}{Colors.ENDC}...")
-        helpers.bulk(
-            self.es,
-            docs,
-        )
-        print(
-            f"{Colors.GREEN}Successfully indexed all documents in {Colors.BLUE}{index_name}{Colors.ENDC} 🗂️"
-        )
+    def bulk_insert(self, docs: list | Generator, refresh: bool = False):
+        print(f"Indexing {docs=} documents in ElasticSearch...")
+        print(f"Bulk Inserting documents in...")
+        helpers.bulk(self.es, docs, refresh=refresh)
+        print(f"{Colors.GREEN}Successfully indexed all documents 🗂️{Colors.ENDC}")
 
     def clear_index_data(self, index_name: str):
         print(

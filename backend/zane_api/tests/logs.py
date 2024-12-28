@@ -15,10 +15,11 @@ from temporalio.common import RetryPolicy
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
+from search.client import SearchResponse, SearchQuery
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
-    def test_collect_service_logs(self):
+    def test_ingest_service_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
 
         deployment: DockerDeployment = service.deployments.first()
@@ -120,14 +121,21 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_logs,
+            QUERY_STRING="refresh=true",
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(len(simple_logs), deployment.logs.count())
-        log: SimpleLog = deployment.logs.first()
+        self.assertEqual(
+            len(simple_logs),
+            self.search_client.count(index_name=self.ELASTICSEARCH_LOG_INDEX),
+        )
+        data: SearchResponse = self.search_client.search(
+            index_name=self.ELASTICSEARCH_LOG_INDEX, query=SearchQuery()
+        )
+        log = data.logs[0]
         self.assertEqual(SimpleLog.LogSource.SERVICE, log.source)
         self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
         self.assertIsNotNone(log.time)
