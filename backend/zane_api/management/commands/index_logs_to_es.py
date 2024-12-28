@@ -28,7 +28,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         total_documents_indexed = 0
         client = SearchClient(settings.ELASTICSEARCH_HOST)
-        client.clear_index_data(settings.ELASTICSEARCH_LOG_INDEX)
+        client.clear_index_data(settings.ELASTICSEARCH_LOGS_INDEX)
 
         max_documents = options["max_documents"]
         batch_size = options["batch_size"]
@@ -57,7 +57,7 @@ class Command(BaseCommand):
             def documents():
                 for log in logs:
                     yield {
-                        "_index": settings.ELASTICSEARCH_LOG_INDEX,
+                        "_index": settings.ELASTICSEARCH_LOGS_INDEX,
                         "service_id": log["service_id"],
                         "deployment_id": log["deployment_id"],
                         "time": log["time"].isoformat(),
@@ -88,6 +88,6 @@ class Command(BaseCommand):
         )
         self.stdout.write(
             self.style.SUCCESS(
-                f"Total logs indexed in ElasticSearch: {client.count(settings.ELASTICSEARCH_LOG_INDEX)}"
+                f"Total logs indexed in ElasticSearch: {client.count(settings.ELASTICSEARCH_LOGS_INDEX)}"
             )
         )

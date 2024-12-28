@@ -272,13 +272,13 @@ class APITestCase(TestCase):
         self.async_client = AsyncCustomAPIClient(parent=self)
         self.fake_docker_client = FakeDockerClient()
         self.search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
-        self.ELASTICSEARCH_LOG_INDEX = (
-            f"{settings.ELASTICSEARCH_LOG_INDEX}-{random_word()}"
+        self.ELASTICSEARCH_LOGS_INDEX = (
+            f"{settings.ELASTICSEARCH_LOGS_INDEX}-{random_word()}"
         )
         settings_ctx = override_settings(
-            ELASTICSEARCH_LOG_INDEX=self.ELASTICSEARCH_LOG_INDEX
+            ELASTICSEARCH_LOGS_INDEX=self.ELASTICSEARCH_LOGS_INDEX
         )
-        self.search_client.create_log_index_if_not_exists(self.ELASTICSEARCH_LOG_INDEX)
+        self.search_client.create_log_index_if_not_exists(self.ELASTICSEARCH_LOGS_INDEX)
         settings_ctx.__enter__()
 
         # these functions are always patched
@@ -296,9 +296,9 @@ class APITestCase(TestCase):
 
         self.addCleanup(patch.stopall)
         self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
-        # self.addCleanup(
-        #     lambda: self.search_client.delete_index(self.ELASTICSEARCH_LOG_INDEX)
-        # )
+        self.addCleanup(
+            lambda: self.search_client.delete_index(self.ELASTICSEARCH_LOGS_INDEX)
+        )
 
     def tearDown(self):
         cache.clear()

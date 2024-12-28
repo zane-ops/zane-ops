@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
 from typing import Callable, TypeVar, List, Optional, Literal
-
+import re
 from django.core.cache import cache
 
 
@@ -243,3 +243,8 @@ class Colors:
     RED = "\033[91m"
     GREY = "\033[90m"
     ENDC = "\033[0m"  # Reset to default color
+
+
+def escape_ansi(content: str):
+    ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    return ANSI_ESCAPE_PATTERN.sub("", content)

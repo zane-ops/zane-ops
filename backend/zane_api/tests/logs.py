@@ -11,11 +11,12 @@ from temporalio.testing import WorkflowEnvironment
 import base64
 from temporalio.common import RetryPolicy
 
+from ..utils import jprint
+
 
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
-from search.client import SearchResponse, SearchQuery
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
@@ -130,20 +131,21 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
 
         self.assertEqual(
             len(simple_logs),
-            self.search_client.count(index_name=self.ELASTICSEARCH_LOG_INDEX),
+            self.search_client.count(index_name=self.ELASTICSEARCH_LOGS_INDEX),
         )
-        data: SearchResponse = self.search_client.search(
-            index_name=self.ELASTICSEARCH_LOG_INDEX, query=SearchQuery()
+        data = self.search_client.search(
+            index_name=self.ELASTICSEARCH_LOGS_INDEX,
+            search_params={"deployment_id": deployment.hash},
         )
-        log = data.logs[0]
-        self.assertEqual(SimpleLog.LogSource.SERVICE, log.source)
-        self.assertEqual(SimpleLog.LogLevel.INFO, log.level)
-        self.assertIsNotNone(log.time)
+        log = data["results"][0]
+        self.assertEqual(SimpleLog.LogSource.SERVICE, log["source"])
+        self.assertEqual(SimpleLog.LogLevel.INFO, log["level"])
+        self.assertIsNotNone(log["time"])
         self.assertEqual(
             simple_logs[0]["log"],
-            log.content,
+            log["content"],
         )
-        self.assertIsNotNone(log.service_id)
+        self.assertIsNotNone(log["service_id"])
 
 
 class SimpleLogViewTests(AuthAPITestCase):
@@ -190,7 +192,7 @@ class SimpleLogViewTests(AuthAPITestCase):
         ),
         (
             datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
-            '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+            '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
     ]
 
@@ -198,24 +200,32 @@ class SimpleLogViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        simple_logs = SimpleLog.objects.bulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=(
-                        SimpleLog.LogLevel.INFO
-                        if i % 2 == 0
-                        else SimpleLog.LogLevel.ERROR
-                    ),
-                )
-                for i, (time, content) in enumerate(self.sample_log_contents)
-            ]
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="refresh=true",
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = self.client.get(
             reverse(
@@ -273,25 +283,32 @@ class SimpleLogViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        SimpleLog.objects.bulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    created_at=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=(
-                        SimpleLog.LogLevel.INFO
-                        if i % 2 == 0
-                        else SimpleLog.LogLevel.ERROR
-                    ),
-                )
-                for i, (time, content) in enumerate(self.sample_log_contents)
-            ]
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="refresh=true",
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         time_after = datetime.datetime(
             2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc
@@ -313,24 +330,36 @@ class SimpleLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, len(response.json()["results"]))
 
-    def test_quote_in_query(self):
+    def test_filter_by_query(self):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        SimpleLog.objects.bulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=SimpleLog.LogLevel.INFO,
-                )
-                for (time, content) in self.sample_log_contents
-            ]
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="refresh=true",
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = self.client.get(
             reverse(
@@ -341,7 +370,7 @@ class SimpleLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            QUERY_STRING=f"content=%2B0000%5D%20%22POST",  # searching for `+0000] "POST`
+            QUERY_STRING=f"query=*%20%2B0000%5D%20%22POST%20%2F",  # searching for `* +0000] "POST /`
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))

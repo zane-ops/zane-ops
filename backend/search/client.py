@@ -3,30 +3,7 @@ from elasticsearch import Elasticsearch, helpers
 from zane_api.utils import Colors
 from dataclasses import dataclass, field
 from .dtos import RuntimeLogLevel, RuntimeLogSource, RuntimeLogDto
-
-
-@dataclass
-class SearchQuery:
-    level: list[str] = field(
-        default_factory=lambda: [RuntimeLogLevel.ERROR, RuntimeLogLevel.INFO]
-    )
-    source: list[str] = field(
-        default_factory=lambda: [RuntimeLogSource.SYSTEM, RuntimeLogSource.SERVICE]
-    )
-    limit: int = 50
-    deployment_id: Optional[str] = None
-    term: Optional[str] = None
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    cursor: Optional[str] = None
-
-
-@dataclass
-class SearchResponse:
-    total: int
-    logs: list[RuntimeLogDto]
-    next: Optional[str] = None
-    previous: Optional[str] = None
+from .serializers import RuntimeLogsSearchSerializer
 
 
 class SearchClient:
@@ -42,57 +19,90 @@ class SearchClient:
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
-    def search(self, index_name: str, query: SearchQuery):
-        # """
-        # TODO :
-        #   - Run a parallel search with an exact search and a full text search
-        #   - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
-        #   - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-        # """
+    def search(self, index_name: str, search_params: dict = None):
+        """
+        TODO :
+          - Run a parallel search with an exact search and a full text search
+          - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
+          - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+        """
 
+        search_params = search_params or {}
         filters = []
 
-        if query.deployment_id:
-            filters.append({"term": {"deployment_id": query.deployment_id}})
-        if query.level:
-            filters.append({"terms": {"level": query.level}})
-        if query.source:
-            filters.append({"terms": {"source": query.source}})
-        # if query.term:
-        #     filters.append(
-        #         {"wildcard": {"content.text.keyword": {"value": f"*{query.term}*"}}}
-        #     )
+        print(
+            f"Searching in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC} with {search_params=}"
+        )
+        if search_params.get("service_id"):
+            filters.append({"term": {"service_id": search_params["service_id"]}})
+        if search_params.get("deployment_id"):
+            filters.append({"term": {"deployment_id": search_params["deployment_id"]}})
+        if search_params.get("level"):
+            filters.append({"terms": {"level": search_params["level"]}})
+        if search_params.get("source"):
+            filters.append({"terms": {"source": search_params["source"]}})
+        if search_params.get("query"):
+            # escape `*` in the query string as it is a special character in ElasticSearch
+            query = search_params["query"].replace("*", "\\*")
+            filters.append(
+                {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
+            )
+        if search_params.get("time_after"):
+            filters.append(
+                {
+                    "range": {
+                        "time": {
+                            "gte": search_params["time_after"],
+                            "format": "strict_date_optional_time_nanos",
+                        }
+                    }
+                }
+            )
+        if search_params.get("time_before"):
+            filters.append(
+                {
+                    "range": {
+                        "time": {
+                            "lte": search_params["time_before"],
+                            "format": "strict_date_optional_time_nanos",
+                        }
+                    }
+                }
+            )
 
         result = self.es.search(
             index=index_name,
-            size=50,
+            size=search_params.get("per_page", 50),
             sort=[
                 {"time": {"format": "strict_date_optional_time_nanos", "order": "desc"}}
             ],
-            query={"bool": {"filter": filters}},
+            query=(
+                {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
+            ),
         )
 
-        logs = [
-            RuntimeLogDto.from_dict(
-                {
-                    "id": hit["_id"],
-                    "time": hit["_source"]["time"],
-                    "level": hit["_source"]["level"],
-                    "source": hit["_source"]["source"],
-                    "service_id": hit["_source"]["service_id"],
-                    "deployment_id": hit["_source"]["deployment_id"],
-                    "content": hit["_source"]["content"]["raw"],
-                    "content_text": hit["_source"]["content"]["text"],
-                }
+        serializer = RuntimeLogsSearchSerializer(
+            dict(
+                query_time_ms=result["took"],
+                total=result["hits"]["total"]["value"],
+                results=[
+                    {
+                        "id": hit["_id"],
+                        "time": hit["_source"]["time"],
+                        "level": hit["_source"]["level"],
+                        "source": hit["_source"]["source"],
+                        "service_id": hit["_source"]["service_id"],
+                        "deployment_id": hit["_source"]["deployment_id"],
+                        "content": hit["_source"]["content"]["raw"],
+                        "content_text": hit["_source"]["content"]["text"],
+                    }
+                    for hit in result["hits"]["hits"]
+                ],
+                next=None,
+                previous=None,
             )
-            for hit in result["hits"]["hits"]
-        ]
-        return SearchResponse(
-            total=result["hits"]["total"]["value"],
-            logs=logs,
-            next=None,
-            previous=None,
         )
+        return serializer.data
 
     def count(self, index_name: str):
         return self.es.count(index=index_name)["count"]

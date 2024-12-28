@@ -389,10 +389,10 @@ if BACKEND_COMPONENT == "API":
 
 # elastic search config
 ELASTICSEARCH_HOST = os.environ.get("ELASTICSEARCH_HOST", "http://127.0.0.1:9200")
-ELASTICSEARCH_LOG_INDEX = "logs"
+ELASTICSEARCH_LOGS_INDEX = "logs"
 
 if BACKEND_COMPONENT == "API" and not TESTING:
     from search.client import SearchClient
 
     search_client = SearchClient(host=ELASTICSEARCH_HOST)
-    search_client.create_log_index_if_not_exists(index_name=ELASTICSEARCH_LOG_INDEX)
+    search_client.create_log_index_if_not_exists(index_name=ELASTICSEARCH_LOGS_INDEX)

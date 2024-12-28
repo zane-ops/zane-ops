@@ -9,21 +9,16 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
-from ..utils import Colors
+from ..utils import Colors, escape_ansi
 from datetime import datetime
 
-from .base import EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
 from .serializers import (
     DockerContainerLogsResponseSerializer,
     DockerContainerLogsRequestSerializer,
     HTTPServiceLogSerializer,
 )
-from ..models import (
-    SimpleLog,
-    HttpLog,
-)
-from ..serializers import SimpleLogSerializer
+from ..models import HttpLog
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.client import SearchClient
 from django.conf import settings
@@ -135,34 +130,23 @@ class LogIngestAPIView(APIView):
                                     service_id=service_id,
                                     deployment_id=deployment_id,
                                     content=log["log"],
-                                    content_text=SimpleLog.escape_ansi(log["log"]),
+                                    content_text=escape_ansi(log["log"]),
                                 )
-                                # SimpleLog(
-                                #     source=SimpleLog.LogSource.SERVICE,
-                                #     level=(
-                                #         SimpleLog.LogLevel.INFO
-                                #         if log["source"] == "stdout"
-                                #         else SimpleLog.LogLevel.ERROR
-                                #     ),
-                                #     content=log["log"],
-                                #     time=log["time"],
-                                #     deployment_id=deployment_id,
-                                #     service_id=service_id,
-                                #     content_text=SimpleLog.escape_ansi(log["log"]),
-                                # )
                             )
+
             start_time = datetime.now()
             search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
             search_client.bulk_insert(
                 map(
                     lambda log: dict(
-                        _index=settings.ELASTICSEARCH_LOG_INDEX,
+                        _index=settings.ELASTICSEARCH_LOGS_INDEX,
                         **log.to_es_dict(),
                     ),
                     simple_logs,
                 ),
                 refresh=refresh,
             )
+
             HttpLog.objects.bulk_create(http_logs)
             end_time = datetime.now()
 
