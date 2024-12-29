@@ -5845,6 +5845,8 @@ components:
     RuntimeLogsSearch:
       type: object
       properties:
+        total:
+          type: integer
         previous:
           type: string
           nullable: true
@@ -5863,6 +5865,7 @@ components:
       - previous
       - query_time_ms
       - results
+      - total
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

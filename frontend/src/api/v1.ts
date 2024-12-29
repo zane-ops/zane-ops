@@ -1723,6 +1723,7 @@ export interface components {
       source: components["schemas"]["SourceEnum"];
     };
     RuntimeLogsSearch: {
+      total: number;
       previous: string | null;
       next: string | null;
       results: components["schemas"]["RuntimeLog"][];
