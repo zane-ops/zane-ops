@@ -42,10 +42,6 @@ services:
       labels:
         zane.stack: "true"
         zane.role: "proxy"
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 200M
     ports:
       - "443:443"
     volumes:
@@ -81,8 +77,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.1"
-          memory: 100M
+          cpus: "1"
+          memory: 1G
     networks:
       zane:
         aliases:
@@ -112,8 +108,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.5"
-          memory: 500M
+          cpus: "2"
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
       interval: 30s
@@ -332,7 +328,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 500M
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -372,7 +368,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 500M
+          memory: 1G
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
@@ -399,9 +395,43 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.1"
-          memory: 100M
+          cpus: "0.5"
+          memory: 200M
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.monitoring.collection.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g # Heap memory of 1GB
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      zane:
+        aliases:
+          - zane.search
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 1
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1.1G
 volumes:
+  es-data:
+    labels:
+      zane.stack: "true"
   db-data:
     labels:
       zane.stack: "true"
