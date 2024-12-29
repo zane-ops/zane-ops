@@ -16,7 +16,8 @@ from ..utils import jprint
 
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
-from ..models import SimpleLog, DockerDeployment, DockerRegistryService, HttpLog
+from ..models import DockerDeployment, DockerRegistryService, HttpLog
+from search.dtos import RuntimeLogSource, RuntimeLogLevel
 
 
 class SimpleLogCollectViewTests(AuthAPITestCase):
@@ -135,11 +136,11 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         )
         data = self.search_client.search(
             index_name=self.ELASTICSEARCH_LOGS_INDEX,
-            search_params={"deployment_id": deployment.hash},
+            query={"deployment_id": deployment.hash},
         )
         log = data["results"][0]
-        self.assertEqual(SimpleLog.LogSource.SERVICE, log["source"])
-        self.assertEqual(SimpleLog.LogLevel.INFO, log["level"])
+        self.assertEqual(RuntimeLogSource.SERVICE, log["source"])
+        self.assertEqual(RuntimeLogLevel.INFO, log["level"])
         self.assertIsNotNone(log["time"])
         self.assertEqual(
             simple_logs[0]["log"],
@@ -662,12 +663,18 @@ class SimpleLogScheduleTests(AuthAPITestCase):
             self.assertEqual(2, result.deleted_count)
             no_of_logs_older_than_a_month = self.search_client.count(
                 index_name=self.ELASTICSEARCH_LOGS_INDEX,
-                query={"time_before": (now - timedelta(days=30)).isoformat()},
+                query={
+                    "time_before": (now - timedelta(days=30)).isoformat(),
+                    "source": [RuntimeLogSource.SERVICE],
+                },
             )
             self.assertEqual(0, no_of_logs_older_than_a_month)
             no_of_logs_younger_than_a_month = self.search_client.count(
                 index_name=self.ELASTICSEARCH_LOGS_INDEX,
-                query={"time_after": (now - timedelta(days=30)).isoformat()},
+                query={
+                    "time_after": (now - timedelta(days=30)).isoformat(),
+                    "source": [RuntimeLogSource.SERVICE],
+                },
             )
             self.assertEqual(2, no_of_logs_younger_than_a_month)
 
@@ -1317,7 +1324,6 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
             },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(0, SimpleLog.objects.count())
         self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
 
         log: HttpLog = HttpLog.objects.first()
@@ -1438,12 +1444,11 @@ class DeploymentSystemLogViewTests(AuthAPITestCase):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
 
         first_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertNotEqual(
-            0,
-            await SimpleLog.objects.filter(
-                source=SimpleLog.LogSource.SYSTEM,
-                deployment_id=first_deployment.hash,
-                service_id=service.id,
-                level=SimpleLog.LogLevel.INFO,
-            ).acount(),
+        system_logs_total = self.search_client.count(
+            index_name=self.ELASTICSEARCH_LOGS_INDEX,
+            query={
+                "source": [RuntimeLogSource.SYSTEM],
+                "deployment_id": first_deployment.hash,
+            },
         )
+        self.assertNotEqual(0, system_logs_total)

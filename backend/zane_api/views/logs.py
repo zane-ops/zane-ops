@@ -22,6 +22,7 @@ from ..models import HttpLog
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.client import SearchClient
 from django.conf import settings
+from django.utils import timezone
 
 
 @extend_schema(exclude=True)
@@ -123,6 +124,7 @@ class LogIngestAPIView(APIView):
                             simple_logs.append(
                                 RuntimeLogDto(
                                     time=log["time"],
+                                    created_at=timezone.now(),
                                     level=(
                                         RuntimeLogLevel.INFO
                                         if log["source"] == "stdout"

@@ -4,6 +4,7 @@ from typing import Generator
 from elasticsearch import Elasticsearch, helpers
 from zane_api.utils import Colors
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
+from .dtos import RuntimeLogDto
 
 
 class SearchClient:
@@ -18,6 +19,18 @@ class SearchClient:
 
     def bulk_insert(self, docs: list | Generator, refresh: bool = False):
         helpers.bulk(self.es, docs, refresh=refresh)
+
+    def insert(
+        self, index_name: str, document: dict | RuntimeLogDto, refresh: bool = False
+    ):
+        from django.conf import settings
+
+        document = (
+            document.to_es_dict() if isinstance(document, RuntimeLogDto) else document
+        )
+        self.es.index(
+            index=index_name, document=document, refresh=settings.TESTING or refresh
+        )
 
     def search(self, index_name: str, query: dict = None):
         print(f"====== LOGS SEARCH ======")
@@ -261,6 +274,7 @@ class SearchClient:
                         "source": {"type": "keyword"},
                         "service_id": {"type": "keyword"},
                         "time": {"type": "date_nanos"},
+                        "created_at": {"type": "date_nanos"},
                     }
                 },
             )

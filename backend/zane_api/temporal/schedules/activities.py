@@ -18,9 +18,11 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
-    from ...models import DockerDeployment, HealthCheck, SimpleLog
-    from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors
+    from ...models import DockerDeployment, HealthCheck
+    from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors, escape_ansi
     from search.client import SearchClient
+    from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
+    from search.constants import ELASTICSEARCH_BYTE_LIMIT
 
 docker_client: docker.DockerClient | None = None
 
@@ -47,15 +49,20 @@ async def deployment_log(
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
 
-    # Regex pattern to match ANSI color codes
-    await SimpleLog.objects.acreate(
-        source=SimpleLog.LogSource.SYSTEM,
-        level=SimpleLog.LogLevel.INFO,
-        content=message,
-        time=current_time,
-        deployment_id=deployment.hash,
-        service_id=deployment.service_id,
-        content_text=SimpleLog.escape_ansi(message),
+    search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+    max_utf8_chars = ELASTICSEARCH_BYTE_LIMIT // 4
+    search_client.insert(
+        index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+        document=RuntimeLogDto(
+            source=RuntimeLogSource.SYSTEM,
+            level=RuntimeLogLevel.INFO,
+            content=message,
+            content_text=escape_ansi(message)[:max_utf8_chars],
+            time=current_time,
+            created_at=current_time,
+            deployment_id=deployment.hash,
+            service_id=deployment.service_id,
+        ),
     )
 
 

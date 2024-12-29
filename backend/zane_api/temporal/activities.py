@@ -13,6 +13,8 @@ from .main import create_schedule, delete_schedule, pause_schedule, unpause_sche
 with workflow.unsafe.imports_passed_through():
     from .schedules import MonitorDockerDeploymentWorkflow
     from search.client import SearchClient
+    from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
+    from search.constants import ELASTICSEARCH_BYTE_LIMIT
     import docker
     import docker.errors
     from ..models import (
@@ -23,7 +25,6 @@ with workflow.unsafe.imports_passed_through():
         HealthCheck,
         URL,
         DockerDeploymentChange,
-        SimpleLog,
     )
     from docker.models.networks import Network
     from docker.models.services import Service
@@ -49,6 +50,7 @@ with workflow.unsafe.imports_passed_through():
         Colors,
         cache_result,
         convert_value_to_bytes,
+        escape_ansi,
     )
 
 from ..dtos import (
@@ -188,15 +190,21 @@ async def deployment_log(
             service_id = deployment.service_id
         case _:
             raise TypeError(f"unsupported type {type(deployment)}")
-    # Regex pattern to match ANSI color codes
-    await SimpleLog.objects.acreate(
-        source=SimpleLog.LogSource.SYSTEM,
-        level=SimpleLog.LogLevel.INFO,
-        content=message,
-        time=current_time,
-        deployment_id=deployment_id,
-        service_id=service_id,
-        content_text=SimpleLog.escape_ansi(message),
+    search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+
+    max_utf8_chars = ELASTICSEARCH_BYTE_LIMIT // 4
+    search_client.insert(
+        index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+        document=RuntimeLogDto(
+            source=RuntimeLogSource.SYSTEM,
+            level=RuntimeLogLevel.INFO,
+            content=message,
+            content_text=escape_ansi(message)[:max_utf8_chars],
+            time=current_time,
+            created_at=current_time,
+            deployment_id=deployment_id,
+            service_id=service_id,
+        ),
     )
 
 
