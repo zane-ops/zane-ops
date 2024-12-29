@@ -17,20 +17,18 @@ class SearchClient:
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
-    def bulk_insert(self, docs: list | Generator, refresh: bool = False):
-        helpers.bulk(self.es, docs, refresh=refresh)
+    def bulk_insert(self, docs: list | Generator):
+        from django.conf import settings
 
-    def insert(
-        self, index_name: str, document: dict | RuntimeLogDto, refresh: bool = False
-    ):
+        helpers.bulk(self.es, docs, refresh=settings.TESTING)
+
+    def insert(self, index_name: str, document: dict | RuntimeLogDto):
         from django.conf import settings
 
         document = (
             document.to_es_dict() if isinstance(document, RuntimeLogDto) else document
         )
-        self.es.index(
-            index=index_name, document=document, refresh=settings.TESTING or refresh
-        )
+        self.es.index(index=index_name, document=document, refresh=settings.TESTING)
 
     def search(self, index_name: str, query: dict = None):
         print(f"====== LOGS SEARCH ======")
@@ -164,7 +162,9 @@ class SearchClient:
         print(f"====== END LOGS COUNT ======")
         return count
 
-    def delete(self, index_name: str, query: dict = None, refresh: bool = False) -> int:
+    def delete(self, index_name: str, query: dict = None) -> int:
+        from django.conf import settings
+
         print(f"====== LOGS DELETE ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
 
@@ -175,7 +175,7 @@ class SearchClient:
             query=(
                 {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
             ),
-            refresh=refresh,
+            refresh=settings.TESTING,
         )
         print(
             f"Deleted {Colors.BLUE}{response['deleted']} documents{Colors.ENDC} in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}"

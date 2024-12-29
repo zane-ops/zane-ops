@@ -63,13 +63,12 @@ class MonitorDockerDeploymentWorkflow:
 @workflow.defn(name="cleanup-app-logs")
 class CleanupAppLogsWorkflow:
     @workflow.run
-    async def run(self, refresh_elastic_search: bool = False) -> LogsCleanupResult:
+    async def run(self) -> LogsCleanupResult:
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
         return await workflow.execute_activity_method(
             CleanupActivities.cleanup_simple_logs,
-            arg=refresh_elastic_search,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )

@@ -138,7 +138,6 @@ class ArchivedServiceDetails:
     deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     volumes: List[VolumeDto] = field(default_factory=list)
-    _refresh_elasticsearch: bool = False
 
 
 @dataclass

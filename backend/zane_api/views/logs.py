@@ -34,9 +34,6 @@ class LogIngestAPIView(APIView):
 
     def post(self, request: Request):
         serializer = DockerContainerLogsRequestSerializer(data=request.data)
-        refresh_elasticsearch = (
-            request.query_params.get("_refresh_es", "false") == "true"
-        )
         if serializer.is_valid(raise_exception=True):
             logs = serializer.data
 
@@ -147,8 +144,7 @@ class LogIngestAPIView(APIView):
                         **log.to_es_dict(),
                     ),
                     simple_logs,
-                ),
-                refresh=refresh_elasticsearch,
+                )
             )
 
             HttpLog.objects.bulk_create(http_logs)

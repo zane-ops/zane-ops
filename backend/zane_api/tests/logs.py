@@ -123,7 +123,6 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_logs,
-            QUERY_STRING="_refresh_es=true",
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
@@ -224,7 +223,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -268,7 +266,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -315,7 +312,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -385,7 +381,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -472,7 +467,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -523,7 +517,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -568,7 +561,6 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -577,7 +569,6 @@ class SimpleLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
-            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         deleted_service = await DockerRegistryService.objects.filter(
@@ -641,21 +632,18 @@ class SimpleLogScheduleTests(AuthAPITestCase):
                 headers={
                     "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
                 },
-                QUERY_STRING="_refresh_es=true",
             )
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         async with self.workflowEnvironment(
             task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE
         ) as env:  # type: WorkflowEnvironment
-            refresh_es = True
             result = await env.client.execute_workflow(
                 workflow=CleanupAppLogsWorkflow.run,
                 id="cleanup-app-logs",
                 retry_policy=RetryPolicy(
                     maximum_attempts=1,
                 ),
-                arg=refresh_es,
                 task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )

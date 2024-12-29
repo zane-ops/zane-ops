@@ -838,7 +838,6 @@ class DockerSwarmActivities:
         search_client.delete(
             index_name=settings.ELASTICSEARCH_LOGS_INDEX,
             query=dict(service_id=service_details.original_id),
-            refresh=service_details._refresh_elasticsearch,
         )
 
     @activity.defn

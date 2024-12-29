@@ -266,9 +266,7 @@ class MonitorDockerDeploymentActivities:
 
 class CleanupActivities:
     @activity.defn
-    async def cleanup_simple_logs(
-        self, refresh_elastic_search: bool = False
-    ) -> LogsCleanupResult:
+    async def cleanup_simple_logs(self) -> LogsCleanupResult:
         search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
         now = timezone.now()
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -277,6 +275,5 @@ class CleanupActivities:
             query={
                 "time_before": (today - timedelta(days=30)).isoformat(),
             },
-            refresh=refresh_elastic_search,
         )
         return LogsCleanupResult(deleted_count=deleted_count)
