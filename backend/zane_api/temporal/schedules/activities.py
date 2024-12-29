@@ -19,10 +19,15 @@ with workflow.unsafe.imports_passed_through():
     import docker.errors
     from django import db
     from ...models import DockerDeployment, HealthCheck
-    from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors, escape_ansi
+    from ...utils import (
+        DockerSwarmTaskState,
+        DockerSwarmTask,
+        Colors,
+        escape_ansi,
+        excerpt,
+    )
     from search.client import SearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
-    from search.constants import ELASTICSEARCH_BYTE_LIMIT
 
 docker_client: docker.DockerClient | None = None
 
@@ -50,14 +55,15 @@ async def deployment_log(
     print(f"[{current_time.isoformat()}]: {message}")
 
     search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
-    max_utf8_chars = ELASTICSEARCH_BYTE_LIMIT // 4
+    # This is the max number of characters that we show in color on the frontend
+    MAX_COLORED_CHARS = 1000
     search_client.insert(
         index_name=settings.ELASTICSEARCH_LOGS_INDEX,
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
             level=RuntimeLogLevel.INFO,
-            content=message,
-            content_text=escape_ansi(message)[:max_utf8_chars],
+            content=excerpt(message, MAX_COLORED_CHARS),
+            content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
             time=current_time,
             created_at=current_time,
             deployment_id=deployment.hash,

@@ -248,3 +248,9 @@ class Colors:
 def escape_ansi(content: str):
     ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
     return ANSI_ESCAPE_PATTERN.sub("", content)
+
+
+def excerpt(text: str, max_length: int):
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - 3].rstrip() + "..."

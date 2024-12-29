@@ -8,6 +8,7 @@ from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
 from temporalio.service import RPCError
 
+
 from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 
 with workflow.unsafe.imports_passed_through():
@@ -51,6 +52,7 @@ with workflow.unsafe.imports_passed_through():
         cache_result,
         convert_value_to_bytes,
         escape_ansi,
+        excerpt,
     )
 
 from ..dtos import (
@@ -192,14 +194,14 @@ async def deployment_log(
             raise TypeError(f"unsupported type {type(deployment)}")
     search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
 
-    max_utf8_chars = ELASTICSEARCH_BYTE_LIMIT // 4
+    MAX_COLORED_CHARS = 1000
     search_client.insert(
         index_name=settings.ELASTICSEARCH_LOGS_INDEX,
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
             level=RuntimeLogLevel.INFO,
-            content=message,
-            content_text=escape_ansi(message)[:max_utf8_chars],
+            content=excerpt(message, MAX_COLORED_CHARS),
+            content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
             time=current_time,
             created_at=current_time,
             deployment_id=deployment_id,
