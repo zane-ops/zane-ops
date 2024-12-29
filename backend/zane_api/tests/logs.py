@@ -11,16 +11,13 @@ from temporalio.testing import WorkflowEnvironment
 import base64
 from temporalio.common import RetryPolicy
 
-from ..utils import jprint
-
-
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import DockerDeployment, DockerRegistryService, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
 
 
-class SimpleLogCollectViewTests(AuthAPITestCase):
+class RuntimeLogCollectViewTests(AuthAPITestCase):
     def test_ingest_service_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
 
@@ -148,7 +145,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         self.assertIsNotNone(log["service_id"])
 
 
-class SimpleLogViewTests(AuthAPITestCase):
+class RuntimeLogViewTests(AuthAPITestCase):
     sample_log_contents = [
         (
             datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
@@ -583,7 +580,7 @@ class SimpleLogViewTests(AuthAPITestCase):
         self.assertEqual(0, logs_for_service["total"])
 
 
-class SimpleLogScheduleTests(AuthAPITestCase):
+class RuntimeLogScheduleTests(AuthAPITestCase):
     async def test_delete_logs_older_than_30_days(self):
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
             p, service = await self.acreate_and_deploy_redis_docker_service()
