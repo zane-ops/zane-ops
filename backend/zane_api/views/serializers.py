@@ -1,3 +1,4 @@
+import base64
 import dataclasses
 import json
 import time
@@ -935,7 +936,7 @@ class DockerContainerLogSerializer(serializers.Serializer):
     log = serializers.CharField(required=True, allow_blank=True, trim_whitespace=False)
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
-    time = serializers.DateTimeField(required=True)
+    time = serializers.CharField(required=True)
     tag = serializers.CharField(required=True)
     SOURCES = (
         ("stdout", _("standard ouput")),
@@ -1040,19 +1041,24 @@ class DeploymentLogsQuerySerializer(serializers.Serializer):
     )
     cursor = serializers.CharField(required=False)
 
-    # def validate_cursor(self, cursor: str):
-    #     try:
-    #         decoded_data = base64.b64decode(cursor, validate=True)
-    #         decoded_string = decoded_data.decode("utf-8")
-    #         serializer = CursorSerializer(data=json.loads(decoded_string))
-    #         serializer.is_valid(raise_exception=True)
-    #     except (ValidationError, ValueError):
-    #         raise serializers.ValidationError(
-    #             {
-    #                 "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
-    #             }
-    #         )
-    #     return cursor
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
+
+
+class CursorSerializer(serializers.Serializer):
+    sort = serializers.ListField(required=True, child=serializers.CharField())
+    order = serializers.ChoiceField(choices=["desc", "asc"], required=True)
 
 
 class DeploymentLogsPagination(pagination.CursorPagination):

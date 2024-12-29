@@ -244,24 +244,32 @@ class SimpleLogViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         deployment: DockerDeployment = service.deployments.first()
 
-        SimpleLog.objects.bulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=(
-                        SimpleLog.LogLevel.INFO
-                        if i % 2 == 0
-                        else SimpleLog.LogLevel.ERROR
-                    ),
-                )
-                for i, (time, content) in enumerate(self.sample_log_contents)
-            ]
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="refresh=true",
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = self.client.get(
             reverse(
@@ -276,8 +284,165 @@ class SimpleLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
-        self.assertIsNotNone(data["next"])
         self.assertEqual(5, len(data["results"]))
+        self.assertIsNotNone(data["next"])
+
+    def test_paginate_get_next_page(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="refresh=true",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING="per_page=5",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_page = response.json()
+        self.assertEqual(5, len(first_page["results"]))
+        next_cursor = first_page["next"]
+        self.assertIsNotNone(first_page["next"])
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"per_page=5&cursor={next_cursor}",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        second_page = response.json()
+        self.assertEqual(5, len(second_page["results"]))
+        # Check that no item from first page appears in second page
+        first_page_contents = {item["id"] for item in first_page["results"]}
+        second_page_contents = {item["id"] for item in second_page["results"]}
+        self.assertEqual(0, len(first_page_contents.intersection(second_page_contents)))
+        # Since we know there is 11 logs, there should still be a next page
+        next_cursor = second_page["next"]
+        self.assertIsNotNone(second_page["next"])
+
+    def test_paginate_get_previous_page(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
+
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="refresh=true",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Get first page
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING="per_page=5",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_page = response.json()
+        self.assertEqual(5, len(first_page["results"]))
+        self.assertIsNotNone(first_page["next"])
+        self.assertIsNone(first_page["previous"])
+
+        # Get second page
+        next_cursor = first_page["next"]
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"per_page=5&cursor={next_cursor}",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        second_page = response.json()
+        previous_cursor = second_page["previous"]
+        self.assertEqual(5, len(second_page["results"]))
+        self.assertIsNotNone(second_page["previous"])
+        # the second page still has a next page because we know there are 11 logs
+        # and we only fetched 10 in the first two pages
+        self.assertIsNotNone(second_page["next"])
+
+        # Get previous page
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"per_page=5&cursor={previous_cursor}",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        previous_page = response.json()
+        self.assertEqual(first_page["results"], previous_page["results"])
 
     def test_complex_filter(self):
         p, service = self.create_and_deploy_redis_docker_service()

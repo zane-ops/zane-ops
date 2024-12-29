@@ -1,8 +1,8 @@
-from typing import Generator, Optional
+import base64
+import json
+from typing import Generator
 from elasticsearch import Elasticsearch, helpers
-from zane_api.utils import Colors
-from dataclasses import dataclass, field
-from .dtos import RuntimeLogLevel, RuntimeLogSource, RuntimeLogDto
+from zane_api.utils import Colors, jprint
 from .serializers import RuntimeLogsSearchSerializer
 
 
@@ -30,9 +30,7 @@ class SearchClient:
         search_params = search_params or {}
         filters = []
 
-        print(
-            f"Searching in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC} with {search_params=}"
-        )
+        page_size = int(search_params.get("per_page", 50))
         if search_params.get("service_id"):
             filters.append({"term": {"service_id": search_params["service_id"]}})
         if search_params.get("deployment_id"):
@@ -41,50 +39,126 @@ class SearchClient:
             filters.append({"terms": {"level": search_params["level"]}})
         if search_params.get("source"):
             filters.append({"terms": {"source": search_params["source"]}})
+        if search_params.get("time_after") or search_params.get("time_before"):
+            range_filter = {
+                "range": {
+                    "time": {
+                        "format": "strict_date_optional_time_nanos",
+                    }
+                }
+            }
+
+            if search_params.get("time_after"):
+                range_filter["range"]["time"]["gte"] = search_params["time_after"]
+            if search_params.get("time_before"):
+                range_filter["range"]["time"]["lte"] = search_params["time_before"]
+            filters.append(range_filter)
         if search_params.get("query"):
             # escape `*` in the query string as it is a special character in ElasticSearch
             query = search_params["query"].replace("*", "\\*")
             filters.append(
                 {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
             )
-        if search_params.get("time_after"):
-            filters.append(
-                {
-                    "range": {
-                        "time": {
-                            "gte": search_params["time_after"],
-                            "format": "strict_date_optional_time_nanos",
-                        }
-                    }
-                }
-            )
-        if search_params.get("time_before"):
-            filters.append(
-                {
-                    "range": {
-                        "time": {
-                            "lte": search_params["time_before"],
-                            "format": "strict_date_optional_time_nanos",
-                        }
-                    }
-                }
-            )
+
+        search_after = None
+        cursor = None
+        order = "desc"
+        if search_params.get("cursor"):
+            cursor = base64.b64decode(search_params["cursor"]).decode()
+            cursor = json.loads(cursor)
+            search_after = cursor["sort"]
+            order = cursor["order"]
+
+        print(f"====== LOGS SEARCH ======")
+        print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
+        print(f"Params: {Colors.GREY}{search_params}{Colors.ENDC}")
+        print(f"Filters: {Colors.GREY}{filters}{Colors.ENDC}")
+        print(f"Cursor: {Colors.GREY}{cursor}{Colors.ENDC}")
 
         result = self.es.search(
             index=index_name,
-            size=search_params.get("per_page", 50),
+            size=page_size + 1,
+            search_after=search_after,
             sort=[
-                {"time": {"format": "strict_date_optional_time_nanos", "order": "desc"}}
+                {
+                    "time": {
+                        "order": order,
+                        "format": "strict_date_optional_time_nanos",
+                        "numeric_type": "date_nanos",
+                    }
+                }
             ],
             query=(
                 {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
             ),
         )
 
+        hits = (
+            result["hits"]["hits"]
+            if order == "desc"
+            else list(reversed(result["hits"]["hits"]))
+        )
+        total = result["hits"]["total"]["value"]
+        query_time_ms = result["took"]
+        next_cursor = None
+        prev_cursor = None
+
+        if len(hits) > page_size:
+            # the last hit is used for pagination,
+            # to check if there are more results,
+            # so we remove it from the results
+            hits.pop()
+
+            next_cursor = json.dumps(
+                {
+                    "sort": hits[-1]["sort"],
+                    "order": "desc",
+                }
+            )
+            next_cursor = base64.b64encode(next_cursor.encode()).decode()
+
+        if len(hits) > 0:
+            # the most recent item is the first, we try to see if there are more logs after this
+            # so we can generate a previous cursor if needed
+            first_item = hits[0]
+            print(f"First item: {Colors.GREY}{first_item}{Colors.ENDC}")
+
+            result = self.es.search(
+                index=index_name,
+                size=1,
+                search_after=first_item["sort"],
+                sort=[
+                    {
+                        "time": {
+                            "order": "asc",
+                            "format": "strict_date_optional_time_nanos",
+                            "numeric_type": "date_nanos",
+                        }
+                    }
+                ],
+                query=(
+                    {"bool": {"filter": filters}}
+                    if len(filters) > 0
+                    else {"match_all": {}}
+                ),
+            )
+
+            print(
+                f"Previous logs count: {Colors.GREY}{len(result['hits']['hits'])}{Colors.ENDC}"
+            )
+            if len(result["hits"]["hits"]) > 0:
+                prev_cursor = json.dumps(
+                    {
+                        "sort": first_item["sort"],
+                        "order": "asc",
+                    }
+                )
+                prev_cursor = base64.b64encode(prev_cursor.encode()).decode()
+
         serializer = RuntimeLogsSearchSerializer(
             dict(
-                query_time_ms=result["took"],
-                total=result["hits"]["total"]["value"],
+                query_time_ms=query_time_ms,
+                total=total,
                 results=[
                     {
                         "id": hit["_id"],
@@ -96,12 +170,17 @@ class SearchClient:
                         "content": hit["_source"]["content"]["raw"],
                         "content_text": hit["_source"]["content"]["text"],
                     }
-                    for hit in result["hits"]["hits"]
+                    for hit in hits
                 ],
-                next=None,
-                previous=None,
+                next=next_cursor,
+                previous=prev_cursor,
             )
         )
+
+        print(
+            f"Found {Colors.BLUE}{total}{Colors.ENDC} logs in ElasticSearch in {Colors.GREEN}{query_time_ms}ms{Colors.ENDC}"
+        )
+        print(f"====== END LOGS SEARCH ======")
         return serializer.data
 
     def count(self, index_name: str):
@@ -139,7 +218,7 @@ class SearchClient:
                         "level": {"type": "keyword"},
                         "source": {"type": "keyword"},
                         "service_id": {"type": "keyword"},
-                        "time": {"type": "date"},
+                        "time": {"type": "date_nanos"},
                     }
                 },
             )

@@ -900,12 +900,10 @@ class DockerServiceDeploymentLogsAPIView(APIView):
         else:
             form = DeploymentLogsQuerySerializer(data=request.query_params)
             if form.is_valid(raise_exception=True):
-                search_client = SearchClient(
-                    host=settings.ELASTICSEARCH_HOST,
-                )
+                search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
                 data = search_client.search(
                     index_name=settings.ELASTICSEARCH_LOGS_INDEX,
-                    search_params=form.data,
+                    search_params=dict(**form.data, deployment_id=deployment.hash),
                 )
                 return Response(data)
 

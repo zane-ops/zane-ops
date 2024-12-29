@@ -18,6 +18,7 @@ class RuntimeLogSerializer(serializers.Serializer):
 
 
 class RuntimeLogsSearchSerializer(serializers.Serializer):
+    total = serializers.IntegerField()
     previous = serializers.CharField(default=None, allow_null=True)
     next = serializers.CharField(default=None, allow_null=True)
     results = serializers.ListSerializer(child=RuntimeLogSerializer())
