@@ -827,9 +827,9 @@ class DockerSwarmActivities:
         search_client = SearchClient(
             host=settings.ELASTICSEARCH_HOST,
         )
-        search_client.delete_logs(
+        search_client.delete(
             index_name=settings.ELASTICSEARCH_LOGS_INDEX,
-            search_params=dict(service_id=service_details.original_id),
+            query=dict(service_id=service_details.original_id),
             refresh=service_details._refresh_elasticsearch,
         )
 

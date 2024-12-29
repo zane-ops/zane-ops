@@ -2,8 +2,8 @@ import base64
 import json
 from typing import Generator
 from elasticsearch import Elasticsearch, helpers
-from zane_api.utils import Colors, jprint
-from .serializers import RuntimeLogsSearchSerializer
+from zane_api.utils import Colors
+from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 
 
 class SearchClient:
@@ -16,54 +16,18 @@ class SearchClient:
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
-    def search(self, index_name: str, search_params: dict = None):
-        search_params = search_params or {}
-        filters = []
+    def bulk_insert(self, docs: list | Generator, refresh: bool = False):
+        helpers.bulk(self.es, docs, refresh=refresh)
 
-        page_size = int(search_params.get("per_page", 50))
-        if search_params.get("service_id"):
-            filters.append({"term": {"service_id": search_params["service_id"]}})
-        if search_params.get("deployment_id"):
-            filters.append({"term": {"deployment_id": search_params["deployment_id"]}})
-        if search_params.get("level"):
-            filters.append({"terms": {"level": search_params["level"]}})
-        if search_params.get("source"):
-            filters.append({"terms": {"source": search_params["source"]}})
-        if search_params.get("time_after") or search_params.get("time_before"):
-            range_filter = {
-                "range": {
-                    "time": {
-                        "format": "strict_date_optional_time_nanos",
-                    }
-                }
-            }
-
-            if search_params.get("time_after"):
-                range_filter["range"]["time"]["gte"] = search_params["time_after"]
-            if search_params.get("time_before"):
-                range_filter["range"]["time"]["lte"] = search_params["time_before"]
-            filters.append(range_filter)
-        if search_params.get("query"):
-            # escape `*` in the query string as it is a special character in ElasticSearch
-            query = search_params["query"].replace("*", "\\*")
-            filters.append(
-                {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
-            )
-
-        search_after = None
-        cursor = None
-        order = "desc"
-        if search_params.get("cursor"):
-            cursor = base64.b64decode(search_params["cursor"]).decode()
-            cursor = json.loads(cursor)
-            search_after = cursor["sort"]
-            order = cursor["order"]
-
+    def search(self, index_name: str, query: dict = None):
         print(f"====== LOGS SEARCH ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
-        print(f"Params: {Colors.GREY}{search_params}{Colors.ENDC}")
-        print(f"Filters: {Colors.GREY}{filters}{Colors.ENDC}")
-        print(f"Cursor: {Colors.GREY}{cursor}{Colors.ENDC}")
+        data = self._compute_filters(query)
+
+        filters = data["filters"]
+        search_after = data["search_after"]
+        order = data["order"]
+        page_size = data["page_size"]
 
         result = self.es.search(
             index=index_name,
@@ -86,7 +50,9 @@ class SearchClient:
         hits = (
             result["hits"]["hits"]
             if order == "desc"
-            else list(reversed(result["hits"]["hits"]))
+            else list(
+                reversed(result["hits"]["hits"])
+            )  # we reverse the list because we always want the oldest logs first
         )
         total = result["hits"]["total"]["value"]
         query_time_ms = result["took"]
@@ -169,8 +135,98 @@ class SearchClient:
         print(f"====== END LOGS SEARCH ======")
         return serializer.data
 
-    def count(self, index_name: str):
-        return self.es.count(index=index_name)["count"]
+    def count(self, index_name: str, query: dict = None) -> int:
+        print(f"====== LOGS COUNT ======")
+        print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
+        filters = self._compute_filters(query)["filters"]
+        count = self.es.count(
+            index=index_name,
+            query=(
+                {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
+            ),
+        )["count"]
+        print(
+            f"Found {Colors.BLUE}{count}{Colors.ENDC} logs in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}"
+        )
+        print(f"====== END LOGS COUNT ======")
+        return count
+
+    def delete(self, index_name: str, query: dict = None, refresh: bool = False) -> int:
+        print(f"====== LOGS DELETE ======")
+        print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
+
+        filters = self._compute_filters(query)["filters"]
+
+        response = self.es.delete_by_query(
+            index=index_name,
+            query=(
+                {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
+            ),
+            refresh=refresh,
+        )
+        print(
+            f"Deleted {Colors.BLUE}{response['deleted']} documents{Colors.ENDC} in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}"
+        )
+        print("====== END LOGS DELETE ======")
+        return response["deleted"]
+
+    def _compute_filters(self, query: dict = None):
+        form = RuntimeLogsQuerySerializer(data=query or {})
+        form.is_valid(raise_exception=True)
+
+        search_params = form.validated_data or {}
+        filters = []
+
+        page_size = int(search_params.get("per_page", 50))
+        if search_params.get("service_id"):
+            filters.append({"term": {"service_id": search_params["service_id"]}})
+        if search_params.get("deployment_id"):
+            filters.append({"term": {"deployment_id": search_params["deployment_id"]}})
+        if search_params.get("level"):
+            filters.append({"terms": {"level": search_params["level"]}})
+        if search_params.get("source"):
+            filters.append({"terms": {"source": search_params["source"]}})
+        if search_params.get("time_after") or search_params.get("time_before"):
+            range_filter = {
+                "range": {
+                    "time": {
+                        "format": "strict_date_optional_time_nanos",
+                    }
+                }
+            }
+
+            if search_params.get("time_after"):
+                range_filter["range"]["time"]["gte"] = search_params["time_after"]
+            if search_params.get("time_before"):
+                range_filter["range"]["time"]["lte"] = search_params["time_before"]
+            filters.append(range_filter)
+        if search_params.get("query"):
+            # escape `*` in the query string as it is a special character in ElasticSearch
+            query = search_params["query"].replace("*", "\\*")
+            filters.append(
+                {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
+            )
+
+        search_after = None
+        cursor = None
+
+        order = "desc"
+        if search_params.get("cursor"):
+            cursor = base64.b64decode(search_params["cursor"]).decode()
+            cursor = json.loads(cursor)
+            search_after = cursor["sort"]
+            order = cursor["order"]
+
+        print(f"Params: {Colors.GREY}{search_params}{Colors.ENDC}")
+        print(f"Filters: {Colors.GREY}{filters}{Colors.ENDC}")
+        print(f"Cursor: {Colors.GREY}{cursor}{Colors.ENDC}")
+
+        return {
+            "filters": filters,
+            "search_after": search_after,
+            "order": order,
+            "page_size": page_size,
+        }
 
     def create_log_index_if_not_exists(self, index_name: str):
         if not self.es.indices.exists(index=index_name):
@@ -215,62 +271,6 @@ class SearchClient:
             print(
                 f"Index {Colors.BLUE}{index_name}{Colors.ENDC} already exists in ElasticSearch, skipping creation ⏭️"
             )
-
-    def bulk_insert(self, docs: list | Generator, refresh: bool = False):
-        print(f"Indexing {docs=} documents in ElasticSearch...")
-        print(f"Bulk Inserting documents in...")
-        helpers.bulk(self.es, docs, refresh=refresh)
-        print(f"{Colors.GREEN}Successfully indexed all documents 🗂️{Colors.ENDC}")
-
-    def delete_logs(
-        self, index_name: str, search_params: dict = None, refresh: bool = False
-    ):
-        search_params = search_params or {}
-        filters = []
-        if search_params.get("service_id"):
-            filters.append({"term": {"service_id": search_params["service_id"]}})
-        if search_params.get("deployment_id"):
-            filters.append({"term": {"deployment_id": search_params["deployment_id"]}})
-        if search_params.get("level"):
-            filters.append({"terms": {"level": search_params["level"]}})
-        if search_params.get("source"):
-            filters.append({"terms": {"source": search_params["source"]}})
-        if search_params.get("time_after") or search_params.get("time_before"):
-            range_filter = {
-                "range": {
-                    "time": {
-                        "format": "strict_date_optional_time_nanos",
-                    }
-                }
-            }
-
-            if search_params.get("time_after"):
-                range_filter["range"]["time"]["gte"] = search_params["time_after"]
-            if search_params.get("time_before"):
-                range_filter["range"]["time"]["lte"] = search_params["time_before"]
-            filters.append(range_filter)
-        if search_params.get("query"):
-            # escape `*` in the query string as it is a special character in ElasticSearch
-            query = search_params["query"].replace("*", "\\*")
-            filters.append(
-                {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
-            )
-
-        body = {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
-        print(f"====== LOGS DELETE ======")
-        print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
-        print(f"Params: {Colors.GREY}{search_params}{Colors.ENDC}")
-        print(f"Filters: {Colors.GREY}{filters}{Colors.ENDC}")
-        print(f"Body: {Colors.GREY}{body}{Colors.ENDC}")
-        response = self.es.delete_by_query(
-            index=index_name,
-            query=body,
-            refresh=refresh,
-        )
-        print(
-            f"Deleted {Colors.BLUE}{response['deleted']} documents{Colors.ENDC} in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}"
-        )
-        print("====== END LOGS DELETE ======")
 
     def delete_index(self, index_name: str):
         print(f"Deleting ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}...")

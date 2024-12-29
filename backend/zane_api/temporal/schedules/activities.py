@@ -20,6 +20,7 @@ with workflow.unsafe.imports_passed_through():
     from django import db
     from ...models import DockerDeployment, HealthCheck, SimpleLog
     from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors
+    from search.client import SearchClient
 
 docker_client: docker.DockerClient | None = None
 
@@ -258,8 +259,17 @@ class MonitorDockerDeploymentActivities:
 
 class CleanupActivities:
     @activity.defn
-    async def cleanup_simple_logs(self) -> LogsCleanupResult:
-        deleted_count, _ = await SimpleLog.objects.filter(
-            time__lt=timezone.now() - timedelta(days=30)
-        ).adelete()
+    async def cleanup_simple_logs(
+        self, refresh_elastic_search: bool = False
+    ) -> LogsCleanupResult:
+        search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+        now = timezone.now()
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        deleted_count = search_client.delete(
+            index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+            query={
+                "time_before": (today - timedelta(days=30)).isoformat(),
+            },
+            refresh=refresh_elastic_search,
+        )
         return LogsCleanupResult(deleted_count=deleted_count)

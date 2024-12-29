@@ -586,7 +586,7 @@ class SimpleLogViewTests(AuthAPITestCase):
 
         logs_for_service = self.search_client.search(
             index_name=self.ELASTICSEARCH_LOGS_INDEX,
-            search_params={"service_id": service.id},
+            query={"service_id": service.id},
         )
         self.assertEqual(0, logs_for_service["total"])
 
@@ -617,39 +617,59 @@ class SimpleLogScheduleTests(AuthAPITestCase):
                 ),
             ]
 
-            await SimpleLog.objects.abulk_create(
-                [
-                    SimpleLog(
-                        time=time,
-                        content=content,
-                        service_id=service.id,
-                        deployment_id=deployment.hash,
-                        source=SimpleLog.LogSource.SERVICE,
-                        content_text=SimpleLog.escape_ansi(content),
-                        level=SimpleLog.LogLevel.INFO,
-                    )
-                    for (time, content) in sample_logs
-                ]
+            # Insert logs
+            logs = [
+                {
+                    "log": content,
+                    "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                    "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJNnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                    "time": time.isoformat(),
+                    "tag": json.dumps(
+                        {
+                            "deployment_id": deployment.hash,
+                            "service_id": service.id,
+                        }
+                    ),
+                    "source": "stdout",
+                }
+                for time, content in sample_logs
+            ]
+            response = await self.async_client.post(
+                reverse("zane_api:logs.ingest"),
+                data=logs,
+                headers={
+                    "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+                },
+                QUERY_STRING="_refresh_es=true",
             )
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         async with self.workflowEnvironment(
             task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE
         ) as env:  # type: WorkflowEnvironment
+            refresh_es = True
             result = await env.client.execute_workflow(
                 workflow=CleanupAppLogsWorkflow.run,
                 id="cleanup-app-logs",
                 retry_policy=RetryPolicy(
                     maximum_attempts=1,
                 ),
+                arg=refresh_es,
                 task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
             self.assertEqual(2, result.deleted_count)
-            no_of_logs_older_than_a_month = await SimpleLog.objects.filter(
-                time__lt=timezone.now() - timedelta(days=30)
-            ).acount()
+            no_of_logs_older_than_a_month = self.search_client.count(
+                index_name=self.ELASTICSEARCH_LOGS_INDEX,
+                query={"time_before": (now - timedelta(days=30)).isoformat()},
+            )
             self.assertEqual(0, no_of_logs_older_than_a_month)
+            no_of_logs_younger_than_a_month = self.search_client.count(
+                index_name=self.ELASTICSEARCH_LOGS_INDEX,
+                query={"time_after": (now - timedelta(days=30)).isoformat()},
+            )
+            self.assertEqual(2, no_of_logs_younger_than_a_month)
 
 
 class HttpLogViewTests(AuthAPITestCase):

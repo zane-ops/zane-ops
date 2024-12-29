@@ -72,7 +72,6 @@ from ..serializers import (
     PortConfigurationSerializer,
     DockerEnvVariableSerializer,
     ErrorResponse409Serializer,
-    SimpleLogSerializer,
     HttpLogSerializer,
 )
 from ..temporal import (
@@ -903,7 +902,7 @@ class DockerServiceDeploymentLogsAPIView(APIView):
                 search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
                 data = search_client.search(
                     index_name=settings.ELASTICSEARCH_LOGS_INDEX,
-                    search_params=dict(**form.data, deployment_id=deployment.hash),
+                    query=dict(**form.validated_data, deployment_id=deployment.hash),
                 )
                 return Response(data)
 
