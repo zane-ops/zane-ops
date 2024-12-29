@@ -28,7 +28,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         total_documents_indexed = 0
         client = SearchClient(settings.ELASTICSEARCH_HOST)
-        client.clear_index_data(settings.ELASTICSEARCH_LOGS_INDEX)
+        client.delete_logs(settings.ELASTICSEARCH_LOGS_INDEX)
 
         max_documents = options["max_documents"]
         batch_size = options["batch_size"]

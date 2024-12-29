@@ -122,7 +122,7 @@ class SimpleLogCollectViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=simple_logs,
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
@@ -223,7 +223,7 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -267,7 +267,7 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -314,7 +314,7 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -384,7 +384,7 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -471,7 +471,7 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -522,7 +522,7 @@ class SimpleLogViewTests(AuthAPITestCase):
             headers={
                 "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
             },
-            QUERY_STRING="refresh=true",
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -544,26 +544,39 @@ class SimpleLogViewTests(AuthAPITestCase):
         p, service = await self.acreate_and_deploy_redis_docker_service()
         deployment: DockerDeployment = await service.deployments.afirst()
 
-        await SimpleLog.objects.abulk_create(
-            [
-                SimpleLog(
-                    time=time,
-                    content=content,
-                    service_id=service.id,
-                    deployment_id=deployment.hash,
-                    source=SimpleLog.LogSource.SERVICE,
-                    content_text=SimpleLog.escape_ansi(content),
-                    level=SimpleLog.LogLevel.INFO,
-                )
-                for (time, content) in self.sample_log_contents
-            ]
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time.isoformat(),
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+            QUERY_STRING="_refresh_es=true",
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
                 kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
+            QUERY_STRING="_refresh_es=true",
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         deleted_service = await DockerRegistryService.objects.filter(
@@ -571,10 +584,11 @@ class SimpleLogViewTests(AuthAPITestCase):
         ).afirst()
         self.assertIsNone(deleted_service)
 
-        logs_for_service = await SimpleLog.objects.filter(
-            service_id=service.id
-        ).acount()
-        self.assertEqual(0, logs_for_service)
+        logs_for_service = self.search_client.search(
+            index_name=self.ELASTICSEARCH_LOGS_INDEX,
+            search_params={"service_id": service.id},
+        )
+        self.assertEqual(0, logs_for_service["total"])
 
 
 class SimpleLogScheduleTests(AuthAPITestCase):

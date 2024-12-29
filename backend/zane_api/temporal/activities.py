@@ -12,6 +12,7 @@ from .main import create_schedule, delete_schedule, pause_schedule, unpause_sche
 
 with workflow.unsafe.imports_passed_through():
     from .schedules import MonitorDockerDeploymentWorkflow
+    from search.client import SearchClient
     import docker
     import docker.errors
     from ..models import (
@@ -823,7 +824,14 @@ class DockerSwarmActivities:
         for volume in docker_volume_list:
             volume.remove(force=True)
         print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
-        await SimpleLog.objects.filter(service_id=service_details.original_id).adelete()
+        search_client = SearchClient(
+            host=settings.ELASTICSEARCH_HOST,
+        )
+        search_client.delete_logs(
+            index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+            search_params=dict(service_id=service_details.original_id),
+            refresh=service_details._refresh_elasticsearch,
+        )
 
     @activity.defn
     async def remove_project_network(self, project_details: ArchivedProjectDetails):

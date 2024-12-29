@@ -969,6 +969,9 @@ class ArchiveDockerServiceAPIView(APIView):
     )
     @transaction.atomic()
     def delete(self, request: Request, project_slug: str, service_slug: str):
+        refresh_elasticsearch = (
+            request.query_params.get("_refresh_es", "false") == "true"
+        )
         project = (
             Project.objects.filter(
                 slug=project_slug.lower(), owner=request.user
@@ -1039,6 +1042,7 @@ class ArchiveDockerServiceAPIView(APIView):
                     )
                     for dpl in archived_service.deployments
                 ],
+                _refresh_elasticsearch=refresh_elasticsearch,
             )
 
             transaction.on_commit(

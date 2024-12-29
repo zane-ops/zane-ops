@@ -11,22 +11,12 @@ class SearchClient:
     TODO :
     - limit the system logs to less than 30k characters
     - we might need to explore breaking service logs into pieces if they exceed the limit when indexing
-    - add retention policy for logs in ElasticSearch to 30 days max :
-        - look into index lifecycle management and rollover indices
-        - delete log cleanup temporalio job
     """
 
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
     def search(self, index_name: str, search_params: dict = None):
-        """
-        TODO :
-          - Run a parallel search with an exact search and a full text search
-          - the exact search should be scored higher than the full text search so that the exact search results are shown first : https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html
-          - look into cursor pagination if it supports both forward and backward pagination : https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-        """
-
         search_params = search_params or {}
         filters = []
 
@@ -121,7 +111,6 @@ class SearchClient:
             # the most recent item is the first, we try to see if there are more logs after this
             # so we can generate a previous cursor if needed
             first_item = hits[0]
-            print(f"First item: {Colors.GREY}{first_item}{Colors.ENDC}")
 
             result = self.es.search(
                 index=index_name,
@@ -143,9 +132,6 @@ class SearchClient:
                 ),
             )
 
-            print(
-                f"Previous logs count: {Colors.GREY}{len(result['hits']['hits'])}{Colors.ENDC}"
-            )
             if len(result["hits"]["hits"]) > 0:
                 prev_cursor = json.dumps(
                     {
@@ -236,14 +222,55 @@ class SearchClient:
         helpers.bulk(self.es, docs, refresh=refresh)
         print(f"{Colors.GREEN}Successfully indexed all documents 🗂️{Colors.ENDC}")
 
-    def clear_index_data(self, index_name: str):
-        print(
-            f"Clearing data in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}..."
+    def delete_logs(
+        self, index_name: str, search_params: dict = None, refresh: bool = False
+    ):
+        search_params = search_params or {}
+        filters = []
+        if search_params.get("service_id"):
+            filters.append({"term": {"service_id": search_params["service_id"]}})
+        if search_params.get("deployment_id"):
+            filters.append({"term": {"deployment_id": search_params["deployment_id"]}})
+        if search_params.get("level"):
+            filters.append({"terms": {"level": search_params["level"]}})
+        if search_params.get("source"):
+            filters.append({"terms": {"source": search_params["source"]}})
+        if search_params.get("time_after") or search_params.get("time_before"):
+            range_filter = {
+                "range": {
+                    "time": {
+                        "format": "strict_date_optional_time_nanos",
+                    }
+                }
+            }
+
+            if search_params.get("time_after"):
+                range_filter["range"]["time"]["gte"] = search_params["time_after"]
+            if search_params.get("time_before"):
+                range_filter["range"]["time"]["lte"] = search_params["time_before"]
+            filters.append(range_filter)
+        if search_params.get("query"):
+            # escape `*` in the query string as it is a special character in ElasticSearch
+            query = search_params["query"].replace("*", "\\*")
+            filters.append(
+                {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
+            )
+
+        body = {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
+        print(f"====== LOGS DELETE ======")
+        print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
+        print(f"Params: {Colors.GREY}{search_params}{Colors.ENDC}")
+        print(f"Filters: {Colors.GREY}{filters}{Colors.ENDC}")
+        print(f"Body: {Colors.GREY}{body}{Colors.ENDC}")
+        response = self.es.delete_by_query(
+            index=index_name,
+            query=body,
+            refresh=refresh,
         )
-        self.es.delete_by_query(index=index_name, body={"query": {"match_all": {}}})
         print(
-            f"{Colors.GREEN}Successfully cleared data in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC} 🗑️"
+            f"Deleted {Colors.BLUE}{response['deleted']} documents{Colors.ENDC} in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}"
         )
+        print("====== END LOGS DELETE ======")
 
     def delete_index(self, index_name: str):
         print(f"Deleting ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}...")
