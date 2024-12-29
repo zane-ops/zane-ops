@@ -13,6 +13,7 @@ x-backend-vars: &env-vars
   ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
+  ELASTICSEARCH_HOST: http://zane.search:9200
 
 services:
   proxy:
