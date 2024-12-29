@@ -419,12 +419,8 @@ export const deploymentQueries = {
         if (data) {
           apiData = {
             ...data,
-            next: data?.next
-              ? new URL(data?.next).searchParams.get("cursor")
-              : null,
-            previous: data?.previous
-              ? new URL(data?.previous).searchParams.get("cursor")
-              : null,
+            next: data?.next ?? null,
+            previous: data?.previous ?? null,
             cursor: existingData?.cursor
           };
         }
