@@ -412,13 +412,12 @@ export const deploymentQueries = {
           next: null,
           previous: null,
           results: [],
-          cursor: null,
-          query_time_ms: 0
+          cursor: null
         };
 
         if (data) {
           apiData = {
-            ...data,
+            results: data.results,
             next: data?.next ?? null,
             previous: data?.previous ?? null,
             cursor: existingData?.cursor
@@ -450,9 +449,7 @@ export const deploymentQueries = {
             }
           );
           if (nextPage?.previous) {
-            apiData.cursor = new URL(nextPage.previous).searchParams.get(
-              "cursor"
-            );
+            apiData.cursor = nextPage.previous;
           }
         }
 
@@ -476,11 +473,14 @@ export const deploymentQueries = {
     })
 };
 
-type DeploymentLogQueryData = NonNullable<
-  ApiResponse<
-    "get",
-    "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
-  >
+type DeploymentLogQueryData = Pick<
+  NonNullable<
+    ApiResponse<
+      "get",
+      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+    >
+  >,
+  "next" | "previous" | "results"
 > & {
   cursor?: string | null;
 };
