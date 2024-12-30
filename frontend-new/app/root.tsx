@@ -49,6 +49,7 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       placeholderData: keepPreviousData,
       retry(failureCount, error) {
+        // error responses are valid responses that react router can handle, so we don't want to retry them
         return !(error instanceof Response) && failureCount < 3;
       }
     }
