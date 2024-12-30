@@ -224,11 +224,11 @@ class MonitorDockerDeploymentActivities:
                             deployment_status_reason = str(e)
 
                 print(
-                    f"Healtcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
+                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
                 )
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
                     f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
                 )
                 status_color = (
@@ -245,7 +245,7 @@ class MonitorDockerDeploymentActivities:
                     status_flag = "🏁"
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
                     f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
                 )
                 return deployment_status, deployment_status_reason

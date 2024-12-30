@@ -1455,7 +1455,7 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC}"
                 f" | healthcheck_time_left={Colors.ORANGE}{format_seconds(healthcheck_time_left)}{Colors.ENDC} 💓",
             )
@@ -1576,13 +1576,13 @@ class DockerSwarmActivities:
                     )
                     await deployment_log(
                         deployment,
-                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                        f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
                     )
                     await deployment_log(
                         deployment,
-                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                        f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with status {status_color}{deployment_status}{Colors.ENDC}",
                     )
@@ -1590,13 +1590,13 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
             )
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healthcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| FAILED, Retrying in {Colors.ORANGE}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
             )
@@ -1609,13 +1609,13 @@ class DockerSwarmActivities:
         )
         await deployment_log(
             deployment,
-            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+            f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
             f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC} ✅",
         )
         await deployment_log(
             deployment,
-            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+            f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
             f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
         )
