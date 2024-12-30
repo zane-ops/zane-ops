@@ -15,6 +15,8 @@ from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import DockerDeployment, DockerRegistryService, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
+from search.constants import ELASTICSEARCH_BYTE_LIMIT
+from ..utils import random_word, excerpt
 
 
 class RuntimeLogCollectViewTests(AuthAPITestCase):
@@ -143,6 +145,54 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
             log["content"],
         )
         self.assertIsNotNone(log["service_id"])
+
+    def test_cut_large_logs_into_chunks(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+
+        deployment: DockerDeployment = service.deployments.first()
+
+        maximum_utf8_bytes = (
+            ELASTICSEARCH_BYTE_LIMIT // 4
+        )  # utf-8 characters take 4 bytes
+        simple_logs = [
+            {
+                "log": ("😘" * maximum_utf8_bytes * 2)
+                + "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": "2024-06-30T03:17:14Z",
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout",
+            },
+        ]
+
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            3,
+            self.search_client.count(index_name=self.ELASTICSEARCH_LOGS_INDEX),
+        )
+        data = self.search_client.search(
+            index_name=self.ELASTICSEARCH_LOGS_INDEX,
+            query={"deployment_id": deployment.hash},
+        )
+        log = data["results"][0]
+        self.assertNotEqual(
+            simple_logs[0]["log"],
+            log["content"],
+        )
 
 
 class RuntimeLogViewTests(AuthAPITestCase):

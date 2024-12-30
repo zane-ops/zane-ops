@@ -254,3 +254,63 @@ def excerpt(text: str, max_length: int):
     if len(text) <= max_length:
         return text
     return text[: max_length - 3].rstrip() + "..."
+
+
+def truncate_utf8(utf8_string: str, limit: int) -> list[str]:
+    """
+    Splits a UTF-8 string into chunks of specified byte size limit while preserving UTF-8 character boundaries.
+
+    This function takes a string and splits it into multiple parts, ensuring that each part's UTF-8 encoded
+    byte length does not exceed the specified limit and that no UTF-8 characters are split across chunks.
+
+    Args:
+        s (str): The input string to be truncated/split
+        limit (int): Maximum number of bytes allowed in each chunk
+
+    Returns:
+        list[str]: A list of string chunks, where each chunk's UTF-8 encoded form is within the byte limit
+
+    Example:
+        >>> text = "Hello 🌍 World!"
+        >>> truncate_utf8(text, 10)
+        ['Hello 🌍', ' World!']
+
+    Note:
+        - The function preserves UTF-8 character boundaries to prevent corruption
+        - Uses 'ignore' error handling for decoding to handle any potential invalid UTF-8 sequences
+    """
+    result = []
+    remaining = utf8_string
+
+    while remaining:
+        # Encode the current remaining string into bytes
+        encoded = remaining.encode("utf-8")
+
+        # If the byte length is within the limit, add the remaining part and break
+        if len(encoded) <= limit:
+            result.append(remaining)
+            break
+
+        # Find the last valid byte position within the limit
+        valid_end = limit
+        """
+        https://stackoverflow.com/a/59451718/10322846
+        In UTF-8, continuation bytes always start with the bit pattern `10xxxxxx`. we check for the continuation byte by:
+        1. Using the mask `11000000` to clear all bits except the first two.
+        2. Checking if those two bits match `10000000`.
+
+        example:
+            # Example continuation byte: 10101010
+            # Mask:                      11000000
+            # After & operation:         10000000  ✓ Matches what we want
+        """
+        while valid_end > 0 and (encoded[valid_end] & 0b11000000) == 0b10000000:
+            valid_end -= 1
+
+        # Decode the valid part and update the remaining part
+        truncated = encoded[:valid_end].decode("utf-8", errors="ignore")
+        remaining = encoded[valid_end:].decode("utf-8", errors="ignore")
+
+        result.append(truncated)
+
+    return result

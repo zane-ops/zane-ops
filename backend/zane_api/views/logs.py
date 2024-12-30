@@ -9,7 +9,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
-from ..utils import Colors, escape_ansi
+from ..utils import Colors, escape_ansi, truncate_utf8
 from datetime import datetime
 
 from .helpers import ZaneServices
@@ -21,6 +21,7 @@ from .serializers import (
 from ..models import HttpLog
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.client import SearchClient
+from search.constants import ELASTICSEARCH_BYTE_LIMIT
 from django.conf import settings
 from django.utils import timezone
 
@@ -118,7 +119,7 @@ class LogIngestAPIView(APIView):
                             pass
                         case _:
                             deployment_id = json_tag["deployment_id"]
-                            simple_logs.append(
+                            simple_logs.extend(
                                 RuntimeLogDto(
                                     time=log["time"],
                                     created_at=timezone.now(),
@@ -130,8 +131,11 @@ class LogIngestAPIView(APIView):
                                     source=RuntimeLogSource.SERVICE,
                                     service_id=service_id,
                                     deployment_id=deployment_id,
-                                    content=log["log"],
-                                    content_text=escape_ansi(log["log"]),
+                                    content=message,
+                                    content_text=escape_ansi(message),
+                                )
+                                for message in truncate_utf8(
+                                    log["log"], ELASTICSEARCH_BYTE_LIMIT
                                 )
                             )
 

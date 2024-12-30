@@ -15,7 +15,6 @@ with workflow.unsafe.imports_passed_through():
     from .schedules import MonitorDockerDeploymentWorkflow
     from search.client import SearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
-    from search.constants import ELASTICSEARCH_BYTE_LIMIT
     import docker
     import docker.errors
     from ..models import (
