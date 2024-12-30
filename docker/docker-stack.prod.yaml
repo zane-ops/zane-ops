@@ -215,7 +215,7 @@ services:
       - zane
   temporal-main-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "wait-for-it elasticsearch:9200 -t 0 -- source /venv/bin/activate && python manage.py run_worker"
+    command: /bin/bash -c "wait-for-it zane.search:9200 -t 0 -- source /venv/bin/activate && python manage.py run_worker"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -249,7 +249,7 @@ services:
       - zane
   temporal-schedule-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "wait-for-it elasticsearch:9200 -t 0 -- source /venv/bin/activate && python manage.py run_worker"
+    command: /bin/bash -c "wait-for-it zane.search:9200 -t 0 -- source /venv/bin/activate && python manage.py run_worker"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
