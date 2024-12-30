@@ -483,64 +483,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerImageSearchResponse'
           description: ''
-  /api/domain/root/:
-    get:
-      operationId: getRootDomain
-      description: Get the root domain used by ZaneOps to generate automatic subdomains
-        for services.
-      summary: Get Root Domain
-      tags:
-      - domain
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetRootDomainErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetRootDomain'
-          description: ''
   /api/ping/:
     get:
       operationId: ping
@@ -2546,6 +2488,63 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
+  /api/settings/:
+    get:
+      operationId: getAPISettings
+      description: Get the settings of the API.
+      summary: Get API settings
+      tags:
+      - settings
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAPISettingsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+          description: ''
 components:
   schemas:
     ApplyDeploymentChangesCommitMessageErrorComponent:
@@ -3788,6 +3787,13 @@ components:
       - UPDATE
       type: string
       description: '* `UPDATE` - Update'
+    GetAPISettingsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetArchivedProjectListError:
       oneOf:
       - $ref: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
@@ -3945,20 +3951,6 @@ components:
       required:
       - errors
       - type
-    GetRootDomain:
-      type: object
-      properties:
-        domain:
-          type: string
-      required:
-      - domain
-    GetRootDomainErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetSingleProjectErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -5907,6 +5899,19 @@ components:
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
         * `DEPLOYING` - Deploying
+    Settings:
+      type: object
+      properties:
+        root_domain:
+          type: string
+        image_version:
+          type: string
+        commit_sha:
+          type: string
+      required:
+      - commit_sha
+      - image_version
+      - root_domain
     SlotEnum:
       enum:
       - BLUE

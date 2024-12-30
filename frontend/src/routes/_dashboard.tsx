@@ -24,6 +24,7 @@ import {
   Search,
   Send,
   Settings,
+  TagIcon,
   Twitter
 } from "lucide-react";
 import * as React from "react";
@@ -250,6 +251,14 @@ const socialLinks = [
 ];
 
 function Footer() {
+  const { data } = useQuery({
+    queryKey: ["APP_SETTINGS"],
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/api/settings/");
+      return data;
+    },
+    staleTime: Number.MAX_SAFE_INTEGER
+  });
   return (
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
@@ -267,16 +276,38 @@ function Footer() {
             </a>
           ))}
         </div>
-        {import.meta.env.VITE_COMMIT_SHA && (
-          <a
-            className="flex underline items-center gap-2"
-            href={`https://github.com/zane-ops/zane-ops/tree/${import.meta.env.VITE_COMMIT_SHA}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <GitCommitVertical size={15} />
-            commit #{import.meta.env.VITE_COMMIT_SHA.substring(0, 7)}
-          </a>
+        {data && (
+          <div className="flex gap-4">
+            {data.commit_sha && (
+              <span className="flex items-center gap-2">
+                <GitCommitVertical size={15} />
+                <span>
+                  commit&nbsp;
+                  <a
+                    className="underline font-semibold"
+                    href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                    target="_blank"
+                  >
+                    #{data.commit_sha.substring(0, 7)}
+                  </a>
+                </span>
+              </span>
+            )}
+            {data.image_version && (
+              <span className="flex items-center gap-2">
+                <TagIcon size={15} />
+                <span>
+                  <a
+                    className="underline font-semibold"
+                    href={`https://github.com/zane-ops/zane-ops/tree/${data.image_version === "canary" ? "main" : data.image_version}`}
+                    target="_blank"
+                  >
+                    {data.image_version}
+                  </a>
+                </span>
+              </span>
+            )}
+          </div>
         )}
       </footer>
     </>

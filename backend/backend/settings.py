@@ -387,6 +387,10 @@ if BACKEND_COMPONENT == "API":
         internal_tls=DEBUG,
     )
 
+# Docker image version
+IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")
+COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
+
 # elastic search config
 ELASTICSEARCH_HOST = os.environ.get("ELASTICSEARCH_HOST", "http://127.0.0.1:9200")
 ELASTICSEARCH_LOGS_INDEX = "logs"

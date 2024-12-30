@@ -1,6 +1,7 @@
 from typing import Callable
 from django.http import HttpRequest, HttpResponse
 import os
+from django.conf import settings
 
 
 class AddCommitShaHeadersMiddleware:
@@ -9,7 +10,6 @@ class AddCommitShaHeadersMiddleware:
 
     def __call__(self, request: HttpRequest):
         response = self.get_response(request)
-        COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
-        if COMMIT_SHA is not None:
-            response["X-Commit-Sha"] = COMMIT_SHA
+        if settings.COMMIT_SHA is not None:
+            response["X-Commit-Sha"] = settings.COMMIT_SHA
         return response
