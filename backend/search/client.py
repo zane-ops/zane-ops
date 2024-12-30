@@ -8,11 +8,6 @@ from .dtos import RuntimeLogDto
 
 
 class SearchClient:
-    """
-    TODO :
-    - we might need to explore breaking service logs into pieces if they exceed the limit when indexing
-    """
-
     def __init__(self, host: str):
         self.es = Elasticsearch(host, api_key="")
 
