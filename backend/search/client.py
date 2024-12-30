@@ -50,7 +50,14 @@ class SearchClient:
                         "format": "strict_date_optional_time_nanos",
                         "numeric_type": "date_nanos",
                     }
-                }
+                },
+                {
+                    "created_at": {
+                        "order": order,
+                        "format": "strict_date_optional_time_nanos",
+                        "numeric_type": "date_nanos",
+                    }
+                },
             ],
             query=(
                 {"bool": {"filter": filters}} if len(filters) > 0 else {"match_all": {}}
@@ -99,7 +106,14 @@ class SearchClient:
                             "format": "strict_date_optional_time_nanos",
                             "numeric_type": "date_nanos",
                         }
-                    }
+                    },
+                    {
+                        "created_at": {
+                            "order": "asc",
+                            "format": "strict_date_optional_time_nanos",
+                            "numeric_type": "date_nanos",
+                        }
+                    },
                 ],
                 query=(
                     {"bool": {"filter": filters}}
