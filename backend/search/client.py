@@ -228,7 +228,7 @@ class SearchClient:
             filters.append(range_filter)
         if search_params.get("query"):
             # escape `*` in the query string as it is a special character in ElasticSearch
-            query = search_params["query"].replace("*", "\\*")
+            query = search_params["query"].replace("*", "\\*").replace("\\", "\\\\")
             filters.append(
                 {
                     "wildcard": {
