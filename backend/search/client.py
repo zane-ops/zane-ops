@@ -10,7 +10,6 @@ from .dtos import RuntimeLogDto
 class SearchClient:
     """
     TODO :
-    - limit the system logs to less than 30k characters
     - we might need to explore breaking service logs into pieces if they exceed the limit when indexing
     """
 
@@ -217,7 +216,14 @@ class SearchClient:
             # escape `*` in the query string as it is a special character in ElasticSearch
             query = search_params["query"].replace("*", "\\*")
             filters.append(
-                {"wildcard": {"content.text.keyword": {"value": f"*{query}*"}}}
+                {
+                    "wildcard": {
+                        "content.text.keyword": {
+                            "value": f"*{query}*",
+                            "case_insensitive": True,
+                        }
+                    }
+                }
             )
 
         search_after = None
