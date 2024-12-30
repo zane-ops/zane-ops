@@ -241,6 +241,10 @@ class RuntimeLogViewTests(AuthAPITestCase):
             datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
+        (
+            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0?00] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
+        ),
     ]
 
     def test_view_logs(self):
@@ -576,7 +580,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            QUERY_STRING=f"query=*%20%2B0000%5D%20%22POST%20%2F",  # searching for `* +0000] "POST /`
+            QUERY_STRING=f"query=*%20%2B0%3F00%5D%20%22POST%20%2F",  # searching for `* +0?00] "POST /`
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
