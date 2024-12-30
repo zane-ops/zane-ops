@@ -234,22 +234,6 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
         ]
 
 
-class SimpleLogSerializer(ModelSerializer):
-    class Meta:
-        model = models.SimpleLog
-        fields = [
-            "id",
-            "content",
-            "content_text",
-            "time",
-            "created_at",
-            "level",
-            "deployment_id",
-            "service_id",
-            "source",
-        ]
-
-
 class HttpLogSerializer(ModelSerializer):
     request_headers = serializers.DictField(
         child=serializers.ListField(child=serializers.CharField())

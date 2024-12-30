@@ -5,6 +5,7 @@ x-backend-vars: &env-vars
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
+  ELASTICSEARCH_HOST: http://zane.search:9200
   
 services:
   proxy-test:
@@ -182,7 +183,25 @@ services:
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.monitoring.collection.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g # Heap memory of 1GB
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      zane:
+        aliases:
+          - zane.search
 volumes:
+  es-data:
   db-data:
   redis-data:
   redisinsight:

@@ -282,7 +282,7 @@ export const deploymentLogSearchSchema = z.object({
     .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
-  content: z.string().optional(),
+  query: z.string().optional(),
   isMaximized: z.coerce.boolean().optional().catch(false)
 });
 
@@ -417,13 +417,9 @@ export const deploymentQueries = {
 
         if (data) {
           apiData = {
-            ...data,
-            next: data?.next
-              ? new URL(data?.next).searchParams.get("cursor")
-              : null,
-            previous: data?.previous
-              ? new URL(data?.previous).searchParams.get("cursor")
-              : null,
+            results: data.results,
+            next: data?.next ?? null,
+            previous: data?.previous ?? null,
             cursor: existingData?.cursor
           };
         }
@@ -453,9 +449,7 @@ export const deploymentQueries = {
             }
           );
           if (nextPage?.previous) {
-            apiData.cursor = new URL(nextPage.previous).searchParams.get(
-              "cursor"
-            );
+            apiData.cursor = nextPage.previous;
           }
         }
 
@@ -479,11 +473,14 @@ export const deploymentQueries = {
     })
 };
 
-type DeploymentLogQueryData = NonNullable<
-  ApiResponse<
-    "get",
-    "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
-  >
+type DeploymentLogQueryData = Pick<
+  NonNullable<
+    ApiResponse<
+      "get",
+      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+    >
+  >,
+  "next" | "previous" | "results"
 > & {
   cursor?: string | null;
 };

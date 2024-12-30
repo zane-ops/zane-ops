@@ -39,7 +39,11 @@ urlpatterns = [
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
     ),
-    re_path(r"^domain/root/?$", views.GetRootDomainView.as_view(), name="domain.root"),
+    re_path(
+        r"^settings/?$",
+        views.SettingsView.as_view(),
+        name="settings",
+    ),
     re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
@@ -149,10 +153,5 @@ urlpatterns += [
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/?$",
         views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
         name="services.docker.deployment_http_logs",
-    ),
-    re_path(
-        r"^_proxy/logs/?$",
-        views.ProxyLogsAPIView.as_view(),
-        name="proxy.logs",
     ),
 ]
