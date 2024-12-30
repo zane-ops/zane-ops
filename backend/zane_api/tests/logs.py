@@ -16,7 +16,7 @@ from .base import AuthAPITestCase
 from ..models import DockerDeployment, DockerRegistryService, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
 from search.constants import ELASTICSEARCH_BYTE_LIMIT
-from ..utils import random_word, excerpt
+import urllib.request
 
 
 class RuntimeLogCollectViewTests(AuthAPITestCase):
@@ -571,6 +571,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+        url_encoded_query = urllib.request.pathname2url('* +0?00] "POST /')
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_logs",
@@ -580,7 +581,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            QUERY_STRING=f"query=*%20%2B0%3F00%5D%20%22POST%20%2F",  # searching for `* +0?00] "POST /`
+            QUERY_STRING=f"query={url_encoded_query}",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
