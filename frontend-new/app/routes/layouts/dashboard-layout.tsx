@@ -9,6 +9,7 @@ import {
   Menu,
   Search,
   Send,
+  TagIcon,
   Twitter
 } from "lucide-react";
 import { Link, Outlet, redirect, useFetcher } from "react-router";
@@ -32,7 +33,9 @@ import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
+import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
+import { apiClient } from "~/api/client";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
 import { queryClient } from "~/root";
@@ -249,6 +252,23 @@ const socialLinks = [
 ];
 
 function Footer() {
+  const { data } = useQuery({
+    queryKey: ["APP_SETTINGS"],
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/api/settings/");
+      return data;
+    },
+    staleTime: Number.MAX_SAFE_INTEGER
+  });
+
+  let image_version_url: string | null = null;
+  if (data?.image_version === "canary") {
+    image_version_url = "https://github.com/zane-ops/zane-ops/tree/main";
+  } else if (data?.image_version.startsWith("pr-")) {
+    image_version_url = `https://github.com/zane-ops/zane-ops/pull/${data.image_version.substring(3)}`;
+  } else if (data?.image_version) {
+    image_version_url = `https://github.com/zane-ops/zane-ops/tree/${data.image_version}`;
+  }
   return (
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
@@ -266,16 +286,38 @@ function Footer() {
             </a>
           ))}
         </div>
-        {import.meta.env.VITE_COMMIT_SHA && (
-          <a
-            className="flex underline items-center gap-2"
-            href={`https://github.com/zane-ops/zane-ops/tree/${import.meta.env.VITE_COMMIT_SHA}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <GitCommitVertical size={15} />
-            commit #{import.meta.env.VITE_COMMIT_SHA.substring(0, 7)}
-          </a>
+        {data && (
+          <div className="flex gap-4">
+            {data.commit_sha && (
+              <span className="flex items-center gap-2">
+                <GitCommitVertical size={15} />
+                <span>
+                  commit&nbsp;
+                  <a
+                    className="underline font-semibold"
+                    href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                    target="_blank"
+                  >
+                    #{data.commit_sha.substring(0, 7)}
+                  </a>
+                </span>
+              </span>
+            )}
+            {data.image_version && image_version_url && (
+              <span className="flex items-center gap-2">
+                <TagIcon size={15} />
+                <span>
+                  <a
+                    className="underline font-semibold"
+                    href={image_version_url}
+                    target="_blank"
+                  >
+                    {data.image_version}
+                  </a>
+                </span>
+              </span>
+            )}
+          </div>
         )}
       </footer>
     </>

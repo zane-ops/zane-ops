@@ -48,13 +48,6 @@ export interface paths {
      */
     get: operations["searchDockerRegistry"];
   };
-  "/api/domain/root/": {
-    /**
-     * Get Root Domain
-     * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-     */
-    get: operations["getRootDomain"];
-  };
   "/api/ping/": {
     /**
      * Ping
@@ -166,6 +159,13 @@ export interface paths {
      * @description Get all services in a project
      */
     get: operations["projects_service_list_list"];
+  };
+  "/api/settings/": {
+    /**
+     * Get API settings
+     * @description Get the settings of the API.
+     */
+    get: operations["getAPISettings"];
   };
 }
 
@@ -694,6 +694,7 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListError: components["schemas"]["GetArchivedProjectListSlugErrorComponent"] | components["schemas"]["GetArchivedProjectListSortByErrorComponent"];
     GetArchivedProjectListErrorResponse400: components["schemas"]["GetArchivedProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListSlugErrorComponent: {
@@ -761,10 +762,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRootDomain: {
-      domain: string;
-    };
-    GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitServiceCard: {
       /** Format: date-time */
@@ -1746,6 +1743,11 @@ export interface components {
      * @enum {string}
      */
     ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    Settings: {
+      root_domain: string;
+      image_version: string;
+      commit_sha: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -2179,34 +2181,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["SearchDockerRegistryErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Root Domain
-   * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-   */
-  getRootDomain: {
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomain"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
         };
       };
       401: {
@@ -3121,6 +3095,34 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get API settings
+   * @description Get the settings of the API.
+   */
+  getAPISettings: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Settings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {
