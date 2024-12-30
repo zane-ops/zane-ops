@@ -9,8 +9,10 @@ import {
   AlarmCheck,
   BookOpen,
   ChevronDown,
+  ChevronRight,
   ChevronsUpDown,
   CircleUser,
+  CommandIcon,
   Folder,
   GitCommitVertical,
   Globe,
@@ -22,10 +24,21 @@ import {
   Search,
   Send,
   Settings,
+  TagIcon,
   Twitter
 } from "lucide-react";
+import * as React from "react";
 import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
+import { Button } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandSeparator
+} from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -101,29 +114,14 @@ function Header() {
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
-          <Menubar className="border-none w-fit text-black bg-primary">
-            <MenubarMenu>
-              <MenubarTrigger className="flex  justify-center text-sm items-center gap-1">
-                Create
-                <ChevronsUpDown className="w-4" />
-              </MenubarTrigger>
-              <MenubarContent className=" border border-border min-w-6">
-                <Link to="/create-project">
-                  <MenubarContentItem icon={Folder} text="Project" />
-                </Link>
-                <MenubarContentItem icon={Globe} text="Web Service" />
-                <MenubarContentItem icon={Hammer} text="Worker" />
-                <MenubarContentItem icon={AlarmCheck} text="CRON" />
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
-          <div className="flex w-full justify-center items-center">
-            <Search className="relative left-10" />
-            <Input
-              className="px-14 my-1  text-sm focus-visible:right-0"
-              placeholder="Search for Service, Worker, CRON, etc..."
-            />
+          <Button asChild>
+            <Link to="/create-project">Create project</Link>
+          </Button>
+
+          <div className="flex mx-2 w-full justify-center items-center">
+            <CommandMenu />
           </div>
+
           <a
             href="https://github.com/zane-ops/zane-ops"
             target="_blank"
@@ -167,7 +165,7 @@ function Header() {
               <SheetHeader>
                 <div className="absolute w-full top-3.5">
                   <div className="flex justify-between w-[78%] items-center">
-                    <Link href="/">
+                    <Link to="/">
                       <Logo className="w-10 flex-none h-10 mr-8" />
                     </Link>
                     <a
@@ -253,6 +251,23 @@ const socialLinks = [
 ];
 
 function Footer() {
+  const { data } = useQuery({
+    queryKey: ["APP_SETTINGS"],
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/api/settings/");
+      return data;
+    },
+    staleTime: Number.MAX_SAFE_INTEGER
+  });
+
+  let image_version_url: string | null = null;
+  if (data?.image_version === "canary") {
+    image_version_url = "https://github.com/zane-ops/zane-ops/tree/main";
+  } else if (data?.image_version.startsWith("pr-")) {
+    image_version_url = `https://github.com/zane-ops/zane-ops/pull/${data.image_version.substring(3)}`;
+  } else if (data?.image_version) {
+    image_version_url = `https://github.com/zane-ops/zane-ops/tree/${data.image_version}`;
+  }
   return (
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
@@ -270,18 +285,205 @@ function Footer() {
             </a>
           ))}
         </div>
-        {import.meta.env.VITE_COMMIT_SHA && (
-          <a
-            className="flex underline items-center gap-2"
-            href={`https://github.com/zane-ops/zane-ops/tree/${import.meta.env.VITE_COMMIT_SHA}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <GitCommitVertical size={15} />
-            commit #{import.meta.env.VITE_COMMIT_SHA.substring(0, 7)}
-          </a>
+        {data && (
+          <div className="flex gap-4">
+            {data.commit_sha && (
+              <span className="flex items-center gap-2">
+                <GitCommitVertical size={15} />
+                <span>
+                  commit&nbsp;
+                  <a
+                    className="underline font-semibold"
+                    href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                    target="_blank"
+                  >
+                    #{data.commit_sha.substring(0, 7)}
+                  </a>
+                </span>
+              </span>
+            )}
+            {data.image_version && image_version_url && (
+              <span className="flex items-center gap-2">
+                <TagIcon size={15} />
+                <span>
+                  <a
+                    className="underline font-semibold"
+                    href={image_version_url}
+                    target="_blank"
+                  >
+                    {data.image_version}
+                  </a>
+                </span>
+              </span>
+            )}
+          </div>
         )}
       </footer>
     </>
+  );
+}
+
+const resources = [
+  {
+    id: "prj_01GZX4TX89P4",
+    slug: "shop-app",
+    created_at: "2024-06-17T08:45:23Z",
+    type: "project"
+  },
+  {
+    id: "prj_01GZX5TX78L3",
+    slug: "pay-gateway",
+    created_at: "2024-06-17T09:15:45Z",
+    type: "project"
+  },
+  {
+    id: "prj_01GZX6TR56F9",
+    slug: "blog-site",
+    created_at: "2024-06-17T09:50:30Z",
+    type: "project"
+  },
+  {
+    id: "prj_01GZX7TZ67Q1",
+    slug: "file-uploader",
+    created_at: "2024-06-17T10:10:15Z",
+    type: "project"
+  },
+  {
+    id: "srv_01GZX8DKR11A",
+    slug: "auth-service",
+    project_slug: "shop-app",
+    created_at: "2024-06-17T10:20:40Z",
+    type: "service"
+  },
+  {
+    id: "srv_01GZX9KR22B1",
+    slug: "payment-api",
+    project_slug: "pay-gateway",
+    created_at: "2024-06-17T10:35:00Z",
+    type: "service"
+  },
+  {
+    id: "srv_01GZX10TR33C",
+    slug: "comment-system",
+    project_slug: "blog-site",
+    created_at: "2024-06-17T11:00:20Z",
+    type: "service"
+  },
+  {
+    id: "srv_01GZX11FR44D",
+    slug: "file-processor",
+    project_slug: "file-uploader",
+    created_at: "2024-06-17T11:25:10Z",
+    type: "service"
+  },
+  {
+    id: "srv_01GZX12LK55E",
+    slug: "analytics-service",
+    project_slug: "shop-app",
+    created_at: "2024-06-17T11:50:45Z",
+    type: "service"
+  },
+  {
+    id: "srv_01GZX13KK66F",
+    slug: "email-notifier",
+    project_slug: "pay-gateway",
+    created_at: "2024-06-17T12:15:30Z",
+    type: "service"
+  }
+] as const;
+
+export function CommandMenu() {
+  const [open, setOpen] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleEvent = (e: KeyboardEvent | MouseEvent) => {
+      if (
+        e instanceof KeyboardEvent &&
+        e.key === "k" &&
+        (e.metaKey || e.ctrlKey)
+      ) {
+        e.preventDefault();
+        setOpen((prev) => {
+          const newState = !prev;
+          if (newState) {
+            inputRef.current?.focus();
+          } else {
+            inputRef.current?.blur();
+          }
+          return newState;
+        });
+      }
+
+      if (
+        e instanceof MouseEvent &&
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+        inputRef.current?.blur();
+      }
+    };
+
+    document.addEventListener("keydown", handleEvent);
+    document.addEventListener("mousedown", handleEvent);
+
+    return () => {
+      document.removeEventListener("keydown", handleEvent);
+      document.removeEventListener("mousedown", handleEvent);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div
+        onClick={() => setOpen(true)}
+        className="relative w-full flex items-center"
+      >
+        <Search size={15} className="absolute left-4 text-gray-400" />
+        <Input
+          ref={inputRef}
+          className="w-full pl-12 pr-12 my-1 text-sm rounded-md border focus-visible:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search for Service, Worker, CRON, etc..."
+        />
+        <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1">
+          <CommandIcon size={15} />
+          <span className="text-xs">K</span>
+        </div>
+      </div>
+
+      {open && resources.length > 0 && (
+        <div className="absolute top-12 left-0 w-full z-50 shadow-lg  rounded-md">
+          <Command>
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup
+                heading={<span>Resources ({resources.length})</span>}
+              >
+                {resources.map((resource) => (
+                  <CommandItem key={resource.id} className=" block">
+                    <p>{resource.slug}</p>
+                    <p className="text-secondary text-xs">
+                      {resource.type === "project" ? (
+                        "projects"
+                      ) : (
+                        <div className="flex gap-0.5 items-center">
+                          <span className="flex-none">projects</span>{" "}
+                          <ChevronRight size={13} />
+                          <span>{resource.project_slug}</span>
+                          <ChevronRight className="flex-none" size={13} />
+                          <span className="flex-none">services</span>
+                        </div>
+                      )}
+                    </p>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
+      )}
+    </div>
   );
 }

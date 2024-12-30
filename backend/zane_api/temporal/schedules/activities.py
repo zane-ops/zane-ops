@@ -18,8 +18,16 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
-    from ...models import DockerDeployment, HealthCheck, SimpleLog
-    from ...utils import DockerSwarmTaskState, DockerSwarmTask, Colors
+    from ...models import DockerDeployment, HealthCheck
+    from ...utils import (
+        DockerSwarmTaskState,
+        DockerSwarmTask,
+        Colors,
+        escape_ansi,
+        excerpt,
+    )
+    from search.client import SearchClient
+    from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 
 docker_client: docker.DockerClient | None = None
 
@@ -46,15 +54,21 @@ async def deployment_log(
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
 
-    # Regex pattern to match ANSI color codes
-    await SimpleLog.objects.acreate(
-        source=SimpleLog.LogSource.SYSTEM,
-        level=SimpleLog.LogLevel.INFO,
-        content=message,
-        time=current_time,
-        deployment_id=deployment.hash,
-        service_id=deployment.service_id,
-        content_text=SimpleLog.escape_ansi(message),
+    search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+    # This is the max number of characters that we show in color on the frontend
+    MAX_COLORED_CHARS = 1000
+    search_client.insert(
+        index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+        document=RuntimeLogDto(
+            source=RuntimeLogSource.SYSTEM,
+            level=RuntimeLogLevel.INFO,
+            content=excerpt(message, MAX_COLORED_CHARS),
+            content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
+            time=current_time,
+            created_at=current_time,
+            deployment_id=deployment.hash,
+            service_id=deployment.service_id,
+        ),
     )
 
 
@@ -210,11 +224,11 @@ class MonitorDockerDeploymentActivities:
                             deployment_status_reason = str(e)
 
                 print(
-                    f"Healtcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
+                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
                 )
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
                     f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
                 )
                 status_color = (
@@ -231,7 +245,7 @@ class MonitorDockerDeploymentActivities:
                     status_flag = "🏁"
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Monitoring Healtcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
                     f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
                 )
                 return deployment_status, deployment_status_reason
@@ -259,7 +273,13 @@ class MonitorDockerDeploymentActivities:
 class CleanupActivities:
     @activity.defn
     async def cleanup_simple_logs(self) -> LogsCleanupResult:
-        deleted_count, _ = await SimpleLog.objects.filter(
-            time__lt=timezone.now() - timedelta(days=30)
-        ).adelete()
+        search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+        now = timezone.now()
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        deleted_count = search_client.delete(
+            index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+            query={
+                "time_before": (today - timedelta(days=30)).isoformat(),
+            },
+        )
         return LogsCleanupResult(deleted_count=deleted_count)

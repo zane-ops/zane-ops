@@ -1,3 +1,4 @@
+import base64
 import dataclasses
 import json
 import time
@@ -26,7 +27,6 @@ from ..models import (
     Volume,
     DockerEnvVariable,
     PortConfiguration,
-    SimpleLog,
     HttpLog,
 )
 from ..temporal import (
@@ -37,6 +37,8 @@ from ..temporal import (
 from ..utils import EnhancedJSONEncoder, convert_value_to_bytes, format_storage_value
 from ..validators import validate_url_path, validate_env_name
 
+from search.dtos import RuntimeLogLevel, RuntimeLogSource
+from search.serializers import RuntimeLogSerializer
 
 # ==============================
 #    Docker services create    #
@@ -215,11 +217,11 @@ class ResourceLimitsRequestSerializer(serializers.Serializer):
 
 
 class HealthCheckRequestSerializer(serializers.Serializer):
-    HEALTCHECK_CHOICES = (
+    HEALTHCHECK_CHOICES = (
         ("PATH", _("path")),
         ("COMMAND", _("command")),
     )
-    type = serializers.CustomChoiceField(required=True, choices=HEALTCHECK_CHOICES)
+    type = serializers.CustomChoiceField(required=True, choices=HEALTHCHECK_CHOICES)
     value = serializers.CharField(max_length=255, required=True)
     timeout_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
     interval_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
@@ -934,7 +936,7 @@ class DockerContainerLogSerializer(serializers.Serializer):
     log = serializers.CharField(required=True, allow_blank=True, trim_whitespace=False)
     container_id = serializers.CharField(required=True)
     container_name = serializers.CharField(required=True)
-    time = serializers.DateTimeField(required=True)
+    time = serializers.CharField(required=True)
     tag = serializers.CharField(required=True)
     SOURCES = (
         ("stdout", _("standard ouput")),
@@ -1016,19 +1018,47 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
 # ==============================
 
 
-class DeploymentLogsFilterSet(django_filters.FilterSet):
-    time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(method="filter_content", strip=False)
-    source = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogSource.choices)
-    level = django_filters.MultipleChoiceFilter(choices=SimpleLog.LogLevel.choices)
+class DeploymentLogsQuerySerializer(serializers.Serializer):
+    time_before = serializers.DateTimeField(required=False)
+    time_after = serializers.DateTimeField(required=False)
+    query = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
+    source = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[RuntimeLogSource.SERVICE, RuntimeLogSource.SYSTEM]
+        ),
+        required=False,
+    )
+    level = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[RuntimeLogLevel.INFO, RuntimeLogLevel.ERROR]
+        ),
+        required=False,
+    )
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
+    cursor = serializers.CharField(required=False)
 
-    @staticmethod
-    def filter_content(queryset: QuerySet, name: str, value: str):
-        return queryset.filter(content_text__icontains=value)
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
 
-    class Meta:
-        model = SimpleLog
-        fields = ["level", "content", "time", "source"]
+
+class CursorSerializer(serializers.Serializer):
+    sort = serializers.ListField(required=True, child=serializers.CharField())
+    order = serializers.ChoiceField(choices=["desc", "asc"], required=True)
 
 
 class DeploymentLogsPagination(pagination.CursorPagination):
@@ -1057,20 +1087,6 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "request_ip",
             "request_id",
         ]
-
-
-# ==============================
-#         Proxy Logs           #
-# ==============================
-
-
-class ProxyLogsFilterSet(django_filters.FilterSet):
-    time = django_filters.DateTimeFromToRangeFilter()
-    content = django_filters.CharFilter(lookup_expr="icontains")
-
-    class Meta:
-        model = SimpleLog
-        fields = ["level", "content", "time"]
 
 
 # ==============================

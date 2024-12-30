@@ -20,6 +20,9 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
+from search.client import SearchClient
+from search.serializers import RuntimeLogsSearchSerializer
+
 from .base import (
     EMPTY_RESPONSE,
     ResourceConflict,
@@ -31,6 +34,7 @@ from .helpers import (
     compute_docker_changes_from_snapshots,
 )
 from .serializers import (
+    DeploymentLogsQuerySerializer,
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
     DockerServiceUpdateRequestSerializer,
@@ -45,7 +49,6 @@ from .serializers import (
     DockerDeploymentFieldChangeRequestSerializer,
     DeploymentListPagination,
     DeploymentLogsPagination,
-    DeploymentLogsFilterSet,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployServiceSerializer,
     ResourceLimitChangeSerializer,
@@ -58,7 +61,6 @@ from ..models import (
     ArchivedProject,
     ArchivedDockerService,
     DockerDeploymentChange,
-    SimpleLog,
     HttpLog,
 )
 from ..serializers import (
@@ -70,7 +72,6 @@ from ..serializers import (
     PortConfigurationSerializer,
     DockerEnvVariableSerializer,
     ErrorResponse409Serializer,
-    SimpleLogSerializer,
     HttpLogSerializer,
 )
 from ..temporal import (
@@ -862,31 +863,19 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class DockerServiceDeploymentLogsAPIView(ListAPIView):
-    serializer_class = SimpleLogSerializer
-    queryset = (
-        SimpleLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    pagination_class = DeploymentLogsPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = DeploymentLogsFilterSet
+class DockerServiceDeploymentLogsAPIView(APIView):
+    serializer_class = RuntimeLogsSearchSerializer
 
     @extend_schema(
-        summary="Get deployment logs",
+        summary="Get deployment logs", parameters=[DeploymentLogsQuerySerializer]
     )
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound as e:
-            if "Invalid cursor" in str(e.detail):
-                return Response(EMPTY_CURSOR_RESPONSE)
-            raise e
-
-    def get_queryset(self):
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        deployment_hash = self.kwargs["deployment_hash"]
-
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
             service = DockerRegistryService.objects.get(
@@ -895,7 +884,6 @@ class DockerServiceDeploymentLogsAPIView(ListAPIView):
             deployment = DockerDeployment.objects.get(
                 service=service, hash=deployment_hash
             )
-            return deployment.logs
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -908,6 +896,15 @@ class DockerServiceDeploymentLogsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
+        else:
+            form = DeploymentLogsQuerySerializer(data=request.query_params)
+            if form.is_valid(raise_exception=True):
+                search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+                data = search_client.search(
+                    index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+                    query=dict(**form.validated_data, deployment_id=deployment.hash),
+                )
+                return Response(data)
 
 
 class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):

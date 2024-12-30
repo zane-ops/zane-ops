@@ -13,6 +13,9 @@ x-backend-vars: &env-vars
   ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
+  ELASTICSEARCH_HOST: http://zane.search:9200
+  IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+  GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
 
 services:
   proxy:
@@ -42,10 +45,6 @@ services:
       labels:
         zane.stack: "true"
         zane.role: "proxy"
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 200M
     ports:
       - "443:443"
     volumes:
@@ -81,8 +80,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.1"
-          memory: 100M
+          cpus: "1"
+          memory: 1G
     networks:
       zane:
         aliases:
@@ -112,8 +111,8 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.5"
-          memory: 500M
+          cpus: "2"
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
       interval: 30s
@@ -134,6 +133,7 @@ services:
       - valkey
       - proxy
       - temporal-server
+      - elasticsearch
   temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
@@ -217,7 +217,7 @@ services:
       - zane
   temporal-main-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
+    command: /bin/bash -c "set -ex && source /venv/bin/activate && wait-for-it zane.search:9200 -t 0 -- wait-for-it zane.temporal:7233 -t 0 -- python manage.py run_worker"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -225,6 +225,7 @@ services:
       - valkey
       - proxy
       - temporal-server
+      - elasticsearch
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -250,7 +251,7 @@ services:
       - zane
   temporal-schedule-worker:
     image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "source /venv/bin/activate && python manage.py run_worker"
+    command: /bin/bash -c "set -ex && source /venv/bin/activate && wait-for-it zane.search:9200 -t 0 -- wait-for-it zane.temporal:7233 -t 0 -- python manage.py run_worker"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -258,6 +259,7 @@ services:
       - valkey
       - proxy
       - temporal-server
+      - elasticsearch
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -332,7 +334,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 500M
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -372,7 +374,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 500M
+          memory: 1G
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
@@ -399,9 +401,48 @@ services:
         zane.stack: "true"
       resources:
         limits:
-          cpus: "0.1"
-          memory: 100M
+          cpus: "0.5"
+          memory: 200M
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.monitoring.collection.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g # Heap memory of 1GB
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      zane:
+        aliases:
+          - zane.search
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 1
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1.1G
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f $$(hostname -i):9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 volumes:
+  es-data:
+    labels:
+      zane.stack: "true"
   db-data:
     labels:
       zane.stack: "true"

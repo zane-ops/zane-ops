@@ -1,4 +1,5 @@
 packages:
   - "frontend/"
+  - "frontend-new/"
   - "backend/"
   - "docker/"
