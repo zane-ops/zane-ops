@@ -3,8 +3,6 @@ FROM caddy:2.8-alpine
 
 WORKDIR /var/www/html
 
-ARG COMMIT_SHA
-ENV COMMIT_SHA=$COMMIT_SHA
 
 RUN apk update && apk add --no-cache curl
 
