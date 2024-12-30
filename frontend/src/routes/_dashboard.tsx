@@ -259,6 +259,15 @@ function Footer() {
     },
     staleTime: Number.MAX_SAFE_INTEGER
   });
+
+  let image_version_url: string | null = null;
+  if (data?.image_version === "canary") {
+    image_version_url = "https://github.com/zane-ops/zane-ops/tree/main";
+  } else if (data?.image_version.startsWith("pr-")) {
+    image_version_url = `https://github.com/zane-ops/zane-ops/pull/${data.image_version.substring(3)}`;
+  } else if (data?.image_version) {
+    image_version_url = `https://github.com/zane-ops/zane-ops/tree/${data.image_version}`;
+  }
   return (
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
@@ -293,13 +302,13 @@ function Footer() {
                 </span>
               </span>
             )}
-            {data.image_version && (
+            {data.image_version && image_version_url && (
               <span className="flex items-center gap-2">
                 <TagIcon size={15} />
                 <span>
                   <a
                     className="underline font-semibold"
-                    href={`https://github.com/zane-ops/zane-ops/tree/${data.image_version === "canary" ? "main" : data.image_version}`}
+                    href={image_version_url}
                     target="_blank"
                   >
                     {data.image_version}
