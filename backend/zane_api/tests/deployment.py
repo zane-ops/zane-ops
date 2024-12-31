@@ -2101,7 +2101,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             updated_service.credentials,
         )
         self.assertEqual(0, updated_service.unapplied_changes.count())
-        self.assertEqual(2, updated_service.applied_changes.count())
+        self.assertEqual(1, updated_service.applied_changes.count())
 
     def test_deploy_service_with_commit_message(self):
         owner = self.loginUser()
