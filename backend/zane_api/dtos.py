@@ -153,10 +153,6 @@ class DockerServiceSnapshot:
         )
 
     @property
-    def non_read_only_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.mode != "READ_ONLY", self.volumes))
-
-    @property
     def host_volumes(self) -> List[VolumeDto]:
         return list(filter(lambda v: v.host_path is not None, self.volumes))
 

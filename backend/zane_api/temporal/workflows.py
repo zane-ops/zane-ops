@@ -236,10 +236,7 @@ class DeployDockerServiceWorkflow:
                 )
 
             if (
-                (
-                    len(service.non_read_only_volumes) > 0
-                    or len(service.non_http_ports) > 0
-                )
+                (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
                 and previous_production_deployment is not None
                 and previous_production_deployment.status
                 != DockerDeployment.DeploymentStatus.FAILED
