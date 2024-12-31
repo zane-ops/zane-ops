@@ -975,7 +975,12 @@ class DockerSwarmActivities:
                 f"Deployment {Colors.ORANGE}{healthcheck_result.deployment_hash}{Colors.ENDC}"
                 f" finished with status {status_color}{deployment.status}{Colors.ENDC}.",
             )
-            return deployment.status
+            await deployment_log(
+                healthcheck_result,
+                f"Deployment {Colors.ORANGE}{healthcheck_result.deployment_hash}{Colors.ENDC}"
+                f" finished with reason {Colors.GREY}{deployment.status_reason}{Colors.ENDC}.",
+            )
+            return deployment.status, deployment.status_reason
 
     @activity.defn
     async def get_previous_production_deployment(
@@ -1246,12 +1251,23 @@ class DockerSwarmActivities:
                 ),
             )
         except docker.errors.ImageNotFound as e:
-            raise ApplicationError(non_retryable=True, message=str(e))
+            await deployment_log(
+                deployment,
+                f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}this image does not exists or may require credentials to pull ❌{Colors.ENDC}",
+            )
+            return False
+        except docker.errors.APIError as e:
+            await deployment_log(
+                deployment,
+                f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}{e.explanation} ❌{Colors.ENDC}",
+            )
+            return False
         else:
             await deployment_log(
                 deployment,
                 f"Finished pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} ✅",
             )
+            return True
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(
