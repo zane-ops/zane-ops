@@ -367,32 +367,19 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
 
   const { data: service } = useServiceQuery({ project_slug, service_slug });
 
-  const serviceImageChange = service.unapplied_changes.find(
-    (change) => change.field === "image"
-  );
+  const serviceSourcheChange = service.unapplied_changes.find(
+    (change) => change.field === "source"
+  ) as { new_value: Pick<DockerService, "image" | "credentials"> } | undefined;
 
-  const serviceImage =
-    (serviceImageChange?.new_value as string) ?? service.image;
+  const serviceImage = serviceSourcheChange?.new_value.image ?? service.image!;
 
   const imageParts = serviceImage.split(":");
 
   const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
   const image = imageParts.join(":");
-  const serviceCredentialsChange = service?.unapplied_changes.find(
-    (change) => change.field === "credentials"
-  );
+
   const credentials =
-    (serviceCredentialsChange?.new_value as DockerService["credentials"]) ??
-    service.credentials;
-
-  const newCredentialsValue =
-    serviceCredentialsChange?.new_value as DockerService["credentials"];
-
-  const isEmptyChange =
-    serviceCredentialsChange !== undefined &&
-    (newCredentialsValue === null ||
-      (newCredentialsValue?.username.trim() === "" &&
-        newCredentialsValue?.password.trim() === ""));
+    serviceSourcheChange?.new_value.credentials ?? service.credentials;
 
   return (
     <div className="w-full max-w-4xl">
@@ -419,7 +406,7 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
             <div
               className={cn(
                 "w-full rounded-md flex justify-between items-center gap-2 py-2.5 pl-4 pr-2",
-                serviceImageChange !== undefined
+                serviceSourcheChange !== undefined
                   ? "dark:bg-secondary-foreground bg-secondary/60"
                   : "bg-muted"
               )}
@@ -450,6 +437,7 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
             name="credentials.username"
             id="credentials.username"
             disabled={!isEditing}
+            defaultValue={credentials?.username}
             className={cn(
               "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
               "data-[edited]:dark:disabled:bg-secondary-foreground",
@@ -469,7 +457,7 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
               placeholder={!isEditing ? "<empty>" : "*******"}
               disabled={!isEditing}
               type={isPasswordShown ? "text" : "password"}
-              // defaultValue={"password"}
+              defaultValue={credentials?.password}
               name="credentials.password"
               id="credentials.password"
               className={cn(
