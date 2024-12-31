@@ -12,15 +12,8 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import {
-  Link,
-  redirect,
-  useFetcher,
-  useMatches,
-  useNavigate,
-  useParams
-} from "react-router";
-import { toast } from "sonner";
+import { flushSync } from "react-dom";
+import { Link, useFetcher, useMatches, useNavigate } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -382,116 +375,112 @@ async function cancelServiceChange({
 
 function ServiceSlugForm({ service_slug }: ServiceFormProps) {
   const [isEditing, setIsEditing] = React.useState(false);
-
-  return (
-    <div className="w-full max-w-4xl">
-      {isEditing ? (
-        <ServiceSlugEditForm
-          service_slug={service_slug}
-          quitEditing={() => setIsEditing(false)}
-        />
-      ) : (
-        <div className="flex flex-col gap-1.5">
-          <span>Service slug</span>
-          <div
-            className={cn(
-              "w-full rounded-md flex justify-between items-center gap-2 py-1 pl-4 pr-2",
-              "bg-muted"
-            )}
-          >
-            <span>{service_slug}</span>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditing(true);
-              }}
-              className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-            >
-              <span>Edit</span>
-              <PencilLineIcon size={15} />
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ServiceSlugEditForm({
-  service_slug,
-  quitEditing
-}: { service_slug: string; quitEditing: () => void }) {
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
   const navigate = useNavigate();
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const [data, setData] = React.useState(fetcher.data);
+  const errors = getFormErrorsFromResponseData(data?.errors);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
   React.useEffect(() => {
+    setData(fetcher.data);
+
     if (fetcher.state === "idle" && fetcher.data?.data?.slug) {
       navigate(`../../${fetcher.data.data.slug}/settings`, {
         replace: true,
         relative: "path"
       });
-      quitEditing();
+      setIsEditing(false);
     }
   }, [fetcher.state, fetcher.data]);
 
   return (
-    <fetcher.Form
-      method="post"
-      className="flex flex-col md:flex-row gap-2 w-full"
-    >
-      <fieldset className="flex flex-col gap-1.5 flex-1">
-        <label htmlFor="slug">Service slug</label>
-        <Input
-          id="slug"
-          name="slug"
-          autoFocus
-          placeholder="service slug"
-          defaultValue={service_slug}
-          aria-labelledby="slug-error"
-        />
+    <div className="w-full max-w-4xl">
+      <fetcher.Form
+        method="post"
+        className="flex flex-col md:flex-row gap-2 w-full"
+      >
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="slug">Service slug</label>
+          <div className="relative">
+            <Input
+              id="slug"
+              name="slug"
+              ref={inputRef}
+              placeholder="service slug"
+              defaultValue={service_slug}
+              disabled={!isEditing}
+              aria-labelledby="slug-error"
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                "disabled:border-transparent disabled:opacity-100"
+              )}
+            />
 
-        {errors.slug && (
-          <span id="slug-error" className="text-red-500 text-sm">
-            {errors.slug}
-          </span>
-        )}
-      </fieldset>
+            {!isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  flushSync(() => {
+                    setIsEditing(true);
+                  });
+                  inputRef.current?.focus();
+                }}
+                className={cn(
+                  "absolute inset-y-0 right-3 text-sm py-0 border-0",
+                  "bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                )}
+              >
+                <span>Edit</span>
+                <PencilLineIcon size={15} />
+              </Button>
+            )}
+          </div>
 
-      <div className="flex gap-2 md:relative top-8">
-        <SubmitButton
-          isPending={isPending}
-          variant="outline"
-          className="bg-inherit"
-          name="intent"
-          value="update-slug"
-        >
-          {isPending ? (
-            <>
-              <LoaderIcon className="animate-spin" size={15} />
-              <span className="sr-only">Updating service slug...</span>
-            </>
-          ) : (
-            <>
-              <CheckIcon size={15} className="flex-none" />
-              <span className="sr-only">Update service slug</span>
-            </>
+          {errors.slug && (
+            <span id="slug-error" className="text-red-500 text-sm">
+              {errors.slug}
+            </span>
           )}
-        </SubmitButton>
-        <Button
-          onClick={() => {
-            quitEditing();
-          }}
-          variant="outline"
-          className="bg-inherit"
-          type="button"
-        >
-          <XIcon size={15} className="flex-none" />
-          <span className="sr-only">Cancel</span>
-        </Button>
-      </div>
-    </fetcher.Form>
+        </fieldset>
+
+        {isEditing && (
+          <div className="flex gap-2 md:relative top-8">
+            <SubmitButton
+              isPending={isPending}
+              variant="outline"
+              className="bg-inherit"
+              name="intent"
+              value="update-slug"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span className="sr-only">Updating service slug...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span className="sr-only">Update service slug</span>
+                </>
+              )}
+            </SubmitButton>
+            <Button
+              onClick={() => {
+                setIsEditing(false);
+                setData(undefined);
+              }}
+              variant="outline"
+              className="bg-inherit"
+              type="reset"
+            >
+              <XIcon size={15} className="flex-none" />
+              <span className="sr-only">Cancel</span>
+            </Button>
+          </div>
+        )}
+      </fetcher.Form>
+    </div>
   );
 }
 
@@ -500,11 +489,20 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
   const isPending = fetcher.state !== "idle";
 
   const [data, setData] = React.useState(fetcher.data);
-
   const [isEditing, setIsEditing] = React.useState(false);
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
   const { data: service } = useServiceQuery({ project_slug, service_slug });
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (!fetcher.data.errors) {
+        setIsEditing(false);
+      }
+    }
+  }, [fetcher.state, fetcher.data]);
 
   const serviceSourcheChange = service.unapplied_changes.find(
     (change) => change.field === "source"
@@ -513,23 +511,12 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
     | undefined;
 
   const serviceImage = serviceSourcheChange?.new_value.image ?? service.image!;
-
   const imageParts = serviceImage.split(":");
-
   const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
   const image = imageParts.join(":");
 
   const credentials =
     serviceSourcheChange?.new_value.credentials ?? service.credentials;
-
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data) {
-      setData(fetcher.data);
-      if (!fetcher.data.errors) {
-        setIsEditing(false);
-      }
-    }
-  }, [fetcher.state, fetcher.data]);
 
   const errors = getFormErrorsFromResponseData(data?.errors);
 
@@ -556,7 +543,7 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
             <Input
               id="image"
               name="image"
-              autoFocus
+              ref={inputRef}
               disabled={!isEditing || serviceSourcheChange !== undefined}
               placeholder="image"
               defaultValue={serviceImage}
@@ -736,7 +723,13 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
                 type="reset"
                 disabled={isPending}
                 onClick={() => {
-                  setIsEditing(!isEditing);
+                  const newIsEditing = !isEditing;
+                  flushSync(() => {
+                    setIsEditing(newIsEditing);
+                  });
+                  if (newIsEditing) {
+                    inputRef.current?.focus();
+                  }
                   setData(undefined);
                 }}
                 className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
