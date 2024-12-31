@@ -58,10 +58,7 @@ def compute_docker_service_snapshot_with_changes(
     }
     for change in deployment_changes:
         match change.field:
-            case (
-                DockerDeploymentChange.ChangeField.IMAGE
-                | DockerDeploymentChange.ChangeField.COMMAND
-            ):
+            case DockerDeploymentChange.ChangeField.COMMAND:
                 setattr(service_snapshot, change.field, change.new_value)
             case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                 service_snapshot.healthcheck = (
@@ -71,12 +68,14 @@ def compute_docker_service_snapshot_with_changes(
                     if change.new_value is not None
                     else None
                 )
-            case DockerDeploymentChange.ChangeField.CREDENTIALS:
-                service_snapshot.credentials = (
-                    DockerCredentialsDto.from_dict(change.new_value)
-                    if change.new_value is not None
-                    else None
-                )
+            case DockerDeploymentChange.ChangeField.SOURCE:
+                service_snapshot.image = change.new_value["image"]
+                if change.new_value.get("credentials") is not None:
+                    service_snapshot.credentials = (
+                        DockerCredentialsDto.from_dict(change.new_value)
+                        if change.new_value is not None
+                        else None
+                    )
             case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
                 service_snapshot.resource_limits = (
                     ResourceLimitsDto.from_dict(change.new_value)

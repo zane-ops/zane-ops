@@ -504,7 +504,7 @@ class DockerRegistryService(BaseService):
     def add_change(self, change: "DockerDeploymentChange"):
         change.service = self
         match change.field:
-            case "image" | "command" | "credentials" | "healthcheck":
+            case "source" | "command" | "healthcheck":
                 change_for_field: "DockerDeploymentChange" = (
                     self.unapplied_changes.filter(field=change.field).first()
                 )
@@ -734,9 +734,8 @@ class DockerDeploymentChange(BaseDeploymentChange):
     )
 
     class ChangeField(models.TextChoices):
-        IMAGE = "image", _("image")
+        SOURCE = "source", _("source")
         COMMAND = "command", _("command")
-        CREDENTIALS = "credentials", _("credentials")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
         ENV_VARIABLES = "env_variables", _("env variables")
