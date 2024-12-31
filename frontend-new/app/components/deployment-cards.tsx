@@ -13,7 +13,6 @@ import {
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
 import { Link } from "react-router";
-import { toast } from "sonner";
 import { Code } from "~/components/code";
 import { Button } from "~/components/ui/button";
 import {
@@ -30,9 +29,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { useCancelDockerServiceDeploymentMutation } from "~/lib/hooks/use-cancel-docker-service-deployment-mutation";
-import { useRedeployDockerServiceMutation } from "~/lib/hooks/use-redeploy-docker-service-mutation";
 import { cn } from "~/lib/utils";
+import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-old-deployment";
 import {
   capitalizeText,
@@ -51,8 +49,6 @@ export type DockerDeploymentCardProps = {
   hash: string;
   is_current_production?: boolean;
   redeploy_hash: string | null;
-  project_slug: string;
-  service_slug: string;
 };
 
 export function DockerDeploymentCard({
@@ -64,21 +60,9 @@ export function DockerDeploymentCard({
   image,
   hash,
   redeploy_hash,
-  project_slug,
-  service_slug,
   is_current_production = false
 }: DockerDeploymentCardProps) {
   const now = new Date();
-  const { mutateAsync: redeploy } = useRedeployDockerServiceMutation(
-    project_slug,
-    service_slug,
-    hash
-  );
-  const { mutateAsync: cancel } = useCancelDockerServiceDeploymentMutation(
-    project_slug,
-    service_slug,
-    hash
-  );
   const [timeElapsed, setTimeElapsed] = React.useState(
     started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
   );
@@ -123,6 +107,7 @@ export function DockerDeploymentCard({
     (finished_at || !runningDeploymentsStatuses.includes(status));
 
   const redeployFetcher = useFetcher<typeof redeployClientAction>();
+  const cancelFetcher = useFetcher<typeof cancelClientAction>();
 
   return (
     <div
@@ -270,6 +255,15 @@ export function DockerDeploymentCard({
             className="hidden"
           />
         )}
+        {isCancellable && (
+          <cancelFetcher.Form
+            method="post"
+            action={`./deployments/${hash}/cancel`}
+            id={`cancel-${hash}-form`}
+            className="hidden"
+          />
+        )}
+
         <Menubar className="border-none h-auto w-fit">
           <MenubarMenu>
             <MenubarTrigger
@@ -307,25 +301,19 @@ export function DockerDeploymentCard({
                 </button>
               )}
               {isCancellable && (
-                <MenubarContentItem
-                  className="text-red-500"
-                  icon={Ban}
-                  text="Cancel"
-                  onClick={() =>
-                    toast.promise(cancel(), {
-                      loading: `Requesting cancellation for deployment #${hash}...`,
-                      success: "Success",
-                      error: "Error",
-                      closeButton: true,
-                      description: (data) => {
-                        if (data instanceof Error) {
-                          return data.message;
-                        }
-                        return "Deployment cancel request sent.";
-                      }
-                    })
-                  }
-                />
+                <button
+                  form={`cancel-${hash}-form`}
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                  disabled={cancelFetcher.state !== "idle"}
+                >
+                  <MenubarContentItem
+                    className="text-red-500"
+                    icon={Ban}
+                    text="Cancel"
+                  />
+                </button>
               )}
             </MenubarContent>
           </MenubarMenu>

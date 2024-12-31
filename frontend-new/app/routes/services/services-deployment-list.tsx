@@ -278,8 +278,6 @@ export default function DeploymentListPage({
                                 ? new Date(deployment.finished_at)
                                 : undefined
                             }
-                            service_slug={service_slug}
-                            project_slug={project_slug}
                           />
                         </li>
                       ))}
@@ -311,8 +309,6 @@ export default function DeploymentListPage({
                           : undefined
                       }
                       is_current_production
-                      service_slug={service_slug}
-                      project_slug={project_slug}
                     />
                   </section>
                 )}
@@ -339,8 +335,6 @@ export default function DeploymentListPage({
                                 ? new Date(deployment.finished_at)
                                 : undefined
                             }
-                            service_slug={service_slug}
-                            project_slug={project_slug}
                           />
                         </li>
                       ))}

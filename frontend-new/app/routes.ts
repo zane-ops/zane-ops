@@ -49,7 +49,8 @@ export default [
             route(
               "redeploy",
               "./routes/deployments/redeploy-old-deployment.tsx"
-            )
+            ),
+            route("cancel", "./routes/deployments/cancel-deployment.tsx")
           ]
         )
       ])
