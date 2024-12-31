@@ -902,7 +902,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def finish_and_save_deployment(
         self, healthcheck_result: DeploymentHealthcheckResult
-    ) -> str:
+    ) -> tuple[str, str]:
         try:
             deployment: DockerDeployment = (
                 await DockerDeployment.objects.filter(
@@ -1235,7 +1235,9 @@ class DockerSwarmActivities:
                     pass
 
     @activity.defn
-    async def pull_image_for_deployment(self, deployment: DockerDeploymentDetails):
+    async def pull_image_for_deployment(
+        self, deployment: DockerDeploymentDetails
+    ) -> bool:
         service = deployment.service
         await deployment_log(
             deployment,
