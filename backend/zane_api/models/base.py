@@ -370,7 +370,7 @@ class DockerRegistryService(BaseService):
                     self.image = change.new_value.get("image")
                     credentials = change.new_value.get("credentials")
 
-                    self.credentials = credentials if credentials is not None else {
+                    self.credentials = None if credentials is None else {
                         "username": credentials.get("username"),
                         "password": credentials.get("password"),
                     }

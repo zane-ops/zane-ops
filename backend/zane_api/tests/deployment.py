@@ -2110,9 +2110,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={
+                        "image": "caddy:2.8-alpine",
+                    },
                     service=service,
                 ),
             ]
@@ -2144,9 +2146,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={
+                        "image": "caddy:2.8-alpine",
+                    },
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2178,9 +2182,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -2207,9 +2211,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -2249,9 +2253,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2330,9 +2334,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2403,9 +2407,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2479,9 +2483,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2545,9 +2549,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2590,9 +2594,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2638,9 +2642,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2677,9 +2681,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2723,15 +2727,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="ghcr.io/caddy:2.8-alpine-with-python",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CREDENTIALS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"username": "fredkiss3", "password": "s3cret"},
+                    new_value={"image": "caddy:2.8-alpine", "credentials": {"username": "fredkiss3", "password": "s3cret"}},
                     service=service,
                 ),
             ]
@@ -2765,9 +2763,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
