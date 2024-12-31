@@ -369,7 +369,7 @@ class DeployDockerServiceWorkflow:
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
-            final_deployment_status = await workflow.execute_activity_method(
+            final_deployment_status, reason = await workflow.execute_activity_method(
                 DockerSwarmActivities.finish_and_save_deployment,
                 healthcheck_result,
                 start_to_close_timeout=timedelta(seconds=5),
@@ -378,6 +378,7 @@ class DeployDockerServiceWorkflow:
             next_queued_deployment = await self.queue_next_deployment(deployment)
             return DeployDockerServiceWorkflowResult(
                 deployment_status=final_deployment_status,
+                deployment_status_reason=reason,
                 healthcheck_result=healthcheck_result,
                 next_queued_deployment=next_queued_deployment,
             )
