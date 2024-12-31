@@ -193,7 +193,11 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                     if existing_change is not None:
                         existing_change.new_value = {
                             "image": target_snapshot.image,
-                            "credentials": target_snapshot.credentials,
+                            "credentials": (
+                                target_snapshot.credentials.to_dict()
+                                if target_snapshot.credentials is not None
+                                else None
+                            ),
                         }
                     else:
                         changes.append(
