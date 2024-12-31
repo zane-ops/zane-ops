@@ -362,18 +362,20 @@ class DockerRegistryService(BaseService):
         added_new_http_port = False
         for change in self.unapplied_changes:
             match change.field:
-                case ( 
-                    DockerDeploymentChange.ChangeField.COMMAND
-                ):
+                case DockerDeploymentChange.ChangeField.COMMAND:
                     setattr(self, change.field, change.new_value)
                 case DockerDeploymentChange.ChangeField.SOURCE:
                     self.image = change.new_value.get("image")
                     credentials = change.new_value.get("credentials")
 
-                    self.credentials = None if credentials is None else {
-                        "username": credentials.get("username"),
-                        "password": credentials.get("password"),
-                    }
+                    self.credentials = (
+                        None
+                        if credentials is None
+                        else {
+                            "username": credentials.get("username"),
+                            "password": credentials.get("password"),
+                        }
+                    )
                 case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
                     if change.new_value is None:
                         self.resource_limits = None
