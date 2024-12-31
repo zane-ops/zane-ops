@@ -3804,6 +3804,81 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertTrue(scaled_down)
 
+    async def test_do_zero_downtime_when_updating_with_only_read_only_volumes(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+
+        fake_service = MagicMock()
+        fake_service.tasks.side_effect = [
+            [],
+            [
+                {
+                    "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                    "Version": {"Index": 15078},
+                    "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                    "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                    "Status": {
+                        "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                        "State": "running",
+                        "Message": "started",
+                        # "Err": "task: non-zero exit (127)",
+                        "ContainerStatus": {
+                            "ContainerID": "abcd",
+                            "ExitCode": 0,
+                        },
+                    },
+                    "DesiredState": "running",
+                }
+            ],  # first deployment
+            [],  # second deployment
+        ]
+        fake_service_list = MagicMock()
+        fake_service_list.get.return_value = fake_service
+        self.fake_docker_client.services = fake_service_list
+
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/var/run/docker.sock",
+                        "mode": "READ_ONLY",
+                        "host_path": "/var/run/docker.sock",
+                    },
+                    service=service,
+                ),
+            ]
+        )
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, await service.deployments.acount())
+        first_deployment: DockerDeployment = (
+            await service.deployments.order_by("queued_at")
+            .select_related("service")
+            .afirst()
+        )
+        fake_service_list.get.assert_called_with(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=first_deployment.hash,
+                service_id=first_deployment.service_id,
+                project_id=first_deployment.service.project_id,
+            )
+        )
+        fake_service.update.assert_not_called()
+        scaled_down = any(
+            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
+            for call in fake_service.update.call_args_list
+        )
+        self.assertFalse(scaled_down)
+
     async def test_dont_do_zero_downtime_when_updating_with_host_ports(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
