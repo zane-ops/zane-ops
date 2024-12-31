@@ -2,18 +2,36 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
   ContainerIcon,
+  EyeIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, redirect, useFetcher, useMatches } from "react-router";
+import {
+  Link,
+  redirect,
+  useFetcher,
+  useMatches,
+  useNavigate,
+  useParams
+} from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { serviceQueries } from "~/lib/queries";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import {
+  type DockerService,
+  projectQueries,
+  serviceQueries
+} from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
@@ -52,8 +70,10 @@ export default function ServiceSettingsPage({
 
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Source</h2>
-            {/* <ServiceImageForm />
-            <ServiceImageCredentialsForm /> */}
+            <ServiceSourceForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
           </div>
         </section>
       </div>
@@ -204,89 +224,34 @@ async function updateServiceSlug({
     };
   }
 
-  await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug: service_slug })
-  );
-  toast.success("Service updated successfully!", { closeButton: true });
+  await Promise.all([
+    queryClient.invalidateQueries(
+      serviceQueries.single({ project_slug, service_slug: service_slug })
+    ),
+    queryClient.invalidateQueries(projectQueries.serviceList(project_slug))
+  ]);
 
   if (data.slug !== service_slug) {
     queryClient.setQueryData(
       serviceQueries.single({ project_slug, service_slug: data.slug }).queryKey,
       data
     );
-
-    throw redirect(`/project/${project_slug}/services/${data.slug}/settings`);
   }
+  return {
+    data
+  };
 }
 
 function ServiceSlugForm({ service_slug }: ServiceFormProps) {
   const [isEditing, setIsEditing] = React.useState(false);
 
-  const fetcher = useFetcher<typeof clientAction>();
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && !fetcher.data?.errors) {
-      setIsEditing(false);
-    }
-  }, [fetcher.state, fetcher.data]);
-
   return (
     <div className="w-full max-w-4xl">
       {isEditing ? (
-        <fetcher.Form
-          method="post"
-          className="flex flex-col md:flex-row gap-2 w-full"
-        >
-          <fieldset className="flex flex-col gap-1.5 flex-1">
-            <label htmlFor="slug">Service slug</label>
-            <Input
-              id="slug"
-              name="slug"
-              placeholder="service slug"
-              defaultValue={fetcher.data?.userData.slug ?? service_slug}
-              aria-labelledby="slug-error"
-            />
-
-            {errors.slug && (
-              <span id="slug-error" className="text-red-500 text-sm">
-                {errors.slug}
-              </span>
-            )}
-          </fieldset>
-
-          <div className="flex gap-2 md:relative top-8">
-            <SubmitButton
-              isPending={isPending}
-              variant="outline"
-              className="bg-inherit"
-              name="intent"
-              value="update-slug"
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span className="sr-only">Updating service slug...</span>
-                </>
-              ) : (
-                <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span className="sr-only">Update service slug</span>
-                </>
-              )}
-            </SubmitButton>
-            <Button
-              onClick={() => setIsEditing(false)}
-              variant="outline"
-              className="bg-inherit"
-              type="button"
-            >
-              <XIcon size={15} className="flex-none" />
-              <span className="sr-only">Cancel</span>
-            </Button>
-          </div>
-        </fetcher.Form>
+        <ServiceSlugEditForm
+          service_slug={service_slug}
+          quitEditing={() => setIsEditing(false)}
+        />
       ) : (
         <div className="flex flex-col gap-1.5">
           <span>Service slug</span>
@@ -310,6 +275,260 @@ function ServiceSlugForm({ service_slug }: ServiceFormProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ServiceSlugEditForm({
+  service_slug,
+  quitEditing
+}: { service_slug: string; quitEditing: () => void }) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const navigate = useNavigate();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.data?.slug) {
+      navigate(`../../${fetcher.data.data.slug}/settings`, {
+        replace: true,
+        relative: "path"
+      });
+      quitEditing();
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <fetcher.Form
+      method="post"
+      className="flex flex-col md:flex-row gap-2 w-full"
+    >
+      <fieldset className="flex flex-col gap-1.5 flex-1">
+        <label htmlFor="slug">Service slug</label>
+        <Input
+          id="slug"
+          name="slug"
+          placeholder="service slug"
+          defaultValue={service_slug}
+          aria-labelledby="slug-error"
+        />
+
+        {errors.slug && (
+          <span id="slug-error" className="text-red-500 text-sm">
+            {errors.slug}
+          </span>
+        )}
+      </fieldset>
+
+      <div className="flex gap-2 md:relative top-8">
+        <SubmitButton
+          isPending={isPending}
+          variant="outline"
+          className="bg-inherit"
+          name="intent"
+          value="update-slug"
+        >
+          {isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span className="sr-only">Updating service slug...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span className="sr-only">Update service slug</span>
+            </>
+          )}
+        </SubmitButton>
+        <Button
+          onClick={() => {
+            quitEditing();
+          }}
+          variant="outline"
+          className="bg-inherit"
+          type="button"
+        >
+          <XIcon size={15} className="flex-none" />
+          <span className="sr-only">Cancel</span>
+        </Button>
+      </div>
+    </fetcher.Form>
+  );
+}
+
+function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  const { data: service } = useServiceQuery({ project_slug, service_slug });
+
+  const serviceImageChange = service.unapplied_changes.find(
+    (change) => change.field === "image"
+  );
+
+  const serviceImage =
+    (serviceImageChange?.new_value as string) ?? service.image;
+
+  const imageParts = serviceImage.split(":");
+
+  const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
+  const image = imageParts.join(":");
+  const serviceCredentialsChange = service?.unapplied_changes.find(
+    (change) => change.field === "credentials"
+  );
+  const credentials =
+    (serviceCredentialsChange?.new_value as DockerService["credentials"]) ??
+    service.credentials;
+
+  const newCredentialsValue =
+    serviceCredentialsChange?.new_value as DockerService["credentials"];
+
+  const isEmptyChange =
+    serviceCredentialsChange !== undefined &&
+    (newCredentialsValue === null ||
+      (newCredentialsValue?.username.trim() === "" &&
+        newCredentialsValue?.password.trim() === ""));
+
+  return (
+    <div className="w-full max-w-4xl">
+      {/* {non_field_errors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{non_field_errors}</AlertDescription>
+          </Alert>
+        )} */}
+      <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="image">Source Image</label>
+          <Input
+            id="image"
+            name="image"
+            placeholder="image"
+            defaultValue={serviceImage}
+            aria-labelledby="image-error"
+          />
+
+          {/* {errors.image && (
+            <span id="image-error" className="text-red-500 text-sm">
+              {errors.image}
+            </span>
+          )} */}
+        </fieldset>
+
+        <fieldset className="w-full flex flex-col gap-2">
+          <legend>Credentials</legend>
+          <p className="text-gray-400">
+            If your image is on a private registry, please provide the
+            information below.
+          </p>
+
+          <label
+            className="text-muted-foreground"
+            htmlFor="credentials.username"
+          >
+            Username for registry
+          </label>
+          <Input
+            placeholder={isEmptyChange ? "<empty>" : "username"}
+            // disabled={serviceCredentialsChange !== undefined}
+            // defaultValue={credentials?.username}
+            name="credentials.username"
+            id="credentials.username"
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+              "disabled:border-transparent"
+            )}
+            aria-labelledby="credentials.username-error"
+          />
+          {/* {
+              errors.new_value?.username && (
+                <span id="credentials.username-error" className="text-red-500 text-sm">
+                  {errors.new_value.username}
+                </span>
+              )
+            } */}
+          <label className="text-muted-foreground">Password for registry</label>
+          <div className="flex gap-2">
+            <Input
+              placeholder={isEmptyChange ? "<empty>" : "*******"}
+              // disabled={serviceCredentialsChange !== undefined}
+              // type={isPasswordShown ? "text" : "password"}
+              // defaultValue={credentials?.password}
+              name="credentials.password"
+              id="credentials.password"
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              aria-labelledby="credentials.password-error"
+            />
+
+            {/* {
+              errors.new_value?.username && (
+                <span id="credentials.username-error" className="text-red-500 text-sm">
+                  {errors.new_value.username}
+                </span>
+              )
+            } */}
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    // onClick={() => setIsPasswordShown(!isPasswordShown)}
+                    className="p-4"
+                  >
+                    {/* {isPasswordShown ? (
+                        <EyeOffIcon size={15} className="flex-none" />
+                      ) : (
+                        <EyeIcon size={15} className="flex-none" />
+                      )} */}
+                    <EyeIcon size={15} className="flex-none" />
+                    <span className="sr-only">
+                      Show password
+                      {/* {isPasswordShown ? "Hide" : "Show"} password */}
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Show Password
+                  {/* {isPasswordShown ? "Hide" : "Show"} password */}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          {/* {errors.new_value?.password && (
+              <Form.Message className="text-red-500 text-sm">
+                {errors.new_value.password}
+              </Form.Message>
+            )} */}
+        </fieldset>
+
+        <SubmitButton
+          isPending={isPending}
+          variant="secondary"
+          className="self-start"
+          name="intent"
+          value="update-field"
+        >
+          {isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span>Update</span>
+            </>
+          )}
+        </SubmitButton>
+      </fetcher.Form>
     </div>
   );
 }
