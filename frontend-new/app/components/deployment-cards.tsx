@@ -11,7 +11,7 @@ import {
   Timer
 } from "lucide-react";
 import * as React from "react";
-import { useNavigate } from "react-router";
+import { useFetcher, useNavigate } from "react-router";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Code } from "~/components/code";
@@ -33,6 +33,7 @@ import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { useCancelDockerServiceDeploymentMutation } from "~/lib/hooks/use-cancel-docker-service-deployment-mutation";
 import { useRedeployDockerServiceMutation } from "~/lib/hooks/use-redeploy-docker-service-mutation";
 import { cn } from "~/lib/utils";
+import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-old-deployment";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -120,6 +121,8 @@ export function DockerDeploymentCard({
   const isRedeployable =
     !is_current_production &&
     (finished_at || !runningDeploymentsStatuses.includes(status));
+
+  const redeployFetcher = useFetcher<typeof redeployClientAction>();
 
   return (
     <div
@@ -259,6 +262,14 @@ export function DockerDeploymentCard({
           <Link to={`deployments/${hash}`}>View logs</Link>
         </Button>
 
+        {isRedeployable && (
+          <redeployFetcher.Form
+            method="post"
+            action={`./deployments/${hash}/redeploy`}
+            id={`redeploy-${hash}-form`}
+            className="hidden"
+          />
+        )}
         <Menubar className="border-none h-auto w-fit">
           <MenubarMenu>
             <MenubarTrigger
@@ -285,24 +296,15 @@ export function DockerDeploymentCard({
                 onClick={() => navigate(`./deployments/${hash}`)}
               />
               {isRedeployable && (
-                <MenubarContentItem
-                  icon={Redo2}
-                  text="Redeploy"
-                  onClick={() =>
-                    toast.promise(redeploy(), {
-                      loading: `Queuing redeployment for #${hash}...`,
-                      success: "Success",
-                      error: "Error",
-                      closeButton: true,
-                      description(data) {
-                        if (data instanceof Error) {
-                          return data.message;
-                        }
-                        return "Redeployment queued succesfully.";
-                      }
-                    })
-                  }
-                />
+                <button
+                  form={`redeploy-${hash}-form`}
+                  disabled={redeployFetcher.state !== "idle"}
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                >
+                  <MenubarContentItem icon={Redo2} text="Redeploy" />
+                </button>
               )}
               {isCancellable && (
                 <MenubarContentItem

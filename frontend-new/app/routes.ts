@@ -45,7 +45,11 @@ export default [
           [
             index("./routes/deployments/deployment-logs.tsx"),
             route("details", "./routes/deployments/deployment-details.tsx"),
-            route("http-logs", "./routes/deployments/deployment-http-logs.tsx")
+            route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
+            route(
+              "redeploy",
+              "./routes/deployments/redeploy-old-deployment.tsx"
+            )
           ]
         )
       ])
