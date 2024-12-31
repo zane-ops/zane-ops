@@ -1,13 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  CableIcon,
   CheckIcon,
   ContainerIcon,
+  ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
+  TriangleAlertIcon,
   Undo2Icon,
   XIcon
 } from "lucide-react";
@@ -16,6 +19,7 @@ import { flushSync } from "react-dom";
 import { Link, useFetcher, useMatches, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import { Code } from "~/components/code";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -72,6 +76,27 @@ export default function ServiceSettingsPage({
               project_slug={project_slug}
               service_slug={service_slug}
             />
+          </div>
+        </section>
+
+        <section id="networking" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <CableIcon size={15} className="flex-none text-grey" />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+          <div className="w-full flex flex-col gap-12 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Networking</h2>
+            <ServicePortsForm
+              service_slug={service_slug}
+              project_slug={project_slug}
+            />
+            {/* 
+            <hr className="w-full max-w-4xl border-border" />
+            <ServiceURLsForm className="w-full max-w-4xl" />
+            <hr className="w-full max-w-4xl border-border" />
+            <NetworkAliasesGroup className="w-full max-w-4xl border-border" /> */}
           </div>
         </section>
       </div>
@@ -527,7 +552,10 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
       const fullErrorMessages = errors.non_field_errors.join("\n");
       toast.error("Error", {
         description: fullErrorMessages,
-        closeButton: true
+        closeButton: true,
+        onDismiss: () => {
+          setData(undefined);
+        }
       });
     }
   }, [errors]);
@@ -758,3 +786,36 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
     </div>
   );
 }
+
+function ServicePortsForm({ service_slug, project_slug }: ServiceFormProps) {
+  return (
+    <div className="w-full max-w-4xl flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg">Exposed ports</h3>
+        <p className="text-gray-400">
+          This makes the service reachable externally via the ports defined
+          in&nbsp;
+          <Code>host port</Code>. Using&nbsp;
+          <Code>80</Code>
+          &nbsp;or&nbsp;
+          <Code>443</Code>
+          &nbsp;will create a default URL for the service.
+        </p>
+
+        <Alert variant="warning">
+          <TriangleAlertIcon size={15} />
+          <AlertTitle>Warning</AlertTitle>
+          <AlertDescription>
+            Using a host value other than 80 or 443 will disable&nbsp;
+            <a href="#" className="underline inline-flex gap-1 items-center">
+              zero-downtime deployments <ExternalLinkIcon size={12} />
+            </a>
+            .
+          </AlertDescription>
+        </Alert>
+      </div>
+    </div>
+  );
+}
+
+function NewServicePortForm() {}
