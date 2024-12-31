@@ -279,7 +279,6 @@ function Footer() {
               className="flex underline items-center gap-2"
               href={link.url}
               target="_blank"
-              rel="noopener noreferrer"
             >
               {link.icon}
               {link.name}

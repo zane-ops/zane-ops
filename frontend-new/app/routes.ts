@@ -36,7 +36,7 @@ export default [
             "env-variables",
             "./routes/services/services-env-variables.tsx"
           ),
-          route("settings", "./routes/services/services-settings.tsx")
+          route("settings", "./routes/services/settings/services-settings.tsx")
         ]),
 
         route("deployments", "./routes/layouts/deployment-layout.tsx", [
