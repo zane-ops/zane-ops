@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
+  ContainerIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -38,6 +39,21 @@ export default function ServiceSettingsPage({
               project_slug={project_slug}
               service_slug={service_slug}
             />
+          </div>
+        </section>
+
+        <section id="source" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <ContainerIcon size={15} className="flex-none text-grey" />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Source</h2>
+            {/* <ServiceImageForm />
+            <ServiceImageCredentialsForm /> */}
           </div>
         </section>
       </div>
