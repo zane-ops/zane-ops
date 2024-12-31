@@ -199,7 +199,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                         changes.append(
                             DockerDeploymentChange(
                                 type=DockerDeploymentChange.ChangeType.UPDATE,
-                                field=DockerDeploymentChange.ChangeType.SOURCE,
+                                field=DockerDeploymentChange.ChangeField.SOURCE,
                                 new_value={
                                     "image": target_snapshot.image,
                                     "credentials": target_snapshot.credentials,
