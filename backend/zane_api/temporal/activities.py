@@ -36,6 +36,7 @@ with workflow.unsafe.imports_passed_through():
         NetworkAttachmentConfig,
         RestartPolicy,
         Resources,
+        UpdateConfig,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -1395,6 +1396,10 @@ class DockerSwarmActivities:
                         aliases=[deployment.network_alias],
                     ),
                 ],
+                update_config=UpdateConfig(
+                    order="start-first",
+                    parallelism=1,
+                ),
                 restart_policy=RestartPolicy(
                     condition="on-failure",
                     max_attempts=3,
