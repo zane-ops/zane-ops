@@ -202,11 +202,11 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                                 field=DockerDeploymentChange.ChangeField.SOURCE,
                                 new_value={
                                     "image": target_snapshot.image,
-                                    "credentials": target_snapshot.credentials,
+                                    "credentials": target_snapshot.credentials.to_dict(),
                                 },
                                 old_value={
                                     "image": current_snapshot.image,
-                                    "credentials": current_snapshot.credentials,
+                                    "credentials": current_snapshot.credentials.to_dict(),
                                 },
                             )
                         )
