@@ -2066,20 +2066,18 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
-                        "username": "fredkiss3",
-                        "password": "5ec43t",
+                        "image": "caddy:2.8-alpine",
+                        "credentials": {
+                            "username": "fredkiss3",
+                            "password": "5ec43t",
+                        }
                     },
                     service=service,
                 ),
+               
             ]
         )
 
