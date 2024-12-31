@@ -39,11 +39,15 @@ export default [
           route("settings", "./routes/services/settings/services-settings.tsx")
         ]),
 
-        route("deployments", "./routes/layouts/deployment-layout.tsx", [
-          index("./routes/deployments/deployment-logs.tsx"),
-          route("details", "./routes/deployments/deployment-details.tsx"),
-          route("http-logs", "./routes/deployments/deployment-http-logs.tsx")
-        ])
+        route(
+          "deployments/:deploymentHash",
+          "./routes/layouts/deployment-layout.tsx",
+          [
+            index("./routes/deployments/deployment-logs.tsx"),
+            route("details", "./routes/deployments/deployment-details.tsx"),
+            route("http-logs", "./routes/deployments/deployment-http-logs.tsx")
+          ]
+        )
       ])
     ])
   ])
