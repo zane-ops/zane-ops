@@ -174,7 +174,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
         current_value = getattr(current_snapshot, service_field.name)
         target_value = getattr(target_snapshot, service_field.name)
         match service_field.name:
-            case "image" | "command":
+            case "command":
                 if current_value != target_value:
                     changes.append(
                         DockerDeploymentChange(
@@ -184,7 +184,34 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             old_value=current_value,
                         )
                     )
-            case "healthcheck" | "credentials":
+            case "image" | "credentials":
+                if current_value != target_value:
+                    existing_change = next(
+                        (change for change in changes if change.field == "source"),
+                        None,
+                    )
+                    if existing_change is not None:
+                        existing_change.new_value = {
+                            "image": target_snapshot.image,
+                            "credentials": target_snapshot.credentials,
+                        }
+                    else:
+                        changes.append(
+                            DockerDeploymentChange(
+                                type=DockerDeploymentChange.ChangeType.UPDATE,
+                                field=DockerDeploymentChange.ChangeType.SOURCE,
+                                new_value={
+                                    "image": target_snapshot.image,
+                                    "credentials": target_snapshot.credentials,
+                                },
+                                old_value={
+                                    "image": current_snapshot.image,
+                                    "credentials": current_snapshot.credentials,
+                                },
+                            )
+                        )
+                    pass
+            case "healthcheck":
                 if current_value != target_value:
                     if target_value is not None and isinstance(
                         target_value, HealthCheckDto
