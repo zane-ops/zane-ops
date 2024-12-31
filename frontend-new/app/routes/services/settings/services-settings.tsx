@@ -14,6 +14,7 @@ import {
 import * as React from "react";
 import { flushSync } from "react-dom";
 import { Link, useFetcher, useMatches, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -521,15 +522,18 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
 
   const errors = getFormErrorsFromResponseData(data?.errors);
 
+  React.useEffect(() => {
+    if (errors.non_field_errors && errors.non_field_errors.length > 0) {
+      const fullErrorMessages = errors.non_field_errors.join("\n");
+      toast.error("Error", {
+        description: fullErrorMessages,
+        closeButton: true
+      });
+    }
+  }, [errors]);
+
   return (
     <div className="w-full max-w-4xl">
-      {errors.non_field_errors && errors.non_field_errors.length > 0 && (
-        <Alert variant="destructive">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errors.non_field_errors}</AlertDescription>
-        </Alert>
-      )}
       <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
         <input type="hidden" name="change_field" value="source" />
         <input type="hidden" name="change_type" value="UPDATE" />
