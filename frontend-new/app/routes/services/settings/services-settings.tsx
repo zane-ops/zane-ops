@@ -427,7 +427,7 @@ function ServiceSlugForm({ service_slug }: ServiceFormProps) {
                   inputRef.current?.focus();
                 }}
                 className={cn(
-                  "absolute inset-y-0 right-3 text-sm py-0 border-0",
+                  "absolute inset-y-0 right-0 text-sm py-0 border-0",
                   "bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
                 )}
               >
