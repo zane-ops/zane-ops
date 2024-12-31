@@ -523,10 +523,6 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
     serviceSourcheChange?.new_value.credentials ?? service.credentials;
 
   React.useEffect(() => {
-    console.log({
-      data: fetcher.data,
-      state: fetcher.state
-    });
     if (fetcher.state === "idle" && fetcher.data) {
       setData(fetcher.data);
       if (!fetcher.data.errors) {
