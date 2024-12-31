@@ -843,8 +843,9 @@ class DockerSourceRequestSerializer(serializers.Serializer):
     def validate(self, attrs: dict):
         image = attrs.get("image")
         credentials = attrs.get("credentials")
-        if len(credentials) == 0 or (
-            not credentials.get("username") and not credentials.get("password")
+        if credentials is not None and (
+            len(credentials) == 0
+            or (not credentials.get("username") and not credentials.get("password"))
         ):
             credentials = None
 
