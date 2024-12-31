@@ -3,6 +3,7 @@ import {
   CheckIcon,
   ContainerIcon,
   EyeIcon,
+  EyeOffIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -308,6 +309,7 @@ function ServiceSlugEditForm({
         <Input
           id="slug"
           name="slug"
+          autoFocus
           placeholder="service slug"
           defaultValue={service_slug}
           aria-labelledby="slug-error"
@@ -360,6 +362,8 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
   const { data: service } = useServiceQuery({ project_slug, service_slug });
 
@@ -402,26 +406,37 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
       <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="image">Source Image</label>
-          <Input
-            id="image"
-            name="image"
-            placeholder="image"
-            defaultValue={serviceImage}
-            aria-labelledby="image-error"
-          />
-
-          {/* {errors.image && (
-            <span id="image-error" className="text-red-500 text-sm">
-              {errors.image}
-            </span>
-          )} */}
+          {isEditing ? (
+            <Input
+              id="image"
+              name="image"
+              autoFocus
+              placeholder="image"
+              defaultValue={serviceImage}
+              aria-labelledby="image-error"
+            />
+          ) : (
+            <div
+              className={cn(
+                "w-full rounded-md flex justify-between items-center gap-2 py-2.5 pl-4 pr-2",
+                serviceImageChange !== undefined
+                  ? "dark:bg-secondary-foreground bg-secondary/60"
+                  : "bg-muted"
+              )}
+            >
+              <span>
+                {image}
+                <span className="text-grey">:{tag}</span>
+              </span>
+            </div>
+          )}
         </fieldset>
 
         <fieldset className="w-full flex flex-col gap-2">
           <legend>Credentials</legend>
           <p className="text-gray-400">
-            If your image is on a private registry, please provide the
-            information below.
+            If your service pulls private Docker images from a registry, specify
+            the information below.
           </p>
 
           <label
@@ -431,103 +446,109 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
             Username for registry
           </label>
           <Input
-            placeholder={isEmptyChange ? "<empty>" : "username"}
-            // disabled={serviceCredentialsChange !== undefined}
-            // defaultValue={credentials?.username}
+            placeholder={!isEditing ? "<empty>" : "username"}
             name="credentials.username"
             id="credentials.username"
+            disabled={!isEditing}
             className={cn(
-              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-              "disabled:border-transparent"
+              "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+              "data-[edited]:dark:disabled:bg-secondary-foreground",
+              "disabled:border-transparent disabled:opacity-100"
             )}
             aria-labelledby="credentials.username-error"
           />
-          {/* {
-              errors.new_value?.username && (
-                <span id="credentials.username-error" className="text-red-500 text-sm">
-                  {errors.new_value.username}
-                </span>
-              )
-            } */}
-          <label className="text-muted-foreground">Password for registry</label>
+
+          <label
+            className="text-muted-foreground"
+            htmlFor="credentials.password"
+          >
+            Password for registry
+          </label>
           <div className="flex gap-2">
             <Input
-              placeholder={isEmptyChange ? "<empty>" : "*******"}
-              // disabled={serviceCredentialsChange !== undefined}
-              // type={isPasswordShown ? "text" : "password"}
-              // defaultValue={credentials?.password}
+              placeholder={!isEditing ? "<empty>" : "*******"}
+              disabled={!isEditing}
+              type={isPasswordShown ? "text" : "password"}
+              // defaultValue={"password"}
               name="credentials.password"
               id="credentials.password"
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-                "disabled:border-transparent"
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100"
               )}
               aria-labelledby="credentials.password-error"
             />
 
-            {/* {
-              errors.new_value?.username && (
-                <span id="credentials.username-error" className="text-red-500 text-sm">
-                  {errors.new_value.username}
-                </span>
-              )
-            } */}
             <TooltipProvider>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     type="button"
-                    // onClick={() => setIsPasswordShown(!isPasswordShown)}
+                    onClick={() => setIsPasswordShown(!isPasswordShown)}
                     className="p-4"
                   >
-                    {/* {isPasswordShown ? (
-                        <EyeOffIcon size={15} className="flex-none" />
-                      ) : (
-                        <EyeIcon size={15} className="flex-none" />
-                      )} */}
-                    <EyeIcon size={15} className="flex-none" />
+                    {isPasswordShown ? (
+                      <EyeOffIcon size={15} className="flex-none" />
+                    ) : (
+                      <EyeIcon size={15} className="flex-none" />
+                    )}
                     <span className="sr-only">
-                      Show password
-                      {/* {isPasswordShown ? "Hide" : "Show"} password */}
+                      {isPasswordShown ? "Hide" : "Show"} password
                     </span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Show Password
-                  {/* {isPasswordShown ? "Hide" : "Show"} password */}
+                  {isPasswordShown ? "Hide" : "Show"} password
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
-          {/* {errors.new_value?.password && (
-              <Form.Message className="text-red-500 text-sm">
-                {errors.new_value.password}
-              </Form.Message>
-            )} */}
         </fieldset>
-
-        <SubmitButton
-          isPending={isPending}
-          variant="secondary"
-          className="self-start"
-          name="intent"
-          value="update-field"
-        >
-          {isPending ? (
-            <>
-              <LoaderIcon className="animate-spin" size={15} />
-              <span>Updating...</span>
-            </>
-          ) : (
-            <>
-              <CheckIcon size={15} className="flex-none" />
-              <span>Update</span>
-            </>
+        <div className="flex gap-4">
+          {isEditing && (
+            <SubmitButton
+              isPending={isPending}
+              variant="secondary"
+              className="self-start"
+              name="intent"
+              value="update-field"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
           )}
-        </SubmitButton>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => {
+              setIsEditing(!isEditing);
+            }}
+            className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+          >
+            {!isEditing ? (
+              <>
+                <span>Edit</span>
+                <PencilLineIcon size={15} className="flex-none" />
+              </>
+            ) : (
+              <>
+                <XIcon size={15} className="flex-none" />
+                <span>Cancel</span>
+              </>
+            )}
+          </Button>
+        </div>
       </fetcher.Form>
     </div>
   );
