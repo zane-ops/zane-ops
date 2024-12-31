@@ -6,5 +6,5 @@ WORKDIR /var/www/html
 
 RUN apk update && apk add --no-cache curl
 
-COPY ./frontend-new/dist/ .
+COPY ./frontend-new/build/client .
 COPY ./frontend-new/Caddyfile /etc/caddy/Caddyfile
