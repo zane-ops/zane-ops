@@ -500,6 +500,7 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         setIsEditing(false);
+        setIsPasswordShown(false);
       }
     }
   }, [fetcher.state, fetcher.data]);
