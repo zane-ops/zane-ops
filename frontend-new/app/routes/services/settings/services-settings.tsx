@@ -598,7 +598,7 @@ function ServiceSourceForm({ service_slug, project_slug }: ServiceFormProps) {
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
-                "disabled:border-transparent disabled:opacity-100"
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
               )}
               aria-labelledby="credentials.username-error"
             />
