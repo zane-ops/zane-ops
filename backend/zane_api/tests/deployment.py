@@ -3156,9 +3156,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value=self.fake_docker_client.NONEXISTANT_IMAGE,
+                    new_value={
+                        "image": self.fake_docker_client.NONEXISTANT_IMAGE,
+                    },
                     service=service,
                 ),
             ]
@@ -3190,9 +3192,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3220,9 +3222,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3276,9 +3278,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3365,9 +3367,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3418,9 +3420,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3476,9 +3478,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3505,9 +3507,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3859,9 +3861,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3903,9 +3905,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3946,9 +3948,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
         change: DockerDeploymentChange = await last_deployment.changes.afirst()
         self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
-        self.assertEqual(DockerDeploymentChange.ChangeField.IMAGE, change.field)
-        self.assertEqual("valkey/valkey:7.2-alpine", change.new_value)
-        self.assertEqual("valkey/valkey:7.3-alpine", change.old_value)
+        self.assertEqual(DockerDeploymentChange.ChangeField.SOURCE, change.field)
+        self.assertEqual("valkey/valkey:7.2-alpine", change.new_value.get("image"))
+        self.assertEqual("valkey/valkey:7.3-alpine", change.old_value.get("image"))
 
         await service.arefresh_from_db()
         self.assertEqual("valkey/valkey:7.2-alpine", service.image)
@@ -3960,9 +3962,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -4006,9 +4008,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
