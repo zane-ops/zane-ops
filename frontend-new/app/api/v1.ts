@@ -48,13 +48,6 @@ export interface paths {
      */
     get: operations["searchDockerRegistry"];
   };
-  "/api/domain/root/": {
-    /**
-     * Get Root Domain
-     * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-     */
-    get: operations["getRootDomain"];
-  };
   "/api/ping/": {
     /**
      * Ping
@@ -166,6 +159,13 @@ export interface paths {
      * @description Get all services in a project
      */
     get: operations["projects_service_list_list"];
+  };
+  "/api/settings/": {
+    /**
+     * Get API settings
+     * @description Get the settings of the API.
+     */
+    get: operations["getAPISettings"];
   };
 }
 
@@ -420,7 +420,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerCredentialsFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["DockerImageFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
     DeploymentDocker: {
       /** Format: date-time */
       created_at: string;
@@ -459,17 +459,6 @@ export interface components {
       username: string;
       password: string;
     };
-    /**
-     * @description * `credentials` - credentials
-     * @enum {string}
-     */
-    DockerCredentialsFieldChangeFieldEnum: "credentials";
-    DockerCredentialsFieldChangeRequest: {
-      /** @default UPDATE */
-      type?: components["schemas"]["FieldChangeTypeEnum"];
-      new_value: components["schemas"]["DockerCredentialsRequestRequest"] | null;
-      field: components["schemas"]["DockerCredentialsFieldChangeFieldEnum"];
-    };
     DockerCredentialsRequestRequest: {
       username?: string;
       password?: string;
@@ -483,9 +472,8 @@ export interface components {
       item_id: string | null;
     };
     /**
-     * @description * `image` - image
+     * @description * `source` - source
      * * `command` - command
-     * * `credentials` - credentials
      * * `healthcheck` - healthcheck
      * * `volumes` - volumes
      * * `env_variables` - env variables
@@ -494,7 +482,7 @@ export interface components {
      * * `resource_limits` - resource limits
      * @enum {string}
      */
-    DockerDeploymentChangeFieldEnum: "image" | "command" | "credentials" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits";
+    DockerDeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits";
     /**
      * @description * `UPDATE` - update
      * * `DELETE` - delete
@@ -510,17 +498,6 @@ export interface components {
     DockerImage: {
       full_image: string;
       description: string;
-    };
-    /**
-     * @description * `image` - image
-     * @enum {string}
-     */
-    DockerImageFieldChangeFieldEnum: "image";
-    DockerImageFieldChangeRequest: {
-      /** @default UPDATE */
-      type?: components["schemas"]["FieldChangeTypeEnum"];
-      new_value: string;
-      field: components["schemas"]["DockerImageFieldChangeFieldEnum"];
     };
     DockerImageSearchResponse: {
       images: components["schemas"]["DockerImage"][];
@@ -618,6 +595,21 @@ export interface components {
      */
     DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
+     * @description * `source` - source
+     * @enum {string}
+     */
+    DockerSourceFieldChangeFieldEnum: "source";
+    DockerSourceFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["DockerSourceRequestRequest"];
+      field: components["schemas"]["DockerSourceFieldChangeFieldEnum"];
+    };
+    DockerSourceRequestRequest: {
+      image: string;
+      credentials?: components["schemas"]["DockerCredentialsRequestRequest"];
+    };
+    /**
      * @description * `env_variables` - env_variables
      * @enum {string}
      */
@@ -694,6 +686,7 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListError: components["schemas"]["GetArchivedProjectListSlugErrorComponent"] | components["schemas"]["GetArchivedProjectListSortByErrorComponent"];
     GetArchivedProjectListErrorResponse400: components["schemas"]["GetArchivedProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListSlugErrorComponent: {
@@ -761,10 +754,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRootDomain: {
-      domain: string;
-    };
-    GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitServiceCard: {
       /** Format: date-time */
@@ -1193,7 +1182,7 @@ export interface components {
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -1280,6 +1269,54 @@ export interface components {
       code: "invalid" | "max_string_length" | "min_value" | "null";
       detail: string;
     };
+    RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent: {
+      /**
+       * @description * `new_value.credentials.password` - new_value.credentials.password
+       * @enum {string}
+       */
+      attr: "new_value.credentials.password";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent: {
+      /**
+       * @description * `new_value.credentials.username` - new_value.credentials.username
+       * @enum {string}
+       */
+      attr: "new_value.credentials.username";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RequestDeploymentChangesNewValueDomainErrorComponent: {
       /**
        * @description * `new_value.domain` - new_value.domain
@@ -1307,14 +1344,12 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
-       * * `min_length` - min_length
-       * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueForwardedErrorComponent: {
@@ -1366,6 +1401,24 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueImageErrorComponent: {
+      /**
+       * @description * `new_value.image` - new_value.image
+       * @enum {string}
+       */
+      attr: "new_value.image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueIntervalSecondsErrorComponent: {
@@ -1495,23 +1548,6 @@ export interface components {
       code: "invalid" | "null" | "required";
       detail: string;
     };
-    RequestDeploymentChangesNewValuePasswordErrorComponent: {
-      /**
-       * @description * `new_value.password` - new_value.password
-       * @enum {string}
-       */
-      attr: "new_value.password";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
     RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent: {
       /**
        * @description * `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors
@@ -1601,23 +1637,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueUsernameErrorComponent: {
-      /**
-       * @description * `new_value.username` - new_value.username
-       * @enum {string}
-       */
-      attr: "new_value.username";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueValueErrorComponent: {
@@ -1746,6 +1765,11 @@ export interface components {
      * @enum {string}
      */
     ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    Settings: {
+      root_domain: string;
+      image_version: string;
+      commit_sha: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -2179,34 +2203,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["SearchDockerRegistryErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Root Domain
-   * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-   */
-  getRootDomain: {
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomain"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
         };
       };
       401: {
@@ -3121,6 +3117,34 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get API settings
+   * @description Get the settings of the API.
+   */
+  getAPISettings: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Settings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

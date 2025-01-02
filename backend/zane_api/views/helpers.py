@@ -58,10 +58,7 @@ def compute_docker_service_snapshot_with_changes(
     }
     for change in deployment_changes:
         match change.field:
-            case (
-                DockerDeploymentChange.ChangeField.IMAGE
-                | DockerDeploymentChange.ChangeField.COMMAND
-            ):
+            case DockerDeploymentChange.ChangeField.COMMAND:
                 setattr(service_snapshot, change.field, change.new_value)
             case DockerDeploymentChange.ChangeField.HEALTHCHECK:
                 service_snapshot.healthcheck = (
@@ -71,12 +68,14 @@ def compute_docker_service_snapshot_with_changes(
                     if change.new_value is not None
                     else None
                 )
-            case DockerDeploymentChange.ChangeField.CREDENTIALS:
-                service_snapshot.credentials = (
-                    DockerCredentialsDto.from_dict(change.new_value)
-                    if change.new_value is not None
-                    else None
-                )
+            case DockerDeploymentChange.ChangeField.SOURCE:
+                service_snapshot.image = change.new_value["image"]
+                if change.new_value.get("credentials") is not None:
+                    service_snapshot.credentials = (
+                        DockerCredentialsDto.from_dict(change.new_value)
+                        if change.new_value is not None
+                        else None
+                    )
             case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
                 service_snapshot.resource_limits = (
                     ResourceLimitsDto.from_dict(change.new_value)
@@ -175,7 +174,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
         current_value = getattr(current_snapshot, service_field.name)
         target_value = getattr(target_snapshot, service_field.name)
         match service_field.name:
-            case "image" | "command":
+            case "command":
                 if current_value != target_value:
                     changes.append(
                         DockerDeploymentChange(
@@ -185,7 +184,46 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             old_value=current_value,
                         )
                     )
-            case "healthcheck" | "credentials":
+            case "image" | "credentials":
+                if current_value != target_value:
+                    existing_change = next(
+                        (change for change in changes if change.field == "source"),
+                        None,
+                    )
+                    if existing_change is not None:
+                        existing_change.new_value = {
+                            "image": target_snapshot.image,
+                            "credentials": (
+                                target_snapshot.credentials.to_dict()
+                                if target_snapshot.credentials is not None
+                                else None
+                            ),
+                        }
+                    else:
+                        changes.append(
+                            DockerDeploymentChange(
+                                type=DockerDeploymentChange.ChangeType.UPDATE,
+                                field=DockerDeploymentChange.ChangeField.SOURCE,
+                                new_value={
+                                    "image": target_snapshot.image,
+                                    "credentials": (
+                                        target_snapshot.credentials.to_dict()
+                                        if target_snapshot.credentials is not None
+                                        else None
+                                    ),
+                                },
+                                old_value={
+                                    "image": current_snapshot.image,
+                                    "credentials": (
+                                        current_snapshot.credentials.to_dict()
+                                        if current_snapshot.credentials is not None
+                                        else None
+                                    ),
+                                },
+                            )
+                        )
+                    pass
+            case "healthcheck":
                 if current_value != target_value:
                     if target_value is not None and isinstance(
                         target_value, HealthCheckDto

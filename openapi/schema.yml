@@ -3073,9 +3073,8 @@ components:
       - $ref: '#/components/schemas/VolumeItemChangeRequest'
       - $ref: '#/components/schemas/EnvItemChangeRequest'
       - $ref: '#/components/schemas/PortItemChangeRequest'
-      - $ref: '#/components/schemas/DockerCredentialsFieldChangeRequest'
+      - $ref: '#/components/schemas/DockerSourceFieldChangeRequest'
       - $ref: '#/components/schemas/DockerCommandFieldChangeRequest'
-      - $ref: '#/components/schemas/DockerImageFieldChangeRequest'
       - $ref: '#/components/schemas/HealthcheckFieldChangeRequest'
       - $ref: '#/components/schemas/ResourceLimitChangeRequest'
       discriminator:
@@ -3210,27 +3209,6 @@ components:
       required:
       - password
       - username
-    DockerCredentialsFieldChangeFieldEnum:
-      enum:
-      - credentials
-      type: string
-      description: '* `credentials` - credentials'
-    DockerCredentialsFieldChangeRequest:
-      type: object
-      properties:
-        type:
-          allOf:
-          - $ref: '#/components/schemas/FieldChangeTypeEnum'
-          default: UPDATE
-        new_value:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredentialsRequestRequest'
-          nullable: true
-        field:
-          $ref: '#/components/schemas/DockerCredentialsFieldChangeFieldEnum'
-      required:
-      - field
-      - new_value
     DockerCredentialsRequestRequest:
       type: object
       properties:
@@ -3267,9 +3245,8 @@ components:
       - type
     DockerDeploymentChangeFieldEnum:
       enum:
-      - image
+      - source
       - command
-      - credentials
       - healthcheck
       - volumes
       - env_variables
@@ -3278,9 +3255,8 @@ components:
       - resource_limits
       type: string
       description: |-
-        * `image` - image
+        * `source` - source
         * `command` - command
-        * `credentials` - credentials
         * `healthcheck` - healthcheck
         * `volumes` - volumes
         * `env_variables` - env variables
@@ -3324,26 +3300,6 @@ components:
       required:
       - description
       - full_image
-    DockerImageFieldChangeFieldEnum:
-      enum:
-      - image
-      type: string
-      description: '* `image` - image'
-    DockerImageFieldChangeRequest:
-      type: object
-      properties:
-        type:
-          allOf:
-          - $ref: '#/components/schemas/FieldChangeTypeEnum'
-          default: UPDATE
-        new_value:
-          type: string
-          minLength: 1
-        field:
-          $ref: '#/components/schemas/DockerImageFieldChangeFieldEnum'
-      required:
-      - field
-      - new_value
     DockerImageSearchResponse:
       type: object
       properties:
@@ -3623,6 +3579,35 @@ components:
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
         * `SLEEPING` - Sleeping
+    DockerSourceFieldChangeFieldEnum:
+      enum:
+      - source
+      type: string
+      description: '* `source` - source'
+    DockerSourceFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/DockerSourceRequestRequest'
+        field:
+          $ref: '#/components/schemas/DockerSourceFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    DockerSourceRequestRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          minLength: 1
+        credentials:
+          $ref: '#/components/schemas/DockerCredentialsRequestRequest'
+      required:
+      - image
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -4896,8 +4881,10 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueValueErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueHostErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueForwardedErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueUsernameErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValuePasswordErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueImageErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
@@ -4928,8 +4915,10 @@ components:
           new_value.value: '#/components/schemas/RequestDeploymentChangesNewValueValueErrorComponent'
           new_value.host: '#/components/schemas/RequestDeploymentChangesNewValueHostErrorComponent'
           new_value.forwarded: '#/components/schemas/RequestDeploymentChangesNewValueForwardedErrorComponent'
-          new_value.username: '#/components/schemas/RequestDeploymentChangesNewValueUsernameErrorComponent'
-          new_value.password: '#/components/schemas/RequestDeploymentChangesNewValuePasswordErrorComponent'
+          new_value.image: '#/components/schemas/RequestDeploymentChangesNewValueImageErrorComponent'
+          new_value.credentials.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent'
+          new_value.credentials.username: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent'
+          new_value.credentials.password: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent'
           new_value: '#/components/schemas/RequestDeploymentChangesNewValueErrorComponent'
           new_value.type: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
           new_value.timeout_seconds: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
@@ -5087,6 +5076,84 @@ components:
       - attr
       - code
       - detail
+    RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.non_field_errors
+          type: string
+          description: '* `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.password
+          type: string
+          description: '* `new_value.credentials.password` - new_value.credentials.password'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.username
+          type: string
+          description: '* `new_value.credentials.username` - new_value.credentials.username'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestDeploymentChangesNewValueDomainErrorComponent:
       type: object
       properties:
@@ -5129,8 +5196,6 @@ components:
           enum:
           - blank
           - invalid
-          - min_length
-          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
@@ -5138,8 +5203,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `min_length` - min_length
-            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -5226,6 +5289,36 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.image
+          type: string
+          description: '* `new_value.image` - new_value.image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -5439,34 +5532,6 @@ components:
       - attr
       - code
       - detail
-    RequestDeploymentChangesNewValuePasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.password
-          type: string
-          description: '* `new_value.password` - new_value.password'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -5607,34 +5672,6 @@ components:
             * `invalid_choice` - invalid_choice
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.username
-          type: string
-          description: '* `new_value.username` - new_value.username'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:

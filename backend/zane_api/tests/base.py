@@ -481,9 +481,11 @@ class AuthAPITestCase(APITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
+                    new_value={
+                        "image": "valkey/valkey:7.2-alpine",
+                    },
                     service=service,
                 ),
             ]

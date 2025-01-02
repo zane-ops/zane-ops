@@ -38,13 +38,12 @@ from .serializers import (
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
     DockerServiceUpdateRequestSerializer,
+    DockerSourceFieldChangeSerializer,
     VolumeItemChangeSerializer,
     DockerCommandFieldChangeSerializer,
-    DockerImageFieldChangeSerializer,
     URLItemChangeSerializer,
     EnvItemChangeSerializer,
     PortItemChangeSerializer,
-    DockerCredentialsFieldChangeSerializer,
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
     DeploymentListPagination,
@@ -126,28 +125,22 @@ class CreateDockerServiceAPIView(APIView):
 
                     service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
 
-                    initial_changes = [
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.IMAGE,
-                            new_value=data["image"],
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
-                            service=service,
-                        )
-                    ]
-
+                    source_data = {
+                        "image": data["image"],
+                    }
                     if docker_credentials is not None and (
                         len(docker_credentials.get("username", "")) > 0
                         or len(docker_credentials.get("password", "")) > 0
                     ):
-                        initial_changes.append(
-                            DockerDeploymentChange(
-                                field=DockerDeploymentChange.ChangeField.CREDENTIALS,
-                                new_value=docker_credentials,
-                                type=DockerDeploymentChange.ChangeType.UPDATE,
-                                service=service,
-                            )
-                        )
-                    DockerDeploymentChange.objects.bulk_create(initial_changes)
+                        source_data["credentials"] = docker_credentials
+
+                    DockerDeploymentChange.objects.create(
+                        field=DockerDeploymentChange.ChangeField.SOURCE,
+                        new_value=source_data,
+                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        service=service,
+                    )
+
                     service.save()
                 except IntegrityError:
                     raise ResourceConflict(
@@ -169,9 +162,8 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 VolumeItemChangeSerializer,
                 EnvItemChangeSerializer,
                 PortItemChangeSerializer,
-                DockerCredentialsFieldChangeSerializer,
+                DockerSourceFieldChangeSerializer,
                 DockerCommandFieldChangeSerializer,
-                DockerImageFieldChangeSerializer,
                 HealthcheckFieldChangeSerializer,
                 ResourceLimitChangeSerializer,
             ],
@@ -211,9 +203,8 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             "volumes": VolumeItemChangeSerializer,
             "env_variables": EnvItemChangeSerializer,
             "ports": PortItemChangeSerializer,
-            "credentials": DockerCredentialsFieldChangeSerializer,
             "command": DockerCommandFieldChangeSerializer,
-            "image": DockerImageFieldChangeSerializer,
+            "source": DockerSourceFieldChangeSerializer,
             "healthcheck": HealthcheckFieldChangeSerializer,
             "resource_limits": ResourceLimitChangeSerializer,
         }
@@ -236,23 +227,26 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 change_type = data.get("type")
                 old_value: Any = None
                 match field:
-                    case "image" | "command":
+                    case "command":
                         old_value = getattr(service, field)
                     case "resource_limits":
                         if new_value is not None and len(new_value) == 0:
                             new_value = None
                         old_value = getattr(service, field)
-                    case "credentials":
-                        if new_value is not None and (
-                            len(new_value) == 0
-                            or new_value
+                    case "source":
+                        if new_value.get("credentials") is not None and (
+                            len(new_value["credentials"]) == 0
+                            or new_value.get("credentials")
                             == {
                                 "username": "",
                                 "password": "",
                             }
                         ):
-                            new_value = None
-                        old_value = getattr(service, field)
+                            new_value["credentials"] = None
+                        old_value = {
+                            "image": service.image,
+                            "credentials": service.credentials,
+                        }
                     case "healthcheck":
                         old_value = (
                             HealthCheckSerializer(service.healthcheck).data
@@ -327,9 +321,8 @@ class BulkRequestDockerServiceDeploymentChangesAPIView(APIView):
                 "volumes": VolumeItemChangeSerializer,
                 "env_variables": EnvItemChangeSerializer,
                 "ports": PortItemChangeSerializer,
-                "credentials": DockerCredentialsFieldChangeSerializer,
                 "command": DockerCommandFieldChangeSerializer,
-                "image": DockerImageFieldChangeSerializer,
+                "source": DockerSourceFieldChangeSerializer,
                 "healthcheck": HealthcheckFieldChangeSerializer,
                 "resource_limits": ResourceLimitChangeSerializer,
             }

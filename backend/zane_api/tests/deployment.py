@@ -36,7 +36,7 @@ from ..temporal import (
     CancelDeploymentSignalInput,
     ZaneProxyClient,
 )
-from ..utils import convert_value_to_bytes
+from ..utils import convert_value_to_bytes, jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -170,10 +170,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             service=created_service
         ).first()
         self.assertIsNotNone(change)
-        self.assertEqual("image", change.field)
+        self.assertEqual(DockerDeploymentChange.ChangeField.SOURCE, change.field)
         self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
         self.assertEqual(None, change.old_value)
-        self.assertEqual("redis:alpine", change.new_value)
+        self.assertEqual({"image": "redis:alpine"}, change.new_value)
 
     def test_create_service_with_custom_registry_creates_credential_changes(self):
         owner = self.loginUser()
@@ -199,10 +199,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
         self.assertEqual(
-            2, DockerDeploymentChange.objects.filter(service=created_service).count()
+            1, DockerDeploymentChange.objects.filter(service=created_service).count()
         )
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            service=created_service, field="credentials"
+            service=created_service, field=DockerDeploymentChange.ChangeField.SOURCE
         ).first()
         self.assertIsNotNone(change)
         self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
@@ -212,7 +212,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "username": "fredkiss3",
                 "password": "s3cret",
             },
-            change.new_value,
+            change.new_value["credentials"],
         )
 
     def test_create_service_returns_changes_in_response(self):
@@ -250,9 +250,11 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": "image",
+            "field": DockerDeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
-            "new_value": "ghcr.io/zane-ops/app",
+            "new_value": {
+                "image": "ghcr.io/zane-ops/app",
+            },
         }
 
         response = self.client.put(
@@ -263,10 +265,15 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            1, DockerDeploymentChange.objects.filter(service__slug="app").count()
+        )
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            service__slug="app", field="image"
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.SOURCE,
         ).first()
-        self.assertEqual("ghcr.io/zane-ops/app", change.new_value)
+        self.assertEqual({"image": "ghcr.io/zane-ops/app"}, change.new_value)
 
     def test_request_compound_changes(self):
         owner = self.loginUser()
@@ -307,7 +314,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(change)
         self.assertEqual(DockerDeploymentChange.ChangeType.ADD, change.type)
 
-    def test_validate_credentials_with_previous_image(self):
+    def test_validate_credentials_with_image(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
 
@@ -323,11 +330,14 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": "credentials",
+            "field": DockerDeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
-                "username": "fredkiss3",
-                "password": "bad",
+                "image": "ghcr.io/zane-ops/app",
+                "credentials": {
+                    "username": "fredkiss3",
+                    "password": "bad",
+                },
             },
         }
         response = self.client.put(
@@ -434,11 +444,14 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "field": DockerDeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
-                "username": "",
-                "password": "",
+                "image": "ghcr.io/zane-ops/app",
+                "credentials": {
+                    "username": "",
+                    "password": "",
+                },
             },
         }
         response = self.client.put(
@@ -450,10 +463,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+            field=DockerDeploymentChange.ChangeField.SOURCE,
             service__slug="app",
         ).first()
-        self.assertIsNone(changes)
+        self.assertIsNone(changes.new_value.get("credentials"))
 
     def test_validate_credentials_cannot_pass_username_without_password(self):
         owner = self.loginUser()
@@ -471,11 +484,14 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "field": DockerDeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
-                "username": "helloworld",
-                "password": "",
+                "image": "ghcr.io/zane-ops/app",
+                "credentials": {
+                    "username": "helloworld",
+                    "password": "",
+                },
             },
         }
         response = self.client.put(
@@ -503,11 +519,14 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "field": DockerDeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
-                "username": "",
-                "password": "supersecret123",
+                "image": "ghcr.io/zane-ops/app",
+                "credentials": {
+                     "username": "",
+                     "password": "supersecret123",
+                }
             },
         }
         response = self.client.put(
@@ -535,9 +554,12 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CREDENTIALS,
+            "field": DockerDeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
-            "new_value": {},
+            "new_value": {
+                "image": "ghcr.io/zane-ops/app",
+                "credentials": {},
+            },
         }
         response = self.client.put(
             reverse(
@@ -548,10 +570,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+            field=DockerDeploymentChange.ChangeField.SOURCE,
             service__slug="app",
         ).first()
-        self.assertIsNone(changes)
+        self.assertIsNone(changes.new_value.get("credentials"))
 
     def test_validate_resource_limits_cannot_use_less_than_6mb(self):
         owner = self.loginUser()
@@ -639,44 +661,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                     "unit": "BYTES",
                 },
             },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-    def test_validate_new_image_with_existing_credentials(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-
-        create_service_payload = {
-            "slug": "app",
-            "image": "ghcr.io/zane-ops/app",
-        }
-
-        response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="app")
-        DockerDeploymentChange.objects.create(
-            field="credentials",
-            new_value={
-                "username": "fredkiss3",
-                "password": "s3cret",
-            },
-            service=service,
-        )
-
-        changes_payload = {
-            "field": "image",
-            "type": "UPDATE",
-            "new_value": self.fake_docker_client.NONEXISTANT_PRIVATE_IMAGE,
         }
         response = self.client.put(
             reverse(
@@ -2082,20 +2066,18 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CREDENTIALS,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
-                        "username": "fredkiss3",
-                        "password": "5ec43t",
+                        "image": "caddy:2.8-alpine",
+                        "credentials": {
+                            "username": "fredkiss3",
+                            "password": "5ec43t",
+                        }
                     },
                     service=service,
                 ),
+               
             ]
         )
 
@@ -2119,7 +2101,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             updated_service.credentials,
         )
         self.assertEqual(0, updated_service.unapplied_changes.count())
-        self.assertEqual(2, updated_service.applied_changes.count())
+        self.assertEqual(1, updated_service.applied_changes.count())
 
     def test_deploy_service_with_commit_message(self):
         owner = self.loginUser()
@@ -2128,9 +2110,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={
+                        "image": "caddy:2.8-alpine",
+                    },
                     service=service,
                 ),
             ]
@@ -2162,9 +2146,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={
+                        "image": "caddy:2.8-alpine",
+                    },
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2196,9 +2182,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -2225,9 +2211,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -2267,9 +2253,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2348,9 +2334,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2421,9 +2407,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2497,9 +2483,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2563,9 +2549,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2608,9 +2594,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2656,9 +2642,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2695,9 +2681,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -2741,15 +2727,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="ghcr.io/caddy:2.8-alpine-with-python",
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CREDENTIALS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"username": "fredkiss3", "password": "s3cret"},
+                    new_value={"image": "caddy:2.8-alpine", "credentials": {"username": "fredkiss3", "password": "s3cret"}},
                     service=service,
                 ),
             ]
@@ -2783,9 +2763,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
                 DockerDeploymentChange(
@@ -3176,9 +3156,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value=self.fake_docker_client.NONEXISTANT_IMAGE,
+                    new_value={
+                        "image": self.fake_docker_client.NONEXISTANT_IMAGE,
+                    },
                     service=service,
                 ),
             ]
@@ -3210,9 +3192,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3240,9 +3222,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3296,9 +3278,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3385,9 +3367,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3438,9 +3420,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3496,9 +3478,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3525,9 +3507,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3954,9 +3936,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -3998,9 +3980,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -4041,9 +4023,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
         change: DockerDeploymentChange = await last_deployment.changes.afirst()
         self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
-        self.assertEqual(DockerDeploymentChange.ChangeField.IMAGE, change.field)
-        self.assertEqual("valkey/valkey:7.2-alpine", change.new_value)
-        self.assertEqual("valkey/valkey:7.3-alpine", change.old_value)
+        self.assertEqual(DockerDeploymentChange.ChangeField.SOURCE, change.field)
+        self.assertEqual("valkey/valkey:7.2-alpine", change.new_value.get("image"))
+        self.assertEqual("valkey/valkey:7.3-alpine", change.old_value.get("image"))
 
         await service.arefresh_from_db()
         self.assertEqual("valkey/valkey:7.2-alpine", service.image)
@@ -4055,9 +4037,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]
@@ -4101,9 +4083,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.3-alpine",
+                    new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
             ]

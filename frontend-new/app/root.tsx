@@ -43,11 +43,13 @@ export function meta() {
   return [{ title: "ZaneOps" }] satisfies ReturnType<Route.MetaFunction>;
 }
 
+const ONE_HOUR = 1000 * 60 * 60;
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       placeholderData: keepPreviousData,
+      gcTime: ONE_HOUR,
       retry(failureCount, error) {
         // error responses are valid responses that react router can handle, so we don't want to retry them
         return !(error instanceof Response) && failureCount < 3;

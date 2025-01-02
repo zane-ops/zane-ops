@@ -107,10 +107,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             slug="main-app"
         ).first()
         self.assertIsNotNone(created_service)
-        credentials_changes = created_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.CREDENTIALS
+        change = created_service.unapplied_changes.filter(
+            field=DockerDeploymentChange.ChangeField.SOURCE
         ).first()
-        self.assertIsNone(credentials_changes)
+        self.assertIsNone(change.new_value.get("credentials"))
 
     def test_create_service_slug_is_created_if_not_specified(self):
         owner = self.loginUser()

@@ -36,14 +36,23 @@ export default [
             "env-variables",
             "./routes/services/services-env-variables.tsx"
           ),
-          route("settings", "./routes/services/services-settings.tsx")
+          route("settings", "./routes/services/settings/services-settings.tsx")
         ]),
 
-        route("deployments", "./routes/layouts/deployment-layout.tsx", [
-          index("./routes/deployments/deployment-logs.tsx"),
-          route("details", "./routes/deployments/deployment-details.tsx"),
-          route("http-logs", "./routes/deployments/deployment-http-logs.tsx")
-        ])
+        route(
+          "deployments/:deploymentHash",
+          "./routes/layouts/deployment-layout.tsx",
+          [
+            index("./routes/deployments/deployment-logs.tsx"),
+            route("details", "./routes/deployments/deployment-details.tsx"),
+            route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
+            route(
+              "redeploy",
+              "./routes/deployments/redeploy-old-deployment.tsx"
+            ),
+            route("cancel", "./routes/deployments/cancel-deployment.tsx")
+          ]
+        )
       ])
     ])
   ])
