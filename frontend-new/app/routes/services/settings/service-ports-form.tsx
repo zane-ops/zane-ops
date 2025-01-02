@@ -73,7 +73,7 @@ function NewServicePortForm() {
     if (fetcher.state === "idle" && !fetcher.data?.errors) {
       formRef.current?.reset();
     }
-  }, [fetcher.data]);
+  }, [fetcher.data, fetcher.state]);
   return (
     <fetcher.Form
       method="post"
