@@ -285,6 +285,13 @@ async function requestServiceChange({
       };
       break;
     }
+    case "ports": {
+      userData = {
+        forwarded: Number(formData.get("forwarded")?.toString() ?? ""),
+        host: Number((formData.get("host")?.toString() ?? "").trim() || 80)
+      };
+      break;
+    }
     default: {
       throw new Error("Unexpected field");
     }
