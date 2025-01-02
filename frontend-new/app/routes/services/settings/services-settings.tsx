@@ -27,7 +27,10 @@ export default function ServiceSettingsPage({
 
           <div className="w-full flex flex-col gap-5 pt-1 pb-8">
             <h2 className="text-lg text-grey">Details</h2>
-            <ServiceSlugForm service_slug={service_slug} />
+            <ServiceSlugForm
+              service_slug={service_slug}
+              project_slug={project_slug}
+            />
           </div>
         </section>
 
