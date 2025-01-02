@@ -3,6 +3,7 @@ import { CableIcon, ContainerIcon, InfoIcon } from "lucide-react";
 import { Link, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 
+import { toast } from "sonner";
 import { projectQueries, serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
@@ -297,6 +298,11 @@ async function requestServiceChange({
     }
   }
 
+  let toastId: string | number | undefined;
+  if (type === "DELETE") {
+    toastId = toast.loading("Sending change request...");
+    userData = undefined;
+  }
   const { error: errors, data } = await apiClient.PUT(
     "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
     {
@@ -318,6 +324,15 @@ async function requestServiceChange({
     }
   );
   if (errors) {
+    if (toastId) {
+      const fullErrorMessage = errors.errors.map((err) => err.detail).join(" ");
+
+      toast.error("Failed to send change request", {
+        description: fullErrorMessage,
+        id: toastId,
+        closeButton: true
+      });
+    }
     return {
       errors,
       userData
@@ -330,6 +345,10 @@ async function requestServiceChange({
       exact: true
     })
   ]);
+
+  if (toastId) {
+    toast.success("Change request sent", { id: toastId, closeButton: true });
+  }
 
   return {
     data
@@ -345,6 +364,7 @@ async function cancelServiceChange({
   service_slug: string;
   formData: FormData;
 }) {
+  const toastId = toast.loading("Cancelling service change...");
   const change_id = formData.get("change_id")?.toString();
   const { error: errors, data } = await apiClient.DELETE(
     "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
@@ -363,6 +383,7 @@ async function cancelServiceChange({
   );
 
   if (errors) {
+    toast.error("Failed to cancel change", { id: toastId, closeButton: true });
     return {
       errors
     };
@@ -372,6 +393,7 @@ async function cancelServiceChange({
     ...serviceQueries.single({ project_slug, service_slug }),
     exact: true
   });
+  toast.success("Change cancelled", { id: toastId, closeButton: true });
   return {
     data
   };

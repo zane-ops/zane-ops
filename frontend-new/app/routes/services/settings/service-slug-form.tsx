@@ -56,6 +56,7 @@ export function ServiceSlugForm({
               defaultValue={service_slug}
               disabled={!isEditing}
               aria-labelledby="slug-error"
+              aria-invalid={Boolean(errors.slug)}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted",
                 "disabled:border-transparent disabled:opacity-100"

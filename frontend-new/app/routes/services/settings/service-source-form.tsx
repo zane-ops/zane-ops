@@ -106,6 +106,7 @@ export function ServiceSourceForm({
               placeholder="image"
               defaultValue={serviceImage}
               aria-labelledby="image-error"
+              aria-invalid={Boolean(errors.new_value?.image)}
               data-edited={
                 serviceSourcheChange !== undefined ? "true" : undefined
               }
@@ -158,6 +159,7 @@ export function ServiceSourceForm({
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
                 "disabled:border-transparent disabled:opacity-100 disabled:select-none"
               )}
+              aria-invalid={Boolean(errors.new_value?.credentials?.username)}
               aria-labelledby="credentials.username-error"
             />
             {errors.new_value?.credentials?.username && (
@@ -193,6 +195,7 @@ export function ServiceSourceForm({
                   "data-[edited]:dark:disabled:bg-secondary-foreground",
                   "disabled:border-transparent disabled:opacity-100"
                 )}
+                aria-invalid={Boolean(errors.new_value?.credentials?.password)}
                 aria-labelledby="credentials.password-error"
               />
               {errors.new_value?.credentials?.password && (
