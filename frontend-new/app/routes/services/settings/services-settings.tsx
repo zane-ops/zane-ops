@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { CableIcon, ContainerIcon, InfoIcon } from "lucide-react";
-import { Link, useMatches } from "react-router";
+import { Link, useFetcher, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 
+import * as React from "react";
 import { toast } from "sonner";
 import { projectQueries, serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
 import { ServiceSlugForm } from "~/routes/services/settings/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/settings/service-source-form";
+import { ServiceURLsForm } from "~/routes/services/settings/service-urls-form";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/services-settings";
 
@@ -65,9 +67,12 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
               project_slug={project_slug}
             />
-            {/* 
             <hr className="w-full max-w-4xl border-border" />
-            <ServiceURLsForm className="w-full max-w-4xl" />
+            <ServiceURLsForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
+            {/* 
             <hr className="w-full max-w-4xl border-border" />
             <NetworkAliasesGroup className="w-full max-w-4xl border-border" /> */}
           </div>
@@ -154,6 +159,40 @@ export function useServiceQuery({
   });
 }
 
+export function useFetcherWithCallbacks({
+  onSettled,
+  onSuccess
+}: {
+  onSuccess?: (data: Awaited<ReturnType<typeof clientAction>>) => void;
+  onSettled?: (data: Awaited<ReturnType<typeof clientAction>>) => void;
+}) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const [data, setData] = React.useState(fetcher.data);
+  const onSuccessRef = React.useRef(onSuccess);
+  const onSettledRef = React.useRef(onSettled);
+
+  React.useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onSettledRef.current = onSettled;
+  });
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    if (fetcher.state === "idle" && fetcher.data) {
+      onSettledRef.current?.(fetcher.data);
+      if (!fetcher.data.errors) {
+        onSuccessRef.current?.(fetcher.data);
+      }
+    }
+  }, [fetcher.data, fetcher.state]);
+
+  return {
+    fetcher,
+    data,
+    reset: () => setData(undefined)
+  };
+}
+
 export async function clientAction({
   request,
   params
@@ -184,7 +223,7 @@ export async function clientAction({
       });
     }
     default: {
-      throw new Error("Unexpected intent");
+      throw new Error(`Unexpected intent ${intent}`);
     }
   }
 }
@@ -293,6 +332,24 @@ async function requestServiceChange({
       };
       break;
     }
+    case "urls":
+      {
+        const isRedirect = formData.get("is_redirect")?.toString() === "on";
+
+        userData = {
+          domain: formData.get("domain")?.toString() ?? "",
+          base_path: formData.get("base_path")?.toString(),
+          strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+          redirect_to: !isRedirect
+            ? undefined
+            : {
+                url: formData.get("redirect_to_url")?.toString() ?? "",
+                permanent:
+                  formData.get("redirect_to_permanent")?.toString() === "on"
+              }
+        };
+      }
+      break;
     default: {
       throw new Error("Unexpected field");
     }

@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher } from "react-router";
-import { toast } from "sonner";
 import { Code } from "~/components/code";
 import {
   Accordion,
@@ -20,6 +19,11 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  FieldSet,
+  FieldSetInput,
+  FieldSetLabel
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import {
   Tooltip,
@@ -31,6 +35,7 @@ import type { DockerService } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,
+  useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
 
@@ -177,7 +182,7 @@ function ServicePortItem({
             id={`cancel-${change_id}-form`}
             className="hidden"
           >
-            <input type="hidden" name="intent" value="cancel-service-change" />
+            <input type="hidden" name="change_field" value="ports" />
             <input type="hidden" name="change_id" value={change_id} />
           </cancelFetcher.Form>
         )}
@@ -198,9 +203,9 @@ function ServicePortItem({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  name="intent"
                   type="submit"
-                  value="request-service-change"
+                  name="intent"
+                  value="cancel-service-change"
                   form={`cancel-${change_id}-form`}
                   className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-focus:opacity-100"
                 >
@@ -218,9 +223,9 @@ function ServicePortItem({
                     variant="ghost"
                     type="submit"
                     form={`delete-${id}-form`}
-                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                     name="intent"
                     value="request-service-change"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <Trash2Icon size={15} className="flex-none text-red-400" />
                     <span className="sr-only">Delete exposed port</span>
@@ -364,38 +369,28 @@ function ServicePortItem({
 
 function NewServicePortForm() {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const fetcher = useFetcher<typeof clientAction>();
+  const { fetcher, data, reset } = useFetcherWithCallbacks({
+    onSettled(data) {
+      if (data.errors) {
+        const errors = getFormErrorsFromResponseData(data?.errors);
+        const key = Object.keys(errors.new_value ?? {})[0];
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+      }
+    },
+    onSuccess() {
+      formRef.current?.reset();
+      (
+        formRef.current?.elements.namedItem("forwarded") as HTMLInputElement
+      )?.focus();
+    }
+  });
   const isPending = fetcher.state !== "idle";
 
-  const [data, setData] = React.useState(fetcher.data);
   const errors = getFormErrorsFromResponseData(data?.errors);
 
-  React.useEffect(() => {
-    setData(fetcher.data);
-    const hostInput = formRef.current?.elements.namedItem(
-      "host"
-    ) as HTMLInputElement;
-
-    const forwardedInput = formRef.current?.elements.namedItem(
-      "forwarded"
-    ) as HTMLInputElement;
-
-    const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-    if (fetcher.state === "idle" && fetcher.data) {
-      if (!fetcher.data.errors) {
-        formRef.current?.reset();
-        forwardedInput?.focus();
-      } else {
-        if (errors.new_value?.host) {
-          hostInput?.focus();
-        } else if (errors.new_value?.forwarded) {
-          forwardedInput?.focus();
-        }
-      }
-    }
-  }, [fetcher.data, fetcher.state]);
-
-  console.log({ errors, data });
   return (
     <fetcher.Form
       method="post"
@@ -404,36 +399,20 @@ function NewServicePortForm() {
     >
       <input type="hidden" name="change_field" value="ports" />
       <input type="hidden" name="change_type" value="ADD" />
-      <fieldset className="flex-1 inline-flex flex-col gap-1">
-        <label className="text-gray-400">Forwarded port</label>
-        <Input
-          placeholder="ex: 8080"
-          name="forwarded"
-          aria-invalid={Boolean(errors.new_value?.forwarded)}
-          aria-labelledby="forwarded-error"
-        />
-        {errors.new_value?.forwarded && (
-          <span id="forwarded-error" className="text-red-500 text-sm">
-            {errors.new_value?.forwarded}
-          </span>
-        )}
-      </fieldset>
-      <fieldset className="flex-1 inline-flex flex-col gap-1">
-        <label className="text-gray-400">Host port</label>
-        <Input
-          placeholder="ex: 80"
-          defaultValue={80}
-          name="host"
-          aria-invalid={Boolean(errors.new_value?.host)}
-          aria-labelledby="host-error"
-        />
-
-        {errors.new_value?.host && (
-          <span id="host-error" className="text-red-500 text-sm">
-            {errors.new_value?.host}
-          </span>
-        )}
-      </fieldset>
+      <FieldSet
+        errors={errors.new_value?.forwarded}
+        className="flex-1 inline-flex flex-col gap-1"
+      >
+        <FieldSetLabel className="text-gray-400">Forwarded port</FieldSetLabel>
+        <FieldSetInput placeholder="ex: 8080" name="forwarded" />
+      </FieldSet>
+      <FieldSet
+        errors={errors.new_value?.host}
+        className="flex-1 inline-flex flex-col gap-1"
+      >
+        <FieldSetLabel className="text-gray-400">Host port</FieldSetLabel>
+        <FieldSetInput placeholder="ex: 80" defaultValue={80} name="host" />
+      </FieldSet>
 
       <div className="flex gap-3 items-center pt-7 w-full md:w-auto">
         <SubmitButton
@@ -456,10 +435,7 @@ function NewServicePortForm() {
           )}
         </SubmitButton>
         <Button
-          onClick={() => {
-            console.log("reset");
-            setData(undefined);
-          }}
+          onClick={reset}
           variant="outline"
           type="reset"
           className="flex-1"
