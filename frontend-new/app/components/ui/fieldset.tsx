@@ -11,6 +11,7 @@ export type FieldSetProps = {
 
 type FieldSetContext = {
   id: string;
+  name?: string;
   errors?: string | string[];
 };
 
@@ -20,6 +21,7 @@ export function FieldSet({
   className,
   errors,
   children,
+  name,
   ...props
 }: FieldSetProps) {
   const id = React.useId();
@@ -34,8 +36,8 @@ export function FieldSet({
   );
 
   return (
-    <FieldSetContext value={{ id, errors }}>
-      <fieldset className={className}>
+    <FieldSetContext value={{ id, errors, name }}>
+      <fieldset className={className} {...props}>
         {children}
         {!isErrorComponentInChildren && errors && <FieldSetErrors />}
       </fieldset>
@@ -93,7 +95,7 @@ export function FieldSetInput(
     );
   }
 
-  const { id, errors } = ctx;
+  const { id, errors, name } = ctx;
 
   return (
     <Input
@@ -101,6 +103,7 @@ export function FieldSetInput(
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}
       {...props}
+      name={props.name ?? name}
     />
   );
 }
