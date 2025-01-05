@@ -62,13 +62,11 @@ export function ServiceCommandForm({
       <input type="hidden" name="change_type" value="UPDATE" />
 
       {startingCommandChange !== undefined && (
-        <>
-          <input
-            type="hidden"
-            name="change_id"
-            value={startingCommandChange.id}
-          />
-        </>
+        <input
+          type="hidden"
+          name="change_id"
+          value={startingCommandChange.id}
+        />
       )}
 
       <FieldSet

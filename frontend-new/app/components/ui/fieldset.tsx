@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
+import { Select } from "~/components/ui/select";
 
 import { cn } from "~/lib/utils";
 
@@ -118,7 +119,7 @@ export function FieldSetCheckbox(
 
   if (!ctx) {
     throw new Error(
-      "<FieldSetInput> component should be inside of a <FieldSet> component"
+      "<FieldSetCheckbox> component should be inside of a <FieldSet> component"
     );
   }
 
@@ -126,6 +127,26 @@ export function FieldSetCheckbox(
 
   return (
     <Checkbox
+      id={id}
+      aria-invalid={Boolean(errors)}
+      aria-labelledby={`${id}-error`}
+      {...props}
+    />
+  );
+}
+
+export function FieldSetSelect(props: React.ComponentProps<typeof Select>) {
+  const ctx = React.use(FieldSetContext);
+
+  if (!ctx) {
+    throw new Error(
+      "<FieldSetSelect> component should be inside of a <FieldSet> component"
+    );
+  }
+
+  const { id, errors } = ctx;
+  return (
+    <Select
       id={id}
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}

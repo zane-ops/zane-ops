@@ -25,6 +25,7 @@ import { projectQueries, serviceQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
+import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
 import { ServiceSlugForm } from "~/routes/services/settings/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/settings/service-source-form";
@@ -111,7 +112,10 @@ export default function ServiceSettingsPage({
               project_slug={project_slug}
               service_slug={service_slug}
             />
-            {/* <ServiceHealthcheckForm className="w-full max-w-4xl border-border" /> */}
+            <ServiceHealthcheckForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
           </div>
         </section>
       </div>
