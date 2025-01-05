@@ -1,17 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
-import { CableIcon, ContainerIcon, InfoIcon } from "lucide-react";
+import {
+  CableIcon,
+  CheckIcon,
+  ContainerIcon,
+  CopyIcon,
+  GlobeLockIcon,
+  InfoIcon
+} from "lucide-react";
 import { Link, useFetcher, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 
 import * as React from "react";
 import { toast } from "sonner";
+import { Code } from "~/components/code";
+import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { projectQueries, serviceQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
 import { ServiceSlugForm } from "~/routes/services/settings/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/settings/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/settings/service-urls-form";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
 
 export default function ServiceSettingsPage({
@@ -72,9 +88,11 @@ export default function ServiceSettingsPage({
               project_slug={project_slug}
               service_slug={service_slug}
             />
-            {/* 
             <hr className="w-full max-w-4xl border-border" />
-            <NetworkAliasesGroup className="w-full max-w-4xl border-border" /> */}
+            <NetworkAliasesGroup
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
           </div>
         </section>
       </div>
@@ -139,6 +157,77 @@ export default function ServiceSettingsPage({
           </ul>
         </nav>
       </aside>
+    </div>
+  );
+}
+
+function NetworkAliasesGroup({
+  project_slug,
+  service_slug
+}: {
+  project_slug: string;
+  service_slug: string;
+}) {
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug
+  });
+  const [hasCopied, startTransition] = React.useTransition();
+
+  return (
+    <div className="flex flex-col gap-5 w-full max-w-4xl border-border">
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg">Network alias</h3>
+        <p className="text-gray-400">
+          You can reach this service from within the same project using this
+          value
+        </p>
+      </div>
+      <div className="border border-border px-4 pb-4 pt-1 rounded-md flex items-center gap-4 group">
+        <GlobeLockIcon
+          className="text-grey flex-none hidden md:block"
+          size={20}
+        />
+        <div className="flex flex-col gap-0.5">
+          <div className="flex gap-2 items-center">
+            <span className="text-lg break-all">
+              {service.network_aliases[0]}
+            </span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "px-2.5 py-0.5 focus-visible:opacity-100 group-hover:opacity-100",
+                      hasCopied ? "opacity-100" : "md:opacity-0"
+                    )}
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(service.network_aliases[0])
+                        .then(() => {
+                          // show pending state (which is success state), until the user has stopped clicking the button
+                          startTransition(() => wait(1000));
+                        });
+                    }}
+                  >
+                    {hasCopied ? (
+                      <CheckIcon size={15} className="flex-none" />
+                    ) : (
+                      <CopyIcon size={15} className="flex-none" />
+                    )}
+                    <span className="sr-only">Copy network alias</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy network alias</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <small className="text-grey">
+            You can also simply use <Code>{service.network_alias}</Code>
+          </small>
+        </div>
+      </div>
     </div>
   );
 }
