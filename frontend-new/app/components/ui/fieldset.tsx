@@ -147,7 +147,6 @@ export function FieldSetSelect(props: React.ComponentProps<typeof Select>) {
   const { id, errors } = ctx;
   return (
     <Select
-      id={id}
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}
       {...props}

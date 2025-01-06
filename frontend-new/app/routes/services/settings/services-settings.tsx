@@ -21,7 +21,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { projectQueries, serviceQueries } from "~/lib/queries";
+import {
+  type DockerService,
+  projectQueries,
+  serviceQueries
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
@@ -324,13 +328,15 @@ export async function clientAction({
         formData
       });
     }
-    case "request-service-change": {
+    case "request-service-change":
+    case "remove-service-healthcheck": {
       return requestServiceChange({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         formData
       });
     }
+
     case "cancel-service-change": {
       return cancelServiceChange({
         project_slug: params.projectSlug,
@@ -448,29 +454,46 @@ async function requestServiceChange({
       };
       break;
     }
-    case "urls":
-      {
-        const isRedirect = formData.get("is_redirect")?.toString() === "on";
+    case "urls": {
+      const isRedirect = formData.get("is_redirect")?.toString() === "on";
 
-        userData = {
-          domain: formData.get("domain")?.toString() ?? "",
-          base_path: formData.get("base_path")?.toString(),
-          strip_prefix: formData.get("strip_prefix")?.toString() === "on",
-          redirect_to: !isRedirect
-            ? undefined
-            : {
-                url: formData.get("redirect_to_url")?.toString() ?? "",
-                permanent:
-                  formData.get("redirect_to_permanent")?.toString() === "on"
-              }
-        };
-      }
+      userData = {
+        domain: formData.get("domain")?.toString() ?? "",
+        base_path: formData.get("base_path")?.toString(),
+        strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+        redirect_to: !isRedirect
+          ? undefined
+          : {
+              url: formData.get("redirect_to_url")?.toString() ?? "",
+              permanent:
+                formData.get("redirect_to_permanent")?.toString() === "on"
+            }
+      };
       break;
-    case "command":
-      {
-        userData = formData.get("command")?.toString().trim();
-      }
+    }
+    case "command": {
+      userData = formData.get("command")?.toString().trim();
       break;
+    }
+    case "healthcheck": {
+      const removeHealthcheck =
+        formData.get("intent")?.toString() === "remove-service-healthcheck";
+      userData = removeHealthcheck
+        ? null
+        : {
+            type: formData.get("type")?.toString() as NonNullable<
+              DockerService["healthcheck"]
+            >["type"],
+            value: formData.get("value")?.toString() ?? "",
+            timeout_seconds: Number(
+              formData.get("timeout_seconds")?.toString() || 30
+            ),
+            interval_seconds: Number(
+              formData.get("interval_seconds")?.toString() || 30
+            )
+          };
+      break;
+    }
     default: {
       throw new Error("Unexpected field");
     }

@@ -1,6 +1,12 @@
-import { CheckIcon, LoaderIcon, Trash2Icon, Undo2Icon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckIcon,
+  LoaderIcon,
+  Trash2Icon,
+  Undo2Icon
+} from "lucide-react";
 import * as React from "react";
-import { Form } from "react-router";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -37,19 +43,46 @@ export function ServiceHealthcheckForm({
     service_slug
   });
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+
   const { fetcher, data, reset } = useFetcherWithCallbacks({
     onSettled(data) {
       if (!data.errors) {
         formRef.current?.reset();
-        setHealthCheckType("none");
+        const service = data.data;
+        let updatedHealthCheck = healthcheck;
+        if ("healthcheck" in service) {
+          const healthcheckChange = service.unapplied_changes.find(
+            (change) => change.field === "healthcheck"
+          );
+          const newHealthCheck =
+            healthcheckChange?.new_value as DockerService["healthcheck"];
+          updatedHealthCheck =
+            newHealthCheck === null
+              ? null
+              : newHealthCheck ?? service?.healthcheck;
+        }
+
+        setHealthCheckType(updatedHealthCheck?.type ?? "none");
       } else {
-        (
-          formRef.current?.elements.namedItem("command") as HTMLInputElement
-        )?.focus();
+        const errors = getFormErrorsFromResponseData(data?.errors);
+        const key = Object.keys(errors.new_value ?? {})[0];
+
+        if (key === "type") {
+          SelectTriggerRef.current?.focus();
+          return;
+        }
+
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
       }
     }
   });
-  const healthcheckChange = service?.unapplied_changes.find(
+
+  const healthcheckChange = service.unapplied_changes.find(
     (change) => change.field === "healthcheck"
   );
 
@@ -65,6 +98,9 @@ export function ServiceHealthcheckForm({
   >(healthcheck?.type ?? "none");
 
   const isPending = fetcher.state !== "idle";
+  const non_field_errors = Array.isArray(errors.new_value)
+    ? [...errors.new_value, ...(errors.non_field_errors ?? [])]
+    : errors.non_field_errors;
 
   return (
     <fetcher.Form
@@ -128,6 +164,13 @@ export function ServiceHealthcheckForm({
       //   }}
       className="flex flex-col gap-4 w-full items-start max-w-4xl"
     >
+      {non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{non_field_errors}</AlertDescription>
+        </Alert>
+      )}
       <input type="hidden" name="change_field" value="healthcheck" />
       <input type="hidden" name="change_type" value="UPDATE" />
 
@@ -149,13 +192,14 @@ export function ServiceHealthcheckForm({
             name="type"
             className="flex flex-col gap-1.5 flex-1"
           >
-            <FieldSetLabel className="text-muted-foreground">
+            <label htmlFor="healthcheck_type" className="text-muted-foreground">
               Type
-            </FieldSetLabel>
+            </label>
             <FieldSetSelect
               name="type"
               disabled={healthcheckChange !== undefined}
               value={healthcheckType}
+              defaultValue={healthcheckType}
               onValueChange={(value) =>
                 setHealthCheckType(
                   value as NonNullable<DockerService["healthcheck"]>["type"]
@@ -163,6 +207,8 @@ export function ServiceHealthcheckForm({
               }
             >
               <SelectTrigger
+                id="healthcheck_type"
+                ref={SelectTriggerRef}
                 className={cn(
                   "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
                   "data-disabled:opacity-100 data-disabled:border-transparent",
@@ -312,8 +358,8 @@ export function ServiceHealthcheckForm({
 
             {service?.healthcheck !== null && healthcheck !== null && (
               <SubmitButton
-                value="true"
-                name="remove"
+                value="remove-service-healthcheck"
+                name="intent"
                 isPending={isPending}
                 variant="destructive"
                 className="inline-flex gap-1 items-center"
