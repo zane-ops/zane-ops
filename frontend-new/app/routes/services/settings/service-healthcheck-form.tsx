@@ -106,62 +106,6 @@ export function ServiceHealthcheckForm({
     <fetcher.Form
       ref={formRef}
       method="post"
-      //   action={(formData) => {
-      //     const remove = formData.get("remove")?.toString() === "true";
-      //     if (remove) {
-      //       removeHealthcheckCommandMutation.mutate(
-      //         {
-      //           type: "UPDATE",
-      //           new_value: null
-      //         },
-      //         {
-      //           onSuccess(errors) {
-      //             if (!errors) {
-      //               formRef.current?.reset();
-      //               setHealthCheckType("none");
-      //             }
-      //           }
-      //         }
-      //       );
-      //       return;
-      //     }
-      //     const revertChange =
-      //       formData.get("revert_change")?.toString() === "true";
-      //     if (revertChange && healthcheckChange?.id) {
-      //       cancelHealthcheckChangeMutation.mutate(healthcheckChange.id, {
-      //         onSuccess() {
-      //           setHealthCheckType(service?.healthcheck?.type ?? "none");
-      //           formRef.current?.reset();
-      //         }
-      //       });
-      //       return;
-      //     }
-
-      //     updateHealthcheckCommandMutation.mutate(
-      //       {
-      //         type: "UPDATE",
-      //         new_value: {
-      //           type: formData.get("type")?.toString() as NonNullable<
-      //             DockerService["healthcheck"]
-      //           >["type"],
-      //           value: formData.get("value")?.toString() ?? "",
-      //           timeout_seconds: Number(
-      //             formData.get("timeout_seconds")?.toString() || 30
-      //           ),
-      //           interval_seconds: Number(
-      //             formData.get("interval_seconds")?.toString() || 30
-      //           )
-      //         }
-      //       },
-      //       {
-      //         onSuccess(errors) {
-      //           if (!errors) {
-      //             formRef.current?.reset();
-      //           }
-      //         }
-      //       }
-      //     );
-      //   }}
       className="flex flex-col gap-4 w-full items-start max-w-4xl"
     >
       {non_field_errors && (

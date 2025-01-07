@@ -29,6 +29,7 @@ import {
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
+import { ServiceDeployURLForm } from "~/routes/services/settings/service-deploy-url-form";
 import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
 import { ServiceSlugForm } from "~/routes/services/settings/service-slug-form";
@@ -117,6 +118,11 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
             />
             <ServiceHealthcheckForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
+            <hr className="w-full max-w-4xl border-border" />
+            <ServiceDeployURLForm
               project_slug={project_slug}
               service_slug={service_slug}
             />
@@ -336,7 +342,6 @@ export async function clientAction({
         formData
       });
     }
-
     case "cancel-service-change": {
       return cancelServiceChange({
         project_slug: params.projectSlug,
@@ -344,10 +349,59 @@ export async function clientAction({
         formData
       });
     }
+    case "regenerate-deploy-token": {
+      return regenerateDeployToken({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        formData
+      });
+    }
     default: {
-      throw new Error(`Unexpected intent ${intent}`);
+      throw new Error(`Unexpected intent \`${intent}\``);
     }
   }
+}
+
+async function regenerateDeployToken({
+  project_slug,
+  service_slug,
+  formData
+}: {
+  project_slug: string;
+  service_slug: string;
+  formData: FormData;
+}) {
+  const toastId = toast.loading("Regenerating service deploy URL...");
+  const { error: errors } = await apiClient.PATCH(
+    "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          service_slug
+        }
+      }
+    }
+  );
+  if (errors) {
+    const fullErrorMessage = errors.errors.map((err) => err.detail).join(" ");
+
+    toast.error("Failed to regenerate the deloy URL", {
+      description: fullErrorMessage,
+      id: toastId,
+      closeButton: true
+    });
+  }
+
+  await queryClient.invalidateQueries({
+    ...serviceQueries.single({ project_slug, service_slug }),
+    exact: true
+  });
+
+  toast.success("Done", { id: toastId, closeButton: true });
 }
 
 async function updateServiceSlug({
@@ -540,12 +594,10 @@ async function requestServiceChange({
     };
   }
 
-  await Promise.all([
-    queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug: service_slug }),
-      exact: true
-    })
-  ]);
+  await queryClient.invalidateQueries({
+    ...serviceQueries.single({ project_slug, service_slug: service_slug }),
+    exact: true
+  });
 
   if (toastId) {
     toast.success("Change request sent", { id: toastId, closeButton: true });
