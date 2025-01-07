@@ -49,7 +49,7 @@ from .serializers import (
     DeploymentListPagination,
     DeploymentLogsPagination,
     DeploymentHttpLogsFilterSet,
-    DockerServiceDeployServiceSerializer,
+    DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
 )
 from ..dtos import URLDto, VolumeDto
@@ -84,6 +84,7 @@ from ..temporal import (
     workflow_signal,
     CancelDeploymentSignalInput,
 )
+from ..utils import generate_random_chars
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -121,6 +122,7 @@ class CreateDockerServiceAPIView(APIView):
                     service = DockerRegistryService.objects.create(
                         slug=service_slug,
                         project=project,
+                        deploy_token=generate_random_chars(20),
                     )
 
                     service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
@@ -476,7 +478,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        request=DockerServiceDeployServiceSerializer,
+        request=DockerServiceDeployRequestSerializer,
         operation_id="applyDeploymentChanges",
         summary="Deploy a docker service",
         description="Apply all pending changes for the service and trigger a new deployment.",
@@ -503,7 +505,7 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 f" does not exist within the project `{project_slug}`"
             )
 
-        form = DockerServiceDeployServiceSerializer(
+        form = DockerServiceDeployRequestSerializer(
             data=request.data if request.data is not None else {}
         )
         if form.is_valid(raise_exception=True):

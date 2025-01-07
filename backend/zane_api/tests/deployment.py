@@ -524,9 +524,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
                 "credentials": {
-                     "username": "",
-                     "password": "supersecret123",
-                }
+                    "username": "",
+                    "password": "supersecret123",
+                },
             },
         }
         response = self.client.put(
@@ -2073,11 +2073,10 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                         "credentials": {
                             "username": "fredkiss3",
                             "password": "5ec43t",
-                        }
+                        },
                     },
                     service=service,
                 ),
-               
             ]
         )
 
@@ -2729,7 +2728,10 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine", "credentials": {"username": "fredkiss3", "password": "s3cret"}},
+                    new_value={
+                        "image": "caddy:2.8-alpine",
+                        "credentials": {"username": "fredkiss3", "password": "s3cret"},
+                    },
                     service=service,
                 ),
             ]

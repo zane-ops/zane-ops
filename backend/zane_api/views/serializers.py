@@ -271,8 +271,44 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 # ==============================
 
 
-class DockerServiceDeployServiceSerializer(serializers.Serializer):
+class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
+
+
+# ====================================
+#    Docker servide quick deploy     #
+# ====================================
+
+
+class DockerServiceQuickDeployRequestSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(required=False, allow_blank=True)
+    new_image = serializers.CharField(required=False)
+
+    def validate_new_image(self, image: str | None):
+        if image is None:
+            return None
+
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+
+        do_image_exists = check_if_docker_image_exists(
+            image,
+            credentials=(
+                dict(service.credentials) if service.credentials is not None else None
+            ),
+        )
+        if not do_image_exists:
+            raise serializers.ValidationError(
+                {
+                    "image": [
+                        f"Either the image `{image}` doesn't exist, or the provided credentials are invalid."
+                        f" Did you forget to include the credentials?"
+                    ]
+                }
+            )
+
+        return image
 
 
 # ==============================

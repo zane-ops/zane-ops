@@ -154,4 +154,15 @@ urlpatterns += [
         views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
         name="services.docker.deployment_http_logs",
     ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/regenerate-deploy-token/?$",
+        views.RegenerateServiceDeployTokenAPIView.as_view(),
+        name="services.docker.regenerate_deploy_token",
+    ),
+    re_path(
+        rf"^deploy-service/docker/(?P<deploy_token>[a-zA-Z0-9-_]+)?$",
+        views.QuickDeployServiceAPIView.as_view(),
+        name="services.docker.quick_deploy",
+    ),
 ]
