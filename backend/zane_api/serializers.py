@@ -187,6 +187,7 @@ class DockerServiceSerializer(ModelSerializer):
             "credentials",
             "urls",
             "volumes",
+            "deploy_token",
             "ports",
             "env_variables",
             "network_aliases",

@@ -3309,6 +3309,10 @@ components:
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
+        deploy_token:
+          type: string
+          nullable: true
+          maxLength: 25
         ports:
           type: array
           items:
@@ -3346,6 +3350,7 @@ components:
       - command
       - created_at
       - credentials
+      - deploy_token
       - env_variables
       - healthcheck
       - id
@@ -3607,6 +3612,10 @@ components:
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
+        deploy_token:
+          type: string
+          nullable: true
+          maxLength: 25
         ports:
           type: array
           items:
@@ -3644,6 +3653,7 @@ components:
       - command
       - created_at
       - credentials
+      - deploy_token
       - env_variables
       - healthcheck
       - id
@@ -4765,6 +4775,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/DockerCredentialRequest'
           nullable: true
+        deploy_token:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 25
         network_alias:
           type: string
           nullable: true
@@ -5403,6 +5418,36 @@ components:
       - attr
       - code
       - detail
+    RegenerateServiceDeployTokenDeployTokenErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deploy_token
+          type: string
+          description: '* `deploy_token` - deploy_token'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenError:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
@@ -5413,6 +5458,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDeployTokenErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNetworkAliasErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent'
@@ -5435,6 +5481,7 @@ components:
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
+          deploy_token: '#/components/schemas/RegenerateServiceDeployTokenDeployTokenErrorComponent'
           network_alias: '#/components/schemas/RegenerateServiceDeployTokenNetworkAliasErrorComponent'
           resource_limits.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent'
           resource_limits.cpus: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent'
@@ -7054,7 +7101,7 @@ components:
           type: boolean
         redirect_to:
           allOf:
-          - $ref: '#/components/schemas/URLRedirect'
+          - $ref: '#/components/schemas/URLRedirectModel'
           nullable: true
       required:
       - base_path
@@ -7081,12 +7128,12 @@ components:
           type: boolean
         redirect_to:
           allOf:
-          - $ref: '#/components/schemas/URLRedirectRequest'
+          - $ref: '#/components/schemas/URLRedirectModelRequest'
           nullable: true
       required:
       - domain
       - redirect_to
-    URLRedirect:
+    URLRedirectModel:
       type: object
       properties:
         url:
@@ -7097,6 +7144,18 @@ components:
           default: false
       required:
       - permanent
+      - url
+    URLRedirectModelRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+        permanent:
+          type: boolean
+          default: false
+      required:
       - url
     URLRedirectRequest:
       type: object
