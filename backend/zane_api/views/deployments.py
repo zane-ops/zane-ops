@@ -15,7 +15,7 @@ from ..models import (
 )
 from django.db.models import Q
 import django.db.transaction as transaction
-from .serializers import DockerServiceQuickDeployRequestSerializer
+from .serializers import DockerServiceWebhookDeployRequestSerializer
 from django.conf import settings
 from ..temporal.shared import DockerDeploymentDetails
 from ..temporal.main import start_workflow
@@ -66,7 +66,7 @@ class WebhookDeployServiceAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        request=DockerServiceQuickDeployRequestSerializer,
+        request=DockerServiceWebhookDeployRequestSerializer,
         operation_id="quickDeployService",
         summary="Quickly Deploy a docker service",
         description="trigger a new deployment.",
@@ -84,7 +84,7 @@ class WebhookDeployServiceAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        form = DockerServiceQuickDeployRequestSerializer(
+        form = DockerServiceWebhookDeployRequestSerializer(
             data=request.data if request.data is not None else {},
             context={"service": service},
         )

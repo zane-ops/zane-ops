@@ -276,11 +276,11 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
 
 
 # ====================================
-#    Docker servide quick deploy     #
+#    Docker servide webhook deploy   #
 # ====================================
 
 
-class DockerServiceQuickDeployRequestSerializer(serializers.Serializer):
+class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
     new_image = serializers.CharField(required=False)
 

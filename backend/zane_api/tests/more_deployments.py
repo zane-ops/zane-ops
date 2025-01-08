@@ -4,7 +4,7 @@ from rest_framework import status
 from ..models import Project, DockerRegistryService, DockerDeployment
 
 
-class DockerServiceQuickDeployViewTests(AuthAPITestCase):
+class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
     def test_generate_deploy_token_for_service(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
@@ -41,7 +41,7 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
         self.assertIsNotNone(created_service.deploy_token)
         self.assertEqual(20, len(created_service.deploy_token))
 
-    async def test_quick_deploy_service(self):
+    async def test_webhook_deploy_service(self):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
 
         response = await self.async_client.put(
@@ -57,7 +57,7 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
-    async def test_quick_deploy_service_unauthenticated(self):
+    async def test_webhook_deploy_service_unauthenticated(self):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
         await self.async_client.alogout()
 
@@ -74,7 +74,7 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
-    async def test_quick_deploy_service_with_image_and_commit_message(self):
+    async def test_webhook_deploy_service_with_image_and_commit_message(self):
         _, service = await self.acreate_and_deploy_redis_docker_service()
 
         response = await self.async_client.put(
