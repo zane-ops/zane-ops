@@ -67,8 +67,8 @@ class WebhookDeployServiceAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=DockerServiceWebhookDeployRequestSerializer,
-        operation_id="quickDeployService",
-        summary="Quickly Deploy a docker service",
+        operation_id="webhookDeployService",
+        summary="Webhook to deploy a docker service",
         description="trigger a new deployment.",
     )
     def put(self, request: Request, deploy_token: str):

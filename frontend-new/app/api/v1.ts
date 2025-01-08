@@ -36,10 +36,10 @@ export interface paths {
   };
   "/api/deploy-service/docker/{deploy_token}": {
     /**
-     * Quickly Deploy a docker service
+     * Webhook to deploy a docker service
      * @description trigger a new deployment.
      */
-    put: operations["quickDeployService"];
+    put: operations["webhookDeployService"];
   };
   "/api/docker/check-port/": {
     /**
@@ -624,7 +624,7 @@ export interface components {
      * @enum {string}
      */
     DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
-    DockerServiceQuickDeployRequestRequest: {
+    DockerServiceWebhookDeployRequestRequest: {
       commit_message?: string;
       new_image?: string;
     };
@@ -1243,58 +1243,6 @@ export interface components {
     ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    QuickDeployServiceCommitMessageErrorComponent: {
-      /**
-       * @description * `commit_message` - commit_message
-       * @enum {string}
-       */
-      attr: "commit_message";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    QuickDeployServiceError: components["schemas"]["QuickDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["QuickDeployServiceCommitMessageErrorComponent"] | components["schemas"]["QuickDeployServiceNewImageErrorComponent"];
-    QuickDeployServiceErrorResponse400: components["schemas"]["QuickDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
-    QuickDeployServiceNewImageErrorComponent: {
-      /**
-       * @description * `new_image` - new_image
-       * @enum {string}
-       */
-      attr: "new_image";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    QuickDeployServiceNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    QuickDeployServiceValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["QuickDeployServiceError"][];
-    };
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenCommandErrorComponent: {
       /**
@@ -2451,6 +2399,58 @@ export interface components {
       host_path?: string;
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
+    WebhookDeployServiceCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookDeployServiceError: components["schemas"]["WebhookDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDeployServiceNewImageErrorComponent"];
+    WebhookDeployServiceErrorResponse400: components["schemas"]["WebhookDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookDeployServiceNewImageErrorComponent: {
+      /**
+       * @description * `new_image` - new_image
+       * @enum {string}
+       */
+      attr: "new_image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookDeployServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookDeployServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookDeployServiceError"][];
+    };
   };
   responses: never;
   parameters: never;
@@ -2627,10 +2627,10 @@ export interface operations {
     };
   };
   /**
-   * Quickly Deploy a docker service
+   * Webhook to deploy a docker service
    * @description trigger a new deployment.
    */
-  quickDeployService: {
+  webhookDeployService: {
     parameters: {
       path: {
         deploy_token: string;
@@ -2638,9 +2638,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["DockerServiceQuickDeployRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceQuickDeployRequestRequest"];
-        "multipart/form-data": components["schemas"]["DockerServiceQuickDeployRequestRequest"];
+        "application/json": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
       };
     };
     responses: {
@@ -2651,7 +2651,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["QuickDeployServiceErrorResponse400"];
+          "application/json": components["schemas"]["WebhookDeployServiceErrorResponse400"];
         };
       };
       401: {

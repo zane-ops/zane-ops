@@ -352,9 +352,9 @@ paths:
           description: No response body
   /api/deploy-service/docker/{deploy_token}:
     put:
-      operationId: quickDeployService
+      operationId: webhookDeployService
       description: trigger a new deployment.
-      summary: Quickly Deploy a docker service
+      summary: Webhook to deploy a docker service
       parameters:
       - in: path
         name: deploy_token
@@ -368,21 +368,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceQuickDeployRequestRequest'
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceQuickDeployRequestRequest'
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceQuickDeployRequestRequest'
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
       security:
       - cookieAuth: []
+      - {}
       responses:
         '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QuickDeployServiceErrorResponse400'
+                $ref: '#/components/schemas/WebhookDeployServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -3825,7 +3826,7 @@ components:
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
         * `SLEEPING` - Sleeping
-    DockerServiceQuickDeployRequestRequest:
+    DockerServiceWebhookDeployRequestRequest:
       type: object
       properties:
         commit_message:
@@ -5200,111 +5201,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    QuickDeployServiceCommitMessageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - commit_message
-          type: string
-          description: '* `commit_message` - commit_message'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    QuickDeployServiceError:
-      oneOf:
-      - $ref: '#/components/schemas/QuickDeployServiceNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/QuickDeployServiceCommitMessageErrorComponent'
-      - $ref: '#/components/schemas/QuickDeployServiceNewImageErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/QuickDeployServiceNonFieldErrorsErrorComponent'
-          commit_message: '#/components/schemas/QuickDeployServiceCommitMessageErrorComponent'
-          new_image: '#/components/schemas/QuickDeployServiceNewImageErrorComponent'
-    QuickDeployServiceErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/QuickDeployServiceValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/QuickDeployServiceValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    QuickDeployServiceNewImageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_image
-          type: string
-          description: '* `new_image` - new_image'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    QuickDeployServiceNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    QuickDeployServiceValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuickDeployServiceError'
-      required:
-      - errors
-      - type
     RedeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7518,6 +7414,111 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
+    WebhookDeployServiceCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
+          new_image: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
+    WebhookDeployServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookDeployServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookDeployServiceNewImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_image
+          type: string
+          description: '* `new_image` - new_image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDeployServiceError'
+      required:
+      - errors
+      - type
   securitySchemes:
     cookieAuth:
       type: apiKey
