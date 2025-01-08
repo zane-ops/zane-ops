@@ -1,6 +1,7 @@
 import {
   CheckIcon,
   CopyIcon,
+  ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
   RefreshCcwIcon
@@ -53,12 +54,24 @@ export function ServiceDeployURLForm({
         <fieldset className="w-full flex flex-col gap-5">
           <legend className="text-lg">Deploy webhook URL</legend>
           <p className="text-gray-400">
-            Your private URL to trigger a deploy for this server. Remember to
+            Your private URL to&nbsp;
+            <a
+              href="#"
+              target="_blank"
+              className="text-link underline inline-flex gap-1 items-center"
+            >
+              trigger a deployment <ExternalLinkIcon size={12} />
+            </a>
+            &nbsp;for this server (e.g., from a CI/CD pipeline). Remember to
             keep this a secret.
           </p>
           <div className="flex flex-col md:flex-row gap-2 md:items-start items-stretch">
+            <label htmlFor="deploy-url" className="sr-only">
+              URL
+            </label>
             <Input
               disabled
+              id="deploy-url"
               placeholder="<empty>"
               className="placeholder-shown:font-mono bg-muted disabled:opacity-100"
               value={deployURL ?? ""}
@@ -88,7 +101,7 @@ export function ServiceDeployURLForm({
                       ) : (
                         <CopyIcon size={15} className="flex-none" />
                       )}
-                      <span className="sr-only">Copy url</span>
+                      <span className="sr-only">Copy URL</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Copy url</TooltipContent>
@@ -106,9 +119,10 @@ export function ServiceDeployURLForm({
                         size={15}
                         className={cn("flex-none", isPending && "animate-spin")}
                       />
+                      <span className="sr-only">Regenerate URL</span>
                     </SubmitButton>
                   </TooltipTrigger>
-                  <TooltipContent>regenerate URL</TooltipContent>
+                  <TooltipContent>Regenerate URL</TooltipContent>
                 </Tooltip>
 
                 <Tooltip delayDuration={0}>

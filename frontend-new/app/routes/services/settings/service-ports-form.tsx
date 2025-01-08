@@ -92,7 +92,10 @@ export function ServicePortsForm({
           <AlertTitle>Warning</AlertTitle>
           <AlertDescription>
             Using a host value other than 80 or 443 will disable&nbsp;
-            <a href="#" className="underline inline-flex gap-1 items-center">
+            <a
+              href="#"
+              className="text-link underline inline-flex gap-1 items-center"
+            >
               zero-downtime deployments <ExternalLinkIcon size={12} />
             </a>
             .
