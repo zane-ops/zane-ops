@@ -95,9 +95,8 @@ export default function ServiceDetailsLayout({
   let serviceImage =
     service.image ??
     (
-      service?.unapplied_changes?.filter(
-        (change) => change.field === "source"
-      )[0]?.new_value as Pick<DockerService, "image" | "credentials">
+      service.unapplied_changes.filter((change) => change.field === "source")[0]
+        ?.new_value as Pick<DockerService, "image" | "credentials">
     )?.image;
 
   if (serviceImage && !serviceImage.includes(":")) {
