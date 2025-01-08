@@ -58,7 +58,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         return Response(response.data)
 
 
-class QuickDeployServiceAPIView(APIView):
+class WebhookDeployServiceAPIView(APIView):
     serializer_class = DockerServiceDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]

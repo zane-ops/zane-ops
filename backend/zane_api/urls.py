@@ -162,7 +162,7 @@ urlpatterns += [
     ),
     re_path(
         rf"^deploy-service/docker/(?P<deploy_token>[a-zA-Z0-9-_]+)?$",
-        views.QuickDeployServiceAPIView.as_view(),
+        views.WebhookDeployServiceAPIView.as_view(),
         name="services.docker.webhook_deploy",
     ),
 ]
