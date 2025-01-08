@@ -171,6 +171,13 @@ export interface paths {
      */
     get: operations["projects_service_list_list"];
   };
+  "/api/server/resource-limits/": {
+    /**
+     * Get server resource limits
+     * @description Get the number of CPUS & memory of the server.
+     */
+    get: operations["getServerResouceLimits"];
+  };
   "/api/settings/": {
     /**
      * Get API settings
@@ -788,6 +795,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
+    GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitServiceCard: {
       /** Format: date-time */
@@ -2103,6 +2111,10 @@ export interface components {
      * @enum {string}
      */
     RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
+    ResourceLimit: {
+      no_of_cpus: number;
+      max_memory_in_bytes: number;
+    };
     /**
      * @description * `resource_limits` - resource_limits
      * @enum {string}
@@ -3682,6 +3694,34 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get server resource limits
+   * @description Get the number of CPUS & memory of the server.
+   */
+  getServerResouceLimits: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResourceLimit"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetServerResouceLimitsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

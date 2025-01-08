@@ -188,12 +188,12 @@ class MemoryLimitRequestSerializer(serializers.Serializer):
         # https://docs.docker.com/engine/containers/resource_constraints/#limit-a-containers-access-to-memory
         if value_in_bytes < six_megabytes:
             raise serializers.ValidationError(
-                {"value": "Cannot limit a container max memory to less than 6mb."}
+                {"value": "Cannot limit a service memory to less than 6 MiB."}
             )
         if value_in_bytes > max_memory:
             raise serializers.ValidationError(
                 {
-                    "value": f"Maximum memory limit is {format_storage_value(max_memory)}."
+                    "value": f"The maximum memory limit on this server is {format_storage_value(max_memory)}."
                 }
             )
 

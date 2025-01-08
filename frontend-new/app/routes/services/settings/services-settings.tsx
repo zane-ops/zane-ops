@@ -32,6 +32,7 @@ import { ServiceCommandForm } from "~/routes/services/settings/service-command-f
 import { ServiceDeployURLForm } from "~/routes/services/settings/service-deploy-url-form";
 import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
+import { ServiceResourceLimits } from "~/routes/services/settings/service-resource-limits-form";
 import { ServiceSlugForm } from "~/routes/services/settings/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/settings/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/settings/service-urls-form";
@@ -118,6 +119,10 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
             />
             <ServiceHealthcheckForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
+            <ServiceResourceLimits
               project_slug={project_slug}
               service_slug={service_slug}
             />
@@ -499,19 +504,19 @@ async function requestServiceChange({
   switch (field) {
     case "source": {
       userData = {
-        image: formData.get("image")?.toString(),
+        image: formData.get("image")!.toString(),
         credentials: {
           username: formData.get("credentials.username")?.toString(),
           password: formData.get("credentials.password")?.toString()
         }
-      };
+      } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
     case "ports": {
       userData = {
         forwarded: Number(formData.get("forwarded")?.toString() ?? ""),
         host: Number((formData.get("host")?.toString() ?? "").trim() || 80)
-      };
+      } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
     case "urls": {
@@ -528,11 +533,13 @@ async function requestServiceChange({
               permanent:
                 formData.get("redirect_to_permanent")?.toString() === "on"
             }
-      };
+      } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
     case "command": {
-      userData = formData.get("command")?.toString().trim();
+      userData =
+        formData.get("command")?.toString().trim() ??
+        (null satisfies BodyOf<typeof field>["new_value"]);
       break;
     }
     case "healthcheck": {
@@ -540,7 +547,7 @@ async function requestServiceChange({
         formData.get("intent")?.toString() === "remove-service-healthcheck";
       userData = removeHealthcheck
         ? null
-        : {
+        : ({
             type: formData.get("type")?.toString() as NonNullable<
               DockerService["healthcheck"]
             >["type"],
@@ -551,11 +558,28 @@ async function requestServiceChange({
             interval_seconds: Number(
               formData.get("interval_seconds")?.toString() || 30
             )
-          };
+          } satisfies BodyOf<typeof field>["new_value"]);
+      break;
+    }
+    case "resource_limits": {
+      const removeLimits =
+        formData.get("intent")?.toString() === "remove-service-resource-limits";
+      userData = removeLimits
+        ? null
+        : ({
+            cpus: Boolean(formData.get("cpus")?.toString().trim())
+              ? Number(formData.get("cpus")?.toString())
+              : undefined,
+            memory: Boolean(formData.get("memory")?.toString().trim())
+              ? {
+                  value: Number(formData.get("memory")?.toString())
+                }
+              : undefined
+          } satisfies BodyOf<typeof field>["new_value"]);
       break;
     }
     default: {
-      throw new Error("Unexpected field");
+      throw new Error(`Unexpected field \`${field}\``);
     }
   }
 

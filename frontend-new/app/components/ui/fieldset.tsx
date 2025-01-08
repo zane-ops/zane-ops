@@ -2,6 +2,7 @@ import * as React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
+import { Slider } from "~/components/ui/slider";
 
 import { cn } from "~/lib/utils";
 
@@ -123,7 +124,7 @@ export function FieldSetCheckbox(
     );
   }
 
-  const { id, errors } = ctx;
+  const { id, errors, name } = ctx;
 
   return (
     <Checkbox
@@ -131,6 +132,7 @@ export function FieldSetCheckbox(
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}
       {...props}
+      name={props.name ?? name}
     />
   );
 }
@@ -150,6 +152,27 @@ export function FieldSetSelect(props: React.ComponentProps<typeof Select>) {
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}
       {...props}
+    />
+  );
+}
+
+export function FieldSetSlider(props: React.ComponentProps<typeof Slider>) {
+  const ctx = React.use(FieldSetContext);
+
+  if (!ctx) {
+    throw new Error(
+      "<FieldSetSelect> component should be inside of a <FieldSet> component"
+    );
+  }
+
+  const { id, errors, name } = ctx;
+  return (
+    <Slider
+      id={id}
+      aria-invalid={Boolean(errors)}
+      aria-labelledby={`${id}-error`}
+      {...props}
+      name={props.name ?? name}
     />
   );
 }
