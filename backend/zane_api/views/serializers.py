@@ -302,8 +302,7 @@ class DockerServiceQuickDeployRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "image": [
-                        f"Either the image `{image}` doesn't exist, or the provided credentials are invalid."
-                        f" Did you forget to include the credentials?"
+                        f"Either the image `{image}` doesn't exist, or the credentials are invalid for this image."
                     ]
                 }
             )
