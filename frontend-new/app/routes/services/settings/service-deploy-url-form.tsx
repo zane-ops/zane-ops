@@ -57,20 +57,13 @@ export function ServiceDeployURLForm({
             keep this a secret.
           </p>
           <div className="flex flex-col md:flex-row gap-2 md:items-start items-stretch">
-            <span
-              className={cn(
-                "inline-flex flex-1 bg-muted rounded-md py-2 px-3 items-baseline",
-                isDeployURLShown
-                  ? "text-card-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              {deployURL
-                ? isDeployURLShown
-                  ? deployURL
-                  : "********************************************************************************"
-                : ""}
-            </span>
+            <Input
+              disabled
+              placeholder="<empty>"
+              className="placeholder-shown:font-mono bg-muted disabled:opacity-100"
+              value={deployURL ?? ""}
+              type={isDeployURLShown ? "text" : "password"}
+            />
 
             <div className="flex gap-2">
               <TooltipProvider>
