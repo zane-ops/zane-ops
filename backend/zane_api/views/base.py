@@ -18,7 +18,7 @@ EMPTY_CURSOR_RESPONSE = OrderedDict(
 
 
 class ThrottledExceptionWithWaitTime(exceptions.Throttled):
-    default_detail = "You made too Many requests in a short amount of time,"
+    default_detail = "You made too many requests in a short amount of time,"
     extra_detail_singular = (
         "Please wait for {wait} seconds before retrying your action."
     )
@@ -26,7 +26,7 @@ class ThrottledExceptionWithWaitTime(exceptions.Throttled):
 
 
 class ResourceConflict(exceptions.APIException):
-    status_code = 409
+    status_code = status.HTTP_409_CONFLICT
     default_detail = (
         "The action you tried to perform is not possible because"
         " another resource already exists with the same ID."
