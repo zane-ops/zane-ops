@@ -57,6 +57,23 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
+    async def test_quick_deploy_service_unauthenticated(self):
+        _, service = await self.acreate_and_deploy_caddy_docker_service()
+        await self.async_client.alogout()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.quick_deploy",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        deployment_count = await service.deployments.acount()
+        self.assertEqual(2, deployment_count)
+        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNotNone(docker_service)
+
     async def test_quick_deploy_service_with_image_and_commit_message(self):
         _, service = await self.acreate_and_deploy_redis_docker_service()
 

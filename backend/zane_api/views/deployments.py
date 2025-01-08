@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
-from rest_framework import exceptions
+from rest_framework import exceptions, permissions
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.request import Request
 
@@ -59,6 +60,9 @@ class RegenerateServiceDeployTokenAPIView(APIView):
 
 class QuickDeployServiceAPIView(APIView):
     serializer_class = DockerServiceDeploymentSerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "deploy_webhook"
 
     @transaction.atomic()
     @extend_schema(
