@@ -45,6 +45,11 @@ urlpatterns = [
         name="settings",
     ),
     re_path(
+        r"^server/resource-limits/?$",
+        views.ResourceLimitsView.as_view(),
+        name="server.resource_limits",
+    ),
+    re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",

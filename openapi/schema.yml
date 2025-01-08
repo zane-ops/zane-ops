@@ -2672,6 +2672,63 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
+  /api/server/resource-limits/:
+    get:
+      operationId: getServerResouceLimits
+      description: Get the number of CPUS & memory of the server.
+      summary: Get server resource limits
+      tags:
+      - server
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetServerResouceLimitsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceLimit'
+          description: ''
   /api/settings/:
     get:
       operationId: getAPISettings
@@ -4191,6 +4248,13 @@ components:
       required:
       - errors
       - type
+    GetServerResouceLimitsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetSingleProjectErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -6740,6 +6804,16 @@ components:
         * `HTTP/1.1` - HTTP/1.1
         * `HTTP/2.0` - HTTP/2.0
         * `HTTP/3.0` - HTTP/3.0
+    ResourceLimit:
+      type: object
+      properties:
+        no_of_cpus:
+          type: integer
+        max_memory_in_bytes:
+          type: integer
+      required:
+      - max_memory_in_bytes
+      - no_of_cpus
     ResourceLimitChangeFieldEnum:
       enum:
       - resource_limits
