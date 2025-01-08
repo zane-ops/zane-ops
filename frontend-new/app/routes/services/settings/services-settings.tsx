@@ -372,7 +372,7 @@ async function regenerateDeployToken({
   formData: FormData;
 }) {
   const toastId = toast.loading("Regenerating service deploy URL...");
-  const { error: errors } = await apiClient.PATCH(
+  const { error: errors, data } = await apiClient.PATCH(
     "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/",
     {
       headers: {
@@ -394,6 +394,9 @@ async function regenerateDeployToken({
       id: toastId,
       closeButton: true
     });
+    return {
+      errors
+    };
   }
 
   await queryClient.invalidateQueries({
@@ -402,6 +405,9 @@ async function regenerateDeployToken({
   });
 
   toast.success("Done", { id: toastId, closeButton: true });
+  return {
+    data
+  };
 }
 
 async function updateServiceSlug({
