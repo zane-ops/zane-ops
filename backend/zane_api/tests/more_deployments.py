@@ -46,7 +46,7 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
 
         response = await self.async_client.put(
             reverse(
-                "zane_api:services.docker.quick_deploy",
+                "zane_api:services.docker.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
         )
@@ -63,7 +63,7 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
 
         response = await self.async_client.put(
             reverse(
-                "zane_api:services.docker.quick_deploy",
+                "zane_api:services.docker.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
         )
@@ -79,7 +79,7 @@ class DockerServiceQuickDeployViewTests(AuthAPITestCase):
 
         response = await self.async_client.put(
             reverse(
-                "zane_api:services.docker.quick_deploy",
+                "zane_api:services.docker.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
             data={
