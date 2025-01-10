@@ -1,5 +1,6 @@
 import dataclasses
 from dataclasses import fields
+from typing import Sequence
 
 from django.db.models import Q
 
@@ -21,7 +22,7 @@ from ..serializers import DockerServiceSerializer
 def compute_all_deployment_changes(
     service: DockerRegistryService, change: dict | None = None
 ):
-    deployment_changes = []
+    deployment_changes: list[DeploymentChangeDto] = []
     deployment_changes.extend(
         map(
             lambda ch: DeploymentChangeDto.from_dict(
@@ -41,22 +42,17 @@ def compute_all_deployment_changes(
     return deployment_changes
 
 
-def compute_docker_service_snapshot_with_changes(
-    service: DockerRegistryService, change: dict | None = None
+def compute_docker_service_snapshot(
+    service_snapshot: DockerServiceSnapshot, changes: Sequence[DeploymentChangeDto]
 ):
-    deployment_changes = compute_all_deployment_changes(service, change)
-
-    service_snapshot = DockerServiceSnapshot.from_dict(
-        DockerServiceSerializer(service).data
-    )
-
     field_dto_map = {
-        "volumes": VolumeDto,
-        "env_variables": EnvVariableDto,
-        "ports": PortConfigurationDto,
-        "urls": URLDto,
+        DockerDeploymentChange.ChangeField.VOLUMES: VolumeDto,
+        DockerDeploymentChange.ChangeField.ENV_VARIABLES: EnvVariableDto,
+        DockerDeploymentChange.ChangeField.PORTS: PortConfigurationDto,
+        DockerDeploymentChange.ChangeField.URLS: URLDto,
     }
-    for change in deployment_changes:
+
+    for change in changes:
         match change.field:
             case DockerDeploymentChange.ChangeField.COMMAND:
                 setattr(service_snapshot, change.field, change.new_value)
@@ -104,6 +100,17 @@ def compute_docker_service_snapshot_with_changes(
     return service_snapshot
 
 
+def compute_docker_service_snapshot_with_changes(
+    service: DockerRegistryService, change: dict | None = None
+):
+    deployment_changes = compute_all_deployment_changes(service, change)
+
+    service_snapshot = DockerServiceSnapshot.from_dict(
+        DockerServiceSerializer(service).data
+    )
+    return compute_docker_service_snapshot(service_snapshot, deployment_changes)
+
+
 def compute_docker_service_snapshot_without_changes(
     service: DockerRegistryService, change_id: str
 ):
@@ -123,45 +130,7 @@ def compute_docker_service_snapshot_without_changes(
     service_snapshot = DockerServiceSnapshot.from_dict(
         DockerServiceSerializer(service).data
     )
-
-    field_dto_map = {
-        "volumes": VolumeDto,
-        "env_variables": EnvVariableDto,
-        "ports": PortConfigurationDto,
-        "urls": URLDto,
-    }
-    for change in deployment_changes:
-        match change.field:
-            case "image" | "command":
-                setattr(service_snapshot, change.field, change.new_value)
-            case "healthcheck":
-                service_snapshot.healthcheck = HealthCheckDto.from_dict(
-                    change.new_value,
-                )
-            case "credentials":
-                service_snapshot.credentials = DockerCredentialsDto.from_dict(
-                    change.new_value
-                )
-            case _:
-                dto_class: type[VolumeDto] = field_dto_map[change.field]
-                items: list = getattr(service_snapshot, change.field)
-
-                if change.type == "ADD":
-                    items.append(dto_class.from_dict(change.new_value))
-                if change.type == "DELETE":
-                    setattr(
-                        service_snapshot,
-                        change.field,
-                        [item for item in items if item.id != change.item_id],
-                    )
-                if change.type == "UPDATE":
-                    for i, item in enumerate(items):
-                        if item.id == change.item_id:
-                            items[i] = dto_class.from_dict(
-                                dict(change.new_value, id=change.item_id)
-                            )
-
-    return service_snapshot
+    return compute_docker_service_snapshot(service_snapshot, deployment_changes)
 
 
 def compute_docker_changes_from_snapshots(current: dict, target: dict):
