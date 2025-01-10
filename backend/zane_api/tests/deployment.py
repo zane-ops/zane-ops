@@ -1820,9 +1820,9 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -1866,9 +1866,9 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
         change = DockerDeploymentChange.objects.create(
-            field="image",
+            field=DockerDeploymentChange.ChangeField.SOURCE,
             type=DockerDeploymentChange.ChangeType.UPDATE,
-            new_value="caddy:2.8-alpine",
+            new_value={"image": "caddy:2.8-alpine"},
             service=service,
         )
 
@@ -1893,13 +1893,13 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         port_change, _, _ = DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="ports",
+                    field=DockerDeploymentChange.ChangeField.PORTS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={"forwarded": 80},
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="healthcheck",
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
@@ -1910,9 +1910,9 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -1939,7 +1939,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         url_change, _, _ = DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="urls",
+                    field=DockerDeploymentChange.ChangeField.URLS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "portainer.com",
@@ -1949,7 +1949,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="healthcheck",
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
@@ -1960,9 +1960,9 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -1992,15 +1992,15 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         port_change, _ = DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="ports",
+                    field=DockerDeploymentChange.ChangeField.PORTS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={"forwarded": 80},
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
@@ -2027,7 +2027,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         url_change, _ = DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field="urls",
+                    field=DockerDeploymentChange.ChangeField.URLS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "portainer.com",
@@ -2037,9 +2037,9 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                     service=service,
                 ),
                 DockerDeploymentChange(
-                    field="image",
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="caddy:2.8-alpine",
+                    new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
             ]
