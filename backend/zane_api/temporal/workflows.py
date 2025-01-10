@@ -485,6 +485,7 @@ class DeployDockerServiceWorkflow:
         return DeployDockerServiceWorkflowResult(
             deployment_status=DockerDeployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
+            deployment_status_reason="Deployment cancelled.",
         )
 
     async def queue_next_deployment(
