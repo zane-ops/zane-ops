@@ -1,7 +1,13 @@
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
-from ..models import Project, DockerRegistryService, DockerDeployment
+from ..models import (
+    Project,
+    DockerRegistryService,
+    DockerDeployment,
+    DockerDeploymentChange,
+)
+from ..utils import jprint
 
 
 class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
@@ -97,3 +103,61 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
 
         self.assertEqual("Upgrade valkey image", new_deployment.commit_message)
         self.assertEqual("valkey/valkey:7.3-alpine", service.image)
+
+
+class DockerServiceRequestChangesViewTests(AuthAPITestCase):
+    async def test_validate_conflicting_changes_for_single_field_types_should_merge(
+        self,
+    ):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "type": "UPDATE",
+            "new_value": {
+                "cpus": 1,
+            },
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "type": "UPDATE",
+            "new_value": {"cpus": 2, "memory": {"value": 500}},
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        service = await DockerRegistryService.objects.aget(slug=service.slug)
+        unapplied_changes_count = await DockerDeploymentChange.objects.filter(
+            service__slug=service.slug, applied=False
+        ).acount()
+
+        self.assertEqual(1, unapplied_changes_count)
+
+        resource_limit_change: DockerDeploymentChange = (
+            await DockerDeploymentChange.objects.filter(
+                applied=False,
+                field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            ).afirst()
+        )
+        self.assertEqual(
+            {"cpus": 2, "memory": {"value": 500, "unit": "MEGABYTES"}},
+            resource_limit_change.new_value,
+        )

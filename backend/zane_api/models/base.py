@@ -506,7 +506,12 @@ class DockerRegistryService(BaseService):
     def add_change(self, change: "DockerDeploymentChange"):
         change.service = self
         match change.field:
-            case "source" | "command" | "healthcheck":
+            case (
+                DockerDeploymentChange.ChangeField.SOURCE
+                | DockerDeploymentChange.ChangeField.COMMAND
+                | DockerDeploymentChange.ChangeField.HEALTHCHECK
+                | DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
+            ):
                 change_for_field: "DockerDeploymentChange" = (
                     self.unapplied_changes.filter(field=change.field).first()
                 )
