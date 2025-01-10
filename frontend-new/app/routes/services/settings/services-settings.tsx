@@ -340,7 +340,8 @@ export async function clientAction({
       });
     }
     case "request-service-change":
-    case "remove-service-healthcheck": {
+    case "remove-service-healthcheck":
+    case "remove-service-resource-limits": {
       return requestServiceChange({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
@@ -357,8 +358,7 @@ export async function clientAction({
     case "regenerate-deploy-token": {
       return regenerateDeployToken({
         project_slug: params.projectSlug,
-        service_slug: params.serviceSlug,
-        formData
+        service_slug: params.serviceSlug
       });
     }
     default: {
@@ -369,12 +369,10 @@ export async function clientAction({
 
 async function regenerateDeployToken({
   project_slug,
-  service_slug,
-  formData
+  service_slug
 }: {
   project_slug: string;
   service_slug: string;
-  formData: FormData;
 }) {
   const toastId = toast.loading("Regenerating service deploy URL...");
   const { error: errors, data } = await apiClient.PATCH(

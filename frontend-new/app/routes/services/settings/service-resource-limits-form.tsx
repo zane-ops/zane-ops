@@ -1,17 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckIcon, LoaderIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckIcon,
+  LoaderIcon,
+  Trash2Icon,
+  Undo2Icon
+} from "lucide-react";
 import * as React from "react";
 import { apiClient } from "~/api/client";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel,
-  FieldSetSlider
+  FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Slider } from "~/components/ui/slider";
 import type { DockerService } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -30,7 +36,37 @@ export function ServiceResourceLimits({
     project_slug,
     service_slug
   });
-  const { fetcher, data, reset } = useFetcherWithCallbacks({});
+  const { fetcher, data, reset } = useFetcherWithCallbacks({
+    onSuccess(data) {
+      formRef.current?.reset();
+      const service = data.data!;
+      let updatedResourceLimits = resourceLimits;
+      if ("resource_limits" in service) {
+        const resouceLimitsChange = service.unapplied_changes.find(
+          (change) => change.field === "resource_limits"
+        );
+        const newResourceLimits =
+          resouceLimitsChange?.new_value as DockerService["resource_limits"];
+        updatedResourceLimits =
+          newResourceLimits === null
+            ? null
+            : newResourceLimits ?? service?.healthcheck;
+      }
+      setCPULimit(updatedResourceLimits?.cpus ?? null);
+      setMemoryLimit(updatedResourceLimits?.memory?.value ?? null);
+    },
+    onSettled(data) {
+      if (data.errors) {
+        const errors = getFormErrorsFromResponseData(data?.errors);
+        const key = Object.keys(errors.new_value ?? {})[0];
+
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+      }
+    }
+  });
   const resourceLimitsQuery = useQuery({
     queryKey: ["SERVICE_RESOURCE_LIMITS"],
     queryFn: async () => {
@@ -51,22 +87,25 @@ export function ServiceResourceLimits({
 
   const newResourceLimits =
     resouceLimitsChange?.new_value as DockerService["resource_limits"];
-  const resource_limits =
+  const resourceLimits =
     newResourceLimits === null
       ? null
       : newResourceLimits ?? service?.resource_limits;
 
   const [cpuLimit, setCPULimit] = React.useState<number | null>(
-    resource_limits?.cpus ?? null
+    resourceLimits?.cpus ?? null
   );
   const [memoryLimit, setMemoryLimit] = React.useState<number | null>(
-    resource_limits?.memory?.value ?? null
+    resourceLimits?.memory?.value ?? null
   );
   const max_memory_in_mb = Math.floor(
     (resourceLimitsQuery.data?.max_memory_in_bytes ?? 0) / (1024 * 1024)
   );
 
   const errors = getFormErrorsFromResponseData(data?.errors);
+  const non_field_errors = Array.isArray(errors.new_value)
+    ? [...errors.new_value, ...(errors.non_field_errors ?? [])]
+    : errors.non_field_errors;
 
   return (
     <fetcher.Form
@@ -74,6 +113,14 @@ export function ServiceResourceLimits({
       ref={formRef}
       className="flex flex-col gap-4 w-full items-start max-w-4xl"
     >
+      {non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
       <input type="hidden" name="change_field" value="resource_limits" />
       <input type="hidden" name="change_type" value="UPDATE" />
       {resouceLimitsChange !== undefined && (
@@ -94,13 +141,19 @@ export function ServiceResourceLimits({
             name="cpus"
             className="flex flex-col gap-2"
             errors={errors.new_value?.cpus}
+            disabled={resouceLimitsChange !== undefined}
           >
             <div className="flex justify-between gap-4 items-center">
               <FieldSetLabel>CPU</FieldSetLabel>
               <FieldSetInput
-                className="inline-flex placeholder-shown:font-mono shrink w-28"
+                className={cn(
+                  "inline-flex placeholder-shown:font-mono shrink w-28",
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
                 placeholder="<no-limit>"
-                defaultValue={resource_limits?.cpus ?? ""}
+                defaultValue={resourceLimits?.cpus ?? ""}
                 ref={cpuInputRef}
                 onChange={(ev) => {
                   if (!Number.isNaN(ev.currentTarget.value)) {
@@ -114,6 +167,7 @@ export function ServiceResourceLimits({
               min={0}
               aria-hidden="true"
               value={[cpuLimit ?? 0]}
+              disabled={resouceLimitsChange !== undefined}
               onValueChange={(value) => {
                 setCPULimit(value[0]);
                 if (cpuInputRef.current) {
@@ -127,14 +181,20 @@ export function ServiceResourceLimits({
             name="memory"
             className="flex flex-col gap-2"
             errors={errors.new_value?.memory?.value}
+            disabled={resouceLimitsChange !== undefined}
           >
             <div className="flex justify-between gap-4 items-center">
               <FieldSetLabel>Memory (in MiB)</FieldSetLabel>
               <FieldSetInput
                 ref={memoryInputRef}
-                className="inline-flex placeholder-shown:font-mono shrink w-28"
                 placeholder="<no-limit>"
-                defaultValue={resource_limits?.memory?.value ?? ""}
+                className={cn(
+                  "inline-flex placeholder-shown:font-mono shrink w-28",
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                defaultValue={resourceLimits?.memory?.value ?? ""}
                 onChange={(ev) => {
                   if (!Number.isNaN(ev.currentTarget.value)) {
                     setMemoryLimit(Number(ev.currentTarget.value));
@@ -147,6 +207,7 @@ export function ServiceResourceLimits({
               min={0}
               aria-hidden="true"
               value={[memoryLimit ?? 0]}
+              disabled={resouceLimitsChange !== undefined}
               onValueChange={(value) => {
                 setMemoryLimit(value[0]);
                 if (memoryInputRef.current) {
@@ -158,36 +219,80 @@ export function ServiceResourceLimits({
           </FieldSet>
         </div>
         <div className="flex items-center gap-2">
-          <SubmitButton
-            isPending={isPending}
-            variant="secondary"
-            name="intent"
-            value="request-service-change"
-          >
-            {isPending ? (
-              <>
-                <LoaderIcon className="animate-spin" size={15} />
-                <span>Updating...</span>
-              </>
-            ) : (
-              <>
-                <CheckIcon size={15} className="flex-none" />
-                <span>Update</span>
-              </>
-            )}
-          </SubmitButton>
-          <Button
-            variant="outline"
-            onClick={() => {
-              reset();
-              setCPULimit(null);
-              setMemoryLimit(null);
-            }}
-            type="reset"
-            className="flex-1 md:flex-none"
-          >
-            Reset
-          </Button>
+          {resouceLimitsChange ? (
+            <SubmitButton
+              isPending={isPending}
+              variant="outline"
+              name="intent"
+              value="cancel-service-change"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Reverting...</span>
+                </>
+              ) : (
+                <>
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span>Revert change</span>
+                </>
+              )}
+            </SubmitButton>
+          ) : (
+            <>
+              <SubmitButton
+                isPending={isPending}
+                variant="secondary"
+                name="intent"
+                value="request-service-change"
+              >
+                {isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin" size={15} />
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon size={15} className="flex-none" />
+                    <span>Update</span>
+                  </>
+                )}
+              </SubmitButton>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  reset();
+                  setCPULimit(resourceLimits?.cpus ?? null);
+                  setMemoryLimit(resourceLimits?.memory?.value ?? null);
+                }}
+                type="reset"
+                className="flex-1 md:flex-none"
+              >
+                Reset
+              </Button>
+              {service?.resource_limits !== null && resourceLimits !== null && (
+                <SubmitButton
+                  value="remove-service-resource-limits"
+                  name="intent"
+                  isPending={isPending}
+                  variant="destructive"
+                  className="inline-flex gap-1 items-center"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span>Removing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2Icon size={15} className="flex-none" />
+                      <span>Remove limits</span>
+                    </>
+                  )}
+                </SubmitButton>
+              )}
+            </>
+          )}
         </div>
       </fieldset>
     </fetcher.Form>
