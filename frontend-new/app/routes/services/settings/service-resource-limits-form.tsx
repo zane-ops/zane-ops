@@ -112,6 +112,7 @@ export function ServiceResourceLimits({
             <Slider
               step={0.5}
               min={0}
+              aria-hidden="true"
               value={[cpuLimit ?? 0]}
               onValueChange={(value) => {
                 setCPULimit(value[0]);
@@ -144,6 +145,7 @@ export function ServiceResourceLimits({
             <Slider
               step={100}
               min={0}
+              aria-hidden="true"
               value={[memoryLimit ?? 0]}
               onValueChange={(value) => {
                 setMemoryLimit(value[0]);
