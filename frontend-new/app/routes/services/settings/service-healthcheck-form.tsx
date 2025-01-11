@@ -248,7 +248,7 @@ export function ServiceHealthcheckForm({
         </FieldSet>
       </fieldset>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {healthcheckChange ? (
           <SubmitButton
             isPending={isPending}
@@ -295,7 +295,6 @@ export function ServiceHealthcheckForm({
                 setHealthCheckType(healthcheck?.type ?? "none");
               }}
               type="reset"
-              className="flex-1 md:flex-none"
             >
               Reset
             </Button>

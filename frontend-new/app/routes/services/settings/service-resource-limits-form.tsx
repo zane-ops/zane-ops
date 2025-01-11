@@ -219,7 +219,7 @@ export function ServiceResourceLimits({
             />
           </FieldSet>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {resouceLimitsChange ? (
             <SubmitButton
               isPending={isPending}
@@ -267,7 +267,6 @@ export function ServiceResourceLimits({
                   setMemoryLimit(resourceLimits?.memory?.value ?? null);
                 }}
                 type="reset"
-                className="flex-1 md:flex-none"
               >
                 Reset
               </Button>
