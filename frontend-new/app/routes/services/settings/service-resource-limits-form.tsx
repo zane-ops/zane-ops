@@ -50,8 +50,9 @@ export function ServiceResourceLimits({
         updatedResourceLimits =
           newResourceLimits === null
             ? null
-            : newResourceLimits ?? service?.healthcheck;
+            : newResourceLimits ?? service?.resource_limits;
       }
+
       setCPULimit(updatedResourceLimits?.cpus ?? null);
       setMemoryLimit(updatedResourceLimits?.memory?.value ?? null);
     },
