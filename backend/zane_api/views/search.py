@@ -19,11 +19,11 @@ from ..models import (
     Project,
     DockerRegistryService,
 )
-from ..serializers import (
+
+from serializers import (
     ProjectSearchSerializer,
     ServiceSearchSerializer,
 )
-
 
 class ResouceSearchAPIView(APIView):
     @extend_schema(
