@@ -7,7 +7,6 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -16,7 +15,7 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Slider } from "~/components/ui/slider";
-import type { DockerService } from "~/lib/queries";
+import { type DockerService, serverQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -68,14 +67,7 @@ export function ServiceResourceLimits({
       }
     }
   });
-  const resourceLimitsQuery = useQuery({
-    queryKey: ["SERVICE_RESOURCE_LIMITS"],
-    queryFn: async () => {
-      const { data } = await apiClient.GET("/api/server/resource-limits/");
-      return data;
-    },
-    staleTime: Number.MAX_SAFE_INTEGER
-  });
+  const resourceLimitsQuery = useQuery(serverQueries.resourceLimits);
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const cpuInputRef = React.useRef<React.ComponentRef<"input">>(null);

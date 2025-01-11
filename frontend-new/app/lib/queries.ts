@@ -509,11 +509,33 @@ export const deploymentQueries = {
     })
 };
 
-type DeploymentLogQueryData = NonNullable<
-  ApiResponse<
-    "get",
-    "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
-  >
+export const serverQueries = {
+  settings: queryOptions({
+    queryKey: ["APP_SETTINGS"],
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/api/settings/");
+      return data;
+    },
+    staleTime: Number.MAX_SAFE_INTEGER
+  }),
+  resourceLimits: queryOptions({
+    queryKey: ["SERVICE_RESOURCE_LIMITS"],
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/api/server/resource-limits/");
+      return data;
+    },
+    staleTime: Number.MAX_SAFE_INTEGER
+  })
+};
+
+type DeploymentLogQueryData = Pick<
+  NonNullable<
+    ApiResponse<
+      "get",
+      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+    >
+  >,
+  "next" | "previous" | "results"
 > & {
   cursor?: string | null;
 };

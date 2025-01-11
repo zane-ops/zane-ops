@@ -29,13 +29,12 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { userQueries } from "~/lib/queries";
+import { serverQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
-import { apiClient } from "~/api/client";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
 import { queryClient } from "~/root";
@@ -252,14 +251,7 @@ const socialLinks = [
 ];
 
 function Footer() {
-  const { data } = useQuery({
-    queryKey: ["APP_SETTINGS"],
-    queryFn: async () => {
-      const { data } = await apiClient.GET("/api/settings/");
-      return data;
-    },
-    staleTime: Number.MAX_SAFE_INTEGER
-  });
+  const { data } = useQuery(serverQueries.settings);
 
   let image_version_url: string | null = null;
   if (data?.image_version === "canary") {

@@ -24,6 +24,7 @@ import {
 import {
   type DockerService,
   projectQueries,
+  serverQueries,
   serviceQueries
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -38,6 +39,11 @@ import { ServiceSourceForm } from "~/routes/services/settings/service-source-for
 import { ServiceURLsForm } from "~/routes/services/settings/service-urls-form";
 import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  queryClient.ensureQueryData(serverQueries.resourceLimits);
+  return;
+}
 
 export default function ServiceSettingsPage({
   params: { projectSlug: project_slug, serviceSlug: service_slug }
