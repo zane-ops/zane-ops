@@ -8,10 +8,13 @@ from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
 from temporalio.service import RPCError
 
+
 from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 
 with workflow.unsafe.imports_passed_through():
     from .schedules import MonitorDockerDeploymentWorkflow
+    from search.client import SearchClient
+    from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     import docker
     import docker.errors
     from ..models import (
@@ -22,7 +25,6 @@ with workflow.unsafe.imports_passed_through():
         HealthCheck,
         URL,
         DockerDeploymentChange,
-        SimpleLog,
     )
     from docker.models.networks import Network
     from docker.models.services import Service
@@ -48,6 +50,8 @@ with workflow.unsafe.imports_passed_through():
         Colors,
         cache_result,
         convert_value_to_bytes,
+        escape_ansi,
+        excerpt,
     )
 
 from ..dtos import (
@@ -187,15 +191,21 @@ async def deployment_log(
             service_id = deployment.service_id
         case _:
             raise TypeError(f"unsupported type {type(deployment)}")
-    # Regex pattern to match ANSI color codes
-    await SimpleLog.objects.acreate(
-        source=SimpleLog.LogSource.SYSTEM,
-        level=SimpleLog.LogLevel.INFO,
-        content=message,
-        time=current_time,
-        deployment_id=deployment_id,
-        service_id=service_id,
-        content_text=SimpleLog.escape_ansi(message),
+    search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+
+    MAX_COLORED_CHARS = 1000
+    search_client.insert(
+        index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+        document=RuntimeLogDto(
+            source=RuntimeLogSource.SYSTEM,
+            level=RuntimeLogLevel.INFO,
+            content=excerpt(message, MAX_COLORED_CHARS),
+            content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
+            time=current_time,
+            created_at=current_time,
+            deployment_id=deployment_id,
+            service_id=service_id,
+        ),
     )
 
 
@@ -823,7 +833,13 @@ class DockerSwarmActivities:
         for volume in docker_volume_list:
             volume.remove(force=True)
         print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
-        await SimpleLog.objects.filter(service_id=service_details.original_id).adelete()
+        search_client = SearchClient(
+            host=settings.ELASTICSEARCH_HOST,
+        )
+        search_client.delete(
+            index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+            query=dict(service_id=service_details.original_id),
+        )
 
     @activity.defn
     async def remove_project_network(self, project_details: ArchivedProjectDetails):
@@ -1438,7 +1454,7 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC}"
                 f" | healthcheck_time_left={Colors.ORANGE}{format_seconds(healthcheck_time_left)}{Colors.ENDC} 💓",
             )
@@ -1559,13 +1575,13 @@ class DockerSwarmActivities:
                     )
                     await deployment_log(
                         deployment,
-                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                        f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
                     )
                     await deployment_log(
                         deployment,
-                        f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                        f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with status {status_color}{deployment_status}{Colors.ENDC}",
                     )
@@ -1573,13 +1589,13 @@ class DockerSwarmActivities:
 
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
             )
             await deployment_log(
                 deployment,
-                f"Healtcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+                f"Healthcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| FAILED, Retrying in {Colors.ORANGE}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
             )
@@ -1592,13 +1608,13 @@ class DockerSwarmActivities:
         )
         await deployment_log(
             deployment,
-            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+            f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
             f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC} ✅",
         )
         await deployment_log(
             deployment,
-            f"Healtcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
+            f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
             f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
             f"| finished with status {status_color}{deployment_status}{Colors.ENDC} ✅",
         )

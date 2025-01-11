@@ -5,10 +5,6 @@
 
 
 export interface paths {
-  "/api/_proxy/logs/": {
-    /** Get caddy proxy logs */
-    get: operations["_proxy_logs_list"];
-  };
   "/api/archived-projects/": {
     /** List archived projects */
     get: operations["getArchivedProjectList"];
@@ -51,13 +47,6 @@ export interface paths {
      * @description Search a docker Image in docker hub Registry
      */
     get: operations["searchDockerRegistry"];
-  };
-  "/api/domain/root/": {
-    /**
-     * Get Root Domain
-     * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-     */
-    get: operations["getRootDomain"];
   };
   "/api/ping/": {
     /**
@@ -147,7 +136,7 @@ export interface paths {
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
     /** Get deployment logs */
-    get: operations["projects_service_details_docker_deployments_logs_list"];
+    get: operations["projects_service_details_docker_deployments_logs_retrieve"];
   };
   "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/": {
     /**
@@ -170,6 +159,13 @@ export interface paths {
      * @description Get all services in a project
      */
     get: operations["projects_service_list_list"];
+  };
+  "/api/settings/": {
+    /**
+     * Get API settings
+     * @description Get the settings of the API.
+     */
+    get: operations["getAPISettings"];
   };
 }
 
@@ -698,6 +694,7 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListError: components["schemas"]["GetArchivedProjectListSlugErrorComponent"] | components["schemas"]["GetArchivedProjectListSortByErrorComponent"];
     GetArchivedProjectListErrorResponse400: components["schemas"]["GetArchivedProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListSlugErrorComponent: {
@@ -765,10 +762,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRootDomain: {
-      domain: string;
-    };
-    GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitServiceCard: {
       /** Format: date-time */
@@ -976,7 +969,15 @@ export interface components {
       results: components["schemas"]["DockerServiceDeployment"][];
     };
     PaginatedHttpLogList: {
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?cursor=cD00ODY%3D"
+       */
       next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?cursor=cj0xJnA9NDg3
+       */
       previous: string | null;
       results: components["schemas"]["HttpLog"][];
     };
@@ -994,11 +995,6 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["Project"][];
-    };
-    PaginatedSimpleLogList: {
-      next: string | null;
-      previous: string | null;
-      results: components["schemas"]["SimpleLog"][];
     };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
@@ -1190,66 +1186,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListError"][];
     };
-    ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent: {
-      /**
-       * @description * `content` - content
-       * @enum {string}
-       */
-      attr: "content";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListContentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent"];
-    ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsLogsListLevelErrorComponent: {
-      /**
-       * @description * `level` - level
-       * @enum {string}
-       */
-      attr: "level";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `invalid_list` - invalid_list
-       * @enum {string}
-       */
-      code: "invalid_choice" | "invalid_list";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsLogsListSourceErrorComponent: {
-      /**
-       * @description * `source` - source
-       * @enum {string}
-       */
-      attr: "source";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `invalid_list` - invalid_list
-       * @enum {string}
-       */
-      code: "invalid_choice" | "invalid_list";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsLogsListTimeErrorComponent: {
-      /**
-       * @description * `time` - time
-       * @enum {string}
-       */
-      attr: "time";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsLogsListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListError"][];
-    };
+    ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -1771,6 +1708,25 @@ export interface components {
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
+    RuntimeLog: {
+      id: string;
+      service_id: string | null;
+      deployment_id: string | null;
+      /** Format: date-time */
+      time: string;
+      content: unknown;
+      content_text: string | null;
+      level: components["schemas"]["LevelEnum"];
+      source: components["schemas"]["SourceEnum"];
+    };
+    RuntimeLogsSearch: {
+      total: number;
+      previous: string | null;
+      next: string | null;
+      results: components["schemas"]["RuntimeLog"][];
+      /** Format: double */
+      query_time_ms: number;
+    };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
@@ -1787,19 +1743,10 @@ export interface components {
      * @enum {string}
      */
     ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
-    SimpleLog: {
-      /** Format: uuid */
-      id: string;
-      content: unknown;
-      content_text: string | null;
-      /** Format: date-time */
-      time: string;
-      /** Format: date-time */
-      created_at: string;
-      level: components["schemas"]["LevelEnum"];
-      deployment_id: string | null;
-      service_id: string | null;
-      source: components["schemas"]["SourceEnum"];
+    Settings: {
+      root_domain: string;
+      image_version: string;
+      commit_sha: string;
     };
     /**
      * @description * `BLUE` - Blue
@@ -1809,11 +1756,10 @@ export interface components {
     SlotEnum: "BLUE" | "GREEN";
     /**
      * @description * `SYSTEM` - System Logs
-     * * `PROXY` - Proxy Logs
      * * `SERVICE` - Service Logs
      * @enum {string}
      */
-    SourceEnum: "SYSTEM" | "PROXY" | "SERVICE";
+    SourceEnum: "SYSTEM" | "SERVICE";
     SystemEnvVariables: {
       key: string;
       value: string;
@@ -2006,51 +1952,6 @@ export interface components {
       host_path?: string;
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
-    _proxyLogsListContentErrorComponent: {
-      /**
-       * @description * `content` - content
-       * @enum {string}
-       */
-      attr: "content";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    _proxyLogsListError: components["schemas"]["_proxyLogsListLevelErrorComponent"] | components["schemas"]["_proxyLogsListContentErrorComponent"] | components["schemas"]["_proxyLogsListTimeErrorComponent"];
-    _proxyLogsListErrorResponse400: components["schemas"]["_proxyLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    _proxyLogsListLevelErrorComponent: {
-      /**
-       * @description * `level` - level
-       * @enum {string}
-       */
-      attr: "level";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    _proxyLogsListTimeErrorComponent: {
-      /**
-       * @description * `time` - time
-       * @enum {string}
-       */
-      attr: "time";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    _proxyLogsListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["_proxyLogsListError"][];
-    };
   };
   responses: never;
   parameters: never;
@@ -2065,52 +1966,6 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  /** Get caddy proxy logs */
-  _proxy_logs_list: {
-    parameters: {
-      query?: {
-        content?: string;
-        /** @description The pagination cursor value. */
-        cursor?: string;
-        /**
-         * @description * `ERROR` - Error
-         * * `INFO` - Info
-         */
-        level?: "ERROR" | "INFO";
-        /** @description Number of results to return per page. */
-        per_page?: number;
-        time_after?: string;
-        time_before?: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PaginatedSimpleLogList"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["_proxyLogsListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** List archived projects */
   getArchivedProjectList: {
     parameters: {
@@ -2326,34 +2181,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["SearchDockerRegistryErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Root Domain
-   * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-   */
-  getRootDomain: {
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomain"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
         };
       };
       401: {
@@ -3036,25 +2863,14 @@ export interface operations {
     };
   };
   /** Get deployment logs */
-  projects_service_details_docker_deployments_logs_list: {
+  projects_service_details_docker_deployments_logs_retrieve: {
     parameters: {
       query?: {
-        content?: string;
-        /** @description The pagination cursor value. */
         cursor?: string;
-        /**
-         * @description * `ERROR` - Error
-         * * `INFO` - Info
-         */
-        level?: ("ERROR" | "INFO")[];
-        /** @description Number of results to return per page. */
+        level?: ("INFO" | "ERROR")[];
         per_page?: number;
-        /**
-         * @description * `SYSTEM` - System Logs
-         * * `PROXY` - Proxy Logs
-         * * `SERVICE` - Service Logs
-         */
-        source?: ("PROXY" | "SERVICE" | "SYSTEM")[];
+        query?: string;
+        source?: ("SERVICE" | "SYSTEM")[];
         time_after?: string;
         time_before?: string;
       };
@@ -3067,12 +2883,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedSimpleLogList"];
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400"];
         };
       };
       401: {
@@ -3279,6 +3095,34 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get API settings
+   * @description Get the settings of the API.
+   */
+  getAPISettings: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Settings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

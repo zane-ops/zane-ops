@@ -58,7 +58,7 @@ function CommandList({
       <div className="absolute top-2 -left-1 -right-1">
         <CommandPrimitive.List
           className={cn(
-            "max-h-[300px] p-1 shadow-md bg-popover rounded-md border border-border overflow-y-auto overflow-x-hidden",
+            "max-h-[500px] p-1 shadow-md bg-popover rounded-md border border-border overflow-y-auto overflow-x-hidden",
             className
           )}
           {...props}

@@ -67,7 +67,7 @@ setup: ### Launch initial setup before installing zaneops
 
 deploy: ### Install and deploy zaneops
 	@echo -e "====== \x1b[94mDeploying ZaneOps \x1b[92mwith HTTPS 🔒\x1b[0m ======"
-	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml zane;
+	@set -a; . ./.env; set +a && docker stack deploy --detach --with-registry-auth --compose-file docker-stack.prod.yaml zane;
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"
@@ -79,7 +79,7 @@ deploy: ### Install and deploy zaneops
 
 deploy-with-http: ### Install and deploy zaneops with the HTTP port enabled : better suited for tests and local installation
 	@echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m  ======"
-	@set -a; . ./.env; set +a && docker stack deploy --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
+	@set -a; . ./.env; set +a && docker stack deploy --detach --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane;
 	@docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1
 	@echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"
 	@echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"

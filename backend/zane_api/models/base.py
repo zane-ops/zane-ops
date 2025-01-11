@@ -516,13 +516,6 @@ class DockerRegistryService(BaseService):
             case _:
                 change.save()
 
-    @property
-    def logs(self):
-        deployment = self.latest_production_deployment
-        if deployment is not None:
-            return deployment.logs
-        return None
-
 
 class GitRepositoryService(BaseService):
     ID_PREFIX = "srv_git_"
@@ -699,10 +692,6 @@ class DockerDeployment(BaseDeployment):
         ]
 
     @property
-    def logs(self):
-        return SimpleLog.objects.filter(deployment_id=self.hash)
-
-    @property
     def http_logs(self):
         return HttpLog.objects.filter(deployment_id=self.hash)
 
@@ -859,45 +848,6 @@ class Log(models.Model):
 
     class Meta:
         abstract = True
-
-
-class SimpleLog(Log):
-    class LogLevel(models.TextChoices):
-        ERROR = "ERROR", _("Error")
-        INFO = "INFO", _("Info")
-
-    class LogSource(models.TextChoices):
-        SYSTEM = "SYSTEM", _("System Logs")
-        PROXY = "PROXY", _("Proxy Logs")
-        SERVICE = "SERVICE", _("Service Logs")
-
-    content = models.JSONField(null=True)
-    content_text = models.TextField(null=True, blank=True)
-    level = models.CharField(
-        max_length=10,
-        choices=LogLevel.choices,
-        default=LogLevel.INFO,
-    )
-    source = models.CharField(
-        max_length=10,
-        choices=LogSource.choices,
-        default=LogSource.SERVICE,
-    )
-
-    @classmethod
-    def escape_ansi(cls, content: str):
-        ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-        return ANSI_ESCAPE_PATTERN.sub("", content)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["deployment_id"]),
-            models.Index(fields=["service_id"]),
-            models.Index(fields=["source"]),
-            models.Index(fields=["level"]),
-            models.Index(fields=["time"]),
-        ]
-        ordering = ("-time",)
 
 
 class HttpLog(Log):

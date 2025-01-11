@@ -2,7 +2,7 @@ from .auth import *
 from .base import *
 from .docker import *
 from .docker_services import *
-from .domain import *
+from .settings import *
 from .logs import *
 from .projects import *
 from .proxy import *

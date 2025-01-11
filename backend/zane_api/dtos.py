@@ -153,6 +153,10 @@ class DockerServiceSnapshot:
         )
 
     @property
+    def non_read_only_volumes(self) -> List[VolumeDto]:
+        return list(filter(lambda v: v.mode != "READ_ONLY", self.volumes))
+
+    @property
     def host_volumes(self) -> List[VolumeDto]:
         return list(filter(lambda v: v.host_path is not None, self.volumes))
 
@@ -212,4 +216,32 @@ class DeploymentChangeDto:
 
     @classmethod
     def from_dict(cls, data: dict):
+        return cls(**data)
+
+
+class RuntimeLogLevel:
+    ERROR = "ERROR"
+    INFO = "INFO"
+
+
+class RuntimeLogSource:
+    SYSTEM = "SYSTEM"
+    PROXY = "PROXY"
+    SERVICE = "SERVICE"
+
+
+@dataclass
+class RuntimeLogDto:
+    id: str
+    created_at: str
+    time: str
+    level: Literal["ERROR", "INFO"]
+    source: Literal["SYSTEM", "PROXY", "SERVICE"]
+    service_id: Optional[str] = None
+    deployment_id: Optional[str] = None
+    content: Optional[str] = None
+    content_text: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
         return cls(**data)

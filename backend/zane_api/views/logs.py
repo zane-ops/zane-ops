@@ -1,31 +1,29 @@
 import json
 from urllib.parse import urlparse
 
-from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
-from rest_framework import status, permissions, exceptions
-from rest_framework.generics import ListAPIView
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
-from ..utils import Colors
+from ..utils import Colors, escape_ansi, truncate_utf8
+from datetime import datetime
 
-from . import DeploymentLogsPagination, EMPTY_CURSOR_RESPONSE
 from .helpers import ZaneServices
 from .serializers import (
     DockerContainerLogsResponseSerializer,
     DockerContainerLogsRequestSerializer,
     HTTPServiceLogSerializer,
-    ProxyLogsFilterSet,
 )
-from ..models import (
-    SimpleLog,
-    HttpLog,
-)
-from ..serializers import SimpleLogSerializer
+from ..models import HttpLog
+from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
+from search.client import SearchClient
+from search.constants import ELASTICSEARCH_BYTE_LIMIT
+from django.conf import settings
+from django.utils import timezone
 
 
 @extend_schema(exclude=True)
@@ -40,7 +38,7 @@ class LogIngestAPIView(APIView):
         if serializer.is_valid(raise_exception=True):
             logs = serializer.data
 
-            simple_logs: list[SimpleLog] = []
+            simple_logs: list[RuntimeLogDto] = []
             http_logs: list[HttpLog] = []
 
             for log in logs:
@@ -116,41 +114,45 @@ class LogIngestAPIView(APIView):
                                                 )
                                             )
                                             continue
-                                simple_logs.append(
-                                    SimpleLog(
-                                        source=SimpleLog.LogSource.PROXY,
-                                        level=(
-                                            SimpleLog.LogLevel.INFO
-                                            if log["source"] == "stdout"
-                                            else SimpleLog.LogLevel.ERROR
-                                        ),
-                                        content=content,
-                                        time=log["time"],
-                                    )
-                                )
-
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass
                         case _:
                             deployment_id = json_tag["deployment_id"]
-                            simple_logs.append(
-                                SimpleLog(
-                                    source=SimpleLog.LogSource.SERVICE,
-                                    level=(
-                                        SimpleLog.LogLevel.INFO
-                                        if log["source"] == "stdout"
-                                        else SimpleLog.LogLevel.ERROR
-                                    ),
-                                    content=log["log"],
+                            simple_logs.extend(
+                                RuntimeLogDto(
                                     time=log["time"],
-                                    deployment_id=deployment_id,
+                                    created_at=timezone.now(),
+                                    level=(
+                                        RuntimeLogLevel.INFO
+                                        if log["source"] == "stdout"
+                                        else RuntimeLogLevel.ERROR
+                                    ),
+                                    source=RuntimeLogSource.SERVICE,
                                     service_id=service_id,
-                                    content_text=SimpleLog.escape_ansi(log["log"]),
+                                    deployment_id=deployment_id,
+                                    content=message,
+                                    content_text=escape_ansi(message),
+                                )
+                                for message in truncate_utf8(
+                                    log["log"], ELASTICSEARCH_BYTE_LIMIT
                                 )
                             )
-            SimpleLog.objects.bulk_create(simple_logs)
+
+            start_time = datetime.now()
+            search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+            search_client.bulk_insert(
+                map(
+                    lambda log: dict(
+                        _index=settings.ELASTICSEARCH_LOGS_INDEX,
+                        **log.to_es_dict(),
+                    ),
+                    simple_logs,
+                )
+            )
+
             HttpLog.objects.bulk_create(http_logs)
+            end_time = datetime.now()
 
             response = DockerContainerLogsResponseSerializer(
                 {
@@ -159,27 +161,9 @@ class LogIngestAPIView(APIView):
                 }
             )
             print("====== LOGS INGEST ======")
+            print(f"Took {end_time - start_time}")
             print(
                 f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}"
             )
             print(f"HTTP logs inserted = {Colors.BLUE}{len(http_logs)}{Colors.ENDC}")
             return Response(response.data, status=status.HTTP_200_OK)
-
-
-class ProxyLogsAPIView(ListAPIView):
-    serializer_class = SimpleLogSerializer
-    queryset = SimpleLog.objects.filter(source=SimpleLog.LogSource.PROXY)
-    pagination_class = DeploymentLogsPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = ProxyLogsFilterSet
-
-    @extend_schema(
-        summary="Get caddy proxy logs",
-    )
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound as e:
-            if "Invalid cursor" in str(e.detail):
-                return Response(EMPTY_CURSOR_RESPONSE)
-            raise e

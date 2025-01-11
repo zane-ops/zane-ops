@@ -92,7 +92,13 @@ if ENVIRONMENT == PRODUCTION_ENV:
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
-    [f"https://{ZANE_APP_DOMAIN}", f"http://{ZANE_APP_DOMAIN}", "http://localhost:5678"]
+    [
+        f"https://{ZANE_APP_DOMAIN}",
+        f"http://{ZANE_APP_DOMAIN}",
+        "http://localhost:5678",
+        "http://localhost:5173",
+        "http://localhost:10088",
+    ]
     if ENVIRONMENT != PRODUCTION_ENV
     else [f"https://{ZANE_APP_DOMAIN}"]
 )
@@ -121,6 +127,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
+    "search.apps.SearchConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -379,3 +386,17 @@ if BACKEND_COMPONENT == "API":
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
     )
+
+# Docker image version
+IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")
+COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
+
+# elastic search config
+ELASTICSEARCH_HOST = os.environ.get("ELASTICSEARCH_HOST", "http://127.0.0.1:9200")
+ELASTICSEARCH_LOGS_INDEX = "logs"
+
+if BACKEND_COMPONENT == "API" and not TESTING:
+    from search.client import SearchClient
+
+    search_client = SearchClient(host=ELASTICSEARCH_HOST)
+    search_client.create_log_index_if_not_exists(index_name=ELASTICSEARCH_LOGS_INDEX)
