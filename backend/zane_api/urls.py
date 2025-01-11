@@ -65,6 +65,11 @@ urlpatterns = [
         views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
         name="services.docker.request_deployment_changes",
     ),
+    re_path(
+        r"^search-resources/?$",
+        views.ResouceSearchAPIView.as_view(),
+        name="resources.search",
+    ),
 ]
 
 if settings.DEBUG:
