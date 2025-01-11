@@ -20,7 +20,7 @@ from ..models import (
     DockerRegistryService,
 )
 
-from serializers import (
+from .serializers import (
     ProjectSearchSerializer,
     ServiceSearchSerializer,
 )
