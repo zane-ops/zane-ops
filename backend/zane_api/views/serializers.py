@@ -366,14 +366,14 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
 #       Projects Search        #
 # ==============================
 
-class ProjectSearchSerializer(Serializer):
+class ProjectSearchSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     created_at = serializers.DateTimeField(required=True)
     slug = serializers.SlugField(required=True)
     type = serializers.ChoiceField(choices=["project"], default="project")
 
 
-class ServiceSearchSerializer(Serializer):
+class ServiceSearchSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     project_slug = serializers.SlugField(required=True)
     slug = serializers.SlugField(required=True)
