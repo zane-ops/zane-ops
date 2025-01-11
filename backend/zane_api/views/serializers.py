@@ -362,6 +362,24 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
             )
         return attrs
 
+# ==============================
+#       Projects Search        #
+# ==============================
+
+class ProjectSearchSerializer(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    slug = serializers.SlugField(required=True)
+    type = serializers.ChoiceField(choices=["project"], default="project")
+
+
+class ServiceSearchSerializer(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    project_slug = serializers.SlugField(required=True)
+    slug = serializers.SlugField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    type = serializers.ChoiceField(choices=["service"], default="service")
+
 
 # ==============================
 #       service Update         #
@@ -1125,3 +1143,12 @@ class GitServiceCardSerializer(BaseServiceCardSerializer):
     repository = serializers.CharField(required=True)
     last_commit_message = serializers.CharField(required=False)
     branch = serializers.CharField(required=True)
+
+
+# ==============================
+#       Resources Search       #
+# ==============================
+
+
+class ResourceSearchParamSerializer(serializers.Serializer):
+    query = serializers.CharField(required=False)
