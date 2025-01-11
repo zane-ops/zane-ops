@@ -37,7 +37,6 @@ from .serializers import (
     DockerServiceCardSerializer,
     GitServiceCardSerializer,
     ServiceListParamSerializer,
-    ResourceSearchParamSerializer,
 )
 from ..models import (
     Project,
@@ -54,8 +53,6 @@ from ..serializers import (
     ProjectSerializer,
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
-    ProjectSearchSerializer,
-    ServiceSearchSerializer,
 )
 from ..temporal import (
     CreateProjectResourcesWorkflow,
