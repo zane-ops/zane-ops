@@ -16,7 +16,6 @@ import {
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
-import { wait } from "~/utils";
 
 const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 
