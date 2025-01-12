@@ -442,7 +442,6 @@ export function CommandMenu() {
     };
   }, []);
 
-  const errors = getFormErrorsFromResponseData(resourceListData?.error);
   const imageList = resourceListData?.data ?? [];
 
   console.log(imageList);
