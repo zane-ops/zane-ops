@@ -100,9 +100,6 @@ export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
-    console.log({
-      error
-    });
     message = error.status === 404 ? "Oops!" : "Error";
     details =
       error.status === 404
