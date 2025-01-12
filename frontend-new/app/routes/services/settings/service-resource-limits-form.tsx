@@ -159,7 +159,7 @@ export function ServiceResourceLimits({
               step={0.5}
               min={0}
               aria-hidden="true"
-              value={[cpuLimit ?? 0]}
+              value={[cpuLimit ?? resourceLimitsQuery.data?.no_of_cpus ?? 0]}
               disabled={resouceLimitsChange !== undefined}
               onValueChange={(value) => {
                 setCPULimit(value[0]);
@@ -199,7 +199,7 @@ export function ServiceResourceLimits({
               step={100}
               min={0}
               aria-hidden="true"
-              value={[memoryLimit ?? 0]}
+              value={[memoryLimit ?? max_memory_in_mb]}
               disabled={resouceLimitsChange !== undefined}
               onValueChange={(value) => {
                 setMemoryLimit(value[0]);

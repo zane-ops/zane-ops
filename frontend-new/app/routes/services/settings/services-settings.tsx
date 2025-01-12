@@ -4,6 +4,7 @@ import {
   CheckIcon,
   ContainerIcon,
   CopyIcon,
+  FlameIcon,
   GlobeLockIcon,
   HammerIcon,
   HardDriveIcon,
@@ -31,6 +32,7 @@ import {
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
+import { ServiceDangerZoneForm } from "~/routes/services/settings/service-danger-zone-form";
 import { ServiceDeployURLForm } from "~/routes/services/settings/service-deploy-url-form";
 import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
@@ -152,6 +154,21 @@ export default function ServiceSettingsPage({
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Volumes</h2>
             <ServiceVolumesForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
+          </div>
+        </section>
+
+        <section id="danger" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
+              <FlameIcon size={15} className="flex-none text-red-500" />
+            </div>
+          </div>
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-red-400">Danger Zone</h2>
+            <ServiceDangerZoneForm
               project_slug={project_slug}
               service_slug={service_slug}
             />
