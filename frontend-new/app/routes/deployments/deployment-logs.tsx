@@ -59,7 +59,7 @@ export async function clientLoader({
     query: search.query ?? ""
   } satisfies DeploymentLogFitlers;
 
-  queryClient.prefetchInfiniteQuery(
+  const logs = await queryClient.ensureInfiniteQueryData(
     deploymentQueries.logs({
       deployment_hash,
       project_slug,
@@ -68,7 +68,7 @@ export async function clientLoader({
       queryClient
     })
   );
-  return;
+  return { logs };
 }
 export default function DeploymentLogsPage({
   loaderData,
@@ -105,7 +105,8 @@ export default function DeploymentLogsPage({
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
-    })
+    }),
+    initialData: loaderData.logs
   });
 
   const logs = (logsQuery.data?.pages ?? [])
@@ -536,7 +537,6 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
           <span className="sr-only sm:not-sr-only">
             {logTime.dateFormat},&nbsp;
           </span>
-          {id}
           <span>{logTime.hourFormat}</span>
         </time>
       </span>
