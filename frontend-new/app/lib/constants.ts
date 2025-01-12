@@ -21,3 +21,4 @@ export const SPIN_DELAY_DEFAULT_OPTIONS: Parameters<typeof useSpinDelay>[1] = {
   delay: 250,
   minDuration: 200
 };
+export const REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER = 719925474099;
