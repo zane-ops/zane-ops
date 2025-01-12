@@ -28,7 +28,7 @@ export default [
     route("create-project", "./routes/projects/create-project.tsx"),
 
     ...prefix("project/:projectSlug", [
-      route("", "./routes/projects/project-layout.tsx", [
+      route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-service-list.tsx"),
         route("settings", "./routes/projects/project-settings.tsx")
       ]),
