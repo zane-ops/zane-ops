@@ -107,7 +107,6 @@ export default function DeploymentListPage({
   };
 
   const noFilters =
-    !search.page &&
     !search.per_page &&
     !search.queued_at_after &&
     !search.queued_at_before &&
@@ -278,8 +277,6 @@ export default function DeploymentListPage({
                                 ? new Date(deployment.finished_at)
                                 : undefined
                             }
-                            service_slug={service_slug}
-                            project_slug={project_slug}
                           />
                         </li>
                       ))}
@@ -311,8 +308,6 @@ export default function DeploymentListPage({
                           : undefined
                       }
                       is_current_production
-                      service_slug={service_slug}
-                      project_slug={project_slug}
                     />
                   </section>
                 )}
@@ -339,8 +334,6 @@ export default function DeploymentListPage({
                                 ? new Date(deployment.finished_at)
                                 : undefined
                             }
-                            service_slug={service_slug}
-                            project_slug={project_slug}
                           />
                         </li>
                       ))}

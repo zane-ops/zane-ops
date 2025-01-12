@@ -236,6 +236,16 @@ def random_word(length: int = 10):
     return "".join(random.choice(letters) for _ in range(length))
 
 
+def generate_random_chars(length: int):
+    """
+    Generate a random set of characters comprised of letters & digits
+
+    :param int length:
+    """
+    letters = string.ascii_letters + string.digits
+    return "".join(random.choice(letters) for _ in range(length))
+
+
 class Colors:
     GREEN = "\033[92m"
     BLUE = "\033[94m"

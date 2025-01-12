@@ -40,7 +40,7 @@ from ..temporal import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import find_item_in_list, random_word
+from ..utils import find_item_in_list, random_word, generate_random_chars
 
 
 class CustomAPIClient(APIClient):
@@ -458,7 +458,9 @@ class AuthAPITestCase(APITestCase):
     ):
         owner = self.loginUser()
         project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="redis", project=project)
+        service = DockerRegistryService.objects.create(
+            slug="redis", project=project, deploy_token=generate_random_chars(20)
+        )
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -481,9 +483,11 @@ class AuthAPITestCase(APITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.IMAGE,
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value="valkey/valkey:7.2-alpine",
+                    new_value={
+                        "image": "valkey/valkey:7.2-alpine",
+                    },
                     service=service,
                 ),
             ]

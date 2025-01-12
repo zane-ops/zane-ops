@@ -7,7 +7,12 @@ const TooltipProvider = TooltipPrimitive.Provider;
 
 const Tooltip = TooltipPrimitive.Root;
 
-const TooltipTrigger = TooltipPrimitive.Trigger;
+function TooltipTrigger(
+  props: Omit<React.ComponentProps<typeof TooltipPrimitive.Trigger>, "type">
+) {
+  return <TooltipPrimitive.Trigger {...props} type="button" />;
+}
+
 const TooltipArrow = TooltipPrimitive.Arrow;
 
 const TooltipContent = ({

@@ -34,6 +34,13 @@ export interface paths {
      */
     get: operations["getCSRF"];
   };
+  "/api/deploy-service/docker/{deploy_token}": {
+    /**
+     * Webhook to deploy a docker service
+     * @description trigger a new deployment.
+     */
+    put: operations["webhookDeployService"];
+  };
   "/api/docker/check-port/": {
     /**
      * Check Port
@@ -47,13 +54,6 @@ export interface paths {
      * @description Search a docker Image in docker hub Registry
      */
     get: operations["searchDockerRegistry"];
-  };
-  "/api/domain/root/": {
-    /**
-     * Get Root Domain
-     * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-     */
-    get: operations["getRootDomain"];
   };
   "/api/ping/": {
     /**
@@ -145,6 +145,10 @@ export interface paths {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_retrieve"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/": {
+    /** Regenerate service deploy token */
+    patch: operations["regenerateServiceDeployToken"];
+  };
   "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/": {
     /**
      * Stop/Restart a docker service
@@ -166,6 +170,24 @@ export interface paths {
      * @description Get all services in a project
      */
     get: operations["projects_service_list_list"];
+  };
+  "/api/search-resources/": {
+    /** search for resources (project, service ...) */
+    get: operations["searchResources"];
+  };
+  "/api/server/resource-limits/": {
+    /**
+     * Get server resource limits
+     * @description Get the number of CPUS & memory of the server.
+     */
+    get: operations["getServerResouceLimits"];
+  };
+  "/api/settings/": {
+    /**
+     * Get API settings
+     * @description Get the settings of the API.
+     */
+    get: operations["getAPISettings"];
   };
 }
 
@@ -420,7 +442,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerCredentialsFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["DockerImageFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
     DeploymentDocker: {
       /** Format: date-time */
       created_at: string;
@@ -435,6 +457,7 @@ export interface components {
       credentials: components["schemas"]["DockerCredential"] | null;
       urls: readonly components["schemas"]["URLModel"][];
       volumes: readonly components["schemas"]["Volume"][];
+      deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
       env_variables: readonly components["schemas"]["DockerEnvVariable"][];
       network_aliases: readonly string[];
@@ -459,16 +482,9 @@ export interface components {
       username: string;
       password: string;
     };
-    /**
-     * @description * `credentials` - credentials
-     * @enum {string}
-     */
-    DockerCredentialsFieldChangeFieldEnum: "credentials";
-    DockerCredentialsFieldChangeRequest: {
-      /** @default UPDATE */
-      type?: components["schemas"]["FieldChangeTypeEnum"];
-      new_value: components["schemas"]["DockerCredentialsRequestRequest"] | null;
-      field: components["schemas"]["DockerCredentialsFieldChangeFieldEnum"];
+    DockerCredentialRequest: {
+      username: string;
+      password: string;
     };
     DockerCredentialsRequestRequest: {
       username?: string;
@@ -483,9 +499,8 @@ export interface components {
       item_id: string | null;
     };
     /**
-     * @description * `image` - image
+     * @description * `source` - source
      * * `command` - command
-     * * `credentials` - credentials
      * * `healthcheck` - healthcheck
      * * `volumes` - volumes
      * * `env_variables` - env variables
@@ -494,7 +509,15 @@ export interface components {
      * * `resource_limits` - resource limits
      * @enum {string}
      */
-    DockerDeploymentChangeFieldEnum: "image" | "command" | "credentials" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits";
+    DockerDeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits";
+    DockerDeploymentChangeRequest: {
+      id?: string;
+      type: components["schemas"]["DockerDeploymentChangeTypeEnum"];
+      field: components["schemas"]["DockerDeploymentChangeFieldEnum"];
+      new_value?: unknown;
+      old_value?: unknown;
+      item_id?: string | null;
+    };
     /**
      * @description * `UPDATE` - update
      * * `DELETE` - delete
@@ -507,20 +530,14 @@ export interface components {
       key: string;
       value: string;
     };
+    DockerEnvVariableRequest: {
+      id?: string;
+      key: string;
+      value: string;
+    };
     DockerImage: {
       full_image: string;
       description: string;
-    };
-    /**
-     * @description * `image` - image
-     * @enum {string}
-     */
-    DockerImageFieldChangeFieldEnum: "image";
-    DockerImageFieldChangeRequest: {
-      /** @default UPDATE */
-      type?: components["schemas"]["FieldChangeTypeEnum"];
-      new_value: string;
-      field: components["schemas"]["DockerImageFieldChangeFieldEnum"];
     };
     DockerImageSearchResponse: {
       images: components["schemas"]["DockerImage"][];
@@ -545,6 +562,7 @@ export interface components {
       credentials: components["schemas"]["DockerCredential"] | null;
       urls: readonly components["schemas"]["URLModel"][];
       volumes: readonly components["schemas"]["Volume"][];
+      deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
       env_variables: readonly components["schemas"]["DockerEnvVariable"][];
       network_aliases: readonly string[];
@@ -578,7 +596,7 @@ export interface components {
       image: string;
       credentials?: components["schemas"]["DockerCredentialsRequestRequest"];
     };
-    DockerServiceDeployServiceRequest: {
+    DockerServiceDeployRequestRequest: {
       commit_message?: string;
     };
     DockerServiceDeployment: {
@@ -617,6 +635,25 @@ export interface components {
      * @enum {string}
      */
     DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    DockerServiceWebhookDeployRequestRequest: {
+      commit_message?: string;
+      new_image?: string;
+    };
+    /**
+     * @description * `source` - source
+     * @enum {string}
+     */
+    DockerSourceFieldChangeFieldEnum: "source";
+    DockerSourceFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["DockerSourceRequestRequest"];
+      field: components["schemas"]["DockerSourceFieldChangeFieldEnum"];
+    };
+    DockerSourceRequestRequest: {
+      image: string;
+      credentials?: components["schemas"]["DockerCredentialsRequestRequest"];
+    };
     /**
      * @description * `env_variables` - env_variables
      * @enum {string}
@@ -694,6 +731,7 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListError: components["schemas"]["GetArchivedProjectListSlugErrorComponent"] | components["schemas"]["GetArchivedProjectListSortByErrorComponent"];
     GetArchivedProjectListErrorResponse400: components["schemas"]["GetArchivedProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetArchivedProjectListSlugErrorComponent: {
@@ -761,10 +799,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRootDomain: {
-      domain: string;
-    };
-    GetRootDomainErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitServiceCard: {
       /** Format: date-time */
@@ -792,6 +827,13 @@ export interface components {
       value: string;
       timeout_seconds: number;
       interval_seconds: number;
+    };
+    HealthCheckRequest: {
+      id?: string;
+      type?: components["schemas"]["HealthCheckTypeEnum"];
+      value?: string;
+      timeout_seconds?: number;
+      interval_seconds?: number;
     };
     HealthCheckRequestRequest: {
       type: components["schemas"]["HealthCheckRequestTypeEnum"];
@@ -933,6 +975,10 @@ export interface components {
       value: number;
       unit: components["schemas"]["UnitEnum"];
     };
+    MemoryLimitRequest: {
+      value: number;
+      unit: components["schemas"]["UnitEnum"];
+    };
     MemoryLimitRequestRequest: {
       value: number;
       /** @default MEGABYTES */
@@ -1013,6 +1059,18 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
     };
+    PatchedDockerServiceRequest: {
+      id?: string;
+      slug?: string;
+      image?: string | null;
+      command?: string | null;
+      credentials?: components["schemas"]["DockerCredentialRequest"] | null;
+      deploy_token?: string | null;
+      network_alias?: string | null;
+      resource_limits?: components["schemas"]["ResourceLimitsRequest"] | null;
+      /** @default [] */
+      system_env_variables?: components["schemas"]["SystemEnvVariablesRequest"][];
+    };
     PatchedDockerServiceUpdateRequestRequest: {
       slug?: string;
     };
@@ -1029,6 +1087,11 @@ export interface components {
     PortConfiguration: {
       id: string;
       host: number | null;
+      forwarded: number;
+    };
+    PortConfigurationRequest: {
+      id?: string;
+      host?: number | null;
       forwarded: number;
     };
     /**
@@ -1057,6 +1120,19 @@ export interface components {
       slug?: string;
       description?: string;
     };
+    ProjectSearch: {
+      id: string;
+      /** Format: date-time */
+      created_at: string;
+      slug: string;
+      /** @default project */
+      type: components["schemas"]["ProjectSearchTypeEnum"];
+    };
+    /**
+     * @description * `project` - project
+     * @enum {string}
+     */
+    ProjectSearchTypeEnum: "project";
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
@@ -1193,7 +1269,339 @@ export interface components {
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
+    RegenerateServiceDeployTokenCommandErrorComponent: {
+      /**
+       * @description * `command` - command
+       * @enum {string}
+       */
+      attr: "command";
+      /**
+       * @description * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `credentials.non_field_errors` - credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenCredentialsPasswordErrorComponent: {
+      /**
+       * @description * `credentials.password` - credentials.password
+       * @enum {string}
+       */
+      attr: "credentials.password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenCredentialsUsernameErrorComponent: {
+      /**
+       * @description * `credentials.username` - credentials.username
+       * @enum {string}
+       */
+      attr: "credentials.username";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenDeployTokenErrorComponent: {
+      /**
+       * @description * `deploy_token` - deploy_token
+       * @enum {string}
+       */
+      attr: "deploy_token";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
+    RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegenerateServiceDeployTokenIdErrorComponent: {
+      /**
+       * @description * `id` - id
+       * @enum {string}
+       */
+      attr: "id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenImageErrorComponent: {
+      /**
+       * @description * `image` - image
+       * @enum {string}
+       */
+      attr: "image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenNetworkAliasErrorComponent: {
+      /**
+       * @description * `network_alias` - network_alias
+       * @enum {string}
+       */
+      attr: "network_alias";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent: {
+      /**
+       * @description * `resource_limits.cpus` - resource_limits.cpus
+       * @enum {string}
+       */
+      attr: "resource_limits.cpus";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `resource_limits.memory.non_field_errors` - resource_limits.memory.non_field_errors
+       * @enum {string}
+       */
+      attr: "resource_limits.memory.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent: {
+      /**
+       * @description * `resource_limits.memory.unit` - resource_limits.memory.unit
+       * @enum {string}
+       */
+      attr: "resource_limits.memory.unit";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent: {
+      /**
+       * @description * `resource_limits.memory.value` - resource_limits.memory.value
+       * @enum {string}
+       */
+      attr: "resource_limits.memory.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `resource_limits.non_field_errors` - resource_limits.non_field_errors
+       * @enum {string}
+       */
+      attr: "resource_limits.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent: {
+      /**
+       * @description * `system_env_variables.INDEX.comment` - system_env_variables.INDEX.comment
+       * @enum {string}
+       */
+      attr: "system_env_variables.INDEX.comment";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent: {
+      /**
+       * @description * `system_env_variables.INDEX.key` - system_env_variables.INDEX.key
+       * @enum {string}
+       */
+      attr: "system_env_variables.INDEX.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `system_env_variables.INDEX.non_field_errors` - system_env_variables.INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "system_env_variables.INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent: {
+      /**
+       * @description * `system_env_variables.INDEX.value` - system_env_variables.INDEX.value
+       * @enum {string}
+       */
+      attr: "system_env_variables.INDEX.value";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `system_env_variables.non_field_errors` - system_env_variables.non_field_errors
+       * @enum {string}
+       */
+      attr: "system_env_variables.non_field_errors";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
+    };
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -1280,6 +1688,54 @@ export interface components {
       code: "invalid" | "max_string_length" | "min_value" | "null";
       detail: string;
     };
+    RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent: {
+      /**
+       * @description * `new_value.credentials.password` - new_value.credentials.password
+       * @enum {string}
+       */
+      attr: "new_value.credentials.password";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent: {
+      /**
+       * @description * `new_value.credentials.username` - new_value.credentials.username
+       * @enum {string}
+       */
+      attr: "new_value.credentials.username";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RequestDeploymentChangesNewValueDomainErrorComponent: {
       /**
        * @description * `new_value.domain` - new_value.domain
@@ -1307,14 +1763,12 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
-       * * `min_length` - min_length
-       * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueForwardedErrorComponent: {
@@ -1366,6 +1820,24 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueImageErrorComponent: {
+      /**
+       * @description * `new_value.image` - new_value.image
+       * @enum {string}
+       */
+      attr: "new_value.image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueIntervalSecondsErrorComponent: {
@@ -1495,23 +1967,6 @@ export interface components {
       code: "invalid" | "null" | "required";
       detail: string;
     };
-    RequestDeploymentChangesNewValuePasswordErrorComponent: {
-      /**
-       * @description * `new_value.password` - new_value.password
-       * @enum {string}
-       */
-      attr: "new_value.password";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
     RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent: {
       /**
        * @description * `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors
@@ -1603,23 +2058,6 @@ export interface components {
       code: "invalid_choice" | "null" | "required";
       detail: string;
     };
-    RequestDeploymentChangesNewValueUsernameErrorComponent: {
-      /**
-       * @description * `new_value.username` - new_value.username
-       * @enum {string}
-       */
-      attr: "new_value.username";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
     RequestDeploymentChangesNewValueValueErrorComponent: {
       /**
        * @description * `new_value.value` - new_value.value
@@ -1690,6 +2128,10 @@ export interface components {
      * @enum {string}
      */
     RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
+    ResourceLimit: {
+      no_of_cpus: number;
+      max_memory_in_bytes: number;
+    };
     /**
      * @description * `resource_limits` - resource_limits
      * @enum {string}
@@ -1706,11 +2148,17 @@ export interface components {
       cpus: number | null;
       memory: components["schemas"]["MemoryLimit"] | null;
     };
+    ResourceLimitsRequest: {
+      /** Format: double */
+      cpus: number | null;
+      memory: components["schemas"]["MemoryLimitRequest"] | null;
+    };
     ResourceLimitsRequestRequest: {
       /** Format: double */
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
+    ResourceResponse: components["schemas"]["ServiceSearch"] | components["schemas"]["ProjectSearch"];
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -1731,12 +2179,27 @@ export interface components {
       query_time_ms: number;
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
       /** @default 80 */
       host?: number;
       forwarded: number;
     };
+    ServiceSearch: {
+      id: string;
+      project_slug: string;
+      slug: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @default service */
+      type: components["schemas"]["ServiceSearchTypeEnum"];
+    };
+    /**
+     * @description * `service` - service
+     * @enum {string}
+     */
+    ServiceSearchTypeEnum: "service";
     /**
      * @description * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
@@ -1746,6 +2209,11 @@ export interface components {
      * @enum {string}
      */
     ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    Settings: {
+      root_domain: string;
+      image_version: string;
+      commit_sha: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -1759,6 +2227,11 @@ export interface components {
      */
     SourceEnum: "SYSTEM" | "SERVICE";
     SystemEnvVariables: {
+      key: string;
+      value: string;
+      comment: string;
+    };
+    SystemEnvVariablesRequest: {
       key: string;
       value: string;
       comment: string;
@@ -1781,13 +2254,27 @@ export interface components {
       /** @default / */
       base_path: string;
       strip_prefix: boolean;
-      redirect_to: components["schemas"]["URLRedirect"] | null;
+      redirect_to: components["schemas"]["URLRedirectModel"] | null;
     };
-    URLRedirect: {
+    URLModelRequest: {
+      id?: string;
+      domain: string;
+      /** @default / */
+      base_path?: string;
+      strip_prefix?: boolean;
+      redirect_to: components["schemas"]["URLRedirectModelRequest"] | null;
+    };
+    URLRedirectModel: {
       /** Format: uri */
       url: string;
       /** @default false */
       permanent: boolean;
+    };
+    URLRedirectModelRequest: {
+      /** Format: uri */
+      url: string;
+      /** @default false */
+      permanent?: boolean;
     };
     URLRedirectRequest: {
       /** Format: uri */
@@ -1938,6 +2425,13 @@ export interface components {
      * @enum {string}
      */
     VolumeModeEnum: "READ_ONLY" | "READ_WRITE";
+    VolumeRequest: {
+      id?: string;
+      name: string;
+      container_path: string;
+      host_path?: string | null;
+      mode?: components["schemas"]["VolumeModeEnum"];
+    };
     /**
      * @description * `READ_ONLY` - READ_ONLY
      * * `READ_WRITE` - READ_WRITE
@@ -1949,6 +2443,58 @@ export interface components {
       container_path: string;
       host_path?: string;
       mode?: components["schemas"]["VolumeRequestModeEnum"];
+    };
+    WebhookDeployServiceCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookDeployServiceError: components["schemas"]["WebhookDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDeployServiceNewImageErrorComponent"];
+    WebhookDeployServiceErrorResponse400: components["schemas"]["WebhookDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookDeployServiceNewImageErrorComponent: {
+      /**
+       * @description * `new_image` - new_image
+       * @enum {string}
+       */
+      attr: "new_image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookDeployServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookDeployServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookDeployServiceError"][];
     };
   };
   responses: never;
@@ -2126,6 +2672,51 @@ export interface operations {
     };
   };
   /**
+   * Webhook to deploy a docker service
+   * @description trigger a new deployment.
+   */
+  webhookDeployService: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerServiceDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookDeployServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
    * Check Port
    * @description Check If Port is available on host machine
    */
@@ -2179,34 +2770,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["SearchDockerRegistryErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Root Domain
-   * @description Get the root domain used by ZaneOps to generate automatic subdomains for services.
-   */
-  getRootDomain: {
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomain"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetRootDomainErrorResponse400"];
         };
       };
       401: {
@@ -2529,9 +3092,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["DockerServiceDeployServiceRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceDeployServiceRequest"];
-        "multipart/form-data": components["schemas"]["DockerServiceDeployServiceRequest"];
+        "application/json": components["schemas"]["DockerServiceDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["DockerServiceDeployRequestRequest"];
       };
     };
     responses: {
@@ -2934,6 +3497,49 @@ export interface operations {
       };
     };
   };
+  /** Regenerate service deploy token */
+  regenerateServiceDeployToken: {
+    parameters: {
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedDockerServiceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedDockerServiceRequest"];
+        "multipart/form-data": components["schemas"]["PatchedDockerServiceRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerService"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegenerateServiceDeployTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /**
    * Stop/Restart a docker service
    * @description Stops a running docker service and restart it if it was stopped.
@@ -3121,6 +3727,92 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** search for resources (project, service ...) */
+  searchResources: {
+    parameters: {
+      query?: {
+        query?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResourceResponse"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SearchResourcesErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get server resource limits
+   * @description Get the number of CPUS & memory of the server.
+   */
+  getServerResouceLimits: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResourceLimit"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetServerResouceLimitsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get API settings
+   * @description Get the settings of the API.
+   */
+  getAPISettings: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Settings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

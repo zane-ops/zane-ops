@@ -5,7 +5,7 @@
   "scripts": {
     "generate:api": "openapi-typescript ../openapi/schema.yml -o app/api/v1.ts",
     "build": "NODE_ENV=production react-router build",
-    "dev": "pnpm generate:api && react-router dev",
+    "dev": "pnpm generate:api && react-router dev --host",
     "preview": "vite preview",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
@@ -21,6 +21,7 @@
     "@radix-ui/react-popover": "^1.1.1",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-slider": "^1.2.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.1.1",
     "@radix-ui/react-tabs": "^1.1.0",

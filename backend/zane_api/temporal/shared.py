@@ -149,6 +149,7 @@ class HealthcheckDeploymentDetails:
 @dataclass
 class DeployDockerServiceWorkflowResult:
     deployment_status: str
+    deployment_status_reason: str
     healthcheck_result: Optional[DeploymentHealthcheckResult] = None
     next_queued_deployment: Optional[DockerDeploymentDetails] = None
 

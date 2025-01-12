@@ -9,9 +9,18 @@ import {
 export default [
   route("login", "./routes/login.tsx"),
   route("logout", "./routes/logout.tsx"),
+
   route(
     "project/:projectSlug/services/:serviceSlug/deploy-service",
     "./routes/services/deploy-service.tsx"
+  ),
+  route(
+    "project/:projectSlug/services/:serviceSlug/archive-service",
+    "./routes/services/archive-service.tsx"
+  ),
+  route(
+    "project/:projectSlug/services/:serviceSlug/toggle-service-state",
+    "./routes/services/toggle-service-state.tsx"
   ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
@@ -19,7 +28,7 @@ export default [
     route("create-project", "./routes/projects/create-project.tsx"),
 
     ...prefix("project/:projectSlug", [
-      route("", "./routes/projects/project-layout.tsx", [
+      route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-service-list.tsx"),
         route("settings", "./routes/projects/project-settings.tsx")
       ]),
@@ -36,14 +45,23 @@ export default [
             "env-variables",
             "./routes/services/services-env-variables.tsx"
           ),
-          route("settings", "./routes/services/services-settings.tsx")
+          route("settings", "./routes/services/settings/services-settings.tsx")
         ]),
 
-        route("deployments", "./routes/layouts/deployment-layout.tsx", [
-          index("./routes/deployments/deployment-logs.tsx"),
-          route("details", "./routes/deployments/deployment-details.tsx"),
-          route("http-logs", "./routes/deployments/deployment-http-logs.tsx")
-        ])
+        route(
+          "deployments/:deploymentHash",
+          "./routes/layouts/deployment-layout.tsx",
+          [
+            index("./routes/deployments/deployment-logs.tsx"),
+            route("details", "./routes/deployments/deployment-details.tsx"),
+            route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
+            route(
+              "redeploy",
+              "./routes/deployments/redeploy-old-deployment.tsx"
+            ),
+            route("cancel", "./routes/deployments/cancel-deployment.tsx")
+          ]
+        )
       ])
     ])
   ])

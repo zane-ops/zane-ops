@@ -57,7 +57,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     pnpm run  --filter='!backend' --recursive --parallel dev
     ```
 
-   Wait until you see `Server launched at http://localhost:5678` in the terminal.:
+   Wait until you see `Server launched at http://localhost:5173` in the terminal.:
    
 4. Run DB migrations :
 
@@ -67,7 +67,7 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
 5. Open the source code and start working :
 
-   The app should be available at http://localhost:5678
+   The app should be available at http://localhost:5173
 
 ## Debugging
 

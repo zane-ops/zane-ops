@@ -93,9 +93,11 @@ export default function ServiceDetailsLayout({
   }
 
   let serviceImage =
-    service?.image ??
-    (service?.unapplied_changes?.filter((change) => change.field === "image")[0]
-      ?.new_value as string);
+    service.image ??
+    (
+      service.unapplied_changes.filter((change) => change.field === "source")[0]
+        ?.new_value as Pick<DockerService, "image" | "credentials">
+    )?.image;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";

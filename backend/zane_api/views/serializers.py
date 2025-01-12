@@ -188,12 +188,12 @@ class MemoryLimitRequestSerializer(serializers.Serializer):
         # https://docs.docker.com/engine/containers/resource_constraints/#limit-a-containers-access-to-memory
         if value_in_bytes < six_megabytes:
             raise serializers.ValidationError(
-                {"value": "Cannot limit a container max memory to less than 6mb."}
+                {"value": "Cannot limit a service memory to less than 6 MiB."}
             )
         if value_in_bytes > max_memory:
             raise serializers.ValidationError(
                 {
-                    "value": f"Maximum memory limit is {format_storage_value(max_memory)}."
+                    "value": f"The maximum memory limit on this server is {format_storage_value(max_memory)}."
                 }
             )
 
@@ -271,8 +271,43 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 # ==============================
 
 
-class DockerServiceDeployServiceSerializer(serializers.Serializer):
+class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
+
+
+# ====================================
+#    Docker servide webhook deploy   #
+# ====================================
+
+
+class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(required=False, allow_blank=True)
+    new_image = serializers.CharField(required=False)
+
+    def validate_new_image(self, image: str | None):
+        if image is None:
+            return None
+
+        service: DockerRegistryService = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+
+        do_image_exists = check_if_docker_image_exists(
+            image,
+            credentials=(
+                dict(service.credentials) if service.credentials is not None else None
+            ),
+        )
+        if not do_image_exists:
+            raise serializers.ValidationError(
+                {
+                    "image": [
+                        f"Either the image `{image}` doesn't exist, or the credentials are invalid for this image."
+                    ]
+                }
+            )
+
+        return image
 
 
 # ==============================
@@ -854,58 +889,42 @@ class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
     new_value = ResourceLimitsRequestSerializer(required=True, allow_null=True)
 
 
-class DockerCredentialsFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["credentials"], required=True)
-    new_value = DockerCredentialsRequestSerializer(required=True, allow_null=True)
+class DockerSourceRequestSerializer(serializers.Serializer):
+    image = serializers.CharField(required=True)
+    credentials = DockerCredentialsRequestSerializer(required=False)
 
-    def validate(self, attrs: dict[str, str | OrderedDict]):
-        service = self.get_service()
-        new_value = attrs.get("new_value")
-        if len(new_value) == 0 or (
-            new_value.get("username") == new_value.get("password") == ""
+    def validate(self, attrs: dict):
+        image = attrs.get("image")
+        credentials = attrs.get("credentials")
+        if credentials is not None and (
+            len(credentials) == 0
+            or (not credentials.get("username") and not credentials.get("password"))
         ):
-            attrs["new_value"] = None
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+            credentials = None
 
-        if snapshot.credentials is not None:
-            do_image_exists = check_if_docker_image_exists(
-                snapshot.image,
-                credentials=dataclasses.asdict(snapshot.credentials),
+        do_image_exists = check_if_docker_image_exists(
+            image, credentials=dict(credentials) if credentials is not None else None
+        )
+        if not do_image_exists:
+            raise serializers.ValidationError(
+                {
+                    "image": [
+                        f"Either the image `{image}` doesn't exist, or the provided credentials are invalid."
+                        f" Did you forget to include the credentials?"
+                    ]
+                }
             )
-            if not do_image_exists:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` set in the service."
-                    }
-                )
         return attrs
+
+
+class DockerSourceFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["source"], required=True)
+    new_value = DockerSourceRequestSerializer(required=True)
 
 
 class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["command"], required=True)
     new_value = serializers.CharField(required=True, allow_null=True)
-
-
-class DockerImageFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["image"], required=True)
-    new_value = serializers.CharField(required=True, min_length=1)
-
-    def validate(self, attrs: dict):
-        service = self.get_service()
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
-
-        if snapshot.credentials is not None:
-            do_image_exists = check_if_docker_image_exists(
-                snapshot.image,
-                credentials=dataclasses.asdict(snapshot.credentials),
-            )
-            if not do_image_exists:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": f"The credentials are invalid for the image `{snapshot.image}` provided for the service."
-                    }
-                )
-        return attrs
 
 
 class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
@@ -932,13 +951,12 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
     field = serializers.ChoiceField(
         required=True,
         choices=[
+            "source",
             "urls",
             "volumes",
             "env_variables",
             "ports",
-            "credentials",
             "command",
-            "image",
             "healthcheck",
             "resource_limits",
         ],

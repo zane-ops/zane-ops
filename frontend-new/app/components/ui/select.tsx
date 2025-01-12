@@ -16,7 +16,7 @@ const SelectTrigger = ({
   children,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
-  ref?: React.RefObject<React.ComponentRef<typeof SelectPrimitive.Trigger>>;
+  ref?: React.Ref<React.ComponentRef<typeof SelectPrimitive.Trigger>>;
 }) => (
   <SelectPrimitive.Trigger
     ref={ref}
