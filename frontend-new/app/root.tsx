@@ -103,7 +103,7 @@ export function ErrorBoundary() {
     message = error.status === 404 ? "Oops!" : "Error";
     details =
       error.status === 404
-        ? "Looks like you're lost 😛"
+        ? error.data ?? "Looks like you're lost 😛"
         : error.statusText || details;
   } else if (error && error instanceof Error) {
     details = error.message;

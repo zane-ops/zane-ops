@@ -6,7 +6,7 @@ import {
   queryOptions,
   type skipToken
 } from "@tanstack/react-query";
-import { z } from "zod";
+import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
 import { type ApiResponse, apiClient } from "~/api/client";
 import {
@@ -137,7 +137,9 @@ export const projectQueries = {
           signal
         });
         if (!data) {
-          throw notFound();
+          throw notFound(
+            `The project \`${slug}\` does not exist on this server`
+          );
         }
         return data;
       },
@@ -237,7 +239,9 @@ export const serviceQueries = {
         );
 
         if (!data) {
-          throw notFound();
+          throw notFound(
+            `The service \`${service_slug}\` doesn't exist in this project.`
+          );
         }
         return data;
       },
@@ -301,19 +305,27 @@ export const serviceQueries = {
 export const LOG_LEVELS = ["INFO", "ERROR"] as const;
 export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
 
-export const deploymentLogSearchSchema = z.object({
-  level: z
-    .array(z.enum(LOG_LEVELS))
-    .optional()
-    .catch(LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
-  source: z
-    .array(z.enum(LOG_SOURCES))
-    .optional()
-    .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
+export const deploymentLogSearchSchema = zfd.formData({
+  level: zfd.repeatable(
+    z
+      .array(z.enum(LOG_LEVELS))
+      .optional()
+      .catch(LOG_LEVELS as Writeable<typeof LOG_LEVELS>)
+  ),
+  source: zfd.repeatable(
+    z
+      .array(z.enum(LOG_SOURCES))
+      .optional()
+      .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>)
+  ),
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
   content: z.string().optional(),
-  isMaximized: z.coerce.boolean().optional().catch(false)
+  query: z.string().optional(),
+  isMaximized: preprocess(
+    (arg) => arg === "true",
+    z.coerce.boolean().optional().catch(false)
+  )
 });
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
@@ -353,6 +365,9 @@ export const deploymentQueries = {
             signal
           }
         );
+        if (!data) {
+          throw notFound(`This deployment does not exist in this service.`);
+        }
         return data;
       },
       refetchInterval: (query) => {
@@ -375,7 +390,7 @@ export const deploymentQueries = {
     service_slug: string;
     type?: "docker" | "git";
     deployment_hash: string;
-    filters?: Omit<DeploymentLogFilters, "isMaximized">;
+    filters?: Omit<DeploymentLogFitlers, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
   }) =>
@@ -447,13 +462,9 @@ export const deploymentQueries = {
 
         if (data) {
           apiData = {
-            ...data,
-            next: data?.next
-              ? new URL(data?.next).searchParams.get("cursor")
-              : null,
-            previous: data?.previous
-              ? new URL(data?.previous).searchParams.get("cursor")
-              : null,
+            results: data.results,
+            next: data?.next ?? null,
+            previous: data?.previous ?? null,
             cursor: existingData?.cursor
           };
         }
@@ -483,9 +494,7 @@ export const deploymentQueries = {
             }
           );
           if (nextPage?.previous) {
-            apiData.cursor = new URL(nextPage.previous).searchParams.get(
-              "cursor"
-            );
+            apiData.cursor = nextPage.previous;
           }
         }
 
@@ -550,3 +559,5 @@ export type DeploymentLog = Awaited<
     >
   >
 >["results"][number];
+
+export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
