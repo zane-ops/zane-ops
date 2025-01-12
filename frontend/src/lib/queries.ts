@@ -193,7 +193,11 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     type = "docker"
-  }: { project_slug: string; service_slug: string; type?: "docker" | "git" }) =>
+  }: {
+    project_slug: string;
+    service_slug: string;
+    type?: "docker" | "git";
+  }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,
@@ -495,3 +499,21 @@ export type DeploymentLog = Awaited<
     >
   >
 >["results"][number];
+
+export const resourceQueries = {
+  search: (query: string) =>
+    queryOptions({
+      queryKey: ["RESOURCES", query] as const,
+      queryFn: ({ signal }) => {
+        return apiClient.GET("/api/search-resources/", {
+          params: {
+            query: {
+              query: query.trim()
+            }
+          },
+          signal
+        });
+      },
+      enabled: query.trim().length > 0
+    })
+};

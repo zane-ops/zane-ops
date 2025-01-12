@@ -28,6 +28,7 @@ import {
   Twitter
 } from "lucide-react";
 import * as React from "react";
+import { useDebounce } from "use-debounce";
 import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
 import { Button } from "~/components/ui/button";
@@ -36,8 +37,7 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandList,
-  CommandSeparator
+  CommandList
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import {
@@ -53,7 +53,7 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { userQueries } from "~/lib/queries";
+import { resourceQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
@@ -323,79 +323,17 @@ function Footer() {
   );
 }
 
-const resources = [
-  {
-    id: "prj_01GZX4TX89P4",
-    slug: "shop-app",
-    created_at: "2024-06-17T08:45:23Z",
-    type: "project"
-  },
-  {
-    id: "prj_01GZX5TX78L3",
-    slug: "pay-gateway",
-    created_at: "2024-06-17T09:15:45Z",
-    type: "project"
-  },
-  {
-    id: "prj_01GZX6TR56F9",
-    slug: "blog-site",
-    created_at: "2024-06-17T09:50:30Z",
-    type: "project"
-  },
-  {
-    id: "prj_01GZX7TZ67Q1",
-    slug: "file-uploader",
-    created_at: "2024-06-17T10:10:15Z",
-    type: "project"
-  },
-  {
-    id: "srv_01GZX8DKR11A",
-    slug: "auth-service",
-    project_slug: "shop-app",
-    created_at: "2024-06-17T10:20:40Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX9KR22B1",
-    slug: "payment-api",
-    project_slug: "pay-gateway",
-    created_at: "2024-06-17T10:35:00Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX10TR33C",
-    slug: "comment-system",
-    project_slug: "blog-site",
-    created_at: "2024-06-17T11:00:20Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX11FR44D",
-    slug: "file-processor",
-    project_slug: "file-uploader",
-    created_at: "2024-06-17T11:25:10Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX12LK55E",
-    slug: "analytics-service",
-    project_slug: "shop-app",
-    created_at: "2024-06-17T11:50:45Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX13KK66F",
-    slug: "email-notifier",
-    project_slug: "pay-gateway",
-    created_at: "2024-06-17T12:15:30Z",
-    type: "service"
-  }
-] as const;
-
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [resourceSearchQuery, setResourceSearchQuery] = React.useState("");
+  const [debouncedValue] = useDebounce(resourceSearchQuery, 300);
+  const navigate = useNavigate();
+
+  const { data: resourceListData } = useQuery(
+    resourceQueries.search(debouncedValue)
+  );
 
   React.useEffect(() => {
     const handleEvent = (e: KeyboardEvent | MouseEvent) => {
@@ -435,6 +373,8 @@ export function CommandMenu() {
     };
   }, []);
 
+  const resourceList = resourceListData?.data ?? [];
+
   return (
     <div ref={containerRef} className="relative w-full">
       <div
@@ -446,6 +386,9 @@ export function CommandMenu() {
           ref={inputRef}
           className="w-full pl-12 pr-12 my-1 text-sm rounded-md border focus-visible:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Search for Service, Worker, CRON, etc..."
+          name="resourceSearchQuery"
+          value={resourceSearchQuery}
+          onChange={(e) => setResourceSearchQuery(e.target.value)}
         />
         <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1">
           <CommandIcon size={15} />
@@ -453,18 +396,30 @@ export function CommandMenu() {
         </div>
       </div>
 
-      {open && resources.length > 0 && (
+      {open && resourceList.length > 0 && (
         <div className="absolute top-12 left-0 w-full z-50 shadow-lg  rounded-md">
-          <Command>
+          <Command shouldFilter={false} label="resources">
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup
-                heading={<span>Resources ({resources.length})</span>}
+                heading={<span>Resources ({resourceList.length})</span>}
               >
-                {resources.map((resource) => (
-                  <CommandItem key={resource.id} className=" block">
+                {resourceList.map((resource) => (
+                  <CommandItem
+                    onSelect={() => {
+                      const baseUrl = "/project";
+                      const targetUrl =
+                        resource.type === "project"
+                          ? `${baseUrl}/${resource.slug}`
+                          : `${baseUrl}/${resource.project_slug}/services/docker/${resource.slug}`;
+                      navigate({ to: targetUrl });
+                      setOpen(false);
+                    }}
+                    key={resource.id}
+                    className="block"
+                  >
                     <p>{resource.slug}</p>
-                    <p className="text-secondary text-xs">
+                    <div className="text-secondary text-xs">
                       {resource.type === "project" ? (
                         "projects"
                       ) : (
@@ -476,7 +431,7 @@ export function CommandMenu() {
                           <span className="flex-none">services</span>
                         </div>
                       )}
-                    </p>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
