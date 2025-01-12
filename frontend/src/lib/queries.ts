@@ -500,7 +500,7 @@ export type DeploymentLog = Awaited<
   >
 >["results"][number];
 
-export const searchResources = {
+export const searchResourcesQueries = {
   resources: (query: string) =>
     queryOptions({
       queryKey: ["SEARCHED_RESOURCES", query] as const,
