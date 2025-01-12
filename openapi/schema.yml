@@ -4994,6 +4994,31 @@ components:
         description:
           type: string
           minLength: 1
+    ProjectSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ProjectSearchTypeEnum'
+          default: project
+      required:
+      - created_at
+      - id
+      - slug
+      - type
+    ProjectSearchTypeEnum:
+      enum:
+      - project
+      type: string
+      description: '* `project` - project'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
@@ -6935,6 +6960,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SearchResourcesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ServiceCardResponse:
       oneOf:
       - $ref: '#/components/schemas/DockerServiceCard'
@@ -6955,6 +6987,35 @@ components:
           minimum: 1
       required:
       - forwarded
+    ServiceSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        project_slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ServiceSearchTypeEnum'
+          default: service
+      required:
+      - created_at
+      - id
+      - project_slug
+      - slug
+      - type
+    ServiceSearchTypeEnum:
+      enum:
+      - service
+      type: string
+      description: '* `service` - service'
     ServiceStatusEnum:
       enum:
       - HEALTHY

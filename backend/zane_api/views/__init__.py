@@ -8,3 +8,4 @@ from .projects import *
 from .proxy import *
 from .status import *
 from .deployments import *
+from .search import *
