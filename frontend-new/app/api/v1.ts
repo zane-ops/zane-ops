@@ -171,6 +171,10 @@ export interface paths {
      */
     get: operations["projects_service_list_list"];
   };
+  "/api/search-resources/": {
+    /** search for resources (project, service ...) */
+    get: operations["searchResources"];
+  };
   "/api/server/resource-limits/": {
     /**
      * Get server resource limits
@@ -1116,6 +1120,19 @@ export interface components {
       slug?: string;
       description?: string;
     };
+    ProjectSearch: {
+      id: string;
+      /** Format: date-time */
+      created_at: string;
+      slug: string;
+      /** @default project */
+      type: components["schemas"]["ProjectSearchTypeEnum"];
+    };
+    /**
+     * @description * `project` - project
+     * @enum {string}
+     */
+    ProjectSearchTypeEnum: "project";
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
@@ -2141,6 +2158,7 @@ export interface components {
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
+    ResourceResponse: components["schemas"]["ServiceSearch"] | components["schemas"]["ProjectSearch"];
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -2161,12 +2179,27 @@ export interface components {
       query_time_ms: number;
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
       /** @default 80 */
       host?: number;
       forwarded: number;
     };
+    ServiceSearch: {
+      id: string;
+      project_slug: string;
+      slug: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @default service */
+      type: components["schemas"]["ServiceSearchTypeEnum"];
+    };
+    /**
+     * @description * `service` - service
+     * @enum {string}
+     */
+    ServiceSearchTypeEnum: "service";
     /**
      * @description * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
@@ -3694,6 +3727,36 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** search for resources (project, service ...) */
+  searchResources: {
+    parameters: {
+      query?: {
+        query?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ResourceResponse"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SearchResourcesErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

@@ -2672,6 +2672,70 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
+  /api/search-resources/:
+    get:
+      operationId: searchResources
+      summary: search for resources (project, service ...)
+      parameters:
+      - in: query
+        name: query
+        schema:
+          type: string
+          minLength: 1
+      tags:
+      - search-resources
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResourcesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResourceResponse'
+          description: ''
   /api/server/resource-limits/:
     get:
       operationId: getServerResouceLimits
@@ -6897,6 +6961,14 @@ components:
           minimum: 0.1
         memory:
           $ref: '#/components/schemas/MemoryLimitRequestRequest'
+    ResourceResponse:
+      oneOf:
+      - $ref: '#/components/schemas/ServiceSearch'
+      - $ref: '#/components/schemas/ProjectSearch'
+      discriminator:
+        propertyName: type
+        mapping:
+          null: '#/components/schemas/ProjectSearch'
     RuntimeLog:
       type: object
       properties:
