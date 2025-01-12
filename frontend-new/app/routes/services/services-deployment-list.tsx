@@ -107,7 +107,6 @@ export default function DeploymentListPage({
   };
 
   const noFilters =
-    !search.page &&
     !search.per_page &&
     !search.queued_at_after &&
     !search.queued_at_before &&
