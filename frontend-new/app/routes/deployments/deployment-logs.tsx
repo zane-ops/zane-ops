@@ -202,7 +202,9 @@ export default function DeploymentLogsPage({
     };
   };
 
-  const [firstItemIndex, setFirstItemIndex] = React.useState(9_999_999_999);
+  const [firstItemIndex, setFirstItemIndex] = React.useState(
+    REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER
+  );
   const inputRef = React.useRef<{ reset: () => void }>(null);
 
   const clearFilters = () => {
@@ -557,7 +559,7 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
               className={cn(
                 "text-start -z-1 text-transparent relative",
                 "col-start-1 col-end-1 row-start-1 row-end-1",
-                "break-all text-wrap whitespace-pre [text-wrap-mode:wrap]"
+                "break-all text-wrap whitespace-pre [text-wrap-mode:wrap] select-none"
               )}
             >
               {search.length > 0 ? (
