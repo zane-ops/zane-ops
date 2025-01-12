@@ -7,6 +7,7 @@ import {
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { AnsiHtml } from "fancy-ansi/react";
 import {
+  ArrowDownIcon,
   ChevronRightIcon,
   LoaderIcon,
   Maximize2Icon,
@@ -115,6 +116,8 @@ export default function DeploymentLogsPage({
     .reverse();
   const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
   const [, startTransition] = React.useTransition();
+  const [isAtBottom, setIsAtBottom] = React.useState(true);
+  const virtuoso = React.useRef<React.ComponentRef<typeof Virtuoso>>(null);
 
   const fetchNextPageRef = (node: HTMLDivElement | null) => {
     if (!node) return;
@@ -231,11 +234,27 @@ export default function DeploymentLogsPage({
     >
       <div
         className={cn(
-          "col-span-12 flex flex-col gap-2",
+          "col-span-12 flex flex-col gap-2 relative",
           search.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh]"
         )}
       >
         <HeaderSection startTransition={startTransition} inputRef={inputRef} />
+        {!isAtBottom && (
+          <Button
+            variant="secondary"
+            className="absolute top-28 right-4  z-30"
+            size="sm"
+            onClick={() => {
+              virtuoso.current?.scrollToIndex({
+                index: "LAST",
+                behavior: "smooth",
+                align: "end"
+              });
+            }}
+          >
+            <span>End</span> <ArrowDownIcon size={15} />
+          </Button>
+        )}
 
         {logs.length === 0 ? (
           <section
@@ -281,6 +300,10 @@ export default function DeploymentLogsPage({
             initialTopMostItemIndex={logs.length - 1}
             followOutput="smooth"
             alignToBottom
+            ref={virtuoso}
+            atBottomStateChange={(isAtBottom) => {
+              setIsAtBottom(isAtBottom);
+            }}
             className={cn(
               "text-xs font-mono h-full rounded-md w-full",
               "bg-muted/25 dark:bg-neutral-950",
