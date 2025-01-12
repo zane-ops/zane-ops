@@ -53,8 +53,8 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { searchResourcesQueries, userQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { resourceQueries, userQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
 export const Route = createFileRoute("/_dashboard")({
@@ -323,75 +323,6 @@ function Footer() {
   );
 }
 
-const resources = [
-  {
-    id: "prj_01GZX4TX89P4",
-    slug: "shop-app",
-    created_at: "2024-06-17T08:45:23Z",
-    type: "project"
-  },
-  {
-    id: "prj_01GZX5TX78L3",
-    slug: "pay-gateway",
-    created_at: "2024-06-17T09:15:45Z",
-    type: "project"
-  },
-  {
-    id: "prj_01GZX6TR56F9",
-    slug: "blog-site",
-    created_at: "2024-06-17T09:50:30Z",
-    type: "project"
-  },
-  {
-    id: "prj_01GZX7TZ67Q1",
-    slug: "file-uploader",
-    created_at: "2024-06-17T10:10:15Z",
-    type: "project"
-  },
-  {
-    id: "srv_01GZX8DKR11A",
-    slug: "auth-service",
-    project_slug: "shop-app",
-    created_at: "2024-06-17T10:20:40Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX9KR22B1",
-    slug: "payment-api",
-    project_slug: "pay-gateway",
-    created_at: "2024-06-17T10:35:00Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX10TR33C",
-    slug: "comment-system",
-    project_slug: "blog-site",
-    created_at: "2024-06-17T11:00:20Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX11FR44D",
-    slug: "file-processor",
-    project_slug: "file-uploader",
-    created_at: "2024-06-17T11:25:10Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX12LK55E",
-    slug: "analytics-service",
-    project_slug: "shop-app",
-    created_at: "2024-06-17T11:50:45Z",
-    type: "service"
-  },
-  {
-    id: "srv_01GZX13KK66F",
-    slug: "email-notifier",
-    project_slug: "pay-gateway",
-    created_at: "2024-06-17T12:15:30Z",
-    type: "service"
-  }
-] as const;
-
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -401,7 +332,7 @@ export function CommandMenu() {
   const navigate = useNavigate();
 
   const { data: resourceListData } = useQuery(
-    searchResourcesQueries.resources(debouncedValue)
+    resourceQueries.search(debouncedValue)
   );
 
   React.useEffect(() => {
@@ -442,9 +373,7 @@ export function CommandMenu() {
     };
   }, []);
 
-  const imageList = resourceListData?.data ?? [];
-
-  console.log(imageList);
+  const resourceList = resourceListData?.data ?? [];
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -467,15 +396,15 @@ export function CommandMenu() {
         </div>
       </div>
 
-      {open && imageList.length > 0 && (
+      {open && resourceList.length > 0 && (
         <div className="absolute top-12 left-0 w-full z-50 shadow-lg  rounded-md">
           <Command shouldFilter={false} label="resources">
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup
-                heading={<span>Resources ({imageList.length})</span>}
+                heading={<span>Resources ({resourceList.length})</span>}
               >
-                {imageList.map((resource) => (
+                {resourceList.map((resource) => (
                   <CommandItem
                     onSelect={() => {
                       const baseUrl = "/project";

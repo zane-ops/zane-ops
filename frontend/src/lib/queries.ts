@@ -500,10 +500,10 @@ export type DeploymentLog = Awaited<
   >
 >["results"][number];
 
-export const searchResourcesQueries = {
-  resources: (query: string) =>
+export const resourceQueries = {
+  search: (query: string) =>
     queryOptions({
-      queryKey: ["SEARCHED_RESOURCES", query] as const,
+      queryKey: ["RESOURCES", query] as const,
       queryFn: ({ signal }) => {
         return apiClient.GET("/api/search-resources/", {
           params: {
