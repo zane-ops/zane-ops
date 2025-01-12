@@ -225,7 +225,6 @@ export default function DeploymentLogsPage({
           initialTopMostItemIndex={logs.length - 1}
           followOutput="smooth"
           alignToBottom
-          // defaultItemHeight={16 * 2}
           className={cn(
             "text-xs font-mono h-full rounded-md w-full",
             "bg-muted/25 dark:bg-neutral-950",
@@ -264,7 +263,7 @@ export default function DeploymentLogsPage({
               id={log.id}
               time={log.time}
               level={log.level}
-              // key={log.id}
+              key={log.id}
               content={(log.content as string) ?? ""}
               content_text={log.content_text ?? ""}
             />
@@ -455,7 +454,6 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
     <div
       id={`log-item-${id}`}
       className={cn(
-        // "-scale-y-100",
         "w-full flex gap-2 hover:bg-slate-400/20 relative  group",
         "py-0 px-4 border-none border-0 ring-0",
         level === "ERROR" && "bg-red-400/20"
@@ -463,11 +461,11 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
     >
       <span className="inline-flex items-start select-none min-w-fit flex-none">
         <time className="text-grey" dateTime={date.toISOString()}>
-          {/* <span className="sr-only sm:not-sr-only">
+          <span className="sr-only sm:not-sr-only">
             {logTime.dateFormat},&nbsp;
-          </span> */}
+          </span>
           {id}
-          {/* <span>{logTime.hourFormat}</span> */}
+          <span>{logTime.hourFormat}</span>
         </time>
       </span>
 
