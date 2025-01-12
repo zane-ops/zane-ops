@@ -137,7 +137,12 @@ export function FieldSetCheckbox(
   );
 }
 
-export function FieldSetSelect(props: React.ComponentProps<typeof Select>) {
+export function FieldSetSelect(
+  props: Omit<
+    React.ComponentProps<typeof Select>,
+    "aria-invalid" | "aria-labelledby"
+  >
+) {
   const ctx = React.use(FieldSetContext);
 
   if (!ctx) {
@@ -146,9 +151,10 @@ export function FieldSetSelect(props: React.ComponentProps<typeof Select>) {
     );
   }
 
-  const { id, errors } = ctx;
+  const { id, errors, name } = ctx;
   return (
     <Select
+      name={name}
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}
       {...props}

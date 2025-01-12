@@ -6,6 +6,7 @@ import {
   CopyIcon,
   GlobeLockIcon,
   HammerIcon,
+  HardDriveIcon,
   InfoIcon
 } from "lucide-react";
 import { Link, useFetcher, useMatches } from "react-router";
@@ -37,6 +38,7 @@ import { ServiceResourceLimits } from "~/routes/services/settings/service-resour
 import { ServiceSlugForm } from "~/routes/services/settings/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/settings/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/settings/service-urls-form";
+import { ServiceVolumesForm } from "~/routes/services/settings/service-volumes-form";
 import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
 
@@ -134,6 +136,22 @@ export default function ServiceSettingsPage({
             />
             <hr className="w-full max-w-4xl border-border" />
             <ServiceDeployURLForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
+          </div>
+        </section>
+
+        <section id="volumes" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <HardDriveIcon size={15} className="flex-none text-grey" />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Volumes</h2>
+            <ServiceVolumesForm
               project_slug={project_slug}
               service_slug={service_slug}
             />
@@ -580,6 +598,19 @@ async function requestServiceChange({
                 }
               : undefined
           } satisfies BodyOf<typeof field>["new_value"]);
+      break;
+    }
+    case "volumes": {
+      const hostPath = formData.get("host_path")?.toString();
+      const name = formData.get("name")?.toString();
+      userData = {
+        container_path: formData.get("container_path")?.toString() ?? "",
+        host_path: !hostPath ? undefined : hostPath,
+        mode: formData
+          .get("mode")
+          ?.toString() as DockerService["volumes"][number]["mode"],
+        name: !name ? undefined : name
+      } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
     default: {
