@@ -198,22 +198,24 @@ export default function ServiceDetailsLayout({
           <DeployServiceForm service={service} />
         </section>
 
-        <Button
-          variant="outline"
-          className={cn(
-            "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
-            "bg-grey text-white dark:text-black"
-          )}
-          onClick={() => {
-            const main = document.querySelector("main");
-            main?.scrollIntoView({
-              behavior: "smooth",
-              block: "start"
-            });
-          }}
-        >
-          <span>Back to top</span> <ArrowUpIcon size={15} />
-        </Button>
+        {currentSelectedTab === TABS.SETTINGS && (
+          <Button
+            variant="outline"
+            className={cn(
+              "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
+              "bg-grey text-white dark:text-black"
+            )}
+            onClick={() => {
+              const main = document.querySelector("main");
+              main?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+            }}
+          >
+            <span>Back to top</span> <ArrowUpIcon size={15} />
+          </Button>
+        )}
 
         <Tabs
           value={currentSelectedTab}
