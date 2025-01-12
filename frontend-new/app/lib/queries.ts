@@ -433,7 +433,6 @@ export const deploymentQueries = {
           cursor = existingData.cursor;
         }
 
-        await wait(1500);
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
           {

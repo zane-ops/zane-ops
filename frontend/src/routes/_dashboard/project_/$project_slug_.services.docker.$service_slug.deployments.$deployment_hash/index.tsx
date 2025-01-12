@@ -65,7 +65,7 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
   const navigate = useNavigate({
     from: "./"
   });
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  // const inputRef = React.useRef<React.ComponentRef<"input">>(null);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
   const filters = {
@@ -125,9 +125,9 @@ export function DeploymentLogsDetailPage(): React.JSX.Element {
       })
     );
 
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+    // if (inputRef.current) {
+    //   inputRef.current.value = "";
+    // }
   };
 
   const fetchNextPageRef = (node: HTMLDivElement | null) => {

@@ -59,7 +59,7 @@ export async function clientLoader({
     query: search.query ?? ""
   } satisfies DeploymentLogFitlers;
 
-  const logs = await queryClient.ensureInfiniteQueryData(
+  queryClient.prefetchInfiniteQuery(
     deploymentQueries.logs({
       deployment_hash,
       project_slug,
@@ -68,7 +68,7 @@ export async function clientLoader({
       queryClient
     })
   );
-  return { logs };
+  return;
 }
 export default function DeploymentLogsPage({
   loaderData,
@@ -105,11 +105,10 @@ export default function DeploymentLogsPage({
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
-    }),
-    initialData: loaderData.logs
+    })
   });
 
-  const logs = logsQuery.data.pages
+  const logs = (logsQuery.data?.pages ?? [])
     .toReversed()
     .flatMap((item) => item.results)
     .reverse();
@@ -203,6 +202,21 @@ export default function DeploymentLogsPage({
   };
 
   const [firstItemIndex, setFirstItemIndex] = React.useState(9_999_999_999);
+  const inputRef = React.useRef<{ reset: () => void }>(null);
+
+  const clearFilters = () => {
+    startTransition(() => {
+      setSearchParams(
+        new URLSearchParams([["isMaximized", `${search.isMaximized}`]]),
+        {
+          replace: true
+        }
+      );
+    });
+    if (inputRef.current) {
+      inputRef.current?.reset();
+    }
+  };
 
   return (
     <div
@@ -218,57 +232,97 @@ export default function DeploymentLogsPage({
           search.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh]"
         )}
       >
-        <HeaderSection startTransition={startTransition} />
-        <Virtuoso
-          id="log-content"
-          firstItemIndex={firstItemIndex}
-          initialTopMostItemIndex={logs.length - 1}
-          followOutput="smooth"
-          alignToBottom
-          className={cn(
-            "text-xs font-mono h-full rounded-md w-full",
-            "bg-muted/25 dark:bg-neutral-950",
-            "overflow-y-auto overflow-x-clip contain-strict",
-            "whitespace-no-wrap [overflow-anchor:none]"
-          )}
-          data={logs}
-          components={{
-            Header: () =>
-              (logsQuery.hasPreviousPage ||
-                logsQuery.isFetchingPreviousPage) && (
-                <div
-                  ref={fetchPreviousPageRef}
-                  className={cn(
-                    "text-center items-center justify-center flex gap-2 text-gray-500 px-2 my-2"
-                  )}
-                >
-                  <LoaderIcon size={15} className="animate-spin" />
-                  <p>Fetching previous logs...</p>
-                </div>
-              ),
-            Footer: () => (
-              <>
-                <div ref={fetchNextPageRef} className="w-fit h-px" />
-                <div
-                  className={cn("w-full pb-2 text-center text-grey italic")}
-                  ref={autoRefetchRef}
-                >
-                  -- LIVE <Ping /> new log entries will appear here --
-                </div>
-              </>
-            )
-          }}
-          itemContent={(_, log) => (
-            <Log
-              id={log.id}
-              time={log.time}
-              level={log.level}
-              key={log.id}
-              content={(log.content as string) ?? ""}
-              content_text={log.content_text ?? ""}
-            />
-          )}
-        />
+        <HeaderSection startTransition={startTransition} inputRef={inputRef} />
+
+        {logs.length === 0 ? (
+          <section
+            className={cn(
+              "justify-start min-h-0",
+              "text-xs font-mono h-full rounded-md w-full",
+              "bg-muted/25 dark:bg-neutral-950",
+              "overflow-y-auto overflow-x-clip contain-strict",
+              "whitespace-no-wrap"
+            )}
+          >
+            {logsQuery.isFetching ? (
+              <div className="text-sm text-center items-center flex gap-2 text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <LoaderIcon size={15} className="animate-spin" />
+                <p>Fetching logs...</p>
+              </div>
+            ) : isEmptySearchParams ? (
+              <div className="text-sm text-center items-center flex flex-col text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <h3 className="text-base font-semibold">No logs yet</h3>
+                <p className="inline-block max-w-lg text-balance ">
+                  New log entries will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="text-sm px-2 gap-1.5 text-center items-center flex flex-col text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <h3 className="text-base font-semibold text-balance w-full">
+                  No logs maching the selected filters
+                </h3>
+                <p className="inline-block max-w-lg text-balance">
+                  New log entries that match your search parameters will appear
+                  here.
+                </p>
+                <button className="text-sm underline" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </section>
+        ) : (
+          <Virtuoso
+            id="log-content"
+            firstItemIndex={firstItemIndex}
+            initialTopMostItemIndex={logs.length - 1}
+            followOutput="smooth"
+            alignToBottom
+            className={cn(
+              "text-xs font-mono h-full rounded-md w-full",
+              "bg-muted/25 dark:bg-neutral-950",
+              "overflow-y-auto overflow-x-clip contain-strict",
+              "whitespace-no-wrap [overflow-anchor:none]"
+            )}
+            data={logs}
+            components={{
+              Header: () =>
+                (logsQuery.hasPreviousPage ||
+                  logsQuery.isFetchingPreviousPage) && (
+                  <div
+                    ref={fetchPreviousPageRef}
+                    className={cn(
+                      "text-center items-center justify-center flex gap-2 text-gray-500 px-2 my-2"
+                    )}
+                  >
+                    <LoaderIcon size={15} className="animate-spin" />
+                    <p>Fetching previous logs...</p>
+                  </div>
+                ),
+              Footer: () => (
+                <>
+                  <div ref={fetchNextPageRef} className="w-fit h-px" />
+                  <div
+                    className={cn("w-full pb-2 text-center text-grey italic")}
+                    ref={autoRefetchRef}
+                  >
+                    -- LIVE <Ping /> new log entries will appear here --
+                  </div>
+                </>
+              )
+            }}
+            itemContent={(_, log) => (
+              <Log
+                id={log.id}
+                time={log.time}
+                level={log.level}
+                key={log.id}
+                content={(log.content as string) ?? ""}
+                content_text={log.content_text ?? ""}
+              />
+            )}
+          />
+        )}
       </div>
     </div>
   );
@@ -284,10 +338,28 @@ function Ping() {
 }
 
 const HeaderSection = React.memo(function HeaderSection({
-  startTransition
-}: { startTransition: React.TransitionStartFunction }) {
+  startTransition,
+  inputRef: _inputRef
+}: {
+  startTransition: React.TransitionStartFunction;
+  inputRef?: React.Ref<{ reset: () => void }>;
+}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = deploymentLogSearchSchema.parse(searchParams);
+
+  React.useImperativeHandle(
+    _inputRef,
+    () => {
+      return {
+        reset() {
+          if (inputRef.current) {
+            inputRef.current.value = "";
+          }
+        }
+      };
+    },
+    []
+  );
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
