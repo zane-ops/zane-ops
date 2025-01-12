@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
 import { useDebouncedCallback } from "use-debounce";
 import type { Writeable } from "zod";
