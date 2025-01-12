@@ -112,7 +112,8 @@ export function ServiceSlugForm({
               )}
             </SubmitButton>
             <Button
-              onClick={() => {
+              onClick={(ev) => {
+                ev.currentTarget.form?.reset();
                 setIsEditing(false);
                 setData(undefined);
               }}
