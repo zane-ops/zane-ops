@@ -137,7 +137,9 @@ export const projectQueries = {
           signal
         });
         if (!data) {
-          throw notFound();
+          throw notFound(
+            `The project \`${slug}\` does not exist on this server`
+          );
         }
         return data;
       },
@@ -237,7 +239,9 @@ export const serviceQueries = {
         );
 
         if (!data) {
-          throw notFound();
+          throw notFound(
+            `The service \`${service_slug}\` doesn't exist in this project.`
+          );
         }
         return data;
       },
@@ -353,6 +357,9 @@ export const deploymentQueries = {
             signal
           }
         );
+        if (!data) {
+          throw notFound(`This deployment does not exist in this service.`);
+        }
         return data;
       },
       refetchInterval: (query) => {

@@ -44,7 +44,7 @@ export function meta({ params, error }: Route.MetaArgs) {
   const title = !error
     ? params.serviceSlug
     : isNotFoundError(error)
-      ? "Error 404 - Project does not exist"
+      ? "Error 404 - Service does not exist"
       : "Oops";
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
 }
