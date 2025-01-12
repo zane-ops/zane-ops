@@ -4,14 +4,14 @@ import {
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
-  type skipToken,
+  type skipToken
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { type ApiResponse, apiClient } from "~/api/client";
 import {
   DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
-  DEPLOYMENT_STATUSES,
+  DEPLOYMENT_STATUSES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 
@@ -28,8 +28,8 @@ export const userQueries = {
         return THIRTY_MINUTES;
       }
       return false;
-    },
-  }),
+    }
+  })
 };
 
 export const dockerHubQueries = {
@@ -40,14 +40,14 @@ export const dockerHubQueries = {
         return apiClient.GET("/api/docker/image-search/", {
           params: {
             query: {
-              q: query.trim(),
-            },
+              q: query.trim()
+            }
           },
-          signal,
+          signal
         });
       },
-      enabled: query.trim().length > 0,
-    }),
+      enabled: query.trim().length > 0
+    })
 };
 
 export const projectSearchSchema = z.object({
@@ -62,12 +62,12 @@ export const projectSearchSchema = z.object({
         "updated_at",
         "-updated_at",
         "archived_at",
-        "-archived_at",
+        "-archived_at"
       ])
     )
     .optional()
     .catch(["-updated_at"]),
-  status: z.enum(["active", "archived"]).optional().catch("active"),
+  status: z.enum(["active", "archived"]).optional().catch("active")
 });
 
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
@@ -84,10 +84,10 @@ export const projectQueries = {
               sort_by: filters.sort_by?.filter(
                 (criteria) =>
                   criteria !== "-archived_at" && criteria !== "archived_at"
-              ),
-            },
+              )
+            }
           },
-          signal,
+          signal
         });
       },
       enabled: filters.status !== "archived",
@@ -96,7 +96,7 @@ export const projectQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   archived: (filters: ProjectSearch) =>
     queryOptions({
@@ -109,13 +109,13 @@ export const projectQueries = {
               sort_by: filters.sort_by?.filter(
                 (criteria) =>
                   criteria !== "-updated_at" && criteria !== "updated_at"
-              ),
-            },
+              )
+            }
           },
-          signal,
+          signal
         });
       },
-      enabled: filters.status === "archived",
+      enabled: filters.status === "archived"
     }),
   single: (slug: string) =>
     queryOptions({
@@ -124,32 +124,32 @@ export const projectQueries = {
         return apiClient.GET("/api/projects/{slug}/", {
           params: {
             path: {
-              slug,
-            },
+              slug
+            }
           },
-          signal,
+          signal
         });
       },
-      placeholderData: keepPreviousData,
+      placeholderData: keepPreviousData
     }),
   serviceList: (slug: string, filters: ProjectServiceListSearch = {}) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(slug).queryKey,
         "SERVICE-LIST",
-        filters,
+        filters
       ] as const,
       queryFn: ({ signal }) => {
         return apiClient.GET("/api/projects/{slug}/service-list/", {
           params: {
             query: {
-              ...filters,
+              ...filters
             },
             path: {
-              slug,
-            },
+              slug
+            }
           },
-          signal,
+          signal
         });
       },
       refetchInterval: (query) => {
@@ -157,12 +157,12 @@ export const projectQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
-    }),
+      }
+    })
 };
 
 export const projectServiceListSearchSchema = z.object({
-  query: z.string().optional().catch(""),
+  query: z.string().optional().catch("")
 });
 export type ProjectServiceListSearch = z.infer<
   typeof projectServiceListSearchSchema
@@ -176,7 +176,7 @@ export const serviceDeploymentListFilters = z.object({
     .optional()
     .catch(DEPLOYMENT_STATUSES as Writeable<typeof DEPLOYMENT_STATUSES>),
   queued_at_before: z.coerce.date().optional().catch(undefined),
-  queued_at_after: z.coerce.date().optional().catch(undefined),
+  queued_at_after: z.coerce.date().optional().catch(undefined)
 });
 
 export type ServiceDeploymentListFilters = z.infer<
@@ -192,7 +192,7 @@ export const serviceQueries = {
   single: ({
     project_slug,
     service_slug,
-    type = "docker",
+    type = "docker"
   }: {
     project_slug: string;
     service_slug: string;
@@ -203,7 +203,7 @@ export const serviceQueries = {
         ...projectQueries.single(project_slug).queryKey,
         "SERVICE_DETAILS",
         type,
-        service_slug,
+        service_slug
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -212,10 +212,10 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
-              },
+                service_slug
+              }
             },
-            signal,
+            signal
           }
         );
         return data;
@@ -225,13 +225,13 @@ export const serviceQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   deploymentList: ({
     project_slug,
     service_slug,
     type = "docker",
-    filters = {},
+    filters = {}
   }: {
     project_slug: string;
     service_slug: string;
@@ -242,7 +242,7 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({ project_slug, service_slug, type }).queryKey,
         "DEPLOYMENT_LIST",
-        filters,
+        filters
       ] as const,
       queryFn: ({ signal }) => {
         return apiClient.GET(
@@ -251,15 +251,15 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                service_slug
               },
               query: {
                 ...filters,
                 queued_at_after: filters.queued_at_after?.toISOString(),
-                queued_at_before: filters.queued_at_before?.toISOString(),
-              },
+                queued_at_before: filters.queued_at_before?.toISOString()
+              }
             },
-            signal,
+            signal
           }
         );
       },
@@ -268,8 +268,8 @@ export const serviceQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
-    }),
+      }
+    })
 };
 
 export const LOG_LEVELS = ["INFO", "ERROR"] as const;
@@ -287,7 +287,7 @@ export const deploymentLogSearchSchema = z.object({
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
   query: z.string().optional(),
-  isMaximized: z.coerce.boolean().optional().catch(false),
+  isMaximized: z.coerce.boolean().optional().catch(false)
 });
 
 export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
@@ -297,7 +297,7 @@ export const deploymentQueries = {
     project_slug,
     service_slug,
     deployment_hash,
-    type = "docker",
+    type = "docker"
   }: {
     project_slug: string;
     service_slug: string;
@@ -311,7 +311,7 @@ export const deploymentQueries = {
         type,
         service_slug,
         "DEPLOYMENTS",
-        deployment_hash,
+        deployment_hash
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -321,10 +321,10 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
-              },
+                deployment_hash
+              }
             },
-            signal,
+            signal
           }
         );
         return data;
@@ -334,7 +334,7 @@ export const deploymentQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   logs: ({
     project_slug,
@@ -343,7 +343,7 @@ export const deploymentQueries = {
     type = "docker",
     autoRefetchEnabled = true,
     filters = {},
-    queryClient,
+    queryClient
   }: {
     project_slug: string;
     service_slug: string;
@@ -359,10 +359,10 @@ export const deploymentQueries = {
           project_slug,
           service_slug,
           deployment_hash,
-          type,
+          type
         }).queryKey,
         "RUNTIME_LOGS",
-        filters,
+        filters
       ],
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
@@ -398,17 +398,17 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
+                deployment_hash
               },
               query: {
                 ...filters,
                 per_page: DEFAULT_LOGS_PER_PAGE,
                 cursor,
                 time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString(),
-              },
+                time_after: filters.time_after?.toISOString()
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -416,7 +416,7 @@ export const deploymentQueries = {
           next: null,
           previous: null,
           results: [],
-          cursor: null,
+          cursor: null
         };
 
         if (data) {
@@ -424,7 +424,7 @@ export const deploymentQueries = {
             results: data.results,
             next: data?.next ?? null,
             previous: data?.previous ?? null,
-            cursor: existingData?.cursor,
+            cursor: existingData?.cursor
           };
         }
 
@@ -439,17 +439,17 @@ export const deploymentQueries = {
                 path: {
                   project_slug,
                   service_slug,
-                  deployment_hash,
+                  deployment_hash
                 },
                 query: {
                   ...filters,
                   per_page: DEFAULT_LOGS_PER_PAGE,
                   cursor: apiData.next,
                   time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString(),
-                },
+                  time_after: filters.time_after?.toISOString()
+                }
               },
-              signal,
+              signal
             }
           );
           if (nextPage?.previous) {
@@ -473,8 +473,8 @@ export const deploymentQueries = {
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData,
-      staleTime: Number.POSITIVE_INFINITY,
-    }),
+      staleTime: Number.POSITIVE_INFINITY
+    })
 };
 
 type DeploymentLogQueryData = Pick<
@@ -508,12 +508,12 @@ export const searchResources = {
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {
-              query: query.trim(),
-            },
+              query: query.trim()
+            }
           },
-          signal,
+          signal
         });
       },
-      enabled: query.trim().length > 0,
-    }),
+      enabled: query.trim().length > 0
+    })
 };
