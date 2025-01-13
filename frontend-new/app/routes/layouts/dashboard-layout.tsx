@@ -81,8 +81,6 @@ type HeaderProps = {
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
 
-  const isSheetOpen = React.useState(false);
-
   return (
     <>
       {!import.meta.env.PROD && (
@@ -136,7 +134,6 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
-              {/* <MenubarContentItem icon={Settings} text="Settings" /> */}
               <button
                 className="w-full"
                 onClick={(e) => {
