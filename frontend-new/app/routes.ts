@@ -24,7 +24,7 @@ export default [
   ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
-    index("./routes/home.tsx"),
+    index("./routes/dashboard.tsx"),
     route("create-project", "./routes/projects/create-project.tsx"),
 
     ...prefix("project/:projectSlug", [
