@@ -28,7 +28,7 @@ export default function ProjectServiceListPage({
   params: { projectSlug: project_slug },
   loaderData
 }: Route.ComponentProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
   const { data: serviceList } = useQuery({

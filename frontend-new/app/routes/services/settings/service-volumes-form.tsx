@@ -49,11 +49,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
 import { type DockerService } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
-  type clientAction,
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
