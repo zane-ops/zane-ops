@@ -328,9 +328,11 @@ export function CommandMenu() {
   const [debouncedValue] = useDebounce(resourceSearchQuery, 300);
   const navigate = useNavigate();
 
-  const { data: resourceListData, isLoading } = useQuery(
-    resourceQueries.search(debouncedValue)
-  );
+  const {
+    data: resourceListData,
+    isLoading,
+    isFetching
+  } = useQuery(resourceQueries.search(debouncedValue));
 
   React.useEffect(() => {
     const handleEvent = (e: KeyboardEvent | MouseEvent) => {
@@ -371,13 +373,8 @@ export function CommandMenu() {
   }, []);
 
   const resourceList = resourceListData?.data ?? [];
-  console.log({
-    hidden:
-      resourceList.length === 0 ||
-      resourceSearchQuery.trim().length === 0 ||
-      !open ||
-      isLoading
-  });
+  const hideResultList =
+    debouncedValue.trim().length === 0 || !open || isLoading || isFetching;
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -410,7 +407,7 @@ export function CommandMenu() {
           className={cn(
             "absolute -top-1 left-0 w-full z-50 shadow-lg  rounded-md",
             {
-              hidden: resourceSearchQuery.trim().length === 0 || !open
+              hidden: hideResultList
             }
           )}
         >
