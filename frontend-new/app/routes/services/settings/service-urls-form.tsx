@@ -235,10 +235,10 @@ function ServiceURLFormItem({
                   form={`cancel-${change_id}-form`}
                 >
                   <Undo2Icon size={15} className="flex-none" />
-                  <span className="sr-only">Revert change</span>
+                  <span className="sr-only">Discard change</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Revert change</TooltipContent>
+              <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
             id && (

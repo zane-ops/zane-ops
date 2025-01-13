@@ -213,10 +213,10 @@ function ServicePortItem({
                   className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-focus:opacity-100"
                 >
                   <Undo2Icon size={15} className="flex-none" />
-                  <span className="sr-only">Revert change</span>
+                  <span className="sr-only">Discard change</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Revert change</TooltipContent>
+              <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
             id && (

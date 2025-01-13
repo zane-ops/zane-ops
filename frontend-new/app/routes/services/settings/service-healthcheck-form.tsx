@@ -259,12 +259,12 @@ export function ServiceHealthcheckForm({
             {isPending ? (
               <>
                 <LoaderIcon className="animate-spin" size={15} />
-                <span>Reverting...</span>
+                <span>Discarding...</span>
               </>
             ) : (
               <>
                 <Undo2Icon size={15} className="flex-none" />
-                <span>Revert change</span>
+                <span>Discard change</span>
               </>
             )}
           </SubmitButton>
