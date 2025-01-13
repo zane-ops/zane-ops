@@ -699,7 +699,7 @@ async function cancelServiceChange({
   service_slug: string;
   formData: FormData;
 }) {
-  const toastId = toast.loading("Cancelling service change...");
+  const toastId = toast.loading("Discarding service change...");
   const change_id = formData.get("change_id")?.toString();
   const { error: errors, data } = await apiClient.DELETE(
     "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
@@ -718,7 +718,7 @@ async function cancelServiceChange({
   );
 
   if (errors) {
-    toast.error("Failed to cancel change", { id: toastId, closeButton: true });
+    toast.error("Failed to discard change", { id: toastId, closeButton: true });
     return {
       errors
     };
@@ -728,7 +728,10 @@ async function cancelServiceChange({
     ...serviceQueries.single({ project_slug, service_slug }),
     exact: true
   });
-  toast.success("Change cancelled", { id: toastId, closeButton: true });
+  toast.success("Change discarded successfully", {
+    id: toastId,
+    closeButton: true
+  });
   return {
     data
   };

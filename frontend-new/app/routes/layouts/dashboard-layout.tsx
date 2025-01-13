@@ -1,7 +1,9 @@
 import {
   BookOpen,
   ChevronDown,
+  ChevronRight,
   CircleUser,
+  CommandIcon,
   GitCommitVertical,
   HeartHandshake,
   HelpCircle,
@@ -12,7 +14,7 @@ import {
   TagIcon,
   Twitter
 } from "lucide-react";
-import { Link, Outlet, redirect, useFetcher } from "react-router";
+import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
@@ -29,14 +31,23 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { serverQueries, userQueries } from "~/lib/queries";
+import { resourceQueries, serverQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
+import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { Button } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "~/components/ui/command";
 import { queryClient } from "~/root";
 import type { Route } from "./+types/dashboard-layout";
 
@@ -81,8 +92,6 @@ type HeaderProps = {
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
 
-  const isSheetOpen = React.useState(false);
-
   return (
     <>
       {!import.meta.env.PROD && (
@@ -106,13 +115,10 @@ function Header({ user }: HeaderProps) {
             </Link>
           </Button>
 
-          <div className="flex w-full justify-center items-center">
-            <Search className="relative left-10" />
-            <Input
-              className="px-14 my-1  text-sm focus-visible:right-0"
-              placeholder="Search for Service or Project"
-            />
+          <div className="flex mx-2 w-full justify-center items-center">
+            <CommandMenu />
           </div>
+
           <a
             href="https://github.com/zane-ops/zane-ops"
             target="_blank"
@@ -136,7 +142,6 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
-              {/* <MenubarContentItem icon={Settings} text="Settings" /> */}
               <button
                 className="w-full"
                 onClick={(e) => {
@@ -312,5 +317,141 @@ function Footer() {
         )}
       </footer>
     </>
+  );
+}
+
+export function CommandMenu() {
+  const [open, setOpen] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [resourceSearchQuery, setResourceSearchQuery] = React.useState("");
+  const [debouncedValue] = useDebounce(resourceSearchQuery, 300);
+  const navigate = useNavigate();
+
+  const {
+    data: resourceListData,
+    isLoading,
+    isFetching
+  } = useQuery(resourceQueries.search(debouncedValue));
+
+  React.useEffect(() => {
+    const handleEvent = (e: KeyboardEvent | MouseEvent) => {
+      if (
+        e instanceof KeyboardEvent &&
+        e.key === "k" &&
+        (e.metaKey || e.ctrlKey)
+      ) {
+        e.preventDefault();
+        setOpen((prev) => {
+          const newState = !prev;
+          if (newState) {
+            inputRef.current?.focus();
+          } else {
+            inputRef.current?.blur();
+          }
+          return newState;
+        });
+      }
+
+      if (
+        e instanceof MouseEvent &&
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+        inputRef.current?.blur();
+      }
+    };
+
+    document.addEventListener("keydown", handleEvent);
+    document.addEventListener("mousedown", handleEvent);
+
+    return () => {
+      document.removeEventListener("keydown", handleEvent);
+      document.removeEventListener("mousedown", handleEvent);
+    };
+  }, []);
+
+  const resourceList = resourceListData?.data ?? [];
+  const hideResultList =
+    debouncedValue.trim().length === 0 || !open || isLoading || isFetching;
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <Command label="resources" shouldFilter={false}>
+        <div className="relative w-full flex items-center">
+          <Search size={15} className="absolute left-4 text-gray-400" />
+          <CommandInput
+            ref={inputRef}
+            className="w-full pl-12 pr-12 my-1 text-sm rounded-md border"
+            placeholder="Search for Service, Worker, CRON, etc..."
+            name="resourceSearchQuery"
+            value={resourceSearchQuery}
+            onFocus={() => setOpen(true)}
+            onValueChange={(value) => {
+              console.log({
+                value
+              });
+              setResourceSearchQuery(value);
+              setOpen(true);
+            }}
+            onBlur={() => setOpen(false)}
+          />
+          <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1">
+            <CommandIcon size={15} />
+            <span className="text-xs">K</span>
+          </div>
+        </div>
+
+        <CommandList
+          className={cn(
+            "absolute -top-1 left-0 w-full z-50 shadow-lg  rounded-md",
+            {
+              hidden: hideResultList
+            }
+          )}
+        >
+          <CommandGroup
+            heading={
+              resourceList.length > 0 && (
+                <span>Resources ({resourceList.length})</span>
+              )
+            }
+          >
+            <CommandEmpty>No results found.</CommandEmpty>
+            {resourceList.map((resource) => (
+              <CommandItem
+                onSelect={() => {
+                  const baseUrl = "/project";
+                  const targetUrl =
+                    resource.type === "project"
+                      ? `${baseUrl}/${resource.slug}`
+                      : `${baseUrl}/${resource.project_slug}/services/${resource.slug}`;
+                  navigate(targetUrl);
+                  setOpen(false);
+                }}
+                key={resource.id}
+                className="block"
+              >
+                <p>{resource.slug}</p>
+                <div className="text-secondary text-xs">
+                  {resource.type === "project" ? (
+                    "projects"
+                  ) : (
+                    <div className="flex gap-0.5 items-center">
+                      <span className="flex-none">projects</span>{" "}
+                      <ChevronRight size={13} />
+                      <span>{resource.project_slug}</span>
+                      <ChevronRight className="flex-none" size={13} />
+                      <span className="flex-none">services</span>
+                    </div>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </div>
   );
 }

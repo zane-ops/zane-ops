@@ -49,11 +49,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCancelDockerServiceChangeMutation } from "~/lib/hooks/use-cancel-docker-service-change-mutation";
 import { type DockerService } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
-  type clientAction,
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
@@ -231,10 +229,10 @@ function ServiceVolumeItem({
                   form={`cancel-${change_id}-form`}
                 >
                   <Undo2Icon size={15} className="flex-none" />
-                  <span className="sr-only">Revert change</span>
+                  <span className="sr-only">Discard change</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Revert change</TooltipContent>
+              <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
             id && (

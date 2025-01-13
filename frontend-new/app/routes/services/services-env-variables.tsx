@@ -571,7 +571,7 @@ function EnVariableRow({
                     >
                       <MenubarContentItem
                         icon={Undo2Icon}
-                        text="Revert change"
+                        text="Discard change"
                         className="text-red-400"
                       />
                     </button>
