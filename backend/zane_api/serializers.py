@@ -85,13 +85,13 @@ class VolumeSerializer(ModelSerializer):
         ]
 
 
-class URLRedirectSerializer(serializers.Serializer):
+class URLRedirectModelSerializer(serializers.Serializer):
     url = serializers.URLField()
     permanent = serializers.BooleanField(default=False)
 
 
 class URLModelSerializer(ModelSerializer):
-    redirect_to = URLRedirectSerializer(allow_null=True)
+    redirect_to = URLRedirectModelSerializer(allow_null=True)
 
     class Meta:
         model = models.URL
@@ -187,6 +187,7 @@ class DockerServiceSerializer(ModelSerializer):
             "credentials",
             "urls",
             "volumes",
+            "deploy_token",
             "ports",
             "env_variables",
             "network_aliases",

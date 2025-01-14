@@ -140,6 +140,7 @@ class BaseService(TimestampedModel):
         max_length=255,
         null=True,
     )
+    deploy_token = models.CharField(max_length=25, null=True, unique=True)
 
     @property
     def host_volumes(self):
@@ -362,19 +363,20 @@ class DockerRegistryService(BaseService):
         added_new_http_port = False
         for change in self.unapplied_changes:
             match change.field:
-                case (
-                    DockerDeploymentChange.ChangeField.IMAGE
-                    | DockerDeploymentChange.ChangeField.COMMAND
-                ):
+                case DockerDeploymentChange.ChangeField.COMMAND:
                     setattr(self, change.field, change.new_value)
-                case DockerDeploymentChange.ChangeField.CREDENTIALS:
-                    if change.new_value is None:
-                        self.credentials = None
-                        continue
-                    self.credentials = {
-                        "username": change.new_value.get("username"),
-                        "password": change.new_value.get("password"),
-                    }
+                case DockerDeploymentChange.ChangeField.SOURCE:
+                    self.image = change.new_value.get("image")
+                    credentials = change.new_value.get("credentials")
+
+                    self.credentials = (
+                        None
+                        if credentials is None
+                        else {
+                            "username": credentials.get("username"),
+                            "password": credentials.get("password"),
+                        }
+                    )
                 case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
                     if change.new_value is None:
                         self.resource_limits = None
@@ -504,7 +506,12 @@ class DockerRegistryService(BaseService):
     def add_change(self, change: "DockerDeploymentChange"):
         change.service = self
         match change.field:
-            case "image" | "command" | "credentials" | "healthcheck":
+            case (
+                DockerDeploymentChange.ChangeField.SOURCE
+                | DockerDeploymentChange.ChangeField.COMMAND
+                | DockerDeploymentChange.ChangeField.HEALTHCHECK
+                | DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
+            ):
                 change_for_field: "DockerDeploymentChange" = (
                     self.unapplied_changes.filter(field=change.field).first()
                 )
@@ -734,9 +741,8 @@ class DockerDeploymentChange(BaseDeploymentChange):
     )
 
     class ChangeField(models.TextChoices):
-        IMAGE = "image", _("image")
+        SOURCE = "source", _("source")
         COMMAND = "command", _("command")
-        CREDENTIALS = "credentials", _("credentials")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
         ENV_VARIABLES = "env_variables", _("env variables")

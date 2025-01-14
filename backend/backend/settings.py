@@ -281,6 +281,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "5/minute",
         "tls_certificates": "60/minute",
+        "deploy_webhook": "60/minute",
         "log_collect": "30/minute",
     },
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,

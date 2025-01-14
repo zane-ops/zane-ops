@@ -350,6 +350,96 @@ paths:
           description: ''
         '401':
           description: No response body
+  /api/deploy-service/docker/{deploy_token}:
+    put:
+      operationId: webhookDeployService
+      description: trigger a new deployment.
+      summary: Webhook to deploy a docker service
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - deploy-service
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeployServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerServiceDeployment'
+          description: ''
   /api/docker/check-port/:
     post:
       operationId: checkIfPortIsAvailable
@@ -1122,13 +1212,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+              $ref: '#/components/schemas/DockerServiceDeployRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+              $ref: '#/components/schemas/DockerServiceDeployRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceDeployServiceRequest'
+              $ref: '#/components/schemas/DockerServiceDeployRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -2077,6 +2167,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
+    patch:
+      operationId: regenerateServiceDeployToken
+      summary: Regenerate service deploy token
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegenerateServiceDeployTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DockerService'
+          description: ''
   /api/projects/{project_slug}/toggle-service/docker/{service_slug}/:
     put:
       operationId: toggleDockerService
@@ -2487,6 +2671,127 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
+          description: ''
+  /api/search-resources/:
+    get:
+      operationId: searchResources
+      summary: search for resources (project, service ...)
+      parameters:
+      - in: query
+        name: query
+        schema:
+          type: string
+          minLength: 1
+      tags:
+      - search-resources
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResourcesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResourceResponse'
+          description: ''
+  /api/server/resource-limits/:
+    get:
+      operationId: getServerResouceLimits
+      description: Get the number of CPUS & memory of the server.
+      summary: Get server resource limits
+      tags:
+      - server
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetServerResouceLimitsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceLimit'
           description: ''
   /api/settings/:
     get:
@@ -3073,9 +3378,8 @@ components:
       - $ref: '#/components/schemas/VolumeItemChangeRequest'
       - $ref: '#/components/schemas/EnvItemChangeRequest'
       - $ref: '#/components/schemas/PortItemChangeRequest'
-      - $ref: '#/components/schemas/DockerCredentialsFieldChangeRequest'
+      - $ref: '#/components/schemas/DockerSourceFieldChangeRequest'
       - $ref: '#/components/schemas/DockerCommandFieldChangeRequest'
-      - $ref: '#/components/schemas/DockerImageFieldChangeRequest'
       - $ref: '#/components/schemas/HealthcheckFieldChangeRequest'
       - $ref: '#/components/schemas/ResourceLimitChangeRequest'
       discriminator:
@@ -3127,6 +3431,10 @@ components:
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
+        deploy_token:
+          type: string
+          nullable: true
+          maxLength: 25
         ports:
           type: array
           items:
@@ -3164,6 +3472,7 @@ components:
       - command
       - created_at
       - credentials
+      - deploy_token
       - env_variables
       - healthcheck
       - id
@@ -3210,27 +3519,18 @@ components:
       required:
       - password
       - username
-    DockerCredentialsFieldChangeFieldEnum:
-      enum:
-      - credentials
-      type: string
-      description: '* `credentials` - credentials'
-    DockerCredentialsFieldChangeRequest:
+    DockerCredentialRequest:
       type: object
       properties:
-        type:
-          allOf:
-          - $ref: '#/components/schemas/FieldChangeTypeEnum'
-          default: UPDATE
-        new_value:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredentialsRequestRequest'
-          nullable: true
-        field:
-          $ref: '#/components/schemas/DockerCredentialsFieldChangeFieldEnum'
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
       required:
-      - field
-      - new_value
+      - password
+      - username
     DockerCredentialsRequestRequest:
       type: object
       properties:
@@ -3267,9 +3567,8 @@ components:
       - type
     DockerDeploymentChangeFieldEnum:
       enum:
-      - image
+      - source
       - command
-      - credentials
       - healthcheck
       - volumes
       - env_variables
@@ -3278,15 +3577,37 @@ components:
       - resource_limits
       type: string
       description: |-
-        * `image` - image
+        * `source` - source
         * `command` - command
-        * `credentials` - credentials
         * `healthcheck` - healthcheck
         * `volumes` - volumes
         * `env_variables` - env variables
         * `urls` - urls
         * `ports` - ports
         * `resource_limits` - resource limits
+    DockerDeploymentChangeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+      required:
+      - field
+      - type
     DockerDeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -3313,6 +3634,24 @@ components:
       - id
       - key
       - value
+    DockerEnvVariableRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - key
+      - value
     DockerImage:
       type: object
       properties:
@@ -3324,26 +3663,6 @@ components:
       required:
       - description
       - full_image
-    DockerImageFieldChangeFieldEnum:
-      enum:
-      - image
-      type: string
-      description: '* `image` - image'
-    DockerImageFieldChangeRequest:
-      type: object
-      properties:
-        type:
-          allOf:
-          - $ref: '#/components/schemas/FieldChangeTypeEnum'
-          default: UPDATE
-        new_value:
-          type: string
-          minLength: 1
-        field:
-          $ref: '#/components/schemas/DockerImageFieldChangeFieldEnum'
-      required:
-      - field
-      - new_value
     DockerImageSearchResponse:
       type: object
       properties:
@@ -3415,6 +3734,10 @@ components:
           items:
             $ref: '#/components/schemas/Volume'
           readOnly: true
+        deploy_token:
+          type: string
+          nullable: true
+          maxLength: 25
         ports:
           type: array
           items:
@@ -3452,6 +3775,7 @@ components:
       - command
       - created_at
       - credentials
+      - deploy_token
       - env_variables
       - healthcheck
       - id
@@ -3523,7 +3847,7 @@ components:
           $ref: '#/components/schemas/DockerCredentialsRequestRequest'
       required:
       - image
-    DockerServiceDeployServiceRequest:
+    DockerServiceDeployRequestRequest:
       type: object
       properties:
         commit_message:
@@ -3623,6 +3947,43 @@ components:
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
         * `SLEEPING` - Sleeping
+    DockerServiceWebhookDeployRequestRequest:
+      type: object
+      properties:
+        commit_message:
+          type: string
+        new_image:
+          type: string
+          minLength: 1
+    DockerSourceFieldChangeFieldEnum:
+      enum:
+      - source
+      type: string
+      description: '* `source` - source'
+    DockerSourceFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/DockerSourceRequestRequest'
+        field:
+          $ref: '#/components/schemas/DockerSourceFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    DockerSourceRequestRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          minLength: 1
+        credentials:
+          $ref: '#/components/schemas/DockerCredentialsRequestRequest'
+      required:
+      - image
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -3951,6 +4312,13 @@ components:
       required:
       - errors
       - type
+    GetServerResouceLimitsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetSingleProjectErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -4027,6 +4395,27 @@ components:
       - timeout_seconds
       - type
       - value
+    HealthCheckRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/HealthCheckTypeEnum'
+        value:
+          type: string
+          minLength: 1
+          maxLength: 255
+        timeout_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        interval_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
     HealthCheckRequestRequest:
       type: object
       properties:
@@ -4334,6 +4723,17 @@ components:
       required:
       - unit
       - value
+    MemoryLimitRequest:
+      type: object
+      properties:
+        value:
+          type: integer
+          minimum: 0
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+      required:
+      - unit
+      - value
     MemoryLimitRequestRequest:
       type: object
       properties:
@@ -4480,6 +4880,49 @@ components:
       required:
       - errors
       - type
+    PatchedDockerServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        image:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 510
+        command:
+          type: string
+          nullable: true
+        credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredentialRequest'
+          nullable: true
+        deploy_token:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 25
+        network_alias:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 300
+        resource_limits:
+          allOf:
+          - $ref: '#/components/schemas/ResourceLimitsRequest'
+          nullable: true
+        system_env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEnvVariablesRequest'
+          default: []
     PatchedDockerServiceUpdateRequestRequest:
       type: object
       properties:
@@ -4530,6 +4973,24 @@ components:
       - forwarded
       - host
       - id
+    PortConfigurationRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        host:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        forwarded:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - forwarded
     PortItemChangeFieldEnum:
       enum:
       - ports
@@ -4597,6 +5058,31 @@ components:
         description:
           type: string
           minLength: 1
+    ProjectSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ProjectSearchTypeEnum'
+          default: project
+      required:
+      - created_at
+      - id
+      - slug
+      - type
+    ProjectSearchTypeEnum:
+      enum:
+      - project
+      type: string
+      description: '* `project` - project'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
@@ -4875,6 +5361,603 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateServiceDeployTokenCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - command
+          type: string
+          description: '* `command` - command'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.non_field_errors
+          type: string
+          description: '* `credentials.non_field_errors` - credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.password
+          type: string
+          description: '* `credentials.password` - credentials.password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - credentials.username
+          type: string
+          description: '* `credentials.username` - credentials.username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenDeployTokenErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deploy_token
+          type: string
+          description: '* `deploy_token` - deploy_token'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenError:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDeployTokenErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNetworkAliasErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
+          id: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
+          slug: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
+          image: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
+          command: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
+          credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
+          credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
+          credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
+          deploy_token: '#/components/schemas/RegenerateServiceDeployTokenDeployTokenErrorComponent'
+          network_alias: '#/components/schemas/RegenerateServiceDeployTokenNetworkAliasErrorComponent'
+          resource_limits.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent'
+          resource_limits.cpus: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent'
+          resource_limits.memory.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent'
+          resource_limits.memory.value: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent'
+          resource_limits.memory.unit: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent'
+          system_env_variables.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent'
+          system_env_variables.INDEX.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent'
+          system_env_variables.INDEX.key: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent'
+          system_env_variables.INDEX.value: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent'
+          system_env_variables.INDEX.comment: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent'
+    RegenerateServiceDeployTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateServiceDeployTokenIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - id
+          type: string
+          description: '* `id` - id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - image
+          type: string
+          description: '* `image` - image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNetworkAliasErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - network_alias
+          type: string
+          description: '* `network_alias` - network_alias'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - resource_limits.cpus
+          type: string
+          description: '* `resource_limits.cpus` - resource_limits.cpus'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - resource_limits.memory.non_field_errors
+          type: string
+          description: '* `resource_limits.memory.non_field_errors` - resource_limits.memory.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - resource_limits.memory.unit
+          type: string
+          description: '* `resource_limits.memory.unit` - resource_limits.memory.unit'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - resource_limits.memory.value
+          type: string
+          description: '* `resource_limits.memory.value` - resource_limits.memory.value'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - resource_limits.non_field_errors
+          type: string
+          description: '* `resource_limits.non_field_errors` - resource_limits.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - system_env_variables.INDEX.comment
+          type: string
+          description: '* `system_env_variables.INDEX.comment` - system_env_variables.INDEX.comment'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - system_env_variables.INDEX.key
+          type: string
+          description: '* `system_env_variables.INDEX.key` - system_env_variables.INDEX.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - system_env_variables.INDEX.non_field_errors
+          type: string
+          description: '* `system_env_variables.INDEX.non_field_errors` - system_env_variables.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - system_env_variables.INDEX.value
+          type: string
+          description: '* `system_env_variables.INDEX.value` - system_env_variables.INDEX.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - system_env_variables.non_field_errors
+          type: string
+          description: '* `system_env_variables.non_field_errors` - system_env_variables.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegenerateServiceDeployTokenError'
+      required:
+      - errors
+      - type
     RequestDeploymentChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesNonFieldErrorsErrorComponent'
@@ -4896,8 +5979,10 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueValueErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueHostErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueForwardedErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueUsernameErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValuePasswordErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueImageErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
@@ -4928,8 +6013,10 @@ components:
           new_value.value: '#/components/schemas/RequestDeploymentChangesNewValueValueErrorComponent'
           new_value.host: '#/components/schemas/RequestDeploymentChangesNewValueHostErrorComponent'
           new_value.forwarded: '#/components/schemas/RequestDeploymentChangesNewValueForwardedErrorComponent'
-          new_value.username: '#/components/schemas/RequestDeploymentChangesNewValueUsernameErrorComponent'
-          new_value.password: '#/components/schemas/RequestDeploymentChangesNewValuePasswordErrorComponent'
+          new_value.image: '#/components/schemas/RequestDeploymentChangesNewValueImageErrorComponent'
+          new_value.credentials.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent'
+          new_value.credentials.username: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent'
+          new_value.credentials.password: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent'
           new_value: '#/components/schemas/RequestDeploymentChangesNewValueErrorComponent'
           new_value.type: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
           new_value.timeout_seconds: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
@@ -5087,6 +6174,84 @@ components:
       - attr
       - code
       - detail
+    RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.non_field_errors
+          type: string
+          description: '* `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.password
+          type: string
+          description: '* `new_value.credentials.password` - new_value.credentials.password'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.username
+          type: string
+          description: '* `new_value.credentials.username` - new_value.credentials.username'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestDeploymentChangesNewValueDomainErrorComponent:
       type: object
       properties:
@@ -5129,8 +6294,6 @@ components:
           enum:
           - blank
           - invalid
-          - min_length
-          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
@@ -5138,8 +6301,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `min_length` - min_length
-            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -5226,6 +6387,36 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.image
+          type: string
+          description: '* `new_value.image` - new_value.image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -5439,34 +6630,6 @@ components:
       - attr
       - code
       - detail
-    RequestDeploymentChangesNewValuePasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.password
-          type: string
-          description: '* `new_value.password` - new_value.password'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -5613,34 +6776,6 @@ components:
       - attr
       - code
       - detail
-    RequestDeploymentChangesNewValueUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.username
-          type: string
-          description: '* `new_value.username` - new_value.username'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RequestDeploymentChangesNewValueValueErrorComponent:
       type: object
       properties:
@@ -5758,6 +6893,16 @@ components:
         * `HTTP/1.1` - HTTP/1.1
         * `HTTP/2.0` - HTTP/2.0
         * `HTTP/3.0` - HTTP/3.0
+    ResourceLimit:
+      type: object
+      properties:
+        no_of_cpus:
+          type: integer
+        max_memory_in_bytes:
+          type: integer
+      required:
+      - max_memory_in_bytes
+      - no_of_cpus
     ResourceLimitChangeFieldEnum:
       enum:
       - resource_limits
@@ -5793,6 +6938,20 @@ components:
       required:
       - cpus
       - memory
+    ResourceLimitsRequest:
+      type: object
+      properties:
+        cpus:
+          type: number
+          format: double
+          nullable: true
+        memory:
+          allOf:
+          - $ref: '#/components/schemas/MemoryLimitRequest'
+          nullable: true
+      required:
+      - cpus
+      - memory
     ResourceLimitsRequestRequest:
       type: object
       properties:
@@ -5802,6 +6961,14 @@ components:
           minimum: 0.1
         memory:
           $ref: '#/components/schemas/MemoryLimitRequestRequest'
+    ResourceResponse:
+      oneOf:
+      - $ref: '#/components/schemas/ServiceSearch'
+      - $ref: '#/components/schemas/ProjectSearch'
+      discriminator:
+        propertyName: type
+        mapping:
+          null: '#/components/schemas/ProjectSearch'
     RuntimeLog:
       type: object
       properties:
@@ -5865,6 +7032,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SearchResourcesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ServiceCardResponse:
       oneOf:
       - $ref: '#/components/schemas/DockerServiceCard'
@@ -5885,6 +7059,35 @@ components:
           minimum: 1
       required:
       - forwarded
+    ServiceSearch:
+      type: object
+      properties:
+        id:
+          type: string
+        project_slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ServiceSearchTypeEnum'
+          default: service
+      required:
+      - created_at
+      - id
+      - project_slug
+      - slug
+      - type
+    ServiceSearchTypeEnum:
+      enum:
+      - service
+      type: string
+      description: '* `service` - service'
     ServiceStatusEnum:
       enum:
       - HEALTHY
@@ -5941,6 +7144,22 @@ components:
       - comment
       - key
       - value
+    SystemEnvVariablesRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          minLength: 1
+        comment:
+          type: string
+          minLength: 1
+      required:
+      - comment
+      - key
+      - value
     ToggleDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -5985,7 +7204,7 @@ components:
           type: boolean
         redirect_to:
           allOf:
-          - $ref: '#/components/schemas/URLRedirect'
+          - $ref: '#/components/schemas/URLRedirectModel'
           nullable: true
       required:
       - base_path
@@ -5993,7 +7212,31 @@ components:
       - id
       - redirect_to
       - strip_prefix
-    URLRedirect:
+    URLModelRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        domain:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        base_path:
+          type: string
+          minLength: 1
+          default: /
+        strip_prefix:
+          type: boolean
+        redirect_to:
+          allOf:
+          - $ref: '#/components/schemas/URLRedirectModelRequest'
+          nullable: true
+      required:
+      - domain
+      - redirect_to
+    URLRedirectModel:
       type: object
       properties:
         url:
@@ -6004,6 +7247,18 @@ components:
           default: false
       required:
       - permanent
+      - url
+    URLRedirectModelRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+        permanent:
+          type: boolean
+          default: false
+      required:
       - url
     URLRedirectRequest:
       type: object
@@ -6314,6 +7569,31 @@ components:
       description: |-
         * `READ_ONLY` - Read-Only
         * `READ_WRITE` - Read-Write
+    VolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        container_path:
+          type: string
+          minLength: 1
+          maxLength: 255
+        host_path:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+        mode:
+          $ref: '#/components/schemas/VolumeModeEnum'
+      required:
+      - container_path
+      - name
     VolumeRequestModeEnum:
       enum:
       - READ_ONLY
@@ -6341,6 +7621,111 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
+    WebhookDeployServiceCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
+          new_image: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
+    WebhookDeployServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookDeployServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookDeployServiceNewImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_image
+          type: string
+          description: '* `new_image` - new_image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDeployServiceError'
+      required:
+      - errors
+      - type
   securitySchemes:
     cookieAuth:
       type: apiKey

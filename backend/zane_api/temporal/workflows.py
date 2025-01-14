@@ -236,7 +236,10 @@ class DeployDockerServiceWorkflow:
                 )
 
             if (
-                (len(service.volumes) > 0 or len(service.non_http_ports) > 0)
+                (
+                    len(service.non_read_only_volumes) > 0
+                    or len(service.non_http_ports) > 0
+                )
                 and previous_production_deployment is not None
                 and previous_production_deployment.status
                 != DockerDeployment.DeploymentStatus.FAILED
@@ -255,52 +258,60 @@ class DeployDockerServiceWorkflow:
                     deployment, DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
                 )
 
-            await workflow.execute_activity_method(
+            image_pulled_successfully = await workflow.execute_activity_method(
                 DockerSwarmActivities.pull_image_for_deployment,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=self.retry_policy,
             )
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.create_swarm_service_for_docker_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            if await check_for_cancellation(DockerDeploymentStep.SWARM_SERVICE_CREATED):
-                return await self.handle_cancellation(
-                    deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
-                )
-
-            if deployment.service.http_port is not None:
+            if not image_pulled_successfully:
+                deployment_status = DockerDeployment.DeploymentStatus.FAILED
+                deployment_status_reason = "Failed to pull image"
+            else:
                 await workflow.execute_activity_method(
-                    DockerSwarmActivities.expose_docker_deployment_to_http,
+                    DockerSwarmActivities.create_swarm_service_for_docker_deployment,
                     deployment,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
 
-            if await check_for_cancellation(
-                DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
-            ):
-                return await self.handle_cancellation(
-                    deployment, DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
-                )
+                if await check_for_cancellation(
+                    DockerDeploymentStep.SWARM_SERVICE_CREATED
+                ):
+                    return await self.handle_cancellation(
+                        deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
+                    )
 
-            healthcheck_timeout = (
-                deployment.service.healthcheck.timeout_seconds
-                if deployment.service.healthcheck is not None
-                else settings.DEFAULT_HEALTHCHECK_TIMEOUT
-            )
-            deployment_status, deployment_status_reason = (
-                await workflow.execute_activity_method(
-                    DockerSwarmActivities.run_deployment_healthcheck,
-                    deployment,
-                    retry_policy=self.retry_policy,
-                    start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
+                if deployment.service.http_port is not None:
+                    await workflow.execute_activity_method(
+                        DockerSwarmActivities.expose_docker_deployment_to_http,
+                        deployment,
+                        start_to_close_timeout=timedelta(seconds=30),
+                        retry_policy=self.retry_policy,
+                    )
+
+                if await check_for_cancellation(
+                    DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
+                ):
+                    return await self.handle_cancellation(
+                        deployment, DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
+                    )
+
+                healthcheck_timeout = (
+                    deployment.service.healthcheck.timeout_seconds
+                    if deployment.service.healthcheck is not None
+                    else settings.DEFAULT_HEALTHCHECK_TIMEOUT
                 )
-            )
+                deployment_status, deployment_status_reason = (
+                    await workflow.execute_activity_method(
+                        DockerSwarmActivities.run_deployment_healthcheck,
+                        deployment,
+                        retry_policy=self.retry_policy,
+                        start_to_close_timeout=timedelta(
+                            seconds=healthcheck_timeout + 5
+                        ),
+                    )
+                )
 
             if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
                 if deployment.service.http_port is not None:
@@ -311,12 +322,12 @@ class DeployDockerServiceWorkflow:
                         retry_policy=self.retry_policy,
                     )
 
-            if await check_for_cancellation(
-                DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
-            ):
-                return await self.handle_cancellation(
-                    deployment, DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
-                )
+                if await check_for_cancellation(
+                    DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
+                ):
+                    return await self.handle_cancellation(
+                        deployment, DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
+                    )
 
             healthcheck_result = DeploymentHealthcheckResult(
                 deployment_hash=deployment.hash,
@@ -361,7 +372,7 @@ class DeployDockerServiceWorkflow:
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
-            final_deployment_status = await workflow.execute_activity_method(
+            final_deployment_status, reason = await workflow.execute_activity_method(
                 DockerSwarmActivities.finish_and_save_deployment,
                 healthcheck_result,
                 start_to_close_timeout=timedelta(seconds=5),
@@ -370,6 +381,7 @@ class DeployDockerServiceWorkflow:
             next_queued_deployment = await self.queue_next_deployment(deployment)
             return DeployDockerServiceWorkflowResult(
                 deployment_status=final_deployment_status,
+                deployment_status_reason=reason,
                 healthcheck_result=healthcheck_result,
                 next_queued_deployment=next_queued_deployment,
             )
@@ -476,6 +488,7 @@ class DeployDockerServiceWorkflow:
         return DeployDockerServiceWorkflowResult(
             deployment_status=DockerDeployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
+            deployment_status_reason="Deployment cancelled.",
         )
 
     async def queue_next_deployment(

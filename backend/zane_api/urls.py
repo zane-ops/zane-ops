@@ -45,6 +45,11 @@ urlpatterns = [
         name="settings",
     ),
     re_path(
+        r"^server/resource-limits/?$",
+        views.ResourceLimitsView.as_view(),
+        name="server.resource_limits",
+    ),
+    re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
@@ -64,6 +69,11 @@ urlpatterns = [
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
         name="services.docker.request_deployment_changes",
+    ),
+    re_path(
+        r"^search-resources/?$",
+        views.ResouceSearchAPIView.as_view(),
+        name="resources.search",
     ),
 ]
 
@@ -153,5 +163,16 @@ urlpatterns += [
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/?$",
         views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
         name="services.docker.deployment_http_logs",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/regenerate-deploy-token/?$",
+        views.RegenerateServiceDeployTokenAPIView.as_view(),
+        name="services.docker.regenerate_deploy_token",
+    ),
+    re_path(
+        rf"^deploy-service/docker/(?P<deploy_token>[a-zA-Z0-9-_]+)?$",
+        views.WebhookDeployServiceAPIView.as_view(),
+        name="services.docker.webhook_deploy",
     ),
 ]

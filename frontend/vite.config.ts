@@ -1,13 +1,12 @@
-import path from "node:path";
-import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
-import react from "@vitejs/plugin-react";
+import { reactRouter } from "@react-router/dev/vite";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
+import babel from "vite-plugin-babel";
+import tsconfigPaths from "vite-tsconfig-paths";
 
-const ReactCompilerConfig = {};
-// https://vitejs.dev/config/
 export default defineConfig({
   server: {
-    port: 5678,
+    port: 5173,
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8000",
@@ -16,20 +15,15 @@ export default defineConfig({
     }
   },
   plugins: [
-    TanStackRouterVite({
-      experimental: {
-        enableCodeSplitting: true
+    babel({
+      filter: /\.tsx?$/,
+      babelConfig: {
+        presets: ["@babel/preset-typescript"],
+        plugins: ["babel-plugin-react-compiler"]
       }
     }),
-    react({
-      babel: {
-        plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]]
-      }
-    })
-  ],
-  resolve: {
-    alias: {
-      "~": path.resolve(__dirname, "./src")
-    }
-  }
+    reactRouter(),
+    tsconfigPaths(),
+    tailwindcss()
+  ]
 });
