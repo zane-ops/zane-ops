@@ -27,12 +27,12 @@
   "files": {
     "ignore": [
       "./frontend/src/api/v1.ts",
-      "./frontend-new/app/api/v1.ts",
+      "./frontend/app/api/v1.ts",
       "./frontend/src/routeTree.gen.ts",
       "./frontend/dist/**",
-      "./frontend-new/node_modules/**",
-      "./frontend-new/build/**",
-      "./frontend-new/.react-router/**",
+      "./frontend/node_modules/**",
+      "./frontend/build/**",
+      "./frontend/.react-router/**",
       "node_modules/**"
     ]
   }
