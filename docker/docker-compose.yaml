@@ -49,52 +49,54 @@ services:
   app:
     build:
       context: ../
-      dockerfile: ./app/Dockerfile
+      dockerfile: ./docker/app/Dockerfile
     container_name: zane-app
     volumes: 
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./app/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
     restart: always
     environment:
       <<: *env-vars
     ports:
-      - "8000:8000"
+      - "9001:9001"
+      - "8000:80"
     networks:
       zane:
         aliases:
-          - zane.app
-          - zane.app.zaneops.internal
-  api:
-    build:
-      context: ../backend
-      dockerfile: ../backend/Dockerfile
-    command: >
-      bash -c "source /venv/bin/activate &&
-               uv pip install -r requirements.txt &&
-               python manage.py create_log_cleanup_schedule && python manage.py runserver 0.0.0.0:8000"
-    container_name: zane-api
-    volumes:
-      - ../backend:/code
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - db
-      - redis
-      - temporal-server
-    restart: always
-    environment:
-      <<: *env-vars
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
-      interval: 1m
-      timeout: 3m
-      start_period: 30s
-      retries: 3
-    ports:
-      - "8000:8000"
-    networks:
-      zane:
-        aliases:
-          - zane.api
-          - zane.api.zaneops.internal
+          - zane.frontend
+          - zane.front.zaneops.internal
+  # api:
+    # build:
+    #   context: ../backend
+    #   dockerfile: ../backend/Dockerfile
+    # command: >
+    #   bash -c "source /venv/bin/activate &&
+    #            uv pip install -r requirements.txt &&
+    #            python manage.py create_log_cleanup_schedule && python manage.py runserver 0.0.0.0:8000"
+    # container_name: zane-api
+    # volumes:
+    #   - ../backend:/code
+    #   - /var/run/docker.sock:/var/run/docker.sock:ro
+    # depends_on:
+    #   - db
+    #   - redis
+    #   - temporal-server
+    # restart: always
+    # environment:
+    #   <<: *env-vars
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
+    #   interval: 1m
+    #   timeout: 3m
+    #   start_period: 30s
+    #   retries: 3
+    # ports:
+    #   - "8000:8000"
+    # networks:
+    #   zane:
+    #     aliases:
+    #       - zane.api
+    #       - zane.api.zaneops.internal
   temporal-main-worker:
     build:
       context: ../backend

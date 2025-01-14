@@ -289,7 +289,6 @@ DEFAULT_502_FALLBACK = """
 def register_zaneops_app_on_proxy(
     proxy_url: str,
     zane_app_domain: str,
-    zane_api_internal_domain: str,
     zane_front_internal_domain: str,
     internal_tls: bool = False,
 ):
@@ -314,26 +313,26 @@ def register_zaneops_app_on_proxy(
             ],
             "match": [{"path": ["/*"], "host": [zane_app_domain]}],
         },
-        {
-            "@id": f"api.zaneops.internal",
-            "group": "zaneops.internal",
-            "handle": [
-                {
-                    "handler": "subroute",
-                    "routes": [
-                        {
-                            "handle": [
-                                {
-                                    "handler": "reverse_proxy",
-                                    "upstreams": [{"dial": zane_api_internal_domain}],
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "match": [{"path": ["/api/*"], "host": [zane_app_domain]}],
-        },
+        # {
+        #     "@id": f"api.zaneops.internal",
+        #     "group": "zaneops.internal",
+        #     "handle": [
+        #         {
+        #             "handler": "subroute",
+        #             "routes": [
+        #                 {
+        #                     "handle": [
+        #                         {
+        #                             "handler": "reverse_proxy",
+        #                             "upstreams": [{"dial": zane_api_internal_domain}],
+        #                         }
+        #                     ]
+        #                 }
+        #             ],
+        #         }
+        #     ],
+        #     "match": [{"path": ["/api/*"], "host": [zane_app_domain]}],
+        # },
     ]
 
     for config in url_configurations:
@@ -372,7 +371,7 @@ def register_zaneops_app_on_proxy(
             "on_demand": {
                 "permission": {
                     "@id": "tls-endpoint",
-                    "endpoint": f"http://{zane_api_internal_domain}/api/_proxy/check-certiticates",
+                    "endpoint": f"http://{zane_front_internal_domain}/api/_proxy/check-certiticates",
                     "module": "http",
                 }
             },
