@@ -434,7 +434,7 @@ export function CommandMenu() {
                 className="block"
               >
                 <p>{resource.slug}</p>
-                <div className="text-secondary text-xs">
+                <div className="text-link text-xs">
                   {resource.type === "project" ? (
                     "projects"
                   ) : (
