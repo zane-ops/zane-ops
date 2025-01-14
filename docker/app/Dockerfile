@@ -39,6 +39,7 @@ ENV DJANGO_SETTINGS_MODULE=backend.settings
 COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 
+RUN chmod a+x /app/run_gunicorn.sh
 
 # Expose necessary ports
 EXPOSE 80

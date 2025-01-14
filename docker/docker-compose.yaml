@@ -46,6 +46,23 @@ services:
     depends_on:
       - db
     restart: always
+  app:
+    build:
+      context: ../
+      dockerfile: ./app/Dockerfile
+    container_name: zane-app
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always
+    environment:
+      <<: *env-vars
+    ports:
+      - "8000:8000"
+    networks:
+      zane:
+        aliases:
+          - zane.app
+          - zane.app.zaneops.internal
   api:
     build:
       context: ../backend

@@ -4,7 +4,6 @@
 		root * /var/www/html
 		file_server
 		try_files {path} /index.html
-		# Add X-Robots-Tag header
 		header / X-Robots-Tag "noindex"
 	}
 
