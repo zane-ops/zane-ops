@@ -36,7 +36,7 @@ migrate: ### Run db migration
 	. ./backend/venv/bin/activate && python ./backend/manage.py migrate
 
 dev: ### Start the DEV server
-	pnpm run  --filter='!backend' --recursive --parallel dev
+	pnpm run --recursive --parallel dev
 
 reset-db: ### Wipe out the database and reset the application to its initial state
 	chmod a+x reset-db.sh

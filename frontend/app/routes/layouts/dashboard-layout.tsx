@@ -1,44 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Link,
-  Outlet,
-  createFileRoute,
-  useNavigate
-} from "@tanstack/react-router";
-import {
-  AlarmCheck,
   BookOpen,
   ChevronDown,
   ChevronRight,
-  ChevronsUpDown,
   CircleUser,
   CommandIcon,
-  Folder,
   GitCommitVertical,
-  Globe,
-  Hammer,
   HeartHandshake,
   HelpCircle,
   LogOut,
   Menu,
   Search,
   Send,
-  Settings,
   TagIcon,
   Twitter
 } from "lucide-react";
-import * as React from "react";
-import { useDebounce } from "use-debounce";
-import { apiClient } from "~/api/client";
+import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
 import { Logo } from "~/components/logo";
-import { Button } from "~/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList
-} from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -49,54 +26,72 @@ import {
 } from "~/components/ui/menubar";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { resourceQueries, userQueries } from "~/lib/queries";
+import { resourceQueries, serverQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { deleteCookie, getCsrfTokenHeader } from "~/utils";
+import { metaTitle } from "~/utils";
 
-export const Route = createFileRoute("/_dashboard")({
-  component: () => (
+import { useQuery } from "@tanstack/react-query";
+import * as React from "react";
+import { useDebounce } from "use-debounce";
+import { NavigationProgress } from "~/components/navigation-progress";
+import { Button } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "~/components/ui/command";
+import { queryClient } from "~/root";
+import type { Route } from "./+types/dashboard-layout";
+
+export function meta() {
+  return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const user = userQuery.data?.user;
+
+  if (!user) {
+    let redirectPathName = `/login`;
+    const url = new URL(request.url);
+    if (url.pathname !== "/" && url.pathname !== "/login") {
+      const params = new URLSearchParams([["redirect_to", url.pathname]]);
+      redirectPathName = `/login?${params.toString()}`;
+    }
+
+    throw redirect(redirectPathName);
+  }
+  return user;
+}
+
+export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
+  return (
     <div className="min-h-screen flex flex-col justify-between">
-      <Header />
+      <NavigationProgress />
+      <Header user={loaderData} />
       <main className="grow container p-6">
         <Outlet />
       </main>
       <Footer />
     </div>
-  )
-});
+  );
+}
 
-function Header() {
-  const query = useQuery(userQueries.authedUser);
-  const navigate = useNavigate();
-  const user = query.data?.data?.user;
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: async () => {
-      const { error } = await apiClient.DELETE("/api/auth/logout/", {
-        headers: {
-          ...(await getCsrfTokenHeader())
-        }
-      });
-      if (error) {
-        return error;
-      }
+type HeaderProps = {
+  user: Route.ComponentProps["loaderData"];
+};
 
-      queryClient.removeQueries({
-        queryKey: userQueries.authedUser.queryKey
-      });
-      deleteCookie("csrftoken");
-      navigate({ to: "/login" });
-      return null;
-    }
-  });
+function Header({ user }: HeaderProps) {
+  let fetcher = useFetcher();
 
-  if (!user) {
-    return null;
-  }
   return (
     <>
       {!import.meta.env.PROD && (
@@ -115,7 +110,9 @@ function Header() {
         </Link>
         <div className="md:flex hidden  w-full items-center">
           <Button asChild>
-            <Link to="/create-project">Create project</Link>
+            <Link to="/create-project" prefetch="intent">
+              Create project
+            </Link>
           </Button>
 
           <div className="flex mx-2 w-full justify-center items-center">
@@ -131,6 +128,12 @@ function Header() {
           </a>
         </div>
 
+        <fetcher.Form
+          method="post"
+          action="/logout"
+          id="logout-form"
+          className="hidden"
+        />
         <Menubar className="border-none md:block hidden w-fit">
           <MenubarMenu>
             <MenubarTrigger className="flex justify-center items-center gap-2">
@@ -139,13 +142,15 @@ function Header() {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
-              <MenubarContentItem icon={Settings} text="Settings" />
               <button
-                onClick={() => mutate()}
                 className="w-full"
-                disabled={isPending}
+                onClick={(e) => {
+                  e.currentTarget.form?.requestSubmit();
+                }}
+                form="logout-form"
+                disabled={fetcher.state !== "idle"}
               >
-                {isPending ? (
+                {fetcher.state !== "idle" ? (
                   "Logging out..."
                 ) : (
                   <MenubarContentItem icon={LogOut} text="Logout" />
@@ -189,21 +194,14 @@ function Header() {
                 </div>
 
                 <div className="flex items-center  w-full">
-                  <Menubar className="border-none w-full text-black bg-primary">
-                    <MenubarMenu>
-                      <MenubarTrigger className="flex w-full justify-between text-sm items-center gap-1">
-                        Create
-                        <ChevronsUpDown className="w-4" />
-                      </MenubarTrigger>
-
-                      <MenubarContent className=" border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border ">
-                        <MenubarContentItem icon={Folder} text="Project" />
-                        <MenubarContentItem icon={Globe} text="Web Service" />
-                        <MenubarContentItem icon={Hammer} text="Worker" />
-                        <MenubarContentItem icon={AlarmCheck} text="CRON" />
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </Menubar>
+                  <SheetClose asChild>
+                    <Button
+                      asChild
+                      className="flex w-full justify-between text-sm items-center gap-1"
+                    >
+                      <Link to="/create-project">Create Project</Link>
+                    </Button>
+                  </SheetClose>
                 </div>
               </div>
 
@@ -212,13 +210,20 @@ function Header() {
                 <CircleUser className="w-8 opacity-70" />
               </div>
 
-              <button
-                className="p-2 rounded-md border border-card-foreground text-center"
-                onClick={() => mutate()}
-                disabled={isPending}
-              >
-                {isPending ? "Logging out..." : <div>Log Out</div>}
-              </button>
+              <SheetClose asChild>
+                <button
+                  type="submit"
+                  form="logout-form"
+                  className="p-2 rounded-md border border-card-foreground text-center"
+                  disabled={fetcher.state !== "idle"}
+                >
+                  {fetcher.state !== "idle" ? (
+                    "Logging out..."
+                  ) : (
+                    <div>Log Out</div>
+                  )}
+                </button>
+              </SheetClose>
             </SheetContent>
           </Sheet>
         </div>
@@ -251,14 +256,7 @@ const socialLinks = [
 ];
 
 function Footer() {
-  const { data } = useQuery({
-    queryKey: ["APP_SETTINGS"],
-    queryFn: async () => {
-      const { data } = await apiClient.GET("/api/settings/");
-      return data;
-    },
-    staleTime: Number.MAX_SAFE_INTEGER
-  });
+  const { data } = useQuery(serverQueries.settings);
 
   let image_version_url: string | null = null;
   if (data?.image_version === "canary") {
@@ -278,7 +276,6 @@ function Footer() {
               className="flex underline items-center gap-2"
               href={link.url}
               target="_blank"
-              rel="noopener noreferrer"
             >
               {link.icon}
               {link.name}
@@ -331,9 +328,11 @@ export function CommandMenu() {
   const [debouncedValue] = useDebounce(resourceSearchQuery, 300);
   const navigate = useNavigate();
 
-  const { data: resourceListData } = useQuery(
-    resourceQueries.search(debouncedValue)
-  );
+  const {
+    data: resourceListData,
+    isLoading,
+    isFetching
+  } = useQuery(resourceQueries.search(debouncedValue));
 
   React.useEffect(() => {
     const handleEvent = (e: KeyboardEvent | MouseEvent) => {
@@ -374,71 +373,85 @@ export function CommandMenu() {
   }, []);
 
   const resourceList = resourceListData?.data ?? [];
+  const hideResultList =
+    debouncedValue.trim().length === 0 || !open || isLoading || isFetching;
 
   return (
     <div ref={containerRef} className="relative w-full">
-      <div
-        onClick={() => setOpen(true)}
-        className="relative w-full flex items-center"
-      >
-        <Search size={15} className="absolute left-4 text-gray-400" />
-        <Input
-          ref={inputRef}
-          className="w-full pl-12 pr-12 my-1 text-sm rounded-md border focus-visible:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Search for Service, Worker, CRON, etc..."
-          name="resourceSearchQuery"
-          value={resourceSearchQuery}
-          onChange={(e) => setResourceSearchQuery(e.target.value)}
-        />
-        <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1">
-          <CommandIcon size={15} />
-          <span className="text-xs">K</span>
+      <Command label="resources" shouldFilter={false}>
+        <div className="relative w-full flex items-center">
+          <Search size={15} className="absolute left-4 text-gray-400" />
+          <CommandInput
+            ref={inputRef}
+            className="w-full pl-12 pr-12 my-1 text-sm rounded-md border"
+            placeholder="Search for Service, Worker, CRON, etc..."
+            name="resourceSearchQuery"
+            value={resourceSearchQuery}
+            onFocus={() => setOpen(true)}
+            onValueChange={(value) => {
+              console.log({
+                value
+              });
+              setResourceSearchQuery(value);
+              setOpen(true);
+            }}
+            onBlur={() => setOpen(false)}
+          />
+          <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1">
+            <CommandIcon size={15} />
+            <span className="text-xs">K</span>
+          </div>
         </div>
-      </div>
 
-      {open && resourceList.length > 0 && (
-        <div className="absolute top-12 left-0 w-full z-50 shadow-lg  rounded-md">
-          <Command shouldFilter={false} label="resources">
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup
-                heading={<span>Resources ({resourceList.length})</span>}
+        <CommandList
+          className={cn(
+            "absolute -top-1 left-0 w-full z-50 shadow-lg  rounded-md",
+            {
+              hidden: hideResultList
+            }
+          )}
+        >
+          <CommandGroup
+            heading={
+              resourceList.length > 0 && (
+                <span>Resources ({resourceList.length})</span>
+              )
+            }
+          >
+            <CommandEmpty>No results found.</CommandEmpty>
+            {resourceList.map((resource) => (
+              <CommandItem
+                onSelect={() => {
+                  const baseUrl = "/project";
+                  const targetUrl =
+                    resource.type === "project"
+                      ? `${baseUrl}/${resource.slug}`
+                      : `${baseUrl}/${resource.project_slug}/services/${resource.slug}`;
+                  navigate(targetUrl);
+                  setOpen(false);
+                }}
+                key={resource.id}
+                className="block"
               >
-                {resourceList.map((resource) => (
-                  <CommandItem
-                    onSelect={() => {
-                      const baseUrl = "/project";
-                      const targetUrl =
-                        resource.type === "project"
-                          ? `${baseUrl}/${resource.slug}`
-                          : `${baseUrl}/${resource.project_slug}/services/docker/${resource.slug}`;
-                      navigate({ to: targetUrl });
-                      setOpen(false);
-                    }}
-                    key={resource.id}
-                    className="block"
-                  >
-                    <p>{resource.slug}</p>
-                    <div className="text-secondary text-xs">
-                      {resource.type === "project" ? (
-                        "projects"
-                      ) : (
-                        <div className="flex gap-0.5 items-center">
-                          <span className="flex-none">projects</span>{" "}
-                          <ChevronRight size={13} />
-                          <span>{resource.project_slug}</span>
-                          <ChevronRight className="flex-none" size={13} />
-                          <span className="flex-none">services</span>
-                        </div>
-                      )}
+                <p>{resource.slug}</p>
+                <div className="text-link text-xs">
+                  {resource.type === "project" ? (
+                    "projects"
+                  ) : (
+                    <div className="flex gap-0.5 items-center">
+                      <span className="flex-none">projects</span>{" "}
+                      <ChevronRight size={13} />
+                      <span>{resource.project_slug}</span>
+                      <ChevronRight className="flex-none" size={13} />
+                      <span className="flex-none">services</span>
                     </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </div>
-      )}
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </Command>
     </div>
   );
 }

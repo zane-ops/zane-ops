@@ -7,7 +7,7 @@
   },
   "description": "A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.",
   "scripts": {
-    "format": "biome check ./frontend ./frontend-new ./docker --write",
+    "format": "biome check ./frontend ./docker --write",
     "test": "pnpm -r run test"
   },
   "keywords": [],
