@@ -1,6 +1,5 @@
 packages:
   - "frontend/"
-  - "frontend-old/"
   - "backend/"
   - "cli/"
   - "docker/"
