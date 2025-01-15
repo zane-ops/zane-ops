@@ -356,7 +356,7 @@ services:
         aliases:
           - zane.fluentd
     environment:
-      API_HOST: zane.api.zaneops.internal
+      API_HOST: zane.api.zaneops.internal:80
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
     deploy:
       replicas: 1
