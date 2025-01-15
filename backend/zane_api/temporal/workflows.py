@@ -403,6 +403,7 @@ class DeployDockerServiceWorkflow:
                 deployment_status=final_deployment_status,
                 healthcheck_result=healthcheck_result,
                 next_queued_deployment=next_queued_deployment,
+                deployment_status_reason=healthcheck_result.reason,
             )
 
     async def handle_cancellation(
