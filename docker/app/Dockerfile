@@ -31,8 +31,7 @@ COPY ./frontend/build/client/ /app/staticfiles
 RUN mkdir -p /run/gunicorn/
 RUN chmod -R 777 /run/gunicorn/
 
-COPY ./backend/run_gunicorn.sh /app/run_gunicorn.sh
-RUN chmod a+x /app/run_gunicorn.sh
+RUN chmod -R a+x /app/scripts/*.sh
 
 # Configure Supervisor
 COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf

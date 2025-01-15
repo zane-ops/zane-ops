@@ -185,8 +185,8 @@ services:
     networks:
       - zane
   temporal-main-worker:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "set -ex && source /venv/bin/activate && wait-for-it zane.search:9200 -t 0 -- wait-for-it zane.temporal:7233 -t 0 -- python manage.py run_worker"
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -219,8 +219,8 @@ services:
     networks:
       - zane
   temporal-schedule-worker:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "set -ex && source /venv/bin/activate && wait-for-it zane.search:9200 -t 0 -- wait-for-it zane.temporal:7233 -t 0 -- python manage.py run_worker"
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
