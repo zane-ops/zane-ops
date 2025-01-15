@@ -60,7 +60,7 @@ jobs:
           key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-cache-
-      - name: Build docs with node
+      - name: Build frontend with node
         run: |
           npm install -g pnpm@8
           pnpm install --frozen-lockfile
