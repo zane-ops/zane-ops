@@ -45,6 +45,8 @@ export function ServiceDeployURLForm({
     ? `${currentURL.protocol}//${currentURL.host}/api/deploy-service/docker/${service.deploy_token}`
     : null;
 
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
   return (
     <div className="w-full max-w-4xl">
       <fetcher.Form
@@ -70,10 +72,10 @@ export function ServiceDeployURLForm({
               URL
             </label>
             <Input
-              disabled
               id="deploy-url"
+              ref={inputRef}
               placeholder="<empty>"
-              className="placeholder-shown:font-mono bg-muted disabled:opacity-100 disabled:cursor-default"
+              className="placeholder-shown:font-mono bg-muted opacity-100 disabled:cursor-default"
               value={deployURL ?? ""}
               type={isDeployURLShown ? "text" : "password"}
             />
@@ -92,6 +94,7 @@ export function ServiceDeployURLForm({
                           navigator.clipboard.writeText(deployURL).then(() => {
                             // show pending state (which is success state), until the user has stopped clicking the button
                             startTransition(() => wait(1000));
+                            inputRef.current?.select();
                           });
                         }
                       }}
