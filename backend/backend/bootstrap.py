@@ -313,26 +313,26 @@ def register_zaneops_app_on_proxy(
             ],
             "match": [{"path": ["/*"], "host": [zane_app_domain]}],
         },
-        # {
-        #     "@id": f"api.zaneops.internal",
-        #     "group": "zaneops.internal",
-        #     "handle": [
-        #         {
-        #             "handler": "subroute",
-        #             "routes": [
-        #                 {
-        #                     "handle": [
-        #                         {
-        #                             "handler": "reverse_proxy",
-        #                             "upstreams": [{"dial": zane_api_internal_domain}],
-        #                         }
-        #                     ]
-        #                 }
-        #             ],
-        #         }
-        #     ],
-        #     "match": [{"path": ["/api/*"], "host": [zane_app_domain]}],
-        # },
+        {
+            "@id": f"api.zaneops.internal",
+            "group": "zaneops.internal",
+            "handle": [
+                {
+                    "handler": "subroute",
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "reverse_proxy",
+                                    "upstreams": [{"dial": zane_front_internal_domain}],
+                                }
+                            ]
+                        }
+                    ],
+                }
+            ],
+            "match": [{"path": ["/api/*"], "host": [zane_app_domain]}],
+        },
     ]
 
     for config in url_configurations:
