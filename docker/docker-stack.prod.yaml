@@ -91,6 +91,8 @@ services:
     networks:
       zane:
         aliases:
+          - zane.api
+          - zane.api.zaneops.internal
           - zane.frontend
           - zane.front.zaneops.internal
     environment:
