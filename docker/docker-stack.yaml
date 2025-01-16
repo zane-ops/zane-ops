@@ -77,7 +77,7 @@ services:
     networks:
       - zane
     ports:
-      - 8080:8080
+      - 8082:8080
 volumes:
   caddy-data:
   caddy-config:
