@@ -383,7 +383,7 @@ export function CommandMenu() {
           <Search size={15} className="absolute left-4 text-gray-400" />
           <CommandInput
             ref={inputRef}
-            className="w-full pl-12 pr-12 my-1 text-sm rounded-md border"
+            className="w-full pl-12 pr-12 m-1 text-sm rounded-md border"
             placeholder="Search for Service, Worker, CRON, etc..."
             name="resourceSearchQuery"
             value={resourceSearchQuery}
