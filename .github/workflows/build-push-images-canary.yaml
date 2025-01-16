@@ -41,8 +41,8 @@ jobs:
           build-args: |
             ENVIRONMENT=prod 
             COMMIT_SHA=${{ github.sha }}
-  build-push-frontend:
-    name: Build and Push Zane Frontend
+  build-push-app:
+    name: Build and Push Zane App
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -59,7 +59,7 @@ jobs:
           key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-cache-
-      - name: Build docs with node
+      - name: Build app with node
         run: |
           npm install -g pnpm@8
           pnpm install --frozen-lockfile
@@ -78,11 +78,11 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: Dockerfile.front
+          file: ./docker/app/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/frontend:canary,ghcr.io/zane-ops/frontend:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:canary
+          tags: ghcr.io/zane-ops/app:canary,ghcr.io/zane-ops/app:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:canary
           cache-to: type=inline
           build-args: COMMIT_SHA=${{ github.sha }}
   build-push-backend:
