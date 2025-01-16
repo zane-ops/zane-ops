@@ -62,39 +62,8 @@ services:
       timeout: 5s
       start_period: 5s
       retries: 3
-  frontend:
-    image: ghcr.io/zane-ops/frontend:${IMAGE_VERSION}
-    deploy:
-      replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 5s
-        order: start-first
-        failure_action: rollback
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints:
-          - node.role==manager
-      labels:
-        zane.stack: "true"
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1G
-    networks:
-      zane:
-        aliases:
-          - zane.frontend
-          - zane.front.zaneops.internal
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
-      interval: 30s
-      timeout: 5s
-      start_period: 5s
-      retries: 3
-  api:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
+  app:
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
     deploy:
       replicas: 1
       update_config:
@@ -114,7 +83,7 @@ services:
           cpus: "2"
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:80/api/ping"]
       interval: 30s
       timeout: 3m
       start_period: 10s
@@ -124,6 +93,8 @@ services:
         aliases:
           - zane.api
           - zane.api.zaneops.internal
+          - zane.frontend
+          - zane.front.zaneops.internal
     environment:
       <<: *env-vars
     volumes:
@@ -216,8 +187,8 @@ services:
     networks:
       - zane
   temporal-main-worker:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "set -ex && source /venv/bin/activate && wait-for-it zane.search:9200 -t 0 -- wait-for-it zane.temporal:7233 -t 0 -- python manage.py run_worker"
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -250,8 +221,8 @@ services:
     networks:
       - zane
   temporal-schedule-worker:
-    image: ghcr.io/zane-ops/backend:${IMAGE_VERSION}
-    command: /bin/bash -c "set -ex && source /venv/bin/activate && wait-for-it zane.search:9200 -t 0 -- wait-for-it zane.temporal:7233 -t 0 -- python manage.py run_worker"
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -385,7 +356,7 @@ services:
         aliases:
           - zane.fluentd
     environment:
-      API_HOST: zane.api.zaneops.internal
+      API_HOST: zane.api.zaneops.internal:80
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
     deploy:
       replicas: 1

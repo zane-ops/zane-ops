@@ -292,7 +292,7 @@ class ZaneProxyClient:
                 "method": "GET",
                 "uri": "/api/auth/me/with-token",
             },
-            "upstreams": [{"dial": settings.ZANE_API_SERVICE_INTERNAL_DOMAIN}],
+            "upstreams": [{"dial": settings.ZANE_FRONT_SERVICE_INTERNAL_DOMAIN}],
         }
 
         return {

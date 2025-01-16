@@ -3,5 +3,6 @@ import os
 
 workers = int(os.environ.get("GUNICORN_WORKERS", 2))
 
-bind = "0.0.0.0:8000"
+bind = "unix:/run/gunicorn/gunicorn.sock"
 loglevel = "info"
+timeout = 120

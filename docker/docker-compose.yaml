@@ -78,6 +78,8 @@ services:
         aliases:
           - zane.api
           - zane.api.zaneops.internal
+          - zane.frontend
+          - zane.front.zaneops.internal
   temporal-main-worker:
     build:
       context: ../backend
@@ -179,7 +181,7 @@ services:
         aliases:
           - zane.fluentd
     environment:
-      API_HOST: host.docker.internal
+      API_HOST: host.docker.internal:8000
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
