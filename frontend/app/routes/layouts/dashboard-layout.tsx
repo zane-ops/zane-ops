@@ -104,7 +104,7 @@ function Header({ user }: HeaderProps) {
           <p className="">⚠️ YOU ARE IN DEV ⚠️</p>
         </div>
       )}
-      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-50">
+      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-60">
         <Link to="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
@@ -383,7 +383,7 @@ export function CommandMenu() {
           <Search size={15} className="absolute left-4 text-gray-400" />
           <CommandInput
             ref={inputRef}
-            className="w-full pl-12 pr-12 my-1 text-sm rounded-md border"
+            className="w-full pl-12 pr-12 m-0 text-sm rounded-md border"
             placeholder="Search for Service, Worker, CRON, etc..."
             name="resourceSearchQuery"
             value={resourceSearchQuery}
@@ -404,12 +404,9 @@ export function CommandMenu() {
         </div>
 
         <CommandList
-          className={cn(
-            "absolute -top-1 left-0 w-full z-50 shadow-lg  rounded-md",
-            {
-              hidden: hideResultList
-            }
-          )}
+          className={cn("absolute -top-1 left-0 w-full shadow-lg  rounded-md", {
+            hidden: hideResultList
+          })}
         >
           <CommandGroup
             heading={
