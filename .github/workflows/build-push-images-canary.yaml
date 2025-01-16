@@ -41,8 +41,8 @@ jobs:
           build-args: |
             ENVIRONMENT=prod 
             COMMIT_SHA=${{ github.sha }}
-  build-push-frontend:
-    name: Build and Push Zane Frontend
+  build-push-app:
+    name: Build and Push Zane App
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -59,7 +59,7 @@ jobs:
           key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-cache-
-      - name: Build docs with node
+      - name: Build app with node
         run: |
           npm install -g pnpm@8
           pnpm install --frozen-lockfile
@@ -78,43 +78,11 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: Dockerfile.front
+          file: ./docker/app/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/frontend:canary,ghcr.io/zane-ops/frontend:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/frontend:canary
-          cache-to: type=inline
-          build-args: COMMIT_SHA=${{ github.sha }}
-  build-push-backend:
-    name: Build and Push Zane Backend
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile.prod
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/backend:canary,ghcr.io/zane-ops/backend:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/backend:canary
+          tags: ghcr.io/zane-ops/app:canary,ghcr.io/zane-ops/app:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:canary
           cache-to: type=inline
           build-args: COMMIT_SHA=${{ github.sha }}
 
