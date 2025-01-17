@@ -1133,7 +1133,7 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchTypeEnum: "project";
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
       /**
@@ -1199,6 +1199,19 @@ export interface components {
        * @enum {string}
        */
       code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent: {
@@ -3413,6 +3426,15 @@ export interface operations {
          */
         request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
         request_path?: string;
+        /**
+         * @description Ordering
+         *
+         * * `time` - Time
+         * * `-time` - Time (descending)
+         * * `request_duration_ns` - Request duration ns
+         * * `-request_duration_ns` - Request duration ns (descending)
+         */
+        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
         status?: number;
         time_after?: string;
         time_before?: string;

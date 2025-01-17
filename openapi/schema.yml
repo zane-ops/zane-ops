@@ -1949,6 +1949,26 @@ paths:
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -request_duration_ns
+            - -time
+            - request_duration_ns
+            - time
+        description: |-
+          Ordering
+
+          * `time` - Time
+          * `-time` - Time (descending)
+          * `request_duration_ns` - Request duration ns
+          * `-request_duration_ns` - Request duration ns (descending)
+        explode: false
+        style: form
+      - in: query
         name: status
         schema:
           type: integer
@@ -5092,6 +5112,7 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -5102,6 +5123,7 @@ components:
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
           request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
@@ -5203,6 +5225,25 @@ components:
           - null_characters_not_allowed
           type: string
           description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
         detail:
           type: string
       required:

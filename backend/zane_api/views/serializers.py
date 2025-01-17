@@ -397,9 +397,11 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
             )
         return attrs
 
+
 # ==============================
 #       Projects Search        #
 # ==============================
+
 
 class ProjectSearchSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
@@ -1110,6 +1112,9 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
     request_method = django_filters.MultipleChoiceFilter(
         choices=HttpLog.RequestMethod.choices
+    )
+    sort_by = OrderingFilter(
+        fields=["time", "request_duration_ns"],
     )
 
     class Meta:
