@@ -61,7 +61,7 @@ const SheetContent = ({
   children,
   ...props
 }: SheetContentProps & {
-  ref?: React.RefObject<React.ComponentRef<typeof SheetPrimitive.Content>>;
+  ref?: React.Ref<React.ComponentRef<typeof SheetPrimitive.Content>>;
 }) => (
   <SheetPortal>
     <SheetOverlay className="z-98" />
@@ -73,10 +73,9 @@ const SheetContent = ({
       {children}
 
       <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <div className="rounded-full p-1 border border-border">
-          <X className="h-6 w-6" />
+        <div className="rounded-md p-0.5 border border-border">
+          <X className="h-5 w-5" />
         </div>
-
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>

@@ -26,8 +26,7 @@ export function StatusBadge({
           "border-red-600 bg-red-600/10 text-status-error": color === "red",
           "border-yellow-600 bg-yellow-600/10 text-status-warning":
             color === "yellow",
-          "border-gray-600 bg-gray-600/10 text-status-warning":
-            color === "gray",
+          "border-gray-600 bg-gray-600/10": color === "gray",
           "border-blue-600 bg-blue-600/10 text-blue-100": color === "blue"
         },
         className
