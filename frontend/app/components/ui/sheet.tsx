@@ -64,7 +64,7 @@ const SheetContent = ({
   ref?: React.RefObject<React.ComponentRef<typeof SheetPrimitive.Content>>;
 }) => (
   <SheetPortal>
-    <SheetOverlay />
+    <SheetOverlay className="z-98" />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
