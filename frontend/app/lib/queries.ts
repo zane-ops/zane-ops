@@ -660,6 +660,17 @@ export type DeploymentLog = Awaited<
   >
 >["results"][number];
 
+export type HttpLog = Awaited<
+  ReturnType<
+    NonNullable<
+      Exclude<
+        ReturnType<typeof deploymentQueries.httpLogs>["queryFn"],
+        typeof skipToken
+      >
+    >
+  >
+>["results"][number];
+
 export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
 
 export const resourceQueries = {
