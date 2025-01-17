@@ -900,5 +900,6 @@ class HttpLog(Log):
             models.Index(fields=["request_host"]),
             models.Index(fields=["request_path"]),
             models.Index(fields=["time"]),
+            models.Index(fields=["request_duration_ns"]),
         ]
         ordering = ("time",)
