@@ -6,6 +6,7 @@ from . import views
 app_name = "zane_api"
 
 DJANGO_SLUG_REGEX = r"[-a-zA-Z0-9_]+"
+UUID_REGEX = r"[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}"
 
 urlpatterns = [
     re_path(r"^auth/me/?$", views.AuthedView.as_view(), name="auth.me"),
@@ -163,6 +164,13 @@ urlpatterns += [
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/?$",
         views.DockerServiceDeploymentHttpLogsAPIView.as_view(),
         name="services.docker.deployment_http_logs",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs"
+        rf"/(?P<request_uuid>{UUID_REGEX})/?$",
+        views.DockerServiceDeploymentSingleHttpLogAPIView.as_view(),
+        name="services.docker.deployment_http_logs.single",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"

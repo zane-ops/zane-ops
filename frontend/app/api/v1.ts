@@ -141,6 +141,10 @@ export interface paths {
     /** Get deployment HTTP logs */
     get: operations["projects_service_details_docker_deployments_http_logs_list"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/": {
+    /** Get single deployment http log */
+    get: operations["projects_service_details_docker_deployments_http_logs_retrieve"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_retrieve"];
@@ -1245,6 +1249,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListError"][];
     };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent: {
@@ -3454,6 +3459,44 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get single deployment http log */
+  projects_service_details_docker_deployments_http_logs_retrieve: {
+    parameters: {
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        request_uuid: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["HttpLog"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400"];
         };
       };
       401: {

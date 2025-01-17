@@ -950,6 +950,54 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
             )
 
 
+class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = (
+        HttpLog.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
+
+    @extend_schema(summary="Get single deployment http log")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        deployment_hash = self.kwargs["deployment_hash"]
+        request_uuid = self.kwargs["request_uuid"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment = DockerDeployment.objects.get(
+                service=service, hash=deployment_hash
+            )
+            http_log: HttpLog = deployment.http_logs.filter(
+                deployment_id=deployment_hash, request_id=request_uuid
+            ).first()
+
+            if http_log is None:
+                raise exceptions.NotFound(
+                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
+                )
+            return http_log
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+
 class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
         responses={
