@@ -304,6 +304,15 @@ export const serviceQueries = {
 
 export const LOG_LEVELS = ["INFO", "ERROR"] as const;
 export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
+export const REQUEST_METHODS = [
+  "DELETE",
+  "GET",
+  "HEAD",
+  "OPTIONS",
+  "PATCH",
+  "POST",
+  "PUT"
+] as const;
 
 export const deploymentLogSearchSchema = zfd.formData({
   level: zfd.repeatable(
@@ -330,23 +339,44 @@ export const deploymentLogSearchSchema = zfd.formData({
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
 
+export const deploymentHttpLogSearchSchema = zfd.formData({
+  time_before: z.coerce.date().optional().catch(undefined),
+  time_after: z.coerce.date().optional().catch(undefined),
+  request_method: zfd.repeatable(
+    z
+      .array(z.enum(REQUEST_METHODS))
+      .optional()
+      .catch(REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>)
+  ),
+  request_path: z.string().optional(),
+  request_host: z.string().optional(),
+  request_ip: z.string().ip().optional().catch(undefined),
+  request_id: z.string().uuid().optional().catch(undefined),
+  status: zfd.numeric().optional().catch(undefined),
+  isMaximized: preprocess(
+    (arg) => arg === "true",
+    z.coerce.boolean().optional().catch(false)
+  )
+});
+
+export type DeploymentHTTPLogFilters = z.infer<
+  typeof deploymentHttpLogSearchSchema
+>;
+
 export const deploymentQueries = {
   single: ({
     project_slug,
     service_slug,
-    deployment_hash,
-    type = "docker"
+    deployment_hash
   }: {
     project_slug: string;
     service_slug: string;
-    type?: "docker" | "git";
     deployment_hash: string;
   }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,
         "SERVICE_DETAILS",
-        type,
         service_slug,
         "DEPLOYMENTS",
         deployment_hash
@@ -381,14 +411,12 @@ export const deploymentQueries = {
     project_slug,
     service_slug,
     deployment_hash,
-    type = "docker",
     autoRefetchEnabled = true,
     filters = {},
     queryClient
   }: {
     project_slug: string;
     service_slug: string;
-    type?: "docker" | "git";
     deployment_hash: string;
     filters?: Omit<DeploymentLogFitlers, "isMaximized">;
     queryClient: QueryClient;
@@ -399,8 +427,7 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
-          deployment_hash,
-          type
+          deployment_hash
         }).queryKey,
         "RUNTIME_LOGS",
         filters
@@ -513,6 +540,79 @@ export const deploymentQueries = {
         }
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY
+    }),
+  httpLogs: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    autoRefetchEnabled = true,
+    filters = {},
+    queryClient
+  }: {
+    project_slug: string;
+    service_slug: string;
+    type?: "docker" | "git";
+    deployment_hash: string;
+    filters?: Omit<DeploymentHTTPLogFilters, "isMaximized">;
+    queryClient: QueryClient;
+    autoRefetchEnabled?: boolean;
+  }) =>
+    infiniteQueryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          deployment_hash
+        }).queryKey,
+        "HTTP_LOGS"
+      ] as const,
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash
+              },
+              query: {
+                ...filters,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                // cursor,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          }
+        );
+        if (!data) throw notFound();
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data || !autoRefetchEnabled) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      getNextPageParam: ({ next }) => {
+        if (next) {
+          const url = new URL(next);
+          return url.searchParams.get("cursor");
+        }
+        return null;
+      },
+      getPreviousPageParam: ({ previous }) => {
+        if (previous) {
+          const url = new URL(previous);
+          return url.searchParams.get("cursor");
+        }
+        return null;
+      },
+      initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
     })

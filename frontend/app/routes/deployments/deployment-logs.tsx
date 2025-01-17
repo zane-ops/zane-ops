@@ -37,7 +37,7 @@ import {
   deploymentLogSearchSchema,
   deploymentQueries
 } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { excerpt } from "~/utils";
 import { type Route } from "./+types/deployment-logs";
@@ -540,7 +540,7 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content_text: string;
 };
 
-const Log = ({ content, level, time, id, content_text }: LogProps) => {
+function Log({ content, level, time, id, content_text }: LogProps) {
   const date = new Date(time);
 
   const [searchParams] = useSearchParams();
@@ -598,7 +598,7 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
       </div>
     </div>
   );
-};
+}
 
 function LongLogContent({
   content_text,
@@ -673,27 +673,3 @@ const HighlightedText = React.memo(function HighlightedText({
     }
   });
 });
-
-function formatLogTime(time: string | Date) {
-  const date = new Date(time);
-  const now = new Date();
-  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  const dateFormat = new Intl.DateTimeFormat("en-GB", {
-    month: "short",
-    day: "numeric",
-    timeZone: userTimeZone,
-    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric"
-  })
-    .format(date)
-    .replaceAll(".", "");
-
-  const hourFormat = new Intl.DateTimeFormat("en-GB", {
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    timeZone: userTimeZone
-  }).format(date);
-
-  return { dateFormat, hourFormat };
-}
