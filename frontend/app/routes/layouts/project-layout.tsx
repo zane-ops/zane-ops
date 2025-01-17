@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
-import { isNotFoundError } from "~/lib/utils";
+import { cn, isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import { type Route } from "./+types/project-layout";
@@ -154,22 +154,32 @@ export default function ProjectDetail({
             </Button>
           </div>
           <div className="flex my-3 flex-wrap w-full md:w-auto  justify-end items-center md:gap-3 gap-1">
-            <div className="flex lg:my-5 md:my-4 w-full items-center">
-              {isFetchingServices ? (
-                <LoaderIcon
-                  size={20}
-                  className="animate-spin relative left-4"
-                />
-              ) : (
-                <Search size={20} className="relative left-4" />
+            <div
+              className={cn(
+                "flex lg:my-5 md:my-4 w-full items-center",
+                currentSelectedTab !== TABS.SERVICES && "py-6.5"
               )}
-              <Input
-                onChange={(e) => filterServices(e.currentTarget.value)}
-                defaultValue={query}
-                className="pl-14 pr-5 -mx-5 w-full my-1 text-sm focus-visible:right-0"
-                placeholder="Ex: ZaneOps"
-                ref={inputRef}
-              />
+            >
+              {currentSelectedTab === TABS.SERVICES && (
+                <>
+                  {isFetchingServices ? (
+                    <LoaderIcon
+                      size={20}
+                      className="animate-spin relative left-4"
+                    />
+                  ) : (
+                    <Search size={20} className="relative left-4" />
+                  )}
+
+                  <Input
+                    onChange={(e) => filterServices(e.currentTarget.value)}
+                    defaultValue={query}
+                    className="pl-14 pr-5 -mx-5 w-full my-1 text-sm focus-visible:right-0"
+                    placeholder="Ex: ZaneOps"
+                    ref={inputRef}
+                  />
+                </>
+              )}
             </div>
           </div>
         </section>
