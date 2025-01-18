@@ -351,6 +351,7 @@ export const deploymentHttpLogSearchSchema = zfd.formData({
   request_path: z.string().optional(),
   request_host: z.string().optional(),
   request_ip: z.string().ip().optional().catch(undefined),
+  request_user_agent: z.string().ip().optional().catch(undefined),
   request_id: z.string().uuid().optional().catch(undefined),
   status: zfd.numeric().optional().catch(undefined),
   isMaximized: preprocess(
