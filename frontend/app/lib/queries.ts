@@ -553,7 +553,6 @@ export const deploymentQueries = {
   }: {
     project_slug: string;
     service_slug: string;
-    type?: "docker" | "git";
     deployment_hash: string;
     filters?: Omit<DeploymentHTTPLogFilters, "isMaximized">;
     queryClient: QueryClient;
@@ -615,6 +614,46 @@ export const deploymentQueries = {
       initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
+    }),
+
+  singleHttpLog: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    request_uuid
+  }: {
+    project_slug: string;
+    service_slug: string;
+    deployment_hash: string;
+    request_uuid: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          deployment_hash
+        }).queryKey,
+        "HTTP_LOGS",
+        request_uuid
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash,
+                request_uuid
+              }
+            },
+            signal
+          }
+        );
+        return data;
+      }
     })
 };
 

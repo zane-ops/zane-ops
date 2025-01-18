@@ -1,20 +1,22 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ChevronsUpDownIcon, LoaderIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  CopyIcon,
+  FilterIcon,
+  LoaderIcon
+} from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
 import type { Writeable } from "zod";
-import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
+import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetFooter,
   SheetHeader,
-  SheetTitle,
-  SheetTrigger
+  SheetTitle
 } from "~/components/ui/sheet";
 import {
   Table,
@@ -39,6 +41,7 @@ import {
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { wait } from "~/utils";
 import { type Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
@@ -63,16 +66,28 @@ export async function clientLoader({
     status: search.status
   } satisfies DeploymentHTTPLogFilters;
 
-  const httpLogs = await queryClient.ensureInfiniteQueryData(
-    deploymentQueries.httpLogs({
-      deployment_hash,
-      project_slug,
-      service_slug,
-      filters,
-      queryClient
-    })
-  );
-  return { httpLogs };
+  const [httpLogs, httpLog] = await Promise.all([
+    queryClient.ensureInfiniteQueryData(
+      deploymentQueries.httpLogs({
+        deployment_hash,
+        project_slug,
+        service_slug,
+        filters,
+        queryClient
+      })
+    ),
+    search.request_id
+      ? queryClient.ensureQueryData(
+          deploymentQueries.singleHttpLog({
+            deployment_hash,
+            project_slug,
+            request_uuid: search.request_id,
+            service_slug
+          })
+        )
+      : undefined
+  ] as const);
+  return { httpLogs, httpLog };
 }
 
 export default function DeploymentHttpLogsPage({
@@ -113,23 +128,19 @@ export default function DeploymentHttpLogsPage({
 
   const logs = logsQuery.data.pages.flatMap((item) => item.results);
 
-  const selectedRequest = logs.find(
-    (log) => log.request_id === search.request_id
-  );
-
   return (
     <>
-      {selectedRequest && (
-        <LogRequestDetails
-          log={selectedRequest}
-          onClose={() => {
-            searchParams.delete("request_id");
-            setSearchParams(searchParams);
-          }}
-        />
-      )}
+      <LogRequestDetails
+        open={Boolean(loaderData.httpLog)}
+        log={loaderData.httpLog}
+        onClose={() => {
+          searchParams.delete("request_id");
+          setSearchParams(searchParams, { replace: true });
+        }}
+      />
+
       <div className="flex flex-col h-[60dvh]">
-        <Table className="relative h-full overflow-y-auto z-99">
+        <Table className="relative h-full overflow-y-auto z-50">
           <TableHeader className="bg-toggle sticky top-0">
             <TableRow className="border-none">
               <TableHead>
@@ -183,8 +194,9 @@ export default function DeploymentHttpLogsPage({
                 key={log.id}
                 onClick={() => {
                   if (log.request_id) {
+                    // navigate(`./${log.request_id}`);
                     searchParams.set("request_id", log.request_id);
-                    setSearchParams(searchParams);
+                    setSearchParams(searchParams, { replace: true });
                   }
                 }}
               />
@@ -252,46 +264,156 @@ function LogTableRow({ log, onClick }: LogTableRowProps) {
         <span className="text-grey">ms</span>
       </TableCell>
       <TableCell>
-        <span className="whitespace-nowrap">{log.request_host}</span>
+        <p className="whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
+          {log.request_host}
+        </p>
       </TableCell>
       <TableCell>
-        <span className="whitespace-nowrap">
+        <p className="whitespace-nowrap max-w-[300px] text-ellipsis overflow-x-hidden flex-shrink">
           {log.request_path}
           {log.request_query && (
             <span className="text-grey">?{log.request_query}</span>
           )}
-        </span>
+        </p>
       </TableCell>
 
       <TableCell>
-        <span className="text-grey">{ip}</span>
+        <p className="text-grey whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
+          {ip}
+        </p>
       </TableCell>
     </TableRow>
   );
 }
 
 type LogRequestDetailsProps = {
-  log: HttpLog;
+  log?: HttpLog;
+  open?: boolean;
   onClose?: () => void;
 };
 
-export function LogRequestDetails({ log, onClose }: LogRequestDetailsProps) {
+export function LogRequestDetails({
+  log,
+  onClose,
+  open = false
+}: LogRequestDetailsProps) {
+  const searchParams = new URLSearchParams(log?.request_query ?? "");
+
+  const status = log?.status ?? 0;
+  let statusBadgeColor: StatusBadgeColor = "gray";
+
+  if (status.toString().startsWith("1")) {
+    statusBadgeColor = "blue";
+  } else if (status.toString().startsWith("2")) {
+    statusBadgeColor = "green";
+  } else if (status.toString().startsWith("3")) {
+    statusBadgeColor = "gray";
+  } else if (status.toString().startsWith("4")) {
+    statusBadgeColor = "yellow";
+  } else if (status.toString().startsWith("5")) {
+    statusBadgeColor = "red";
+  }
+
   return (
     <Sheet
-      open
+      open={open}
       onOpenChange={(open) => {
         if (!open) {
           onClose?.();
         }
       }}
     >
-      <SheetContent side="right" className="z-99 border-border">
-        <SheetHeader>
-          <SheetTitle className="font-normal text-card-foreground">
-            <Code>{log.request_method}</Code> {log.request_path}
-          </SheetTitle>
-        </SheetHeader>
-        <dl className="flex flex-col gap-4 py-4">{/* ... */}</dl>
+      <SheetContent
+        side="right"
+        className="z-99 border-border flex flex-col gap-4"
+      >
+        {log && (
+          <>
+            <SheetHeader>
+              <SheetTitle className="font-normal text-card-foreground mt-5 text-base">
+                <span className="border border-gray-600 bg-gray-600/10 px-2 py-1 border-opacity-60 rounded-md ">
+                  {log.request_method}
+                </span>
+                &nbsp;
+                <span className="font-medium">{log.request_path}</span>
+              </SheetTitle>
+            </SheetHeader>
+            <hr className="border-border -mx-6" />
+            <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey  inline-flex items-center">
+                  Status code
+                </dt>
+                <dd className="">
+                  <StatusBadge color={statusBadgeColor} pingState="hidden">
+                    {log.status}
+                  </StatusBadge>
+                </dd>
+              </div>
+
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey  inline-flex items-center">
+                  Protocol
+                </dt>
+                <dd className="text-sm">{log.request_protocol}</dd>
+              </div>
+
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey  inline-flex items-center">
+                  Duration
+                </dt>
+                <dd className="text-sm">
+                  {Intl.NumberFormat("en-US").format(
+                    log.request_duration_ns / 1_000_000
+                  )}
+                  <span className="text-grey">ms</span>
+                </dd>
+              </div>
+
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey inline-flex items-center gap-1 group">
+                  <span>Host</span>
+                </dt>
+                <dd className="text-sm">{log.request_host}</dd>
+              </div>
+
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey inline-flex items-center gap-1 group">
+                  <span>Pathname</span>
+                </dt>
+                <dd className="text-sm">{log.request_path}</dd>
+              </div>
+
+              {log.request_query && (
+                <div className="grid grid-cols-2 items-center gap-x-4 w-full border-b-0 border-border pb-2">
+                  <dt className="text-grey inline-flex items-center gap-1 group">
+                    <span>Query</span>
+                  </dt>
+                  <dd className="text-sm">
+                    <span className="text-grey">{"?"}</span>
+                    {searchParams.entries().map(([key, value], index) => (
+                      <span>
+                        <span className="text-link">{key}</span>
+                        {value && (
+                          <>
+                            <span className="text-grey">{"="}</span>
+                            <span className="text-card-foreground break-all">
+                              {value}
+                            </span>
+                          </>
+                        )}
+                        {index < searchParams.size - 1 && (
+                          <span className="text-grey">{"&"}</span>
+                        )}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </>
+        )}
+        <hr className="border-border -mx-6" />
       </SheetContent>
     </Sheet>
   );
