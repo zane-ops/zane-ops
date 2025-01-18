@@ -18,6 +18,7 @@ import type { DateRange } from "react-day-picker";
 import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { MultiSelect } from "~/components/multi-select";
+import { Ping } from "~/components/ping";
 import { Input } from "~/components/ui/input";
 import {
   Table,
@@ -148,7 +149,7 @@ export default function DeploymentHttpLogsPage({
       <div className="flex flex-col h-[60dvh] mt-8 gap-4">
         <HeaderSection />
         <Table className="relative h-full overflow-y-auto z-50">
-          <TableHeader className="bg-toggle sticky top-0">
+          <TableHeader className="bg-toggle sticky top-0 z-20">
             <TableRow className="border-none">
               <TableHead>
                 <TooltipProvider>
@@ -194,14 +195,25 @@ export default function DeploymentHttpLogsPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            <tr className="h-px" />
+            <tr className="">
+              <td
+                colSpan={7}
+                className="px-4 text-sm text-grey h-6 border-b border-border py-2"
+              >
+                <div className="h-px" />
+                <div className="inline-flex items-center gap-2">
+                  <Ping />
+                  <em className="text-green-500">LIVE</em> -- New requests will
+                  appear here
+                </div>
+              </td>
+            </tr>
             {logs.map((log) => (
               <LogTableRow
                 log={log}
                 key={log.id}
                 onClick={() => {
                   if (log.request_id) {
-                    // navigate(`./${log.request_id}`);
                     searchParams.set("request_id", log.request_id);
                     setSearchParams(searchParams, { replace: true });
                   }

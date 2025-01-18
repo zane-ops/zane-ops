@@ -23,6 +23,7 @@ import { useDebouncedCallback } from "use-debounce";
 import type { Writeable } from "zod";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { MultiSelect } from "~/components/multi-select";
+import { Ping } from "~/components/ping";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -352,15 +353,6 @@ export default function DeploymentLogsPage({
         )}
       </div>
     </div>
-  );
-}
-
-function Ping() {
-  return (
-    <span className="relative inline-flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-    </span>
   );
 }
 
