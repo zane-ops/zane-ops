@@ -1,11 +1,23 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ChevronsUpDownIcon, LoaderIcon } from "lucide-react";
+import {
+  ChevronsUpDownIcon,
+  LoaderIcon,
+  Maximize2Icon,
+  Minimize2Icon,
+  PlusIcon,
+  SearchIcon,
+  XIcon
+} from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
-import { type Writeable, z } from "zod";
+import type { Writeable } from "zod";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { Button } from "~/components/ui/button";
 
+import type { DateRange } from "react-day-picker";
+import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
+import { MultiSelect } from "~/components/multi-select";
+import { Input } from "~/components/ui/input";
 import {
   Table,
   TableBody,
@@ -23,6 +35,8 @@ import {
 import {
   type DeploymentHTTPLogFilters,
   type HttpLog,
+  LOG_LEVELS,
+  LOG_SOURCES,
   REQUEST_METHODS,
   deploymentHttpLogSearchSchema,
   deploymentQueries
@@ -50,6 +64,7 @@ export async function clientLoader({
     request_host: search.request_host,
     request_ip: search.request_ip,
     request_path: search.request_path,
+    request_query: search.request_query,
     request_user_agent: search.request_user_agent,
     status: search.status
   } satisfies DeploymentHTTPLogFilters;
@@ -99,6 +114,7 @@ export default function DeploymentHttpLogsPage({
     request_host: search.request_host,
     request_ip: search.request_ip,
     request_path: search.request_path,
+    request_query: search.request_query,
     request_user_agent: search.request_user_agent,
     status: search.status
   } satisfies DeploymentHTTPLogFilters;
@@ -128,7 +144,8 @@ export default function DeploymentHttpLogsPage({
         }}
       />
 
-      <div className="flex flex-col h-[60dvh]">
+      <div className="flex flex-col h-[60dvh] mt-8 gap-4">
+        <HeaderSection />
         <Table className="relative h-full overflow-y-auto z-50">
           <TableHeader className="bg-toggle sticky top-0">
             <TableRow className="border-none">
@@ -274,5 +291,138 @@ function LogTableRow({ log, onClick }: LogTableRowProps) {
 }
 
 function HeaderSection() {
-  return;
+  const [, startTransition] = React.useTransition();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = deploymentHttpLogSearchSchema.parse(searchParams);
+
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  const date: DateRange = {
+    from: search.time_after,
+    to: search.time_before
+  };
+
+  const possible_fields = [
+    "request_host",
+    "request_path",
+    "request_query",
+    "request_user_agent",
+    "request_ip",
+    "status"
+  ] satisfies Array<keyof DeploymentHTTPLogFilters>;
+
+  const available_fields = possible_fields.filter(
+    (field) => !(field in search)
+  );
+
+  const isEmptySearchParams =
+    !search.time_after &&
+    !search.time_before &&
+    (search.request_method ?? []).length === 0 &&
+    available_fields.length === possible_fields.length;
+
+  const clearFilters = () => {
+    startTransition(() => {
+      setSearchParams(
+        new URLSearchParams([["isMaximized", `${search.isMaximized}`]]),
+        {
+          replace: true
+        }
+      );
+    });
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      <section className="rounded-t-sm w-full flex gap-2 items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangeWithShortcuts
+            date={date}
+            setDate={(newDateRange) => {
+              searchParams.delete("time_before");
+              searchParams.delete("time_after");
+              if (newDateRange?.to) {
+                searchParams.set("time_before", newDateRange?.to.toISOString());
+              }
+              if (newDateRange?.from) {
+                searchParams.set(
+                  "time_after",
+                  newDateRange?.from.toISOString()
+                );
+              }
+              setSearchParams(searchParams, { replace: true });
+            }}
+            className="w-[250px] grow"
+          />
+
+          <MultiSelect
+            value={search.request_method as string[]}
+            className="w-auto"
+            options={REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>}
+            onValueChange={(newVal) => {
+              searchParams.delete("request_method");
+              for (const value of newVal) {
+                searchParams.append("request_method", value);
+              }
+              setSearchParams(searchParams, { replace: true });
+            }}
+            label="method"
+          />
+
+          <MultiSelect
+            value={[]}
+            align="start"
+            className="w-auto"
+            Icon={PlusIcon}
+            options={available_fields}
+            onValueChange={(newVal) => {
+              // ...
+            }}
+            label="Filter"
+          />
+
+          {!isEmptySearchParams && (
+            <Button
+              variant="outline"
+              className="inline-flex w-min gap-1"
+              onClick={clearFilters}
+            >
+              <XIcon size={15} />
+              <span>Reset filters</span>
+            </Button>
+          )}
+        </div>
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  searchParams.set("isMaximized", `${!search.isMaximized}`);
+                  setSearchParams(searchParams, { replace: true });
+                }}
+              >
+                <span className="sr-only">
+                  {search.isMaximized ? "Minimize" : "Maximize"}
+                </span>
+                {search.isMaximized ? (
+                  <Minimize2Icon size={15} />
+                ) : (
+                  <Maximize2Icon size={15} />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64 text-balance">
+              {search.isMaximized ? "Minimize" : "Maximize"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </section>
+      <hr className="border-border" />
+    </>
+  );
 }

@@ -239,6 +239,7 @@ export default function DeploymentLogsPage({
         )}
       >
         <HeaderSection startTransition={startTransition} inputRef={inputRef} />
+
         {!isAtBottom && (
           <Button
             variant="secondary"

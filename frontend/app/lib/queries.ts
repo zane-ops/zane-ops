@@ -349,6 +349,7 @@ export const deploymentHttpLogSearchSchema = zfd.formData({
       .catch(REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>)
   ),
   request_path: z.string().optional(),
+  request_query: z.string().optional(),
   request_host: z.string().optional(),
   request_ip: z.string().ip().optional().catch(undefined),
   request_user_agent: z.string().ip().optional().catch(undefined),
@@ -566,7 +567,8 @@ export const deploymentQueries = {
           service_slug,
           deployment_hash
         }).queryKey,
-        "HTTP_LOGS"
+        "HTTP_LOGS",
+        filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const { data } = await apiClient.GET(

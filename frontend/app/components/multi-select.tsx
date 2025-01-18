@@ -88,6 +88,8 @@ interface MultiSelectProps
    */
   className?: string;
   value: string[];
+  align?: React.ComponentProps<typeof PopoverContent>["align"];
+  Icon?: React.ComponentType<React.ComponentProps<typeof ChevronDownIcon>>;
 }
 export const MultiSelect = ({
   ref,
@@ -101,6 +103,8 @@ export const MultiSelect = ({
   modalPopover = false,
   asChild = false,
   className,
+  align = "end",
+  Icon = ChevronDownIcon,
   ...props
 }: MultiSelectProps & {
   ref?: React.RefObject<HTMLButtonElement>;
@@ -137,10 +141,7 @@ export const MultiSelect = ({
           )}
         >
           <div className="flex items-center gap-1 justify-between w-full mx-auto">
-            <ChevronDownIcon
-              size={15}
-              className="cursor-pointer text-muted-foreground"
-            />
+            <Icon size={15} className="cursor-pointer text-muted-foreground" />
             <div className="flex items-center gap-1">
               <span className="text-sm text-card-foreground">{label}</span>
               {values.length > 0 && (
@@ -168,7 +169,7 @@ export const MultiSelect = ({
       </PopoverTrigger>
       <PopoverContent
         className="w-[200px] p-0 border-0"
-        align="end"
+        align={align}
         sideOffset={0}
         side="bottom"
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
