@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
-import type { Writeable } from "zod";
+import { type Writeable, z } from "zod";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
@@ -299,21 +299,6 @@ export function LogRequestDetails({
 }: LogRequestDetailsProps) {
   const searchParams = new URLSearchParams(log?.request_query ?? "");
 
-  const status = log?.status ?? 0;
-  let statusBadgeColor: StatusBadgeColor = "gray";
-
-  if (status.toString().startsWith("1")) {
-    statusBadgeColor = "blue";
-  } else if (status.toString().startsWith("2")) {
-    statusBadgeColor = "green";
-  } else if (status.toString().startsWith("3")) {
-    statusBadgeColor = "gray";
-  } else if (status.toString().startsWith("4")) {
-    statusBadgeColor = "yellow";
-  } else if (status.toString().startsWith("5")) {
-    statusBadgeColor = "red";
-  }
-
   return (
     <Sheet
       open={open}
@@ -327,125 +312,133 @@ export function LogRequestDetails({
         side="right"
         className="z-99 border-border flex flex-col gap-4"
       >
-        {log && (
-          <>
-            <SheetHeader>
-              <SheetTitle className="font-normal text-card-foreground mt-5 text-base">
-                <span className="border border-gray-600 bg-gray-600/10 px-2 py-1 border-opacity-60 rounded-md ">
-                  {log.request_method}
-                </span>
-                &nbsp;
-                <span className="font-medium">{log.request_path}</span>
-              </SheetTitle>
-            </SheetHeader>
-            <hr className="border-border -mx-6" />
-            <h3>Request metadata:</h3>
-
-            <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey  inline-flex items-center">ID</dt>
-                <dd className="text-sm">{log.request_id}</dd>
-              </div>
-
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey  inline-flex items-center">
-                  Status code
-                </dt>
-                <dd
-                  className={cn("", {
-                    "text-blue-600": log.status.toString().startsWith("1"),
-                    "text-green-600": log.status.toString().startsWith("2"),
-                    "text-grey": log.status.toString().startsWith("3"),
-                    "text-yellow-600": log.status.toString().startsWith("4"),
-                    "text-red-600": log.status.toString().startsWith("5")
-                  })}
-                >
-                  {log.status}
-                </dd>
-              </div>
-
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey  inline-flex items-center">Date</dt>
-                <dd className="text-sm">
-                  <time
-                    className="text-grey whitespace-nowrap"
-                    dateTime={new Date(log.time).toISOString()}
-                  >
-                    {formattedTime(log.time)}
-                  </time>
-                </dd>
-              </div>
-
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey  inline-flex items-center">
-                  Duration
-                </dt>
-                <dd className="text-sm">
-                  {Intl.NumberFormat("en-US").format(
-                    log.request_duration_ns / 1_000_000
-                  )}
-                  <span className="text-grey">ms</span>
-                </dd>
-              </div>
-
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey  inline-flex items-center">
-                  Protocol
-                </dt>
-                <dd className="text-sm">{log.request_protocol}</dd>
-              </div>
-            </dl>
-
-            <hr className="border-border -mx-6" />
-
-            <h3>URL data:</h3>
-            <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey inline-flex items-center gap-1 group">
-                  <span>Host</span>
-                </dt>
-                <dd className="text-sm">{log.request_host}</dd>
-              </div>
-
-              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey inline-flex items-center gap-1 group">
-                  <span>Pathname</span>
-                </dt>
-                <dd className="text-sm">{log.request_path}</dd>
-              </div>
-
-              {log.request_query && (
-                <div className="grid grid-cols-2 items-center gap-x-4 w-full border-b-0 border-border pb-2">
-                  <dt className="text-grey inline-flex items-center gap-1 group">
-                    <span>Query</span>
-                  </dt>
-                  <dd className="text-sm">
-                    <span className="text-grey">{"?"}</span>
-                    {searchParams.entries().map(([key, value], index) => (
-                      <span>
-                        <span className="text-link">{key}</span>
-                        {value && (
-                          <>
-                            <span className="text-grey">{"="}</span>
-                            <span className="text-card-foreground break-all">
-                              {value}
-                            </span>
-                          </>
-                        )}
-                        {index < searchParams.size - 1 && (
-                          <span className="text-grey">{"&"}</span>
-                        )}
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </>
-        )}
-        <hr className="border-border -mx-6" />
+        {log && <LogRequestDetailsContent log={log} />}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function LogRequestDetailsContent({ log }: { log: HttpLog }) {
+  const searchParams = new URLSearchParams(log.request_query ?? "");
+  const ip = log.request_headers["X-Forwarded-For"]?.[0] ?? log.request_ip;
+
+  const isIPv6 = z.string().ip({ version: "v6" }).safeParse(ip).success;
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle className="font-normal text-card-foreground mt-5 text-base">
+          <span className="border border-gray-600 bg-gray-600/10 px-2 py-1 border-opacity-60 rounded-md ">
+            {log.request_method}
+          </span>
+          &nbsp;
+          <span className="font-medium">{log.request_path}</span>
+        </SheetTitle>
+      </SheetHeader>
+      <hr className="border-border -mx-6" />
+      <h3>Request metadata:</h3>
+
+      <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey  inline-flex items-center">ID</dt>
+          <dd className="text-sm">{log.request_id}</dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey  inline-flex items-center">Status code</dt>
+          <dd
+            className={cn("", {
+              "text-blue-600": log.status.toString().startsWith("1"),
+              "text-green-600": log.status.toString().startsWith("2"),
+              "text-grey": log.status.toString().startsWith("3"),
+              "text-yellow-600": log.status.toString().startsWith("4"),
+              "text-red-600": log.status.toString().startsWith("5")
+            })}
+          >
+            {log.status}
+          </dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey  inline-flex items-center">Date</dt>
+          <dd className="text-sm">
+            <time
+              className="text-grey whitespace-nowrap"
+              dateTime={new Date(log.time).toISOString()}
+            >
+              {formattedTime(log.time)}
+            </time>
+          </dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey  inline-flex items-center">Duration</dt>
+          <dd className="text-sm">
+            {Intl.NumberFormat("en-US").format(
+              log.request_duration_ns / 1_000_000
+            )}
+            <span className="text-grey">ms</span>
+          </dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey  inline-flex items-center">Client IP</dt>
+          <dd className="text-sm break-all text-grey">{ip}</dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey  inline-flex items-center">Protocol</dt>
+          <dd className="text-sm">{log.request_protocol}</dd>
+        </div>
+      </dl>
+
+      <hr className="border-border -mx-6" />
+
+      <h3>URL data:</h3>
+      <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey inline-flex items-center gap-1 group">
+            <span>Host</span>
+          </dt>
+          <dd className="text-sm">{log.request_host}</dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+          <dt className="text-grey inline-flex items-center gap-1 group">
+            <span>Pathname</span>
+          </dt>
+          <dd className="text-sm">{log.request_path}</dd>
+        </div>
+
+        {log.request_query && (
+          <div className="grid grid-cols-2 items-center gap-x-4 w-full border-b-0 border-border pb-2">
+            <dt className="text-grey inline-flex items-center gap-1 group">
+              <span>Query</span>
+            </dt>
+            <dd className="text-sm">
+              <span className="text-grey">{"?"}</span>
+              {searchParams.entries().map(([key, value], index) => (
+                <span>
+                  <span className="text-link">{key}</span>
+                  {value && (
+                    <>
+                      <span className="text-grey">{"="}</span>
+                      <span className="text-card-foreground break-all">
+                        {value}
+                      </span>
+                    </>
+                  )}
+                  {index < searchParams.size - 1 && (
+                    <span className="text-grey">{"&"}</span>
+                  )}
+                </span>
+              ))}
+            </dd>
+          </div>
+        )}
+      </dl>
+      <hr className="border-border -mx-6" />
+    </>
   );
 }
 
