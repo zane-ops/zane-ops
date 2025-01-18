@@ -305,8 +305,6 @@ export function LogRequestDetails({
   onClose,
   open = false
 }: LogRequestDetailsProps) {
-  const searchParams = new URLSearchParams(log?.request_query ?? "");
-
   return (
     <Sheet
       open={open}
@@ -397,6 +395,41 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey  inline-flex items-center">Protocol</dt>
           <dd className="text-sm">{log.request_protocol}</dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
+          <dt className="text-grey inline-flex items-center gap-1 group">
+            <span>User Agent</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <FilterIcon size={15} />
+                    <span className="sr-only">Filter this host</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Filter this host</TooltipContent>
+              </Tooltip>
+
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton
+                    label="Copy value"
+                    value={log.request_user_agent ?? ""}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>Copy value</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </dt>
+          <dd className="text-sm">
+            {log.request_user_agent ?? (
+              <span className="text-grey font-mono">N/A</span>
+            )}
+          </dd>
         </div>
       </dl>
 
