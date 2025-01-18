@@ -1116,6 +1116,12 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     sort_by = OrderingFilter(
         fields=["time", "request_duration_ns"],
     )
+    request_query = django_filters.CharFilter(
+        field_name="request_query", method="filter_query"
+    )
+
+    def filter_query(self, queryset: QuerySet, name: str, value: str):
+        return queryset.filter(request_query__istartswith=value)
 
     class Meta:
         model = HttpLog
