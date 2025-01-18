@@ -1,7 +1,9 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
+  ChevronRightIcon,
   ChevronsUpDownIcon,
+  Code,
   CopyIcon,
   FilterIcon,
   LoaderIcon
@@ -11,6 +13,12 @@ import { useSearchParams } from "react-router";
 import { type Writeable, z } from "zod";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import {
   Sheet,
@@ -41,7 +49,7 @@ import {
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { formattedTime, wait } from "~/utils";
+import { formattedTime, pluralize, wait } from "~/utils";
 import { type Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
@@ -310,7 +318,7 @@ export function LogRequestDetails({
     >
       <SheetContent
         side="right"
-        className="z-99 border-border flex flex-col gap-4"
+        className="z-99 border-border flex flex-col gap-4 overflow-y-auto"
       >
         {log && <LogRequestDetailsContent log={log} />}
       </SheetContent>
@@ -396,9 +404,30 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
 
       <h3>URL data:</h3>
       <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
-        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
           <dt className="text-grey inline-flex items-center gap-1 group">
             <span>Host</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <FilterIcon size={15} />
+                    <span className="sr-only">Filter this host</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Filter this host</TooltipContent>
+              </Tooltip>
+
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton label="Copy value" value={log.request_host} />
+                </TooltipTrigger>
+                <TooltipContent>Copy value</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </dt>
           <dd className="text-sm">{log.request_host}</dd>
         </div>
@@ -406,6 +435,27 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey inline-flex items-center gap-1 group">
             <span>Pathname</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <FilterIcon size={15} />
+                    <span className="sr-only">Filter this pathname</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Filter this pathname</TooltipContent>
+              </Tooltip>
+
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton label="Copy value" value={log.request_path} />
+                </TooltipTrigger>
+                <TooltipContent>Copy value</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </dt>
           <dd className="text-sm">{log.request_path}</dd>
         </div>
@@ -414,11 +464,35 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <div className="grid grid-cols-2 items-center gap-x-4 w-full border-b-0 border-border pb-2">
             <dt className="text-grey inline-flex items-center gap-1 group">
               <span>Query</span>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    >
+                      <FilterIcon size={15} />
+                      <span className="sr-only">Filter this query</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Filter this query</TooltipContent>
+                </Tooltip>
+
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <CopyButton
+                      label="Copy value"
+                      value={`?${log.request_query}`}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>Copy value</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </dt>
             <dd className="text-sm">
               <span className="text-grey">{"?"}</span>
               {searchParams.entries().map(([key, value], index) => (
-                <span>
+                <span key={`${key}-${index}`}>
                   <span className="text-link">{key}</span>
                   {value && (
                     <>
@@ -437,9 +511,70 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           </div>
         )}
       </dl>
+
+      <hr className="border-border -mx-6" />
+      <Accordion type="single" collapsible defaultValue="request">
+        <AccordionItem value="request" className="border-0">
+          <AccordionTrigger className="gap-2 py-0 data-[state=open]:pb-4">
+            <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+            <h3>Response headers:</h3>
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col pb-0">
+            <dl className="flex flex-col gap-0.5 text-base">
+              {transformHeadersObjectToArray(log.response_headers).map(
+                ([key, value]) => (
+                  <div className="inline gap-1 w-full" key={`${key}-${value}`}>
+                    <dt className="text-link inline flex-none">{key}:</dt>
+                    &nbsp;&nbsp;
+                    <dd className="break-all inline text-grey">{value}</dd>
+                  </div>
+                )
+              )}
+            </dl>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      <hr className="border-border -mx-6" />
+      <Accordion type="single" collapsible defaultValue="response">
+        <AccordionItem value="response" className="border-0">
+          <AccordionTrigger className="gap-2 py-0 data-[state=open]:pb-4">
+            <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+            <h3>Request headers:</h3>
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col pb-0">
+            <dl className="flex flex-col gap-0.5 text-base">
+              {transformHeadersObjectToArray(log.request_headers).map(
+                ([key, value]) => (
+                  <div className="inline gap-1 w-full" key={`${key}-${value}`}>
+                    <dt className="text-link inline flex-none">{key}:</dt>
+                    &nbsp;&nbsp;
+                    <dd className="break-all inline text-grey">{value}</dd>
+                  </div>
+                )
+              )}
+            </dl>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
       <hr className="border-border -mx-6" />
     </>
   );
+}
+
+function transformHeadersObjectToArray(current: {
+  [key: string]: string[];
+}): Array<[string, string]> {
+  const target: Array<[string, string]> = [];
+
+  for (const key in current) {
+    if (current.hasOwnProperty(key)) {
+      current[key].forEach((value) => {
+        target.push([key, value]);
+      });
+    }
+  }
+
+  return target;
 }
 
 function HeaderSection() {
