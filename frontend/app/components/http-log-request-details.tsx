@@ -58,7 +58,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   return (
     <>
       <SheetHeader>
-        <SheetTitle className="font-normal text-card-foreground mt-5 text-base">
+        <SheetTitle className="font-normal text-card-foreground mt-5 text-base text-start">
           <span className="border border-gray-600 bg-gray-600/10 px-2 py-1 border-opacity-60 rounded-md ">
             {log.request_method}
           </span>
@@ -67,7 +67,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         </SheetTitle>
       </SheetHeader>
       <hr className="border-border -mx-6" />
-      <h3>Request metadata:</h3>
+      <h3 className="font-medium">Request metadata:</h3>
 
       <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
@@ -173,7 +173,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               </Tooltip>
             </TooltipProvider>
           </dt>
-          <dd className="text-sm text-grey">
+          <dd className="text-sm text-grey inline-flex h-full items-center">
             {log.request_user_agent ?? <span className="font-mono">N/A</span>}
           </dd>
         </div>
@@ -181,7 +181,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
 
       <hr className="border-border -mx-6" />
 
-      <h3>URL data:</h3>
+      <h3 className="font-medium">URL data:</h3>
       <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
         <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
           <dt className="text-grey inline-flex items-center gap-1 group">
