@@ -114,8 +114,16 @@ class LogIngestAPIView(APIView):
                                                     response_headers=log_content[
                                                         "resp_headers"
                                                     ],
-                                                    request_user_agent=user_agent,
-                                                    request_ip=client_ip,
+                                                    request_user_agent=(
+                                                        user_agent[0]
+                                                        if isinstance(user_agent, list)
+                                                        else None
+                                                    ),
+                                                    request_ip=(
+                                                        client_ip[0]
+                                                        if isinstance(client_ip, list)
+                                                        else client_ip
+                                                    ),
                                                     request_id=log_content.get("uuid"),
                                                     request_method=req["method"],
                                                 )
