@@ -90,6 +90,7 @@ interface MultiSelectProps
   value: string[];
   align?: React.ComponentProps<typeof PopoverContent>["align"];
   Icon?: React.ComponentType<React.ComponentProps<typeof ChevronDownIcon>>;
+  closeOnSelect?: boolean;
 }
 export const MultiSelect = ({
   ref,
@@ -105,6 +106,7 @@ export const MultiSelect = ({
   className,
   align = "end",
   Icon = ChevronDownIcon,
+  closeOnSelect,
   ...props
 }: MultiSelectProps & {
   ref?: React.RefObject<HTMLButtonElement>;
@@ -115,6 +117,10 @@ export const MultiSelect = ({
     const newSelectedValues = values.includes(option)
       ? values.filter((v) => v !== option)
       : [...values, option];
+
+    if (closeOnSelect) {
+      setIsPopoverOpen(false);
+    }
     onValueChange(newSelectedValues);
   };
 

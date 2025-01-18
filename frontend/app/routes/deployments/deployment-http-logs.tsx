@@ -9,12 +9,13 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { useSearchParams } from "react-router";
+import { Form, useSearchParams } from "react-router";
 import type { Writeable } from "zod";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { Button } from "~/components/ui/button";
 
 import type { DateRange } from "react-day-picker";
+import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { MultiSelect } from "~/components/multi-select";
 import { Input } from "~/components/ui/input";
@@ -311,15 +312,19 @@ function HeaderSection() {
     "status"
   ] satisfies Array<keyof DeploymentHTTPLogFilters>;
 
+  const [selectedFields, setSelectedFields] = React.useState(
+    possible_fields.filter((field) => field in search)
+  );
+
   const available_fields = possible_fields.filter(
-    (field) => !(field in search)
+    (field) => !selectedFields.includes(field)
   );
 
   const isEmptySearchParams =
     !search.time_after &&
     !search.time_before &&
     (search.request_method ?? []).length === 0 &&
-    available_fields.length === possible_fields.length;
+    possible_fields.every((field) => !(field in search));
 
   const clearFilters = () => {
     startTransition(() => {
@@ -329,12 +334,20 @@ function HeaderSection() {
           replace: true
         }
       );
+      setSelectedFields([]);
     });
 
     if (inputRef.current) {
       inputRef.current.value = "";
     }
   };
+
+  const searchForQuery = useDebouncedCallback((query: string) => {
+    startTransition(() => {
+      searchParams.set("request_query", query);
+      setSearchParams(searchParams, { replace: true });
+    });
+  }, 300);
 
   return (
     <>
@@ -373,16 +386,37 @@ function HeaderSection() {
             label="method"
           />
 
+          {selectedFields.includes("request_query") && (
+            <Input
+              placeholder="query"
+              name="request_query"
+              className="max-w-40"
+              defaultValue={search.request_query}
+              onChange={(ev) => {
+                const newQuery = ev.currentTarget.value;
+                if (newQuery !== (search.request_query ?? "")) {
+                  searchForQuery(
+                    newQuery.startsWith("?") ? newQuery.substring(1) : newQuery
+                  );
+                }
+              }}
+            />
+          )}
+
           <MultiSelect
             value={[]}
             align="start"
             className="w-auto"
             Icon={PlusIcon}
             options={available_fields}
+            closeOnSelect
             onValueChange={(newVal) => {
-              // ...
+              const field = newVal[0] as (typeof possible_fields)[number];
+              if (!selectedFields.includes(field)) {
+                setSelectedFields([...selectedFields, field]);
+              }
             }}
-            label="Filter"
+            label="Add Filter"
           />
 
           {!isEmptySearchParams && (
