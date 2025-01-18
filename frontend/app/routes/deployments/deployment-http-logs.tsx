@@ -41,7 +41,7 @@ import {
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { wait } from "~/utils";
+import { formattedTime, wait } from "~/utils";
 import { type Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
@@ -339,23 +339,41 @@ export function LogRequestDetails({
               </SheetTitle>
             </SheetHeader>
             <hr className="border-border -mx-6" />
+            <h3>Request metadata:</h3>
+
             <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
               <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-                <dt className="text-grey  inline-flex items-center">
-                  Status code
-                </dt>
-                <dd className="">
-                  <StatusBadge color={statusBadgeColor} pingState="hidden">
-                    {log.status}
-                  </StatusBadge>
-                </dd>
+                <dt className="text-grey  inline-flex items-center">ID</dt>
+                <dd className="text-sm">{log.request_id}</dd>
               </div>
 
               <div className="grid grid-cols-2 items-center gap-x-4 w-full">
                 <dt className="text-grey  inline-flex items-center">
-                  Protocol
+                  Status code
                 </dt>
-                <dd className="text-sm">{log.request_protocol}</dd>
+                <dd
+                  className={cn("", {
+                    "text-blue-600": log.status.toString().startsWith("1"),
+                    "text-green-600": log.status.toString().startsWith("2"),
+                    "text-grey": log.status.toString().startsWith("3"),
+                    "text-yellow-600": log.status.toString().startsWith("4"),
+                    "text-red-600": log.status.toString().startsWith("5")
+                  })}
+                >
+                  {log.status}
+                </dd>
+              </div>
+
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey  inline-flex items-center">Date</dt>
+                <dd className="text-sm">
+                  <time
+                    className="text-grey whitespace-nowrap"
+                    dateTime={new Date(log.time).toISOString()}
+                  >
+                    {formattedTime(log.time)}
+                  </time>
+                </dd>
               </div>
 
               <div className="grid grid-cols-2 items-center gap-x-4 w-full">
@@ -370,6 +388,18 @@ export function LogRequestDetails({
                 </dd>
               </div>
 
+              <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+                <dt className="text-grey  inline-flex items-center">
+                  Protocol
+                </dt>
+                <dd className="text-sm">{log.request_protocol}</dd>
+              </div>
+            </dl>
+
+            <hr className="border-border -mx-6" />
+
+            <h3>URL data:</h3>
+            <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
               <div className="grid grid-cols-2 items-center gap-x-4 w-full">
                 <dt className="text-grey inline-flex items-center gap-1 group">
                   <span>Host</span>
