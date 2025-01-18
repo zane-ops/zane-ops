@@ -261,4 +261,5 @@ class HttpLogSerializer(ModelSerializer):
             "request_duration_ns",
             "request_headers",
             "response_headers",
+            "request_user_agent",
         ]

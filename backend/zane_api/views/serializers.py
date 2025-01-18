@@ -1127,6 +1127,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "status",
             "request_ip",
             "request_id",
+            "request_user_agent",
         ]
 
 

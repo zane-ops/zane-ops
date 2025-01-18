@@ -890,6 +890,7 @@ class HttpLog(Log):
     request_query = models.CharField(max_length=2000, null=True, blank=True)
     request_ip = models.GenericIPAddressField()
     request_id = models.CharField(null=True, max_length=255)
+    request_user_agent = models.TextField(blank=True, null=True)
 
     class Meta:
         indexes = [
@@ -901,5 +902,6 @@ class HttpLog(Log):
             models.Index(fields=["request_path"]),
             models.Index(fields=["time"]),
             models.Index(fields=["request_duration_ns"]),
+            models.Index(fields=["request_user_agent"]),
         ]
         ordering = ("time",)

@@ -1942,6 +1942,10 @@ paths:
         name: request_path
         schema:
           type: string
+      - in: query
+        name: request_user_agent
+        schema:
+          type: string
       - in: path
         name: service_slug
         schema:
@@ -4646,6 +4650,9 @@ components:
             type: array
             items:
               type: string
+        request_user_agent:
+          type: string
+          nullable: true
       required:
       - deployment_id
       - id
@@ -4658,6 +4665,7 @@ components:
       - request_path
       - request_protocol
       - request_query
+      - request_user_agent
       - response_headers
       - service_id
       - status
@@ -5207,6 +5215,7 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
@@ -5218,6 +5227,7 @@ components:
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
           request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
+          request_user_agent: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent'
           sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
       oneOf:
@@ -5315,6 +5325,25 @@ components:
           - request_path
           type: string
           description: '* `request_path` - request_path'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_user_agent
+          type: string
+          description: '* `request_user_agent` - request_user_agent'
         code:
           enum:
           - null_characters_not_allowed
