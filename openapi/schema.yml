@@ -1943,6 +1943,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: request_query
+        schema:
+          type: string
+      - in: query
         name: request_user_agent
         schema:
           type: string
@@ -5212,6 +5216,7 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
@@ -5224,6 +5229,7 @@ components:
           request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
           request_path: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
           request_host: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
           request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
@@ -5325,6 +5331,25 @@ components:
           - request_path
           type: string
           description: '* `request_path` - request_path'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_query
+          type: string
+          description: '* `request_query` - request_query'
         code:
           enum:
           - null_characters_not_allowed

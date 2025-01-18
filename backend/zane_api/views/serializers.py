@@ -1124,6 +1124,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "request_method",
             "request_path",
             "request_host",
+            "request_query",
             "status",
             "request_ip",
             "request_id",

@@ -1138,7 +1138,7 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchTypeEnum: "project";
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
       /**
@@ -1199,6 +1199,19 @@ export interface components {
        * @enum {string}
        */
       attr: "request_path";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent: {
+      /**
+       * @description * `request_query` - request_query
+       * @enum {string}
+       */
+      attr: "request_query";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -3445,6 +3458,7 @@ export interface operations {
          */
         request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
         request_path?: string;
+        request_query?: string;
         request_user_agent?: string;
         /**
          * @description Ordering
