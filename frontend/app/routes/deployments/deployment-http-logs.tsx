@@ -397,7 +397,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <dd className="text-sm">{log.request_protocol}</dd>
         </div>
 
-        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
+        <div className="grid grid-cols-2 items-start gap-x-4 w-full group">
           <dt className="text-grey inline-flex items-center gap-1 group">
             <span>User Agent</span>
             <TooltipProvider>
@@ -425,10 +425,8 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               </Tooltip>
             </TooltipProvider>
           </dt>
-          <dd className="text-sm">
-            {log.request_user_agent ?? (
-              <span className="text-grey font-mono">N/A</span>
-            )}
+          <dd className="text-sm text-grey">
+            {log.request_user_agent ?? <span className="font-mono">N/A</span>}
           </dd>
         </div>
       </dl>
