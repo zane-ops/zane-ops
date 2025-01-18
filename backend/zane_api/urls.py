@@ -167,6 +167,12 @@ urlpatterns += [
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/fields?$",
+        views.DockerServiceDeploymentHttpLogsFieldsAPIView.as_view(),
+        name="services.docker.deployment_http_logs.fields",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs"
         rf"/(?P<request_uuid>{UUID_REGEX})/?$",
         views.DockerServiceDeploymentSingleHttpLogAPIView.as_view(),

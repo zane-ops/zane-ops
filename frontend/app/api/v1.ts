@@ -145,6 +145,10 @@ export interface paths {
     /** Get single deployment http log */
     get: operations["projects_service_details_docker_deployments_http_logs_retrieve"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields": {
+    /** Get deployment http logs fields values */
+    get: operations["projects_service_details_docker_deployments_http_logs_fields_list"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_retrieve"];
@@ -1138,6 +1142,7 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchTypeEnum: "project";
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
@@ -3526,6 +3531,53 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment http logs fields values */
+  projects_service_details_docker_deployments_http_logs_fields_list: {
+    parameters: {
+      query: {
+        /**
+         * @description * `request_host` - request_host
+         * * `request_path` - request_path
+         * * `request_user_agent` - request_user_agent
+         * * `request_ip` - request_ip
+         */
+        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
+        value: string;
+      };
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400"];
         };
       };
       401: {

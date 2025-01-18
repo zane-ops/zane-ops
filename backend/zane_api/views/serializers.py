@@ -1139,6 +1139,27 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
 
 
 # ==============================
+#       Http logs fields       #
+# ==============================
+
+
+class HttpLogFieldsQuerySerializer(serializers.Serializer):
+    field = serializers.ChoiceField(
+        choices=[
+            "request_host",
+            "request_path",
+            "request_user_agent",
+            "request_ip",
+        ]
+    )
+    value = serializers.CharField(allow_blank=True)
+
+
+class HttpLogFieldsResponseSerializer(serializers.ListSerializer):
+    child = serializers.CharField()
+
+
+# ==============================
 #     Project Service List     #
 # ==============================
 

@@ -39,6 +39,8 @@ from .serializers import (
     DockerServiceDeploymentFilterSet,
     DockerServiceUpdateRequestSerializer,
     DockerSourceFieldChangeSerializer,
+    HttpLogFieldsQuerySerializer,
+    HttpLogFieldsResponseSerializer,
     VolumeItemChangeSerializer,
     DockerCommandFieldChangeSerializer,
     URLItemChangeSerializer,
@@ -900,6 +902,65 @@ class DockerServiceDeploymentLogsAPIView(APIView):
                     query=dict(**form.validated_data, deployment_id=deployment.hash),
                 )
                 return Response(data)
+
+
+class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
+    serializer_class = HttpLogFieldsResponseSerializer
+
+    @extend_schema(
+        summary="Get deployment http logs fields values",
+        parameters=[HttpLogFieldsQuerySerializer],
+    )
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment = DockerDeployment.objects.get(
+                service=service, hash=deployment_hash
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+        else:
+            form = HttpLogFieldsQuerySerializer(data=request.query_params)
+            if form.is_valid(raise_exception=True):
+                field = form.data["field"]
+                value = form.data["value"]
+
+                condition = {}
+                if len(value) > 0:
+                    condition = {f"{field}__istartswith": value}
+
+                values = (
+                    HttpLog.objects.filter(
+                        deployment_id=deployment.hash,
+                        service_id=service.id,
+                        **condition,
+                    )
+                    .order_by(field)
+                    .values_list(field, flat=True)
+                    .distinct()[:10]
+                )
+
+                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
+                return Response(seriaziler.data)
 
 
 class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
