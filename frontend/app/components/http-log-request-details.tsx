@@ -128,10 +128,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <FilterIcon size={15} />
-                    <span className="sr-only">Filter this IP</span>
+                    <span className="sr-only">Add Filter</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Filter this IP</TooltipContent>
+                <TooltipContent>Add Filter</TooltipContent>
               </Tooltip>
 
               <Tooltip delayDuration={0}>
@@ -156,10 +156,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <FilterIcon size={15} />
-                    <span className="sr-only">Filter this user-agent</span>
+                    <span className="sr-only">Add Filter</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Filter this user-agent</TooltipContent>
+                <TooltipContent>Add Filter</TooltipContent>
               </Tooltip>
 
               <Tooltip delayDuration={0}>
@@ -194,10 +194,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <FilterIcon size={15} />
-                    <span className="sr-only">Filter this host</span>
+                    <span className="sr-only">Add Filter</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Filter this host</TooltipContent>
+                <TooltipContent>Add Filter</TooltipContent>
               </Tooltip>
 
               <Tooltip delayDuration={0}>
@@ -213,7 +213,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
 
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey inline-flex items-center gap-1 group">
-            <span>Pathname</span>
+            <span>Path</span>
             <TooltipProvider>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -222,10 +222,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <FilterIcon size={15} />
-                    <span className="sr-only">Filter this pathname</span>
+                    <span className="sr-only">Add Filter</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Filter this pathname</TooltipContent>
+                <TooltipContent>Add Filter</TooltipContent>
               </Tooltip>
 
               <Tooltip delayDuration={0}>
@@ -236,7 +236,15 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               </Tooltip>
             </TooltipProvider>
           </dt>
-          <dd className="text-sm">{log.request_path}</dd>
+          <dd className="text-sm">
+            <a
+              href={`//${log.request_host}${log.request_path}`}
+              target="_blank"
+              className="text-link underline"
+            >
+              {log.request_path}
+            </a>
+          </dd>
         </div>
 
         {log.request_query && (
@@ -251,10 +259,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                       className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                     >
                       <FilterIcon size={15} />
-                      <span className="sr-only">Filter this query</span>
+                      <span className="sr-only">Add Filter</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Filter this query</TooltipContent>
+                  <TooltipContent>Add Filter</TooltipContent>
                 </Tooltip>
 
                 <Tooltip delayDuration={0}>
