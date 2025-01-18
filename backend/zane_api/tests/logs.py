@@ -1368,7 +1368,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
 
-        log: HttpLog = HttpLog.objects.first()
+        log: HttpLog = HttpLog.objects.last()
         self.assertEqual(service.id, log.service_id)
         self.assertEqual(fist_deployment.hash, log.deployment_id)
         self.assertEqual(HttpLog.RequestMethod.GET, log.request_method)
