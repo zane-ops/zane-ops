@@ -63,7 +63,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             {log.request_method}
           </span>
           &nbsp;
-          <span className="font-medium">{log.request_path}</span>
+          <span className="font-medium break-all">{log.request_path}</span>
         </SheetTitle>
       </SheetHeader>
       <hr className="border-border -mx-6" />
@@ -240,7 +240,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             <a
               href={`//${log.request_host}${log.request_path}`}
               target="_blank"
-              className="text-link underline"
+              className="text-link underline break-all"
             >
               {log.request_path}
             </a>
