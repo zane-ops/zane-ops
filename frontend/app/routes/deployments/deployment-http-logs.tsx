@@ -236,8 +236,6 @@ type LogTableRowProps = {
 
 function LogTableRow({ log, onClick }: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
-  const ip = log.request_headers["X-Forwarded-For"] ?? log.request_ip;
-
   return (
     <TableRow
       className="border-border cursor-pointer"
@@ -287,7 +285,7 @@ function LogTableRow({ log, onClick }: LogTableRowProps) {
 
       <TableCell>
         <p className="text-grey whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
-          {ip}
+          {log.request_ip}
         </p>
       </TableCell>
     </TableRow>
@@ -326,10 +324,6 @@ export function LogRequestDetails({
 
 function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const searchParams = new URLSearchParams(log.request_query ?? "");
-  const ip = log.request_headers["X-Forwarded-For"]?.[0] ?? log.request_ip;
-
-  const isIPv6 = z.string().ip({ version: "v6" }).safeParse(ip).success;
-
   return (
     <>
       <SheetHeader>
@@ -388,17 +382,40 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         </div>
 
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-          <dt className="text-grey  inline-flex items-center">Client IP</dt>
-          <dd className="text-sm break-all text-grey">{ip}</dd>
-        </div>
-
-        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey  inline-flex items-center">Protocol</dt>
           <dd className="text-sm">{log.request_protocol}</dd>
         </div>
 
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
+          <dt className="text-grey inline-flex items-center">
+            <span>Client IP</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <FilterIcon size={15} />
+                    <span className="sr-only">Filter this IP</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Filter this IP</TooltipContent>
+              </Tooltip>
+
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton label="Copy value" value={log.request_ip} />
+                </TooltipTrigger>
+                <TooltipContent>Copy value</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </dt>
+          <dd className="text-sm break-all text-grey">{log.request_ip}</dd>
+        </div>
+
         <div className="grid grid-cols-2 items-start gap-x-4 w-full group">
-          <dt className="text-grey inline-flex items-center gap-1 group">
+          <dt className="text-grey inline-flex items-center gap-1">
             <span>User Agent</span>
             <TooltipProvider>
               <Tooltip delayDuration={0}>
@@ -408,10 +425,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <FilterIcon size={15} />
-                    <span className="sr-only">Filter this host</span>
+                    <span className="sr-only">Filter this user-agent</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Filter this host</TooltipContent>
+                <TooltipContent>Filter this user-agent</TooltipContent>
               </Tooltip>
 
               <Tooltip delayDuration={0}>
