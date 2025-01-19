@@ -91,6 +91,8 @@ interface MultiSelectProps
   align?: React.ComponentProps<typeof PopoverContent>["align"];
   Icon?: React.ComponentType<React.ComponentProps<typeof ChevronDownIcon>>;
   closeOnSelect?: boolean;
+  acceptArbitraryValues?: boolean;
+  ref?: React.RefObject<HTMLButtonElement>;
 }
 export const MultiSelect = ({
   ref,
@@ -107,10 +109,9 @@ export const MultiSelect = ({
   align = "end",
   Icon = ChevronDownIcon,
   closeOnSelect,
+  acceptArbitraryValues = false,
   ...props
-}: MultiSelectProps & {
-  ref?: React.RefObject<HTMLButtonElement>;
-}) => {
+}: MultiSelectProps) => {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
   const toggleOption = (option: string) => {
@@ -120,6 +121,7 @@ export const MultiSelect = ({
 
     if (closeOnSelect) {
       setIsPopoverOpen(false);
+      setInputValue("");
     }
     onValueChange(newSelectedValues);
   };
@@ -127,6 +129,13 @@ export const MultiSelect = ({
   const handleTogglePopover = () => {
     setIsPopoverOpen((prev) => !prev);
   };
+
+  const [inputValue, setInputValue] = React.useState("");
+
+  let visibleOptions = new Set(options);
+  if (inputValue.trim().length > 0 && acceptArbitraryValues) {
+    visibleOptions.add(inputValue.trim());
+  }
 
   return (
     <Popover
@@ -180,36 +189,43 @@ export const MultiSelect = ({
         side="bottom"
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
-        <Command className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2">
+        <Command
+          shouldFilter={!acceptArbitraryValues}
+          className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2"
+        >
           <CommandPrimitive.Input
             placeholder="search"
             className="bg-inherit focus-visible:outline-hidden px-2 py-2"
+            value={inputValue}
+            onValueChange={setInputValue}
           />
           <hr className="-mx-2 border-border" />
           <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandPrimitive.Group>
-              {options.map((option) => {
-                const isSelected = values.includes(option);
-                return (
-                  <CommandItem
-                    key={option}
-                    onSelect={() => toggleOption(option)}
-                    className="cursor-pointer flex gap-1"
-                  >
-                    <CheckIcon
-                      size={15}
-                      className={cn(
-                        "flex-none transition-transform duration-75",
-                        isSelected ? "scale-100" : "scale-0"
-                      )}
-                    />
-                    <div className="flex items-center justify-between w-full">
-                      <span>{option}</span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
+              {[...visibleOptions]
+                .filter((option) => option.startsWith(inputValue))
+                .map((option) => {
+                  const isSelected = values.includes(option);
+                  return (
+                    <CommandItem
+                      key={option}
+                      onSelect={() => toggleOption(option)}
+                      className="cursor-pointer flex gap-1"
+                    >
+                      <CheckIcon
+                        size={15}
+                        className={cn(
+                          "flex-none transition-transform duration-75",
+                          isSelected ? "scale-100" : "scale-0"
+                        )}
+                      />
+                      <div className="flex items-center justify-between w-full">
+                        <span>{option}</span>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
             </CommandPrimitive.Group>
           </CommandPrimitive.List>
         </Command>

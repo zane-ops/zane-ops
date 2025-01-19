@@ -5,16 +5,16 @@ import {
   Maximize2Icon,
   Minimize2Icon,
   PlusIcon,
-  SearchIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import type { Writeable } from "zod";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { Button } from "~/components/ui/button";
 
 import type { DateRange } from "react-day-picker";
+import { flushSync } from "react-dom";
 import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { MultiSelect } from "~/components/multi-select";
@@ -37,15 +37,13 @@ import {
 import {
   type DeploymentHTTPLogFilters,
   type HttpLog,
-  LOG_LEVELS,
-  LOG_SOURCES,
   REQUEST_METHODS,
   deploymentHttpLogSearchSchema,
   deploymentQueries
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { type Route } from "./+types/deployment-http-logs";
+import type { Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
   request,
@@ -136,7 +134,12 @@ export default function DeploymentHttpLogsPage({
   const logs = logsQuery.data.pages.flatMap((item) => item.results);
 
   return (
-    <>
+    <div
+      className={cn(
+        search.isMaximized &&
+          "fixed inset-0 top-28 bg-background z-50 p-5 w-full"
+      )}
+    >
       <HttpLogRequestDetails
         open={Boolean(loaderData.httpLog)}
         log={loaderData.httpLog}
@@ -146,7 +149,12 @@ export default function DeploymentHttpLogsPage({
         }}
       />
 
-      <div className="flex flex-col h-[60dvh] mt-8 gap-4">
+      <div
+        className={cn(
+          "flex flex-col gap-4",
+          search.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh] mt-8"
+        )}
+      >
         <HeaderSection />
         <Table className="relative h-full overflow-y-auto z-50">
           <TableHeader className="bg-toggle sticky top-0 z-20">
@@ -236,7 +244,7 @@ export default function DeploymentHttpLogsPage({
           </TableBody>
         </Table>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -361,9 +369,14 @@ function HeaderSection() {
     });
   }, 300);
 
+  const parentRef = React.useRef<React.ComponentRef<"section">>(null);
+
   return (
     <>
-      <section className="rounded-t-sm w-full flex gap-2 items-center justify-between">
+      <section
+        className="rounded-t-sm w-full flex gap-2 items-start justify-between"
+        ref={parentRef}
+      >
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangeWithShortcuts
             date={date}
@@ -399,20 +412,88 @@ function HeaderSection() {
           />
 
           {selectedFields.includes("request_query") && (
-            <Input
-              placeholder="query"
-              name="request_query"
-              className="max-w-40"
-              defaultValue={search.request_query}
-              onChange={(ev) => {
-                const newQuery = ev.currentTarget.value;
-                if (newQuery !== (search.request_query ?? "")) {
-                  searchForQuery(
-                    newQuery.startsWith("?") ? newQuery.substring(1) : newQuery
+            <div className="inline-flex items-center gap-1">
+              <Input
+                placeholder="query"
+                name="request_query"
+                className="max-w-40"
+                defaultValue={search.request_query}
+                onChange={(ev) => {
+                  const newQuery = ev.currentTarget.value;
+                  if (newQuery !== (search.request_query ?? "")) {
+                    searchForQuery(
+                      newQuery.startsWith("?")
+                        ? newQuery.substring(1)
+                        : newQuery
+                    );
+                  }
+                }}
+              />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "request_query")
                   );
+                  searchParams.delete("request_query");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
+
+          {selectedFields.includes("status") && (
+            <div className="inline-flex items-center gap-1">
+              <MultiSelect
+                value={search.status ? [search.status.toString()] : []}
+                className="w-auto"
+                name="status"
+                options={
+                  search.status
+                    ? [
+                        ...new Set([
+                          "200",
+                          "300",
+                          "400",
+                          "500",
+                          search.status.toString()
+                        ])
+                      ]
+                    : ["200", "300", "400", "500"]
                 }
-              }}
-            />
+                closeOnSelect
+                onValueChange={(statuses) => {
+                  const lastStatus = statuses.at(-1);
+                  searchParams.delete("status");
+                  if (lastStatus) {
+                    searchParams.set("status", lastStatus);
+                  }
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                label="status"
+                acceptArbitraryValues
+              />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "status")
+                  );
+                  searchParams.delete("status");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
           )}
 
           <MultiSelect
@@ -422,10 +503,17 @@ function HeaderSection() {
             Icon={PlusIcon}
             options={available_fields}
             closeOnSelect
-            onValueChange={(newVal) => {
-              const field = newVal[0] as (typeof possible_fields)[number];
+            onValueChange={([newField]) => {
+              const field = newField as (typeof possible_fields)[number];
               if (!selectedFields.includes(field)) {
-                setSelectedFields([...selectedFields, field]);
+                flushSync(() => {
+                  setSelectedFields([...selectedFields, field]);
+                });
+
+                const element = parentRef.current?.querySelector(
+                  `[name=${field}]`
+                ) as HTMLElement | null;
+                element?.focus();
               }
             }}
             label="Add Filter"
