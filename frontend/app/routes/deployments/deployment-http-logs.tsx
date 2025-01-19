@@ -228,7 +228,7 @@ export default function DeploymentHttpLogsPage({
                 }}
               />
             ))}
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               <TableCell colSpan={7} className="relative">
                 <div
                   className={cn(
@@ -559,4 +559,8 @@ function HeaderSection() {
       <hr className="border-border" />
     </>
   );
+}
+
+function HostFilter() {
+  return;
 }
