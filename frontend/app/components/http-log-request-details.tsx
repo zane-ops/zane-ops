@@ -57,6 +57,14 @@ export function HttpLogRequestDetails({
 function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const searchParams = new URLSearchParams(log.request_query ?? "");
   const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
+  let duration = log.request_duration_ns / 1_000_000;
+  let unit = "ms";
+
+  if (duration > 1000) {
+    duration = duration / 1_000;
+    unit = "s";
+  }
+
   return (
     <>
       <SheetHeader>
@@ -107,10 +115,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey  inline-flex items-center">Duration</dt>
           <dd className="text-sm">
-            {Intl.NumberFormat("en-US").format(
-              log.request_duration_ns / 1_000_000
-            )}
-            <span className="text-grey">ms</span>
+            {Intl.NumberFormat("en-US", {
+              maximumFractionDigits: 3
+            }).format(duration)}
+            <span className="text-grey">{unit}</span>
           </dd>
         </div>
 

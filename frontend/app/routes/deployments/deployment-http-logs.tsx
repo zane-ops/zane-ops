@@ -156,42 +156,24 @@ export default function DeploymentHttpLogsPage({
           <TableHeader className="bg-toggle sticky top-0 z-20">
             <TableRow className="border-none">
               <TableHead>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <button
-                        // onClick={() => handleSort("slug")}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
-                        Date
-                        <ChevronsUpDownIcon size={15} className="flex-none" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="capitalize">Status</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <button
+                  // onClick={() => handleSort("slug")}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  Date
+                  <ChevronsUpDownIcon size={15} className="flex-none" />
+                </button>
               </TableHead>
               <TableHead>Method</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <button
-                        // onClick={() => handleSort("slug")}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
-                        Duration
-                        <ChevronsUpDownIcon size={15} className="flex-none" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="capitalize">Status</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <button
+                  // onClick={() => handleSort("slug")}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  Duration
+                  <ChevronsUpDownIcon size={15} className="flex-none" />
+                </button>
               </TableHead>
               <TableHead>Host</TableHead>
               <TableHead>Path</TableHead>
@@ -251,6 +233,14 @@ type LogTableRowProps = {
 
 function LogTableRow({ log, onClick }: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
+  let duration = log.request_duration_ns / 1_000_000;
+  let unit = "ms";
+
+  if (duration > 1000) {
+    duration = duration / 1_000;
+    unit = "s";
+  }
+
   return (
     <TableRow
       className="border-border cursor-pointer"
@@ -281,8 +271,10 @@ function LogTableRow({ log, onClick }: LogTableRowProps) {
         {log.status}
       </TableCell>
       <TableCell>
-        {Intl.NumberFormat("en-US").format(log.request_duration_ns / 1_000_000)}
-        <span className="text-grey">ms</span>
+        {Intl.NumberFormat("en-US", {
+          maximumFractionDigits: 3
+        }).format(duration)}
+        <span className="text-grey">{unit}</span>
       </TableCell>
       <TableCell>
         <p className="whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
