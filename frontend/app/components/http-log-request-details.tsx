@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { STANDARD_HTTP_STATUS_CODES } from "~/lib/constants";
 import type { HttpLog } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { formattedTime } from "~/utils";
@@ -55,6 +56,7 @@ export function HttpLogRequestDetails({
 
 function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const searchParams = new URLSearchParams(log.request_query ?? "");
+  const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
   return (
     <>
       <SheetHeader>
@@ -86,7 +88,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               "text-red-600": log.status.toString().startsWith("5")
             })}
           >
-            {log.status}
+            {statusMessage ? `${log.status} ${statusMessage}` : log.status}
           </dd>
         </div>
 
