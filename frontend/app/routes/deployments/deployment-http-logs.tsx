@@ -441,6 +441,27 @@ function HeaderSection() {
             </div>
           )}
 
+          {selectedFields.includes("request_path") && (
+            <div className="inline-flex items-center gap-1">
+              <PathFilter paths={search.request_path ?? []} />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "request_path")
+                  );
+                  searchParams.delete("request_path");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
+
           {selectedFields.includes("request_query") && (
             <div className="inline-flex items-center gap-1">
               <Input
@@ -498,28 +519,72 @@ function HeaderSection() {
             </div>
           )}
 
-          <MultiSelect
-            value={[]}
-            align="start"
-            className="w-auto"
-            Icon={PlusIcon}
-            options={available_fields}
-            closeOnSelect
-            onValueChange={([newField]) => {
-              const field = newField as (typeof possible_fields)[number];
-              if (!selectedFields.includes(field)) {
-                flushSync(() => {
-                  setSelectedFields([...selectedFields, field]);
-                });
+          {selectedFields.includes("request_ip") && (
+            <div className="inline-flex items-center gap-1">
+              <ClientIpFilter clientIps={search.request_ip ?? []} />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "request_ip")
+                  );
+                  searchParams.delete("request_ip");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
 
-                const element = parentRef.current?.querySelector(
-                  `[name=${field}]`
-                ) as HTMLElement | null;
-                element?.focus();
-              }
-            }}
-            label="Add Filter"
-          />
+          {selectedFields.includes("request_user_agent") && (
+            <div className="inline-flex items-center gap-1">
+              <UserAgentFilter userAgents={search.request_user_agent ?? []} />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "request_user_agent")
+                  );
+                  searchParams.delete("request_user_agent");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
+
+          {available_fields.length > 0 && (
+            <MultiSelect
+              value={[]}
+              align="start"
+              className="w-auto"
+              Icon={PlusIcon}
+              options={available_fields}
+              closeOnSelect
+              onValueChange={([newField]) => {
+                const field = newField as (typeof possible_fields)[number];
+                if (!selectedFields.includes(field)) {
+                  flushSync(() => {
+                    setSelectedFields([...selectedFields, field]);
+                  });
+
+                  const element = parentRef.current?.querySelector(
+                    `[name=${field}]`
+                  ) as HTMLElement | null;
+                  element?.focus();
+                }
+              }}
+              label="Add Filter"
+            />
+          )}
 
           {!isEmptySearchParams && (
             <Button
@@ -625,6 +690,136 @@ function HostFilter({ hosts }: HostFilterProps) {
         setSearchParams(searchParams, { replace: true });
       }}
       label="host"
+      acceptArbitraryValues
+    />
+  );
+}
+
+type PathFilterProps = {
+  paths: string[];
+};
+
+function PathFilter({ paths }: PathFilterProps) {
+  const {
+    deploymentHash: deployment_hash,
+    projectSlug: project_slug,
+    serviceSlug: service_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [inputValue, setInputValue] = React.useState("");
+
+  const { data: hostList = [] } = useQuery(
+    deploymentQueries.filterHttpLogFields({
+      deployment_hash,
+      project_slug,
+      service_slug,
+      field: "request_path",
+      value: inputValue
+    })
+  );
+  return (
+    <MultiSelect
+      value={paths}
+      className="w-auto"
+      name="request_path"
+      options={[...new Set([...hostList, ...paths])]}
+      closeOnSelect
+      inputValue={inputValue}
+      onInputValueChange={setInputValue}
+      onValueChange={(statuses) => {
+        searchParams.delete("request_path");
+        statuses.forEach((status) =>
+          searchParams.append("request_path", status)
+        );
+        setSearchParams(searchParams, { replace: true });
+      }}
+      label="path"
+      acceptArbitraryValues
+    />
+  );
+}
+
+type ClientIpFilterProps = {
+  clientIps: string[];
+};
+
+function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
+  const {
+    deploymentHash: deployment_hash,
+    projectSlug: project_slug,
+    serviceSlug: service_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [inputValue, setInputValue] = React.useState("");
+
+  const { data: ipList = [] } = useQuery(
+    deploymentQueries.filterHttpLogFields({
+      deployment_hash,
+      project_slug,
+      service_slug,
+      field: "request_ip",
+      value: inputValue
+    })
+  );
+  return (
+    <MultiSelect
+      value={clientIps}
+      className="w-auto"
+      name="request_ip"
+      options={[...new Set([...ipList, ...clientIps])]}
+      closeOnSelect
+      inputValue={inputValue}
+      onInputValueChange={setInputValue}
+      onValueChange={(statuses) => {
+        searchParams.delete("request_ip");
+        statuses.forEach((status) => searchParams.append("request_ip", status));
+        setSearchParams(searchParams, { replace: true });
+      }}
+      label="client ip"
+      acceptArbitraryValues
+    />
+  );
+}
+
+type UserAgentFilterProps = {
+  userAgents: string[];
+};
+
+function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
+  const {
+    deploymentHash: deployment_hash,
+    projectSlug: project_slug,
+    serviceSlug: service_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [inputValue, setInputValue] = React.useState("");
+
+  const { data: uaList = [] } = useQuery(
+    deploymentQueries.filterHttpLogFields({
+      deployment_hash,
+      project_slug,
+      service_slug,
+      field: "request_user_agent",
+      value: inputValue
+    })
+  );
+  return (
+    <MultiSelect
+      value={userAgents}
+      className="w-auto"
+      name="request_user_agent"
+      options={[...new Set([...uaList, ...userAgents])]}
+      closeOnSelect
+      inputValue={inputValue}
+      onInputValueChange={setInputValue}
+      onValueChange={(statuses) => {
+        searchParams.delete("request_user_agent");
+        statuses.forEach((status) =>
+          searchParams.append("request_user_agent", status)
+        );
+        setSearchParams(searchParams, { replace: true });
+      }}
+      label="user agent"
       acceptArbitraryValues
     />
   );
