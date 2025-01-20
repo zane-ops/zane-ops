@@ -956,7 +956,7 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
                     )
                     .order_by(field)
                     .values_list(field, flat=True)
-                    .distinct()[:10]
+                    .distinct()[:5]
                 )
 
                 seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
