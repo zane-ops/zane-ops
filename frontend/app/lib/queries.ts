@@ -654,10 +654,16 @@ export const deploymentQueries = {
         };
 
         if (data) {
+          const next = data.next
+            ? new URL(data.next).searchParams.get("cursor")
+            : null;
+          const previous = data.previous
+            ? new URL(data.previous).searchParams.get("cursor")
+            : null;
           apiData = {
             results: data.results,
-            next: data?.next ?? null,
-            previous: data?.previous ?? null,
+            next,
+            previous,
             cursor: existingData?.cursor
           };
         }
@@ -687,7 +693,9 @@ export const deploymentQueries = {
             }
           );
           if (nextPage?.previous) {
-            apiData.cursor = nextPage.previous;
+            apiData.cursor = new URL(nextPage.previous).searchParams.get(
+              "cursor"
+            );
           }
         }
 
@@ -699,20 +707,8 @@ export const deploymentQueries = {
         }
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
-      getNextPageParam: ({ next }) => {
-        if (next) {
-          const url = new URL(next);
-          return url.searchParams.get("cursor");
-        }
-        return null;
-      },
-      getPreviousPageParam: ({ previous }) => {
-        if (previous) {
-          const url = new URL(previous);
-          return url.searchParams.get("cursor");
-        }
-        return null;
-      },
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY

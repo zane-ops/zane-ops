@@ -186,6 +186,83 @@ export default function DeploymentHttpLogsPage({
   const timeSortDirection = getSortDirection("time");
   const durationSortDirection = getSortDirection("request_duration_ns");
 
+  const autoRefetchRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setIsAutoRefetchEnabled(true);
+        } else {
+          setIsAutoRefetchEnabled(false);
+        }
+      },
+      {
+        root: node.closest("#log-content"),
+        rootMargin: "0px",
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.unobserve(node);
+    };
+  };
+
+  const fetchNextPageRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          logsQuery.hasNextPage
+        ) {
+          logsQuery.fetchNextPage();
+        }
+      },
+      {
+        root: node.closest("#log-content"),
+        rootMargin: "120%",
+        threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
+      }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.unobserve(node);
+    };
+  };
+
+  const fetchPreviousPageRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry.isIntersecting &&
+          !logsQuery.isFetching &&
+          logsQuery.hasPreviousPage
+        ) {
+          logsQuery.fetchPreviousPage();
+        }
+      },
+      {
+        root: node.closest("#log-content"),
+        rootMargin: "20%",
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.unobserve(node);
+    };
+  };
+
   return (
     <div
       className={cn(
@@ -207,6 +284,7 @@ export default function DeploymentHttpLogsPage({
           "flex flex-col gap-4",
           search.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh] mt-8"
         )}
+        id="log-content"
       >
         <HeaderSection />
         <Table className="relative h-full overflow-y-auto z-50">
@@ -254,13 +332,16 @@ export default function DeploymentHttpLogsPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            <tr className="">
+            <tr>
               <td
                 colSpan={7}
                 className="px-4 text-sm text-grey h-6 border-b border-border py-2"
               >
-                <div className="h-px" />
-                <div className="inline-flex items-center gap-2">
+                <div className="h-px" ref={fetchPreviousPageRef} />
+                <div
+                  className="inline-flex items-center gap-2"
+                  ref={autoRefetchRef}
+                >
                   <Ping />
                   <em className="text-green-500">LIVE</em> -- New requests will
                   appear here
@@ -279,17 +360,25 @@ export default function DeploymentHttpLogsPage({
                 }}
               />
             ))}
-            <TableRow className="hover:bg-transparent">
+
+            <TableRow className="hover:bg-transparent text-gray-500 px-2">
               <TableCell colSpan={7} className="relative">
-                <div
-                  className={cn(
-                    "items-center flex gap-2 text-gray-500 px-2",
-                    "w-full sticky left-0"
-                  )}
-                >
-                  <LoaderIcon size={15} className="animate-spin" />
-                  <p>Fetching previous logs...</p>
-                </div>
+                {logsQuery.hasNextPage || logsQuery.isFetchingNextPage ? (
+                  <div
+                    ref={fetchNextPageRef}
+                    className={cn(
+                      "items-center flex gap-2",
+                      "w-full sticky left-0"
+                    )}
+                  >
+                    <LoaderIcon size={15} className="animate-spin" />
+                    <p>Fetching previous logs...</p>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center sticky">
+                    -- End of the list --
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           </TableBody>
