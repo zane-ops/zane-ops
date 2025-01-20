@@ -387,6 +387,31 @@ function HeaderSection() {
         ref={parentRef}
       >
         <div className="flex items-center gap-2 flex-wrap">
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    searchParams.set("isMaximized", `${!search.isMaximized}`);
+                    setSearchParams(searchParams, { replace: true });
+                  }}
+                >
+                  <span className="sr-only">
+                    {search.isMaximized ? "Minimize" : "Maximize"}
+                  </span>
+                  {search.isMaximized ? (
+                    <Minimize2Icon size={15} />
+                  ) : (
+                    <Maximize2Icon size={15} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-balance">
+                {search.isMaximized ? "Minimize" : "Maximize"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <DateRangeWithShortcuts
             date={date}
             setDate={(newDateRange) => {
@@ -597,31 +622,6 @@ function HeaderSection() {
             </Button>
           )}
         </div>
-        <TooltipProvider>
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  searchParams.set("isMaximized", `${!search.isMaximized}`);
-                  setSearchParams(searchParams, { replace: true });
-                }}
-              >
-                <span className="sr-only">
-                  {search.isMaximized ? "Minimize" : "Maximize"}
-                </span>
-                {search.isMaximized ? (
-                  <Minimize2Icon size={15} />
-                ) : (
-                  <Maximize2Icon size={15} />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64 text-balance">
-              {search.isMaximized ? "Minimize" : "Maximize"}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </section>
       <hr className="border-border" />
     </>

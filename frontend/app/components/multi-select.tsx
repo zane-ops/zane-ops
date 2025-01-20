@@ -229,7 +229,7 @@ export const MultiSelect = ({
                           isSelected ? "scale-100" : "scale-0"
                         )}
                       />
-                      <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center justify-between w-full break-all">
                         <span>{option}</span>
                       </div>
                     </CommandItem>
