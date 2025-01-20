@@ -1108,6 +1108,10 @@ class DeploymentLogsPagination(pagination.CursorPagination):
     )
 
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
     request_method = django_filters.MultipleChoiceFilter(
@@ -1119,6 +1123,17 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     request_query = django_filters.CharFilter(
         field_name="request_query", method="filter_query"
     )
+    status = NumberInFilter(method="filter_multiple_values")
+    request_ip = django_filters.BaseInFilter(method="filter_multiple_values")
+    request_user_agent = django_filters.BaseInFilter(method="filter_multiple_values")
+    request_host = django_filters.BaseInFilter(
+        field_name="request_host", method="filter_multiple_values"
+    )
+    request_path = django_filters.BaseInFilter(method="filter_multiple_values")
+
+    def filter_multiple_values(self, queryset: QuerySet, name: str, value: str):
+        params = self.request.GET.getlist(name)
+        return queryset.filter(**{f"{name}__in": params})
 
     def filter_query(self, queryset: QuerySet, name: str, value: str):
         return queryset.filter(request_query__istartswith=value)

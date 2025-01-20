@@ -1143,40 +1143,14 @@ export interface components {
      */
     ProjectSearchTypeEnum: "project";
     ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
-      /**
-       * @description * `request_host` - request_host
-       * @enum {string}
-       */
-      attr: "request_host";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent: {
       /**
        * @description * `request_id` - request_id
        * @enum {string}
        */
       attr: "request_id";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent: {
-      /**
-       * @description * `request_ip` - request_ip
-       * @enum {string}
-       */
-      attr: "request_ip";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -1198,38 +1172,12 @@ export interface components {
       code: "invalid_choice" | "invalid_list";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent: {
-      /**
-       * @description * `request_path` - request_path
-       * @enum {string}
-       */
-      attr: "request_path";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent: {
       /**
        * @description * `request_query` - request_query
        * @enum {string}
        */
       attr: "request_query";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent: {
-      /**
-       * @description * `request_user_agent` - request_user_agent
-       * @enum {string}
-       */
-      attr: "request_user_agent";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -3449,9 +3397,11 @@ export interface operations {
         cursor?: string;
         /** @description Number of results to return per page. */
         per_page?: number;
-        request_host?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_host?: string[];
         request_id?: string;
-        request_ip?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_ip?: string[];
         /**
          * @description * `GET` - GET
          * * `POST` - POST
@@ -3462,9 +3412,11 @@ export interface operations {
          * * `HEAD` - HEAD
          */
         request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
-        request_path?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_path?: string[];
         request_query?: string;
-        request_user_agent?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_user_agent?: string[];
         /**
          * @description Ordering
          *
@@ -3474,7 +3426,8 @@ export interface operations {
          * * `-request_duration_ns` - Request duration ns (descending)
          */
         sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
-        status?: number;
+        /** @description Multiple values may be separated by commas. */
+        status?: string[];
         time_after?: string;
         time_before?: string;
       };

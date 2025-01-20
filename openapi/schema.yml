@@ -1905,7 +1905,12 @@ paths:
       - in: query
         name: request_host
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: request_id
         schema:
@@ -1913,7 +1918,12 @@ paths:
       - in: query
         name: request_ip
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: request_method
         schema:
@@ -1941,7 +1951,12 @@ paths:
       - in: query
         name: request_path
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: request_query
         schema:
@@ -1949,7 +1964,12 @@ paths:
       - in: query
         name: request_user_agent
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: path
         name: service_slug
         schema:
@@ -1979,7 +1999,12 @@ paths:
       - in: query
         name: status
         schema:
-          type: integer
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: time_after
         schema:
@@ -5333,26 +5358,18 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
           request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-          request_path: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
-          request_host: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
           request_query: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
-          request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
-          request_user_agent: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent'
           sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
       oneOf:
@@ -5363,25 +5380,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_host
-          type: string
-          description: '* `request_host` - request_host'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent:
       type: object
       properties:
@@ -5390,25 +5388,6 @@ components:
           - request_id
           type: string
           description: '* `request_id` - request_id'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_ip
-          type: string
-          description: '* `request_ip` - request_ip'
         code:
           enum:
           - null_characters_not_allowed
@@ -5442,25 +5421,6 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_path
-          type: string
-          description: '* `request_path` - request_path'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent:
       type: object
       properties:
@@ -5469,25 +5429,6 @@ components:
           - request_query
           type: string
           description: '* `request_query` - request_query'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestUserAgentErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_user_agent
-          type: string
-          description: '* `request_user_agent` - request_user_agent'
         code:
           enum:
           - null_characters_not_allowed
