@@ -437,6 +437,27 @@ function HeaderSection() {
             label="method"
           />
 
+          {selectedFields.includes("status") && (
+            <div className="inline-flex items-center gap-1">
+              <StatusFilter statuses={search.status ?? []} />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "status")
+                  );
+                  searchParams.delete("status");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
+
           {selectedFields.includes("request_host") && (
             <div className="inline-flex items-center gap-1">
               <HostFilter hosts={search.request_host ?? []} />
@@ -503,27 +524,6 @@ function HeaderSection() {
                     fields.filter((field) => field !== "request_query")
                   );
                   searchParams.delete("request_query");
-                  setSearchParams(searchParams, { replace: true });
-                }}
-                variant="outline"
-                className="bg-inherit"
-                type="button"
-              >
-                <XIcon size={15} className="flex-none" />
-                <span className="sr-only">Remove field</span>
-              </Button>
-            </div>
-          )}
-
-          {selectedFields.includes("status") && (
-            <div className="inline-flex items-center gap-1">
-              <StatusFilter statuses={search.status ?? []} />
-              <Button
-                onClick={() => {
-                  setSelectedFields((fields) =>
-                    fields.filter((field) => field !== "status")
-                  );
-                  searchParams.delete("status");
                   setSearchParams(searchParams, { replace: true });
                 }}
                 variant="outline"
