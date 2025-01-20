@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
+  ArrowDown01Icon,
+  ArrowUp10Icon,
   ChevronsUpDownIcon,
   LoaderIcon,
   Maximize2Icon,
@@ -64,7 +66,8 @@ export async function clientLoader({
     request_path: search.request_path,
     request_query: search.request_query,
     request_user_agent: search.request_user_agent,
-    status: search.status
+    status: search.status,
+    sort_by: search.sort_by
   } satisfies DeploymentHTTPLogFilters;
 
   const [httpLogs, httpLog] = await Promise.all([
@@ -91,6 +94,8 @@ export async function clientLoader({
   return { httpLogs, httpLog };
 }
 
+type SortDirection = "ascending" | "descending" | "indeterminate";
+
 export default function DeploymentHttpLogsPage({
   loaderData,
   params: {
@@ -103,6 +108,7 @@ export default function DeploymentHttpLogsPage({
   const search = deploymentHttpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
+  const { sort_by } = search;
   const filters = {
     time_after: search.time_after,
     time_before: search.time_before,
@@ -112,7 +118,8 @@ export default function DeploymentHttpLogsPage({
     request_path: search.request_path,
     request_query: search.request_query,
     request_user_agent: search.request_user_agent,
-    status: search.status
+    status: search.status,
+    sort_by
   } satisfies DeploymentHTTPLogFilters;
 
   const logsQuery = useInfiniteQuery({
@@ -128,6 +135,56 @@ export default function DeploymentHttpLogsPage({
   });
 
   const logs = logsQuery.data.pages.flatMap((item) => item.results);
+
+  const toggleSort = (field: "time" | "request_duration_ns") => {
+    let nextDirection: SortDirection = "ascending";
+
+    if (sort_by?.includes(field)) {
+      nextDirection = "descending";
+    } else if (sort_by?.includes(`-${field}`)) {
+      nextDirection = "indeterminate";
+    }
+
+    let newSortBy = (sort_by ?? []).filter(
+      (sort_field) => sort_field !== field && sort_field !== `-${field}`
+    );
+    switch (nextDirection) {
+      case "ascending": {
+        newSortBy.push(field);
+        break;
+      }
+      case "descending": {
+        newSortBy.push(`-${field}`);
+        break;
+      }
+    }
+
+    searchParams.delete("sort_by");
+    newSortBy
+      .toSorted((a, b) => {
+        if (a.replace("-", "") === "time") return -1;
+        if (b.replace("-", "") === "time") return 1;
+        return 0;
+      })
+      .forEach((sort_by) => {
+        searchParams.append(`sort_by`, sort_by.toString());
+      });
+    setSearchParams(searchParams, {
+      replace: true
+    });
+  };
+
+  const getSortDirection = (field: "time" | "request_duration_ns") => {
+    let direction: SortDirection = "indeterminate";
+    if (sort_by?.includes(field)) {
+      direction = "ascending";
+    } else if (sort_by?.includes(`-${field}`)) {
+      direction = "descending";
+    }
+    return direction;
+  };
+  const timeSortDirection = getSortDirection("time");
+  const durationSortDirection = getSortDirection("request_duration_ns");
 
   return (
     <div
@@ -157,22 +214,38 @@ export default function DeploymentHttpLogsPage({
             <TableRow className="border-none">
               <TableHead>
                 <button
-                  // onClick={() => handleSort("slug")}
+                  onClick={() => toggleSort("time")}
                   className="flex cursor-pointer items-center gap-2"
                 >
                   Date
-                  <ChevronsUpDownIcon size={15} className="flex-none" />
+                  {timeSortDirection === "indeterminate" && (
+                    <ChevronsUpDownIcon size={15} className="flex-none" />
+                  )}
+                  {timeSortDirection === "ascending" && (
+                    <ArrowDown01Icon size={15} className="flex-none" />
+                  )}
+                  {timeSortDirection === "descending" && (
+                    <ArrowUp10Icon size={15} className="flex-none" />
+                  )}
                 </button>
               </TableHead>
               <TableHead>Method</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>
                 <button
-                  // onClick={() => handleSort("slug")}
+                  onClick={() => toggleSort("request_duration_ns")}
                   className="flex cursor-pointer items-center gap-2"
                 >
                   Duration
-                  <ChevronsUpDownIcon size={15} className="flex-none" />
+                  {durationSortDirection === "indeterminate" && (
+                    <ChevronsUpDownIcon size={15} className="flex-none" />
+                  )}
+                  {durationSortDirection === "ascending" && (
+                    <ArrowDown01Icon size={15} className="flex-none" />
+                  )}
+                  {durationSortDirection === "descending" && (
+                    <ArrowUp10Icon size={15} className="flex-none" />
+                  )}
                 </button>
               </TableHead>
               <TableHead>Host</TableHead>
@@ -337,6 +410,7 @@ function HeaderSection() {
   const isEmptySearchParams =
     !search.time_after &&
     !search.time_before &&
+    (search.sort_by ?? []).length === 0 &&
     (search.request_method ?? []).length === 0 &&
     possible_fields.every((field) => {
       if (field === "request_query") {

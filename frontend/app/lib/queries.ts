@@ -378,7 +378,15 @@ export const deploymentHttpLogSearchSchema = zfd.formData({
   isMaximized: preprocess(
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)
-  )
+  ),
+  sort_by: zfd
+    .repeatable(
+      z.array(
+        z.enum(["time", "-time", "request_duration_ns", "-request_duration_ns"])
+      )
+    )
+    .optional()
+    .catch(undefined)
 });
 
 export type DeploymentHTTPLogFilters = z.infer<
@@ -591,6 +599,32 @@ export const deploymentQueries = {
         filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
+        const allData = queryClient.getQueryData(queryKey) as InfiniteData<
+          DeploymentHttpLogQueryData,
+          string | null
+        >;
+        const existingData = allData?.pages.find(
+          (_, index) => allData?.pageParams[index] === pageParam
+        );
+
+        /**
+         * We reuse the data in the query as we are sure this page is immutable,
+         * And we don't want to refetch the same logs that we have already fetched.
+         *
+         * However if we have the data in the cache and previous is `null`,
+         * it means that that page is the last and the next time we fetch it,
+         * it might have more data.
+         * Inspired by: https://github.com/TanStack/query/discussions/5921
+         */
+        if (existingData?.previous) {
+          return existingData;
+        }
+
+        let cursor = pageParam ?? undefined;
+        if (existingData?.cursor) {
+          cursor = existingData.cursor;
+        }
+
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
           {
@@ -602,8 +636,8 @@ export const deploymentQueries = {
               },
               query: {
                 ...filters,
+                cursor,
                 per_page: DEFAULT_LOGS_PER_PAGE,
-                // cursor,
                 time_before: filters.time_before?.toISOString(),
                 time_after: filters.time_after?.toISOString()
               }
@@ -611,8 +645,53 @@ export const deploymentQueries = {
             signal
           }
         );
-        if (!data) throw notFound();
-        return data;
+
+        let apiData: DeploymentHttpLogQueryData = {
+          next: null,
+          previous: null,
+          results: [],
+          cursor: null
+        };
+
+        if (data) {
+          apiData = {
+            results: data.results,
+            next: data?.next ?? null,
+            previous: data?.previous ?? null,
+            cursor: existingData?.cursor
+          };
+        }
+
+        // get cursor for initial page as its pageParam is `null`
+        // we want to do so that we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the data it starts
+        if (pageParam === null && apiData.next !== null && !apiData.cursor) {
+          const { data: nextPage } = await apiClient.GET(
+            "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+            {
+              params: {
+                path: {
+                  project_slug,
+                  service_slug,
+                  deployment_hash
+                },
+                query: {
+                  ...filters,
+                  per_page: DEFAULT_LOGS_PER_PAGE,
+                  cursor: apiData.next,
+                  time_before: filters.time_before?.toISOString(),
+                  time_after: filters.time_after?.toISOString()
+                }
+              },
+              signal
+            }
+          );
+          if (nextPage?.previous) {
+            apiData.cursor = nextPage.previous;
+          }
+        }
+
+        return apiData;
       },
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
@@ -752,6 +831,18 @@ type DeploymentLogQueryData = Pick<
     ApiResponse<
       "get",
       "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+    >
+  >,
+  "next" | "previous" | "results"
+> & {
+  cursor?: string | null;
+};
+
+type DeploymentHttpLogQueryData = Pick<
+  NonNullable<
+    ApiResponse<
+      "get",
+      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/"
     >
   >,
   "next" | "previous" | "results"
