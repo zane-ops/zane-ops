@@ -1103,10 +1103,7 @@ class CursorSerializer(serializers.Serializer):
 class DeploymentHttpLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
-    ordering = (
-        "-time",
-        "-created_at",
-    )
+    ordering = ("-time",)
 
     def get_ordering(self, request: Request, queryset, view):
         filter = DeploymentHttpLogsFilterSet(
@@ -1114,7 +1111,11 @@ class DeploymentHttpLogsPagination(pagination.CursorPagination):
         )
 
         if filter.is_valid():
-            return tuple(set(filter.form.cleaned_data.get("sort_by", self.ordering)))
+            ordering = tuple(
+                set(filter.form.cleaned_data.get("sort_by", self.ordering))
+            )
+            if len(ordering) > 0:
+                return ordering  # tuple(set(filter.form.cleaned_data.get("sort_by", self.ordering)))
 
         return self.ordering
 
