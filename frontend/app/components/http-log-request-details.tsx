@@ -319,8 +319,8 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <AccordionContent className="flex flex-col pb-0">
             <dl className="flex flex-col gap-0.5 text-base">
               {transformHeadersObjectToArray(log.response_headers).map(
-                ([key, value]) => (
-                  <div className="inline gap-1 w-full" key={`${key}-${value}`}>
+                ([key, value], index) => (
+                  <div className="inline gap-1 w-full" key={index}>
                     <dt className="text-link inline flex-none">{key}:</dt>
                     &nbsp;&nbsp;
                     <dd className="break-all inline text-grey">{value}</dd>
@@ -341,8 +341,8 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <AccordionContent className="flex flex-col pb-0">
             <dl className="flex flex-col gap-0.5 text-base">
               {transformHeadersObjectToArray(log.request_headers).map(
-                ([key, value]) => (
-                  <div className="inline gap-1 w-full" key={`${key}-${value}`}>
+                ([key, value], index) => (
+                  <div className="inline gap-1 w-full" key={index}>
                     <dt className="text-link inline flex-none">{key}:</dt>
                     &nbsp;&nbsp;
                     <dd className="break-all inline text-grey">{value}</dd>
