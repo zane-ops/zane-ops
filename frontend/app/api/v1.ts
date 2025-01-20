@@ -145,7 +145,7 @@ export interface paths {
     /** Get single deployment http log */
     get: operations["projects_service_details_docker_deployments_http_logs_retrieve"];
   };
-  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields": {
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/": {
     /** Get deployment http logs fields values */
     get: operations["projects_service_details_docker_deployments_http_logs_fields_list"];
   };
