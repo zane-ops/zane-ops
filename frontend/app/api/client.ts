@@ -20,6 +20,18 @@ type ExtractRequestBody<
     : never
   : never;
 
+type ExtractRequestParams<
+  TPaths,
+  TPath extends keyof TPaths,
+  TMethod extends RequestMethod
+> = TPaths[TPath] extends Record<TMethod, infer TOperation>
+  ? TOperation extends {
+      parameters?: { query: infer TRequestParams };
+    }
+    ? TRequestParams
+    : never
+  : never;
+
 // Helper type to filter paths that contain either POST or PUT operations
 type PathsThatContainMethod<TPaths, TMethod extends RequestMethod> = {
   [K in keyof TPaths]: TPaths[K] extends Record<TMethod, unknown> ? K : never;
@@ -29,6 +41,11 @@ export type RequestInput<
   TMethod extends RequestMethod,
   TPath extends PathsThatContainMethod<paths, TMethod>
 > = ExtractRequestBody<paths, TPath, TMethod>;
+
+export type RequestParams<
+  TMethod extends RequestMethod,
+  TPath extends PathsThatContainMethod<paths, TMethod>
+> = ExtractRequestParams<paths, TPath, TMethod>;
 
 type ExtractResponse<
   TPaths,

@@ -8,7 +8,12 @@ import {
 } from "@tanstack/react-query";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
-import { type ApiResponse, apiClient } from "~/api/client";
+import {
+  type ApiResponse,
+  type RequestInput,
+  type RequestParams,
+  apiClient
+} from "~/api/client";
 import {
   DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
@@ -342,31 +347,34 @@ export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
 export const deploymentHttpLogSearchSchema = zfd.formData({
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
-  request_method: zfd.repeatable(
-    z
-      .array(z.enum(REQUEST_METHODS))
-      .optional()
-      .catch(REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>)
-  ),
+  request_method: zfd
+    .repeatable(z.array(z.enum(REQUEST_METHODS)).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
   request_query: z.string().optional(),
-  request_path: zfd.repeatable(z.array(z.string()).optional().catch(undefined)),
-  request_host: zfd.repeatable(z.array(z.string()).optional().catch(undefined)),
-  request_ip: zfd.repeatable(
-    z.array(z.string().ip()).optional().catch(undefined)
-  ),
-  request_user_agent: zfd.repeatable(
-    z.array(z.string()).optional().catch(undefined)
-  ),
+  request_path: zfd
+    .repeatable(z.array(z.string()).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
+  request_host: zfd
+    .repeatable(z.array(z.string()).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
+  request_ip: zfd
+    .repeatable(z.array(z.string().ip()).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
+  request_user_agent: zfd
+    .repeatable(z.array(z.string()).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
   request_id: z.string().uuid().optional().catch(undefined),
-  status: zfd.repeatable(
-    z
-      .array(z.string())
-      .transform((array) =>
-        array.filter((val) => !Number.isNaN(val) && Number(val) > 0)
-      )
-      .optional()
-      .catch(undefined)
-  ),
+  status: zfd
+    .repeatable(
+      z
+        .array(z.string())
+        .transform((array) =>
+          array.filter((val) => !Number.isNaN(val) && Number(val) > 0)
+        )
+        .optional()
+        .catch(undefined)
+    )
+    .transform((val) => (val?.length === 0 ? undefined : val)),
   isMaximized: preprocess(
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)
@@ -630,7 +638,6 @@ export const deploymentQueries = {
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
     }),
-
   singleHttpLog: ({
     project_slug,
     service_slug,
@@ -668,6 +675,55 @@ export const deploymentQueries = {
           }
         );
         return data;
+      }
+    }),
+
+  filterHttpLogFields: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    field,
+    value
+  }: {
+    project_slug: string;
+    service_slug: string;
+    deployment_hash: string;
+    field: RequestParams<
+      "get",
+      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
+    >["field"];
+    value: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          deployment_hash
+        }).queryKey,
+        "HTTP_LOG_FIELDS",
+        field,
+        value
+      ],
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
+          {
+            signal,
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash
+              },
+              query: {
+                field,
+                value
+              }
+            }
+          }
+        );
+        return data ?? [];
       }
     })
 };

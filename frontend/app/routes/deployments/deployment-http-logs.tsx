@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   ChevronsUpDownIcon,
   LoaderIcon,
@@ -8,7 +8,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import type { Writeable } from "zod";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { Button } from "~/components/ui/button";
@@ -58,9 +58,7 @@ export async function clientLoader({
   const filters = {
     time_after: search.time_after,
     time_before: search.time_before,
-    request_method:
-      search.request_method ??
-      (REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>),
+    request_method: search.request_method,
     request_host: search.request_host,
     request_ip: search.request_ip,
     request_path: search.request_path,
@@ -108,9 +106,7 @@ export default function DeploymentHttpLogsPage({
   const filters = {
     time_after: search.time_after,
     time_before: search.time_before,
-    request_method:
-      search.request_method ??
-      (REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>),
+    request_method: search.request_method,
     request_host: search.request_host,
     request_ip: search.request_ip,
     request_path: search.request_path,
@@ -424,6 +420,27 @@ function HeaderSection() {
             label="method"
           />
 
+          {selectedFields.includes("request_host") && (
+            <div className="inline-flex items-center gap-1">
+              <HostFilter hosts={search.request_host ?? []} />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "request_host")
+                  );
+                  searchParams.delete("request_host");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
+
           {selectedFields.includes("request_query") && (
             <div className="inline-flex items-center gap-1">
               <Input
@@ -462,7 +479,7 @@ function HeaderSection() {
 
           {selectedFields.includes("status") && (
             <div className="inline-flex items-center gap-1">
-              <StatusFilter status={search.status ?? []} />
+              <StatusFilter statuses={search.status ?? []} />
               <Button
                 onClick={() => {
                   setSelectedFields((fields) =>
@@ -547,16 +564,16 @@ function HeaderSection() {
 }
 
 type StatusFilterProps = {
-  status: string[];
+  statuses: string[];
 };
-function StatusFilter({ status }: StatusFilterProps) {
+function StatusFilter({ statuses }: StatusFilterProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   return (
     <MultiSelect
-      value={status}
+      value={statuses}
       className="w-auto"
       name="status"
-      options={[...new Set(["200", "300", "400", "500", ...status])]}
+      options={[...new Set(["200", "300", "400", "500", ...statuses])]}
       closeOnSelect
       onValueChange={(statuses) => {
         searchParams.delete("status");
@@ -569,6 +586,46 @@ function StatusFilter({ status }: StatusFilterProps) {
   );
 }
 
-function HostFilter() {
-  return;
+type HostFilterProps = {
+  hosts: string[];
+};
+
+function HostFilter({ hosts }: HostFilterProps) {
+  const {
+    deploymentHash: deployment_hash,
+    projectSlug: project_slug,
+    serviceSlug: service_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [inputValue, setInputValue] = React.useState("");
+
+  const { data: hostList = [] } = useQuery(
+    deploymentQueries.filterHttpLogFields({
+      deployment_hash,
+      project_slug,
+      service_slug,
+      field: "request_host",
+      value: inputValue
+    })
+  );
+  return (
+    <MultiSelect
+      value={hosts}
+      className="w-auto"
+      name="request_host"
+      options={[...new Set([...hostList, ...hosts])]}
+      closeOnSelect
+      inputValue={inputValue}
+      onInputValueChange={setInputValue}
+      onValueChange={(statuses) => {
+        searchParams.delete("request_host");
+        statuses.forEach((status) =>
+          searchParams.append("request_host", status)
+        );
+        setSearchParams(searchParams, { replace: true });
+      }}
+      label="host"
+      acceptArbitraryValues
+    />
+  );
 }

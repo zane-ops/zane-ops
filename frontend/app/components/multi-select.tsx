@@ -93,6 +93,8 @@ interface MultiSelectProps
   closeOnSelect?: boolean;
   acceptArbitraryValues?: boolean;
   ref?: React.RefObject<HTMLButtonElement>;
+  inputValue?: string;
+  onInputValueChange?: (inputValue: string) => void;
 }
 export const MultiSelect = ({
   ref,
@@ -110,6 +112,8 @@ export const MultiSelect = ({
   Icon = ChevronDownIcon,
   closeOnSelect,
   acceptArbitraryValues = false,
+  inputValue: customInputValue,
+  onInputValueChange,
   ...props
 }: MultiSelectProps) => {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
@@ -130,7 +134,9 @@ export const MultiSelect = ({
     setIsPopoverOpen((prev) => !prev);
   };
 
-  const [inputValue, setInputValue] = React.useState("");
+  const [value, setInputValue] = React.useState("");
+
+  const inputValue = customInputValue ?? value;
 
   let visibleOptions = new Set(options);
   if (inputValue.trim().length > 0 && acceptArbitraryValues) {
@@ -197,7 +203,10 @@ export const MultiSelect = ({
             placeholder="search"
             className="bg-inherit focus-visible:outline-hidden px-2 py-2"
             value={inputValue}
-            onValueChange={setInputValue}
+            onValueChange={(val) => {
+              setInputValue(val);
+              onInputValueChange?.(val);
+            }}
           />
           <hr className="-mx-2 border-border" />
           <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2">
