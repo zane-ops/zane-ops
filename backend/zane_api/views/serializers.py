@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from faker import Faker
 from rest_framework import pagination
+from rest_framework.request import Request
 
 from .helpers import (
     compute_docker_service_snapshot_with_changes,
@@ -1099,13 +1100,23 @@ class CursorSerializer(serializers.Serializer):
     order = serializers.ChoiceField(choices=["desc", "asc"], required=True)
 
 
-class DeploymentLogsPagination(pagination.CursorPagination):
+class DeploymentHttpLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
     ordering = (
         "-time",
         "-created_at",
     )
+
+    def get_ordering(self, request: Request, queryset, view):
+        filter = DeploymentHttpLogsFilterSet(
+            {"sort_by": ",".join(request.GET.getlist("sort_by"))}
+        )
+
+        if filter.is_valid():
+            return tuple(set(filter.form.cleaned_data.get("sort_by", self.ordering)))
+
+        return self.ordering
 
 
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
@@ -1117,9 +1128,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     request_method = django_filters.MultipleChoiceFilter(
         choices=HttpLog.RequestMethod.choices
     )
-    sort_by = OrderingFilter(
-        fields=["time", "request_duration_ns"],
-    )
+    sort_by = OrderingFilter(fields=["time", "request_duration_ns"])
     request_query = django_filters.CharFilter(
         field_name="request_query", method="filter_query"
     )

@@ -49,7 +49,7 @@ from .serializers import (
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
     DeploymentListPagination,
-    DeploymentLogsPagination,
+    DeploymentHttpLogsPagination,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
@@ -968,7 +968,7 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
     queryset = (
         HttpLog.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    pagination_class = DeploymentLogsPagination
+    pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
 
