@@ -348,13 +348,25 @@ export const deploymentHttpLogSearchSchema = zfd.formData({
       .optional()
       .catch(REQUEST_METHODS as Writeable<typeof REQUEST_METHODS>)
   ),
-  request_path: z.string().optional(),
   request_query: z.string().optional(),
-  request_host: z.string().optional(),
-  request_ip: z.string().ip().optional().catch(undefined),
-  request_user_agent: z.string().ip().optional().catch(undefined),
+  request_path: zfd.repeatable(z.array(z.string()).optional().catch(undefined)),
+  request_host: zfd.repeatable(z.array(z.string()).optional().catch(undefined)),
+  request_ip: zfd.repeatable(
+    z.array(z.string().ip()).optional().catch(undefined)
+  ),
+  request_user_agent: zfd.repeatable(
+    z.array(z.string()).optional().catch(undefined)
+  ),
   request_id: z.string().uuid().optional().catch(undefined),
-  status: zfd.numeric().optional().catch(undefined),
+  status: zfd.repeatable(
+    z
+      .array(z.string())
+      .transform((array) =>
+        array.filter((val) => !Number.isNaN(val) && Number(val) > 0)
+      )
+      .optional()
+      .catch(undefined)
+  ),
   isMaximized: preprocess(
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)

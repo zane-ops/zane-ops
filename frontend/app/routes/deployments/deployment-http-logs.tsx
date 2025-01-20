@@ -332,9 +332,15 @@ function HeaderSection() {
     "status"
   ] satisfies Array<keyof DeploymentHTTPLogFilters>;
 
-  const [selectedFields, setSelectedFields] = React.useState(
-    possible_fields.filter((field) => field in search)
-  );
+  const [selectedFields, setSelectedFields] = React.useState(() => {
+    return possible_fields.filter((field) => {
+      if (field === "request_query") {
+        return field in search;
+      } else {
+        return field in search && (search[field]?.length ?? 0) > 0;
+      }
+    });
+  });
 
   const available_fields = possible_fields.filter(
     (field) => !selectedFields.includes(field)
@@ -344,16 +350,23 @@ function HeaderSection() {
     !search.time_after &&
     !search.time_before &&
     (search.request_method ?? []).length === 0 &&
-    possible_fields.every((field) => !(field in search));
+    possible_fields.every((field) => {
+      if (field === "request_query") {
+        return !(field in search);
+      } else {
+        return !(field in search) || (search[field]?.length ?? 0) === 0;
+      }
+    });
 
   const clearFilters = () => {
     startTransition(() => {
-      setSearchParams(
-        new URLSearchParams([["isMaximized", `${search.isMaximized}`]]),
-        {
-          replace: true
-        }
-      );
+      const newSearchParams = new URLSearchParams();
+      if (searchParams.get("isMaximized")) {
+        newSearchParams.set("isMaximized", `${search.isMaximized}`);
+      }
+      setSearchParams(newSearchParams, {
+        replace: true
+      });
       setSelectedFields([]);
     });
 
@@ -449,35 +462,7 @@ function HeaderSection() {
 
           {selectedFields.includes("status") && (
             <div className="inline-flex items-center gap-1">
-              <MultiSelect
-                value={search.status ? [search.status.toString()] : []}
-                className="w-auto"
-                name="status"
-                options={
-                  search.status
-                    ? [
-                        ...new Set([
-                          "200",
-                          "300",
-                          "400",
-                          "500",
-                          search.status.toString()
-                        ])
-                      ]
-                    : ["200", "300", "400", "500"]
-                }
-                closeOnSelect
-                onValueChange={(statuses) => {
-                  const lastStatus = statuses.at(-1);
-                  searchParams.delete("status");
-                  if (lastStatus) {
-                    searchParams.set("status", lastStatus);
-                  }
-                  setSearchParams(searchParams, { replace: true });
-                }}
-                label="status"
-                acceptArbitraryValues
-              />
+              <StatusFilter status={search.status ?? []} />
               <Button
                 onClick={() => {
                   setSelectedFields((fields) =>
@@ -558,6 +543,29 @@ function HeaderSection() {
       </section>
       <hr className="border-border" />
     </>
+  );
+}
+
+type StatusFilterProps = {
+  status: string[];
+};
+function StatusFilter({ status }: StatusFilterProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  return (
+    <MultiSelect
+      value={status}
+      className="w-auto"
+      name="status"
+      options={[...new Set(["200", "300", "400", "500", ...status])]}
+      closeOnSelect
+      onValueChange={(statuses) => {
+        searchParams.delete("status");
+        statuses.forEach((status) => searchParams.append("status", status));
+        setSearchParams(searchParams, { replace: true });
+      }}
+      label="status"
+      acceptArbitraryValues
+    />
   );
 }
 
