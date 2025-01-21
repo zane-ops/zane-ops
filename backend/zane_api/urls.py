@@ -155,6 +155,18 @@ urlpatterns += [
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs/?$",
+        views.DockerServiceHttpLogsAPIView.as_view(),
+        name="services.docker.http_logs",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs/fields/?$",
+        views.DockerServiceHttpLogsFieldsAPIView.as_view(),
+        name="services.docker.http_logs.fields",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/logs/?$",
         views.DockerServiceDeploymentLogsAPIView.as_view(),
         name="services.docker.deployment_logs",

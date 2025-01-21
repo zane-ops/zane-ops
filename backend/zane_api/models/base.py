@@ -236,6 +236,10 @@ class DockerRegistryService(BaseService):
         return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
 
     @property
+    def http_logs(self):
+        return HttpLog.objects.filter(service_id=self.id)
+
+    @property
     def network_aliases(self):
         return (
             [
