@@ -752,7 +752,6 @@ export const deploymentQueries = {
         return data;
       }
     }),
-
   filterHttpLogFields: ({
     project_slug,
     service_slug,
