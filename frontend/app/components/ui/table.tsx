@@ -7,9 +7,9 @@ const Table = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLTableElement> & {
-  ref?: React.RefObject<HTMLTableElement>;
+  ref?: React.Ref<HTMLTableElement>;
 }) => (
-  <div className="relative w-full overflow-auto">
+  <div className="relative w-full overflow-y-auto h-full">
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
@@ -68,7 +68,7 @@ const TableRow = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLTableRowElement> & {
-  ref?: React.RefObject<HTMLTableRowElement>;
+  ref?: React.Ref<HTMLTableRowElement>;
 }) => (
   <tr
     ref={ref}

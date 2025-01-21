@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { notUndefined, useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown01Icon,
   ArrowUp10Icon,
@@ -10,17 +11,16 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { useParams, useSearchParams } from "react-router";
-import type { Writeable } from "zod";
-import { HttpLogRequestDetails } from "~/components/http-log-request-details";
-import { Button } from "~/components/ui/button";
-
 import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
+import { useParams, useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
+import type { Writeable } from "zod";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
+import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { MultiSelect } from "~/components/multi-select";
 import { Ping } from "~/components/ping";
+import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
   Table,
@@ -263,6 +263,23 @@ export default function DeploymentHttpLogsPage({
     };
   };
 
+  const containerRef = React.useRef<React.ComponentRef<"div">>(null);
+  const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
+    count: logs.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 53,
+    overscan: 10
+  });
+
+  const items = virtualizer.getVirtualItems();
+  const [before, after] =
+    items.length > 0
+      ? [
+          notUndefined(items[0]).start - virtualizer.options.scrollMargin,
+          virtualizer.getTotalSize() - notUndefined(items[items.length - 1]).end
+        ]
+      : [0, 0];
+
   return (
     <div
       className={cn(
@@ -278,7 +295,6 @@ export default function DeploymentHttpLogsPage({
           setSearchParams(searchParams, { replace: true });
         }}
       />
-
       <div
         className={cn(
           "flex flex-col gap-4",
@@ -287,102 +303,140 @@ export default function DeploymentHttpLogsPage({
         id="log-content"
       >
         <HeaderSection />
-        <Table className="relative h-full overflow-y-auto z-50">
-          <TableHeader className="bg-toggle sticky top-0 z-20">
-            <TableRow className="border-none">
-              <TableHead>
-                <button
-                  onClick={() => toggleSort("time")}
-                  className="flex cursor-pointer items-center gap-2"
-                >
-                  Date
-                  {timeSortDirection === "indeterminate" && (
-                    <ChevronsUpDownIcon size={15} className="flex-none" />
-                  )}
-                  {timeSortDirection === "ascending" && (
-                    <ArrowDown01Icon size={15} className="flex-none" />
-                  )}
-                  {timeSortDirection === "descending" && (
-                    <ArrowUp10Icon size={15} className="flex-none" />
-                  )}
-                </button>
-              </TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort("request_duration_ns")}
-                  className="flex cursor-pointer items-center gap-2"
-                >
-                  Duration
-                  {durationSortDirection === "indeterminate" && (
-                    <ChevronsUpDownIcon size={15} className="flex-none" />
-                  )}
-                  {durationSortDirection === "ascending" && (
-                    <ArrowDown01Icon size={15} className="flex-none" />
-                  )}
-                  {durationSortDirection === "descending" && (
-                    <ArrowUp10Icon size={15} className="flex-none" />
-                  )}
-                </button>
-              </TableHead>
-              <TableHead>Host</TableHead>
-              <TableHead>Path</TableHead>
-              <TableHead>IP</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <tr>
-              <td
-                colSpan={7}
-                className="px-4 text-sm text-grey h-6 border-b border-border py-2"
-              >
-                <div className="h-px" ref={fetchPreviousPageRef} />
-                <div
-                  className="inline-flex items-center gap-2"
-                  ref={autoRefetchRef}
-                >
-                  <Ping />
-                  <em className="text-green-500">LIVE</em> -- New requests will
-                  appear here
-                </div>
-              </td>
-            </tr>
-            {logs.map((log) => (
-              <LogTableRow
-                log={log}
-                key={log.id}
-                onClick={() => {
-                  if (log.request_id) {
-                    searchParams.set("request_id", log.request_id);
-                    setSearchParams(searchParams);
-                  }
-                }}
-              />
-            ))}
-
-            <TableRow className="hover:bg-transparent text-gray-500 px-2">
-              <TableCell colSpan={7} className="relative">
-                {logsQuery.hasNextPage || logsQuery.isFetchingNextPage ? (
-                  <div
-                    ref={fetchNextPageRef}
-                    className={cn(
-                      "items-center flex gap-2",
-                      "w-full sticky left-0"
-                    )}
+        <div
+          className={cn(
+            "overflow-auto",
+            search.isMaximized ? "h-[95%]" : "h-[85%]"
+          )}
+          style={{
+            overflowAnchor: "none"
+          }}
+          ref={containerRef}
+        >
+          <table className="w-full caption-bottom text-sm z-50">
+            <TableHeader>
+              <TableRow className="border-none">
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  <button
+                    onClick={() => toggleSort("time")}
+                    className="flex cursor-pointer items-center gap-2"
                   >
-                    <LoaderIcon size={15} className="animate-spin" />
-                    <p>Fetching previous logs...</p>
+                    Date
+                    {timeSortDirection === "indeterminate" && (
+                      <ChevronsUpDownIcon size={15} className="flex-none" />
+                    )}
+                    {timeSortDirection === "ascending" && (
+                      <ArrowDown01Icon size={15} className="flex-none" />
+                    )}
+                    {timeSortDirection === "descending" && (
+                      <ArrowUp10Icon size={15} className="flex-none" />
+                    )}
+                  </button>
+                </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  Method
+                </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  Status
+                </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  <button
+                    onClick={() => toggleSort("request_duration_ns")}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    Duration
+                    {durationSortDirection === "indeterminate" && (
+                      <ChevronsUpDownIcon size={15} className="flex-none" />
+                    )}
+                    {durationSortDirection === "ascending" && (
+                      <ArrowDown01Icon size={15} className="flex-none" />
+                    )}
+                    {durationSortDirection === "descending" && (
+                      <ArrowUp10Icon size={15} className="flex-none" />
+                    )}
+                  </button>
+                </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  Host
+                </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  Path
+                </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  IP
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-4 text-sm text-grey h-6 border-b border-border py-2"
+                >
+                  <div className="h-px" ref={fetchPreviousPageRef} />
+                  <div
+                    className="inline-flex items-center gap-2"
+                    ref={autoRefetchRef}
+                  >
+                    <Ping />
+                    <em className="text-green-500">LIVE</em> -- New requests
+                    will appear here
                   </div>
-                ) : (
-                  <div className="inline-flex items-center sticky">
-                    -- End of the list --
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+                </td>
+              </tr>
+              {before > 0 && (
+                <tr>
+                  <td colSpan={7} style={{ height: before }} />
+                </tr>
+              )}
+
+              {items.map((virtualRow) => {
+                const log = logs[virtualRow.index];
+                return (
+                  <TableRow
+                    className="border-border cursor-pointer"
+                    key={log.id}
+                    onClick={() => {
+                      if (log.request_id) {
+                        searchParams.set("request_id", log.request_id);
+                        setSearchParams(searchParams);
+                      }
+                    }}
+                    ref={virtualizer.measureElement}
+                  >
+                    <LogTableRowContent log={log} key={log.id} />
+                  </TableRow>
+                );
+              })}
+              {after > 0 && (
+                <tr>
+                  <td colSpan={7} style={{ height: after }} />
+                </tr>
+              )}
+
+              <TableRow className="hover:bg-transparent text-gray-500 px-2">
+                <TableCell colSpan={7} className="relative">
+                  {logsQuery.hasNextPage || logsQuery.isFetchingNextPage ? (
+                    <div
+                      ref={fetchNextPageRef}
+                      className={cn(
+                        "items-center flex gap-2",
+                        "w-full sticky left-0"
+                      )}
+                    >
+                      <LoaderIcon size={15} className="animate-spin" />
+                      <p>Fetching previous logs...</p>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center sticky">
+                      -- End of the list --
+                    </div>
+                  )}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -390,10 +444,9 @@ export default function DeploymentHttpLogsPage({
 
 type LogTableRowProps = {
   log: HttpLog;
-  onClick?: () => void;
 };
 
-function LogTableRow({ log, onClick }: LogTableRowProps) {
+function LogTableRowContent({ log }: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
   let duration = log.request_duration_ns / 1_000_000;
   let unit = "ms";
@@ -404,11 +457,7 @@ function LogTableRow({ log, onClick }: LogTableRowProps) {
   }
 
   return (
-    <TableRow
-      className="border-border cursor-pointer"
-      key={log.id}
-      onClick={onClick}
-    >
+    <>
       <TableCell>
         <time
           className="text-grey whitespace-nowrap"
@@ -457,7 +506,7 @@ function LogTableRow({ log, onClick }: LogTableRowProps) {
           {log.request_ip}
         </p>
       </TableCell>
-    </TableRow>
+    </>
   );
 }
 
