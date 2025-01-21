@@ -396,7 +396,9 @@ export default function DeploymentHttpLogsPage({
                   >
                     <Ping />
                     <em className="text-green-500">LIVE</em> --
-                    {logs.length === 0 && <span>No logs yet,</span>}
+                    {logs.length === 0 && !logsQuery.isFetching && (
+                      <span>No logs yet,</span>
+                    )}
                     <span>New logs will appear here</span>
                   </div>
                 </td>
