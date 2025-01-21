@@ -395,8 +395,9 @@ export default function DeploymentHttpLogsPage({
                     ref={autoRefetchRef}
                   >
                     <Ping />
-                    <em className="text-green-500">LIVE</em> -- New requests
-                    will appear here
+                    <em className="text-green-500">LIVE</em> --
+                    {logs.length === 0 && <span>No logs yet,</span>}
+                    <span>New logs will appear here</span>
                   </div>
                 </td>
               </tr>
@@ -430,26 +431,28 @@ export default function DeploymentHttpLogsPage({
                 </tr>
               )}
 
-              <TableRow className="hover:bg-transparent text-gray-500 px-2">
-                <TableCell colSpan={7} className="relative">
-                  {logsQuery.hasNextPage || logsQuery.isFetchingNextPage ? (
-                    <div
-                      ref={fetchNextPageRef}
-                      className={cn(
-                        "items-center flex gap-2",
-                        "w-full sticky left-0"
-                      )}
-                    >
-                      <LoaderIcon size={15} className="animate-spin" />
-                      <p>Fetching previous logs...</p>
-                    </div>
-                  ) : (
-                    <div className="inline-flex items-center sticky">
-                      -- End of the list --
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
+              {logs.length > 0 && (
+                <TableRow className="hover:bg-transparent text-gray-500 px-2">
+                  <TableCell colSpan={7} className="relative">
+                    {logsQuery.hasNextPage || logsQuery.isFetchingNextPage ? (
+                      <div
+                        ref={fetchNextPageRef}
+                        className={cn(
+                          "items-center flex gap-2",
+                          "w-full sticky left-0"
+                        )}
+                      >
+                        <LoaderIcon size={15} className="animate-spin" />
+                        <p>Fetching previous logs...</p>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center sticky">
+                        -- End of the list --
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </table>
         </div>
