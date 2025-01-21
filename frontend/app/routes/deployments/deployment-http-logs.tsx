@@ -379,7 +379,7 @@ export default function DeploymentHttpLogsPage({
                   Path
                 </TableHead>
                 <TableHead className="sticky top-0 z-20 bg-toggle">
-                  IP
+                  Client IP
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -526,6 +526,15 @@ function LogTableRowContent({ log }: LogTableRowProps) {
   );
 }
 
+const FIELD_LABEL_MAP: Record<string, string> = {
+  host: "request_host",
+  path: "request_path",
+  query: "request_query",
+  "user agent": "request_user_agent",
+  "client ip": "request_ip",
+  status: "status"
+};
+
 function HeaderSection() {
   const [, startTransition] = React.useTransition();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -660,7 +669,7 @@ function HeaderSection() {
               }
               setSearchParams(searchParams, { replace: true });
             }}
-            className="w-[250px] grow"
+            className="min-w-[250px]"
           />
 
           <MultiSelect
@@ -824,10 +833,12 @@ function HeaderSection() {
               align="start"
               className="w-auto"
               Icon={PlusIcon}
-              options={available_fields}
+              options={Object.keys(FIELD_LABEL_MAP)}
               closeOnSelect
               onValueChange={([newField]) => {
-                const field = newField as (typeof possible_fields)[number];
+                const field = FIELD_LABEL_MAP[
+                  newField
+                ] as (typeof possible_fields)[number];
                 if (!selectedFields.includes(field)) {
                   flushSync(() => {
                     setSelectedFields([...selectedFields, field]);

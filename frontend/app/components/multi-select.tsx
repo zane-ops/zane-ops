@@ -173,14 +173,19 @@ export const MultiSelect = ({
                       {values.length} selected
                     </span>
                   ) : (
-                    values.map((val) => (
-                      <span
-                        key={val}
-                        className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground"
-                      >
-                        {capitalizeText(val)}
-                      </span>
-                    ))
+                    <>
+                      {values.map((val) => (
+                        <p
+                          key={val}
+                          className={cn(
+                            "text-sm rounded-md bg-grey/20 px-1 text-card-foreground",
+                            "whitespace-nowrap text-ellipsis overflow-x-hidden md:max-w-[150px] max-w-[50px]"
+                          )}
+                        >
+                          {capitalizeText(val)}
+                        </p>
+                      ))}
+                    </>
                   )}
                 </>
               )}
@@ -220,7 +225,7 @@ export const MultiSelect = ({
                     <CommandItem
                       key={option}
                       onSelect={() => toggleOption(option)}
-                      className="cursor-pointer flex gap-1"
+                      className="cursor-pointer flex gap-1 "
                     >
                       <CheckIcon
                         size={15}
