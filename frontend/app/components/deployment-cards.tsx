@@ -3,6 +3,7 @@ import {
   Container,
   EllipsisVertical,
   Eye,
+  GlobeIcon,
   Hash,
   LoaderIcon,
   Redo2,
@@ -288,6 +289,11 @@ export function DockerDeploymentCard({
                 icon={ScrollText}
                 text="View logs"
                 onClick={() => navigate(`./deployments/${hash}`)}
+              />
+              <MenubarContentItem
+                icon={GlobeIcon}
+                text="View http logs"
+                onClick={() => navigate(`./deployments/${hash}/http-logs`)}
               />
               {isRedeployable && (
                 <button

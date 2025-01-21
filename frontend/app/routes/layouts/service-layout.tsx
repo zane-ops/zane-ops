@@ -3,10 +3,11 @@ import {
   ArrowUpIcon,
   ChevronRight,
   Container,
-  KeyRound,
+  GlobeIcon,
+  KeyRoundIcon,
   LoaderIcon,
-  Rocket,
-  Settings,
+  RocketIcon,
+  SettingsIcon,
   TriangleAlert
 } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
   useLocation,
   useNavigate
 } from "react-router";
+import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Breadcrumb,
@@ -67,7 +69,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 const TABS = {
   DEPLOYMENTS: "deployments",
   ENV_VARIABLES: "envVariables",
-  SETTINGS: "settings"
+  SETTINGS: "settings",
+  HTTP_LOGS: "http-logs"
 } as const;
 
 export default function ServiceDetailsLayout({
@@ -75,7 +78,6 @@ export default function ServiceDetailsLayout({
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ComponentProps) {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const { data: service } = useQuery({
     ...serviceQueries.single({
@@ -90,6 +92,8 @@ export default function ServiceDetailsLayout({
     currentSelectedTab = TABS.ENV_VARIABLES;
   } else if (location.pathname.match(/settings\/?$/)) {
     currentSelectedTab = TABS.SETTINGS;
+  } else if (location.pathname.match(/http\-logs\/?$/)) {
+    currentSelectedTab = TABS.HTTP_LOGS;
   }
 
   let serviceImage =
@@ -217,62 +221,45 @@ export default function ServiceDetailsLayout({
           </Button>
         )}
 
-        <Tabs
-          value={currentSelectedTab}
-          className="w-full mt-5"
-          onValueChange={(value) => {
-            switch (value) {
-              case TABS.DEPLOYMENTS:
-                navigate(".");
-                break;
-              case TABS.ENV_VARIABLES:
-                navigate(`./env-variables`);
-                break;
-              case TABS.SETTINGS:
-                navigate(`./settings`);
-                break;
-              default:
-                break;
-            }
-          }}
-        >
-          <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
-            <TabsTrigger
-              value={TABS.DEPLOYMENTS}
-              className="flex gap-2 items-center"
-            >
-              <span>Deployments</span>
-              <Rocket size={15} className="flex-none" />
-            </TabsTrigger>
+        <nav className="mt-5">
+          <ul
+            className={cn(
+              "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+              "inline-flex items-stretch p-0.5 text-muted-foreground"
+            )}
+          >
+            <li>
+              <NavLink to=".">
+                <span>Deployments</span>
+                <RocketIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
 
-            <TabsTrigger
-              value={TABS.ENV_VARIABLES}
-              className="flex gap-2 items-center"
-            >
-              <span>Env Variables</span>
-              <KeyRound size={15} className="flex-none" />
-            </TabsTrigger>
+            <li>
+              <NavLink to="./env-variables">
+                <span>Env Variables</span>
+                <KeyRoundIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
 
-            <TabsTrigger
-              value={TABS.SETTINGS}
-              className="flex gap-2 items-center"
-            >
-              <span>Settings</span>
-              <Settings size={15} className="flex-none" />
-            </TabsTrigger>
-          </TabsList>
+            <li>
+              <NavLink to="./settings">
+                <span>Settings</span>
+                <SettingsIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
 
-          <TabsContent value={TABS.DEPLOYMENTS}>
-            <Outlet />
-          </TabsContent>
-
-          <TabsContent value={TABS.ENV_VARIABLES}>
-            <Outlet />
-          </TabsContent>
-          <TabsContent value={TABS.SETTINGS}>
-            <Outlet />
-          </TabsContent>
-        </Tabs>
+            <li>
+              <NavLink to="./http-logs">
+                <span>Http logs</span>
+                <GlobeIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+        <section className="mt-2">
+          <Outlet />
+        </section>
       </>
     </>
   );

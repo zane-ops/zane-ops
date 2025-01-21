@@ -1,25 +1,17 @@
-import React from "react";
-import { Link, type LinkProps } from "react-router";
+import * as React from "react";
+import { type NavLinkProps, NavLink as ReactRouterNavLink } from "react-router";
+import { cn } from "~/lib/utils";
 
-export type NavLinkProps = Omit<LinkProps, "to" | "ref" | "activeProps"> & {
-  href: string;
-};
-
-export const NavLink = function NavLink({
-  ref,
-  href,
-  ...props
-}: NavLinkProps & {
-  ref?: React.RefObject<React.ComponentRef<typeof Link>>;
-}) {
+export function NavLink({ className, ...props }: NavLinkProps) {
   return (
-    <Link
-      ref={ref}
+    <ReactRouterNavLink
       {...props}
-      // activeProps={{
-      //   "aria-current": "page"
-      // }}
-      to={href}
+      end
+      className={cn(
+        "gap-2 inline-flex items-center justify-center whitespace-nowrap px-3 py-2 text-sm font-medium transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "aria-[current=page]:border-b-2 aria-[current=page]:border-card-foreground aria-[current=page]:text-card-foreground",
+        className
+      )}
     />
   );
-};
+}

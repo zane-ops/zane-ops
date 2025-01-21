@@ -18,6 +18,7 @@ import {
 } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
+import { NavLink } from "~/components/nav-link";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -108,7 +109,6 @@ export default function ProjectDetail({
   );
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
-  const navigate = useNavigate();
 
   const location = useLocation();
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.SERVICES;
@@ -184,42 +184,31 @@ export default function ProjectDetail({
           </div>
         </section>
 
-        <Tabs
-          value={currentSelectedTab}
-          className="w-full"
-          onValueChange={(value) => {
-            if (value === TABS.SERVICES) {
-              navigate("./");
-            } else {
-              navigate(`./settings`);
-            }
-          }}
-        >
-          <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
-            <TabsTrigger
-              value={TABS.SERVICES}
-              className="flex gap-2 items-center"
-            >
-              <span>Services</span>
-              <ContainerIcon size={15} className="flex-none" />
-            </TabsTrigger>
+        <nav>
+          <ul
+            className={cn(
+              "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+              "inline-flex items-stretch p-0.5 text-muted-foreground"
+            )}
+          >
+            <li>
+              <NavLink to=".">
+                <span>Services</span>
+                <ContainerIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
 
-            <TabsTrigger
-              value={TABS.SETTINGS}
-              className="flex gap-2 items-center"
-            >
-              <span>Settings</span>
-              <SettingsIcon size={15} className="flex-none" />
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value={TABS.SERVICES}>
-            <Outlet />
-          </TabsContent>
-
-          <TabsContent value={TABS.SETTINGS}>
-            <Outlet />
-          </TabsContent>
-        </Tabs>
+            <li>
+              <NavLink to="./settings">
+                <span>Settings</span>
+                <SettingsIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+        <section className="mt-2">
+          <Outlet />
+        </section>
       </>
     </main>
   );
