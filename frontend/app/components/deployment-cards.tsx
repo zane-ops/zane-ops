@@ -9,6 +9,8 @@ import {
   Redo2,
   RotateCw,
   ScrollText,
+  SquareArrowOutUpRight,
+  SquareArrowOutUpRightIcon,
   Timer
 } from "lucide-react";
 import * as React from "react";
@@ -50,6 +52,7 @@ export type DockerDeploymentCardProps = {
   hash: string;
   is_current_production?: boolean;
   redeploy_hash: string | null;
+  url?: string | null;
 };
 
 export function DockerDeploymentCard({
@@ -61,6 +64,7 @@ export function DockerDeploymentCard({
   image,
   hash,
   redeploy_hash,
+  url,
   is_current_production = false
 }: DockerDeploymentCardProps) {
   const now = new Date();
@@ -280,24 +284,10 @@ export function DockerDeploymentCard({
               align="start"
               className="border min-w-0 mx-9 border-border"
             >
-              <MenubarContentItem
-                icon={Eye}
-                text="Details"
-                onClick={() => navigate(`./deployments/${hash}/details`)}
-              />
-              <MenubarContentItem
-                icon={ScrollText}
-                text="View logs"
-                onClick={() => navigate(`./deployments/${hash}`)}
-              />
-              <MenubarContentItem
-                icon={GlobeIcon}
-                text="View http logs"
-                onClick={() => navigate(`./deployments/${hash}/http-logs`)}
-              />
               {isRedeployable && (
                 <button
                   form={`redeploy-${hash}-form`}
+                  className="w-full"
                   disabled={redeployFetcher.state !== "idle"}
                   onClick={(e) => {
                     e.currentTarget.form?.requestSubmit();
@@ -309,6 +299,7 @@ export function DockerDeploymentCard({
               {isCancellable && (
                 <button
                   form={`cancel-${hash}-form`}
+                  className="w-full"
                   onClick={(e) => {
                     e.currentTarget.form?.requestSubmit();
                   }}
@@ -320,6 +311,31 @@ export function DockerDeploymentCard({
                     text="Cancel"
                   />
                 </button>
+              )}
+              <MenubarContentItem
+                icon={Eye}
+                text="Details"
+                onClick={() => navigate(`./deployments/${hash}/details`)}
+              />
+              <MenubarContentItem
+                icon={ScrollText}
+                text="View logs"
+                onClick={() => navigate(`./deployments/${hash}`)}
+              />
+
+              {url && (
+                <>
+                  <MenubarContentItem
+                    icon={GlobeIcon}
+                    text="View http logs"
+                    onClick={() => navigate(`./deployments/${hash}/http-logs`)}
+                  />
+                  <MenubarContentItem
+                    icon={SquareArrowOutUpRightIcon}
+                    text="Go to deployment"
+                    onClick={() => window.open(`//${url}`, "_blank")?.focus()}
+                  />
+                </>
               )}
             </MenubarContent>
           </MenubarMenu>
