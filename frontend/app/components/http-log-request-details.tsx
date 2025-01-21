@@ -1,4 +1,5 @@
 import { ChevronRightIcon, FilterIcon } from "lucide-react";
+import { useSearchParams } from "react-router";
 import { CopyButton } from "~/components/copy-button";
 import {
   Accordion,
@@ -55,7 +56,8 @@ export function HttpLogRequestDetails({
 }
 
 function LogRequestDetailsContent({ log }: { log: HttpLog }) {
-  const searchParams = new URLSearchParams(log.request_query ?? "");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryParams = new URLSearchParams(log.request_query ?? "");
   const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
   let duration = log.request_duration_ns / 1_000_000;
   let unit = "ms";
@@ -136,6 +138,11 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                   <Button
                     variant="ghost"
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() => {
+                      searchParams.set("request_ip", log.request_ip);
+                      searchParams.delete("request_id");
+                      setSearchParams(searchParams, { replace: true });
+                    }}
                   >
                     <FilterIcon size={15} />
                     <span className="sr-only">Add Filter</span>
@@ -159,18 +166,28 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <dt className="text-grey inline-flex items-center gap-1">
             <span>User Agent</span>
             <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                  >
-                    <FilterIcon size={15} />
-                    <span className="sr-only">Add Filter</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Add Filter</TooltipContent>
-              </Tooltip>
+              {log.request_user_agent && (
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                      onClick={() => {
+                        searchParams.set(
+                          "request_user_agent",
+                          log.request_user_agent!
+                        );
+                        searchParams.delete("request_id");
+                        setSearchParams(searchParams, { replace: true });
+                      }}
+                    >
+                      <FilterIcon size={15} />
+                      <span className="sr-only">Add Filter</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Filter</TooltipContent>
+                </Tooltip>
+              )}
 
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -202,6 +219,11 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                   <Button
                     variant="ghost"
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() => {
+                      searchParams.set("request_host", log.request_host);
+                      searchParams.delete("request_id");
+                      setSearchParams(searchParams, { replace: true });
+                    }}
                   >
                     <FilterIcon size={15} />
                     <span className="sr-only">Add Filter</span>
@@ -230,6 +252,11 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                   <Button
                     variant="ghost"
                     className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() => {
+                      searchParams.set("request_path", log.request_path);
+                      searchParams.delete("request_id");
+                      setSearchParams(searchParams, { replace: true });
+                    }}
                   >
                     <FilterIcon size={15} />
                     <span className="sr-only">Add Filter</span>
@@ -262,18 +289,25 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             <dt className="text-grey inline-flex items-center gap-1 group">
               <span>Query</span>
               <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                    >
-                      <FilterIcon size={15} />
-                      <span className="sr-only">Add Filter</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Add Filter</TooltipContent>
-                </Tooltip>
+                {log.request_query && (
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                        onClick={() => {
+                          searchParams.set("request_query", log.request_query!);
+                          searchParams.delete("request_id");
+                          setSearchParams(searchParams, { replace: true });
+                        }}
+                      >
+                        <FilterIcon size={15} />
+                        <span className="sr-only">Add Filter</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Add Filter</TooltipContent>
+                  </Tooltip>
+                )}
 
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
@@ -288,7 +322,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             </dt>
             <dd className="text-sm">
               <span className="text-grey">{"?"}</span>
-              {searchParams.entries().map(([key, value], index) => (
+              {queryParams.entries().map(([key, value], index) => (
                 <span key={`${key}-${index}`}>
                   <span className="text-link">{key}</span>
                   {value && (
@@ -299,7 +333,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                       </span>
                     </>
                   )}
-                  {index < searchParams.size - 1 && (
+                  {index < queryParams.size - 1 && (
                     <span className="text-grey">{"&"}</span>
                   )}
                 </span>

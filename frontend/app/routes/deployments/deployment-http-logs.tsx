@@ -355,7 +355,7 @@ export default function DeploymentHttpLogsPage({
                 onClick={() => {
                   if (log.request_id) {
                     searchParams.set("request_id", log.request_id);
-                    setSearchParams(searchParams, { replace: true });
+                    setSearchParams(searchParams);
                   }
                 }}
               />
@@ -534,6 +534,18 @@ function HeaderSection() {
   }, 300);
 
   const parentRef = React.useRef<React.ComponentRef<"section">>(null);
+
+  React.useEffect(() => {
+    setSelectedFields(
+      possible_fields.filter((field) => {
+        if (field === "request_query") {
+          return field in search;
+        } else {
+          return field in search && (search[field]?.length ?? 0) > 0;
+        }
+      })
+    );
+  }, [searchParams]);
 
   return (
     <>
