@@ -3,6 +3,7 @@ import { notUndefined, useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown01Icon,
   ArrowUp10Icon,
+  ArrowUpIcon,
   ChevronsUpDownIcon,
   LoaderIcon,
   Maximize2Icon,
@@ -297,12 +298,27 @@ export default function DeploymentHttpLogsPage({
       />
       <div
         className={cn(
-          "flex flex-col gap-4",
+          "flex flex-col gap-4 relative",
           search.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh] mt-8"
         )}
         id="log-content"
       >
         <HeaderSection />
+
+        {!isAutoRefetchEnabled && (
+          <Button
+            variant="secondary"
+            className="absolute top-32 right-4  z-30"
+            size="sm"
+            onClick={() => {
+              virtualizer.scrollToIndex(0, {
+                behavior: "smooth"
+              });
+            }}
+          >
+            <span>Top</span> <ArrowUpIcon size={15} />
+          </Button>
+        )}
         <div
           className={cn(
             "overflow-auto",
