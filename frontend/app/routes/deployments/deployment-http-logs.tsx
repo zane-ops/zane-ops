@@ -172,6 +172,9 @@ export default function DeploymentHttpLogsPage({
     setSearchParams(searchParams, {
       replace: true
     });
+    virtualizer.scrollToIndex(0, {
+      behavior: "smooth"
+    });
   };
 
   const getSortDirection = (field: "time" | "request_duration_ns") => {
