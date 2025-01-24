@@ -1,9 +1,3 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@radix-ui/react-tooltip";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnsiHtml } from "fancy-ansi/react";
@@ -18,7 +12,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { flushSync } from "react-dom";
 import { useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
 import { useDebouncedCallback } from "use-debounce";
@@ -29,9 +22,12 @@ import { Ping } from "~/components/ping";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
-  MAX_VISIBLE_LOG_CHARS_LIMIT,
-  REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER
-} from "~/lib/constants";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { MAX_VISIBLE_LOG_CHARS_LIMIT } from "~/lib/constants";
 import {
   type DeploymentLog,
   type DeploymentLogFitlers,
@@ -119,16 +115,14 @@ export default function DeploymentLogsPage({
     .reverse();
   const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
   const [, startTransition] = React.useTransition();
-  const [isAtBottom, setIsAtBottom] = React.useState(true);
-  const virtuoso = React.useRef<React.ComponentRef<typeof Virtuoso>>(null);
 
   const virtualizer = useVirtualizer({
     count: logs.length,
     getScrollElement: () => logContentRef.current,
-    estimateSize: () => 16 * 2,
+    estimateSize: () => 200,
     scrollPaddingEnd: 100,
-    paddingStart: 16,
-    paddingEnd: 8,
+    paddingStart: 4,
+    paddingEnd: 5,
     overscan: 1
   });
   const virtualItems = virtualizer.getVirtualItems();
@@ -160,39 +154,65 @@ export default function DeploymentLogsPage({
     };
   };
 
-  const fetchPreviousPageRef = (node: HTMLDivElement | null) => {
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (
-          entry.isIntersecting &&
-          !logsQuery.isFetching &&
-          logsQuery.hasPreviousPage
-        ) {
-          // logsQuery.fetchPreviousPage().then((query) => {
-          //   // const pages = query.data?.pages;
-          //   // if (pages) {
-          //   //   const lastPageCount = pages[pages.length - 1];
-          //   //   setFirstItemIndex(
-          //   //     (index) => index - lastPageCount.results.length
-          //   //   );
-          //   // }
-          // });
-        }
-      },
-      {
-        root: logContentRef.current,
-        rootMargin: "120%",
-        threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
-      }
-    );
+  const isAtTopRef = React.useRef(false);
+  const canFetchPreviousRef = React.useRef(true);
 
-    observer.observe(node);
-    return () => {
-      observer.unobserve(node);
-    };
-  };
+  const fetchPreviousPageRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+
+          isAtTopRef.current = entry.isIntersecting;
+
+          if (
+            entry.isIntersecting &&
+            !logsQuery.isFetching &&
+            !logsQuery.isFetchingPreviousPage &&
+            !isAutoRefetchEnabledRef.current &&
+            canFetchPreviousRef.current &&
+            logsQuery.hasPreviousPage
+          ) {
+            console.log("fetch previous page");
+            canFetchPreviousRef.current = false;
+            console.log("canFetchPrevious = false");
+            setTimeout(() => {
+              canFetchPreviousRef.current = true;
+              console.log("canFetchPrevious = true");
+            }, 1_000);
+            logsQuery.fetchPreviousPage().then((query) => {
+              const pages = query.data?.pages;
+              if (pages) {
+                const lastPageCount = pages[0].results.length;
+                if (isAtTopRef.current) {
+                  console.log({
+                    SCROLL_TO: lastPageCount
+                  });
+                  virtualizer.scrollToIndex(lastPageCount, {
+                    align: "end",
+                    behavior: "auto"
+                  });
+                }
+              }
+            });
+          }
+        },
+        {
+          root: logContentRef.current,
+          rootMargin: "20%",
+          threshold: 0.1 // how much of the item should be in view before firing this observer in percentage
+        }
+      );
+
+      observer.observe(node);
+      return () => {
+        console.log("fetch-previous element is removed");
+        observer.unobserve(node);
+      };
+    },
+    [virtualizer]
+  );
 
   const isAutoRefetchEnabledRef = React.useRef(isAutoRefetchEnabled);
 
@@ -278,7 +298,6 @@ export default function DeploymentLogsPage({
               });
             }}
           >
-            {/* <span>End</span>  */}
             <ArrowDownIcon size={15} />
           </Button>
         )}
@@ -323,13 +342,15 @@ export default function DeploymentLogsPage({
             ))} */}
 
           {/* {logs.length > 0 && ( */}
-          <div
-            ref={fetchPreviousPageRef}
-            className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2"
-          >
-            <LoaderIcon size={15} className="animate-spin" />
-            <p>Fetching previous logs...</p>
-          </div>
+          {(logsQuery.hasPreviousPage || logsQuery.isFetchingPreviousPage) && (
+            <div
+              ref={fetchPreviousPageRef}
+              className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mt-2"
+            >
+              <LoaderIcon size={15} className="animate-spin" />
+              <p>Fetching previous logs...</p>
+            </div>
+          )}
           <div
             style={{
               height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
@@ -667,14 +688,30 @@ function Log({ content, level, time, id, content_text }: LogProps) {
         level === "ERROR" && "bg-red-400/20"
       )}
     >
-      <span className="inline-flex items-start select-none min-w-fit flex-none">
-        <time className="text-grey" dateTime={date.toISOString()}>
-          <span className="sr-only sm:not-sr-only">
-            {logTime.dateFormat},&nbsp;
-          </span>
-          <span>{logTime.hourFormat}</span>
-        </time>
-      </span>
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-start select-none min-w-fit flex-none">
+              <time className="text-grey" dateTime={date.toISOString()}>
+                <span className="sr-only sm:not-sr-only">
+                  {logTime.dateFormat},&nbsp;
+                </span>
+                <span>{logTime.hourFormat}</span>
+              </time>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent
+            side="top"
+            align="start"
+            alignOffset={0}
+            className="flex flex-col"
+          >
+            <span>Europe</span>
+            <span>UTC</span>
+            <span>Timestamp</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <div className="grid relative z-10 w-full">
         {content_text.length <= MAX_VISIBLE_LOG_CHARS_LIMIT ? (
