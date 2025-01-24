@@ -304,6 +304,220 @@ export const serviceQueries = {
         }
         return false;
       }
+    }),
+  httpLogs: ({
+    project_slug,
+    service_slug,
+    autoRefetchEnabled = true,
+    filters = {},
+    queryClient
+  }: {
+    project_slug: string;
+    service_slug: string;
+    filters?: Omit<HTTPLogFilters, "isMaximized">;
+    queryClient: QueryClient;
+    autoRefetchEnabled?: boolean;
+  }) =>
+    infiniteQueryOptions({
+      queryKey: [
+        ...serviceQueries.single({
+          project_slug,
+          service_slug
+        }).queryKey,
+        "HTTP_LOGS",
+        filters
+      ] as const,
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        const allData = queryClient.getQueryData(queryKey) as InfiniteData<
+          DeploymentHttpLogQueryData,
+          string | null
+        >;
+        const existingData = allData?.pages.find(
+          (_, index) => allData?.pageParams[index] === pageParam
+        );
+
+        /**
+         * We reuse the data in the query as we are sure this page is immutable,
+         * And we don't want to refetch the same logs that we have already fetched.
+         *
+         * However if we have the data in the cache and previous is `null`,
+         * it means that that page is the last and the next time we fetch it,
+         * it might have more data.
+         * Inspired by: https://github.com/TanStack/query/discussions/5921
+         */
+        if (existingData?.previous) {
+          return existingData;
+        }
+
+        let cursor = pageParam ?? undefined;
+        if (existingData?.cursor) {
+          cursor = existingData.cursor;
+        }
+
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug
+              },
+              query: {
+                ...filters,
+                cursor,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          }
+        );
+
+        let apiData: DeploymentHttpLogQueryData = {
+          next: null,
+          previous: null,
+          results: [],
+          cursor: null
+        };
+
+        if (data) {
+          const next = data.next
+            ? new URL(data.next).searchParams.get("cursor")
+            : null;
+          const previous = data.previous
+            ? new URL(data.previous).searchParams.get("cursor")
+            : null;
+          apiData = {
+            results: data.results,
+            next,
+            previous,
+            cursor: existingData?.cursor
+          };
+        }
+
+        // get cursor for initial page as its pageParam is `null`
+        // we want to do so that we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the data it starts
+        if (pageParam === null && apiData.next !== null && !apiData.cursor) {
+          const { data: nextPage } = await apiClient.GET(
+            "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/",
+            {
+              params: {
+                path: {
+                  project_slug,
+                  service_slug
+                },
+                query: {
+                  ...filters,
+                  per_page: DEFAULT_LOGS_PER_PAGE,
+                  cursor: apiData.next,
+                  time_before: filters.time_before?.toISOString(),
+                  time_after: filters.time_after?.toISOString()
+                }
+              },
+              signal
+            }
+          );
+          if (nextPage?.previous) {
+            apiData.cursor = new URL(nextPage.previous).searchParams.get(
+              "cursor"
+            );
+          }
+        }
+
+        return apiData;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data || !autoRefetchEnabled) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
+      initialPageParam: null as string | null,
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY
+    }),
+  singleHttpLog: ({
+    project_slug,
+    service_slug,
+    request_uuid
+  }: {
+    project_slug: string;
+    service_slug: string;
+    request_uuid: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...serviceQueries.single({
+          project_slug,
+          service_slug
+        }).queryKey,
+        "HTTP_LOGS",
+        request_uuid
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                request_uuid
+              }
+            },
+            signal
+          }
+        );
+        return data;
+      }
+    }),
+  filterHttpLogFields: ({
+    project_slug,
+    service_slug,
+    field,
+    value
+  }: {
+    project_slug: string;
+    service_slug: string;
+    field: RequestParams<
+      "get",
+      "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/"
+    >["field"];
+    value: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...serviceQueries.single({
+          project_slug,
+          service_slug
+        }).queryKey,
+        "HTTP_LOG_FIELDS",
+        field,
+        value
+      ],
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/",
+          {
+            signal,
+            params: {
+              path: {
+                project_slug,
+                service_slug
+              },
+              query: {
+                field,
+                value
+              }
+            }
+          }
+        );
+        return data ?? [];
+      }
     })
 };
 
@@ -344,7 +558,7 @@ export const deploymentLogSearchSchema = zfd.formData({
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
 
-export const deploymentHttpLogSearchSchema = zfd.formData({
+export const httpLogSearchSchema = zfd.formData({
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
   request_method: zfd
@@ -389,9 +603,7 @@ export const deploymentHttpLogSearchSchema = zfd.formData({
     .catch(undefined)
 });
 
-export type DeploymentHTTPLogFilters = z.infer<
-  typeof deploymentHttpLogSearchSchema
->;
+export type HTTPLogFilters = z.infer<typeof httpLogSearchSchema>;
 
 export const deploymentQueries = {
   single: ({
@@ -584,7 +796,7 @@ export const deploymentQueries = {
     project_slug: string;
     service_slug: string;
     deployment_hash: string;
-    filters?: Omit<DeploymentHTTPLogFilters, "isMaximized">;
+    filters?: Omit<HTTPLogFilters, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
   }) =>

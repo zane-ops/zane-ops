@@ -37,11 +37,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
-  type DeploymentHTTPLogFilters,
+  type HTTPLogFilters,
   type HttpLog,
   REQUEST_METHODS,
-  deploymentHttpLogSearchSchema,
-  deploymentQueries
+  deploymentQueries,
+  httpLogSearchSchema
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -56,7 +56,7 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
-  const search = deploymentHttpLogSearchSchema.parse(searchParams);
+  const search = httpLogSearchSchema.parse(searchParams);
   const filters = {
     time_after: search.time_after,
     time_before: search.time_before,
@@ -68,7 +68,7 @@ export async function clientLoader({
     request_user_agent: search.request_user_agent,
     status: search.status,
     sort_by: search.sort_by
-  } satisfies DeploymentHTTPLogFilters;
+  } satisfies HTTPLogFilters;
 
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
@@ -105,7 +105,7 @@ export default function DeploymentHttpLogsPage({
   }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const search = deploymentHttpLogSearchSchema.parse(searchParams);
+  const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
   const { sort_by } = search;
@@ -120,7 +120,7 @@ export default function DeploymentHttpLogsPage({
     request_user_agent: search.request_user_agent,
     status: search.status,
     sort_by
-  } satisfies DeploymentHTTPLogFilters;
+  } satisfies HTTPLogFilters;
 
   const logsQuery = useInfiniteQuery({
     ...deploymentQueries.httpLogs({
@@ -545,7 +545,7 @@ const FIELD_LABEL_MAP: Record<string, string> = {
 function HeaderSection() {
   const [, startTransition] = React.useTransition();
   const [searchParams, setSearchParams] = useSearchParams();
-  const search = deploymentHttpLogSearchSchema.parse(searchParams);
+  const search = httpLogSearchSchema.parse(searchParams);
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
@@ -561,7 +561,7 @@ function HeaderSection() {
     "request_user_agent",
     "request_ip",
     "status"
-  ] satisfies Array<keyof DeploymentHTTPLogFilters>;
+  ] satisfies Array<keyof HTTPLogFilters>;
 
   const [selectedFields, setSelectedFields] = React.useState(() => {
     return possible_fields.filter((field) => {
