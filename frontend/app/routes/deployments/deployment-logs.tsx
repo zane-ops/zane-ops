@@ -244,7 +244,7 @@ export default function DeploymentLogsPage({
         {!isAtBottom && (
           <Button
             variant="secondary"
-            className="absolute top-28 right-4  z-30"
+            className="absolute bottom-5 left-1/2 z-30 rounded-full"
             size="sm"
             onClick={() => {
               virtuoso.current?.scrollToIndex({
@@ -254,7 +254,7 @@ export default function DeploymentLogsPage({
               });
             }}
           >
-            <span>End</span> <ArrowDownIcon size={15} />
+            <ArrowDownIcon size={15} />
           </Button>
         )}
 
