@@ -157,6 +157,10 @@ export interface paths {
     /** Get service HTTP logs */
     get: operations["projects_service_details_docker_http_logs_list"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/": {
+    /** Get single service http log */
+    get: operations["projects_service_details_docker_http_logs_retrieve"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/": {
     /** Get service http logs fields values */
     get: operations["projects_service_details_docker_http_logs_fields_list"];
@@ -1360,6 +1364,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListError"][];
     };
+    ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenCommandErrorComponent: {
@@ -3747,6 +3752,43 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get single service http log */
+  projects_service_details_docker_http_logs_retrieve: {
+    parameters: {
+      path: {
+        project_slug: string;
+        request_uuid: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["HttpLog"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400"];
         };
       };
       401: {

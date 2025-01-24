@@ -161,6 +161,13 @@ urlpatterns += [
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs"
+        rf"/(?P<request_uuid>{UUID_REGEX})/?$",
+        views.DockerServiceSingleHttpLogAPIView.as_view(),
+        name="services.docker.http_logs.single",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs/fields/?$",
         views.DockerServiceHttpLogsFieldsAPIView.as_view(),
         name="services.docker.http_logs.fields",

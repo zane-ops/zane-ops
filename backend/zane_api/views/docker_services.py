@@ -1150,6 +1150,46 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
             )
 
 
+class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = (
+        HttpLog.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
+
+    @extend_schema(summary="Get single service http log")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        request_uuid = self.kwargs["request_uuid"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            http_log: HttpLog = service.http_logs.filter(
+                service_id=service.id, request_id=request_uuid
+            ).first()
+
+            if http_log is None:
+                raise exceptions.NotFound(
+                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
+                )
+            return http_log
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+
+
 class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
         responses={
