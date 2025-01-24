@@ -310,7 +310,7 @@ export default function DeploymentHttpLogsPage({
         {!isAutoRefetchEnabled && (
           <Button
             variant="secondary"
-            className="absolute top-32 right-4  z-30"
+            className="absolute bottom-5 left-1/2 z-30 rounded-md"
             size="sm"
             onClick={() => {
               virtualizer.scrollToIndex(0, {
