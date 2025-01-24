@@ -5,7 +5,6 @@ import {
   TooltipTrigger
 } from "@radix-ui/react-tooltip";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnsiHtml } from "fancy-ansi/react";
 import {
   ArrowDownIcon,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { flushSync } from "react-dom";
 import { useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
 import { useDebouncedCallback } from "use-debounce";
@@ -122,17 +120,6 @@ export default function DeploymentLogsPage({
   const [isAtBottom, setIsAtBottom] = React.useState(true);
   const virtuoso = React.useRef<React.ComponentRef<typeof Virtuoso>>(null);
 
-  const virtualizer = useVirtualizer({
-    count: logs.length,
-    getScrollElement: () => logContentRef.current,
-    estimateSize: () => 16 * 2,
-    scrollPaddingEnd: 100,
-    paddingStart: 16,
-    paddingEnd: 8,
-    overscan: 1
-  });
-  const virtualItems = virtualizer.getVirtualItems();
-
   const fetchNextPageRef = (node: HTMLDivElement | null) => {
     if (!node) return;
     const observer = new IntersectionObserver(
@@ -150,7 +137,7 @@ export default function DeploymentLogsPage({
       {
         root: node.closest("#log-content"),
         rootMargin: "20%",
-        threshold: 1
+        threshold: 0.1
       }
     );
 
@@ -170,15 +157,15 @@ export default function DeploymentLogsPage({
           !logsQuery.isFetching &&
           logsQuery.hasPreviousPage
         ) {
-          // logsQuery.fetchPreviousPage().then((query) => {
-          //   // const pages = query.data?.pages;
-          //   // if (pages) {
-          //   //   const lastPageCount = pages[pages.length - 1];
-          //   //   setFirstItemIndex(
-          //   //     (index) => index - lastPageCount.results.length
-          //   //   );
-          //   // }
-          // });
+          logsQuery.fetchPreviousPage().then((query) => {
+            const pages = query.data?.pages;
+            if (pages) {
+              const lastPageCount = pages[pages.length - 1];
+              setFirstItemIndex(
+                (index) => index - lastPageCount.results.length
+              );
+            }
+          });
         }
       },
       {
@@ -194,47 +181,34 @@ export default function DeploymentLogsPage({
     };
   };
 
-  const isAutoRefetchEnabledRef = React.useRef(isAutoRefetchEnabled);
-
-  const autoRefetchRef = React.useCallback((node: HTMLDivElement | null) => {
+  const autoRefetchRef = (node: HTMLDivElement | null) => {
     if (!node) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (entry.isIntersecting) {
-          console.log("enabling auto-refetch");
           setIsAutoRefetchEnabled(true);
-          isAutoRefetchEnabledRef.current = true;
         } else {
-          console.log("disabling auto-refetch");
           setIsAutoRefetchEnabled(false);
-          isAutoRefetchEnabledRef.current = false;
         }
       },
       {
         root: node.closest("#log-content"),
         rootMargin: "0px",
-        threshold: 0.3
+        threshold: 0.1
       }
     );
 
     observer.observe(node);
     return () => {
-      console.log("auto-refetch element is removed");
       observer.unobserve(node);
     };
-  }, []);
+  };
 
-  React.useLayoutEffect(() => {
-    if (isAutoRefetchEnabledRef.current) {
-      virtualizer.scrollToIndex(logs.length, {
-        behavior: "smooth",
-        align: "end"
-      });
-    }
-  }, [logs]);
-
+  const [firstItemIndex, setFirstItemIndex] = React.useState(
+    REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER
+  );
   const inputRef = React.useRef<{ reset: () => void }>(null);
 
   const clearFilters = () => {
@@ -266,116 +240,25 @@ export default function DeploymentLogsPage({
         )}
       >
         <HeaderSection startTransition={startTransition} inputRef={inputRef} />
-        {!isAutoRefetchEnabled && (
+
+        {!isAtBottom && (
           <Button
             variant="secondary"
-            className="rounded-full absolute bottom-5 left-1/2 -translate-x-1/2 z-30"
+            className="absolute top-28 right-4  z-30"
             size="sm"
             onClick={() => {
-              virtualizer.scrollToIndex(logs.length, {
+              virtuoso.current?.scrollToIndex({
+                index: "LAST",
                 behavior: "smooth",
                 align: "end"
               });
             }}
           >
-            {/* <span>End</span>  */}
-            <ArrowDownIcon size={15} />
+            <span>End</span> <ArrowDownIcon size={15} />
           </Button>
         )}
 
-        <section
-          id="log-content"
-          ref={logContentRef}
-          className={cn(
-            "justify-start min-h-0 relative",
-            "text-xs font-mono h-full rounded-md w-full",
-            "bg-muted/25 dark:bg-neutral-950",
-            "overflow-y-auto overflow-x-clip contain-strict",
-            "whitespace-no-wrap [overflow-anchor:none]"
-          )}
-        >
-          {/* {logs.length === 0 &&
-            (logsQuery.isFetching ? (
-              <div className="text-sm text-center items-center flex gap-2 text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                <LoaderIcon size={15} className="animate-spin" />
-                <p>Fetching logs...</p>
-              </div>
-            ) : isEmptySearchParams ? (
-              <div className="text-sm text-center items-center flex flex-col text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                <h3 className="text-base font-semibold">No logs yet</h3>
-                <p className="inline-block max-w-lg text-balance ">
-                  New log entries will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="text-sm px-2 gap-1.5 text-center items-center flex flex-col text-gray-500 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                <h3 className="text-base font-semibold text-balance w-full">
-                  No logs maching the selected filters
-                </h3>
-                <p className="inline-block max-w-lg text-balance">
-                  New log entries that match your search parameters will appear
-                  here.
-                </p>
-                <button className="text-sm underline" onClick={clearFilters}>
-                  Clear filters
-                </button>
-              </div>
-            ))} */}
-
-          {/* {logs.length > 0 && ( */}
-          <div
-            ref={fetchPreviousPageRef}
-            className="text-center items-center justify-center flex gap-2 text-gray-500 px-2 mb-2"
-          >
-            <LoaderIcon size={15} className="animate-spin" />
-            <p>Fetching previous logs...</p>
-          </div>
-          <div
-            style={{
-              height: logs.length > 0 ? virtualizer.getTotalSize() : "auto"
-            }}
-            className="relative justify-start [overflow-anchor:none]"
-          >
-            <div
-              className="absolute top-0 left-0 w-full [overflow-anchor:none]"
-              style={{
-                transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
-              }}
-            >
-              {virtualItems.map((virtualRow) => {
-                const log = logs[virtualRow.index];
-                return (
-                  <div
-                    key={virtualRow.key}
-                    className="w-full"
-                    data-index={virtualRow.index}
-                    ref={virtualizer.measureElement}
-                  >
-                    <Log
-                      id={log.id}
-                      time={log.time}
-                      level={log.level}
-                      key={log.id}
-                      content={(log.content as string) ?? ""}
-                      content_text={log.content_text ?? ""}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {logsQuery.hasNextPage && (
-            <div ref={fetchNextPageRef} className="w-fit h-px" />
-          )}
-          <div
-            className="w-full pb-2 text-center text-grey italic"
-            ref={autoRefetchRef}
-          >
-            -- LIVE <Ping /> new log entries will appear here --
-          </div>
-        </section>
-
-        {/* {logs.length === 0 ? (
+        {logs.length === 0 ? (
           <section
             className={cn(
               "justify-start min-h-0",
@@ -467,7 +350,7 @@ export default function DeploymentLogsPage({
               />
             )}
           />
-        )} */}
+        )}
       </div>
     </div>
   );

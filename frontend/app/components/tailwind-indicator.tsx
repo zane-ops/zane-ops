@@ -13,7 +13,7 @@ export function TailwindIndicator() {
   }, []);
 
   return (
-    <div className="fixed bottom-2 left-2 z-9999999 flex h-6 items-center justify-center gap-2 rounded-full bg-[#8457FF] p-3 font-mono text-xs text-white">
+    <div className="fixed bottom-12 left-2 z-9999999 flex h-6 items-center justify-center gap-2 rounded-full bg-[#8457FF] p-3 font-mono text-xs text-white">
       <div className="block sm:hidden">xs</div>
       <div className="hidden sm:block md:hidden">sm</div>
       <div className="hidden md:block lg:hidden">md</div>
