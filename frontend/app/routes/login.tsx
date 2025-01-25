@@ -15,11 +15,19 @@ import type { Route } from "./+types/login";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
-export async function clientLoader() {
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const searchParams = new URL(request.url).searchParams;
+
   const user = userQuery.data?.user;
   if (user) {
-    throw redirect("/");
+    const redirect_to = searchParams.get("redirect_to");
+    let redirectTo = "/";
+    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
+      redirectTo = redirect_to;
+    }
+
+    throw redirect(redirectTo);
   }
   return;
 }

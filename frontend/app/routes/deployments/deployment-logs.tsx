@@ -23,6 +23,7 @@ import { useDebouncedCallback } from "use-debounce";
 import type { Writeable } from "zod";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { MultiSelect } from "~/components/multi-select";
+import { Ping } from "~/components/ping";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -37,7 +38,7 @@ import {
   deploymentLogSearchSchema,
   deploymentQueries
 } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { excerpt } from "~/utils";
 import { type Route } from "./+types/deployment-logs";
@@ -239,10 +240,11 @@ export default function DeploymentLogsPage({
         )}
       >
         <HeaderSection startTransition={startTransition} inputRef={inputRef} />
+
         {!isAtBottom && (
           <Button
             variant="secondary"
-            className="absolute top-28 right-4  z-30"
+            className="absolute bottom-5 left-1/2 z-30 rounded-full"
             size="sm"
             onClick={() => {
               virtuoso.current?.scrollToIndex({
@@ -252,7 +254,7 @@ export default function DeploymentLogsPage({
               });
             }}
           >
-            <span>End</span> <ArrowDownIcon size={15} />
+            <ArrowDownIcon size={15} />
           </Button>
         )}
 
@@ -351,15 +353,6 @@ export default function DeploymentLogsPage({
         )}
       </div>
     </div>
-  );
-}
-
-function Ping() {
-  return (
-    <span className="relative inline-flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-    </span>
   );
 }
 
@@ -540,7 +533,7 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content_text: string;
 };
 
-const Log = ({ content, level, time, id, content_text }: LogProps) => {
+function Log({ content, level, time, id, content_text }: LogProps) {
   const date = new Date(time);
 
   const [searchParams] = useSearchParams();
@@ -598,7 +591,7 @@ const Log = ({ content, level, time, id, content_text }: LogProps) => {
       </div>
     </div>
   );
-};
+}
 
 function LongLogContent({
   content_text,
@@ -673,27 +666,3 @@ const HighlightedText = React.memo(function HighlightedText({
     }
   });
 });
-
-function formatLogTime(time: string | Date) {
-  const date = new Date(time);
-  const now = new Date();
-  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  const dateFormat = new Intl.DateTimeFormat("en-GB", {
-    month: "short",
-    day: "numeric",
-    timeZone: userTimeZone,
-    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric"
-  })
-    .format(date)
-    .replaceAll(".", "");
-
-  const hourFormat = new Intl.DateTimeFormat("en-GB", {
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    timeZone: userTimeZone
-  }).format(date);
-
-  return { dateFormat, hourFormat };
-}

@@ -19,6 +19,7 @@ import {
   XIcon
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { NavLink } from "~/components/nav-link";
 import type { StatusBadgeColor } from "~/components/status-badge";
 import {
   Breadcrumb,
@@ -62,12 +63,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   return { deployment };
 }
 
-const TABS = {
-  LOGS: "logs",
-  HTTP_LOGS: "http-logs",
-  DETAILS: "details"
-} as const;
-
 export default function DeploymentLayoutPage({
   loaderData,
   params: {
@@ -76,9 +71,6 @@ export default function DeploymentLayoutPage({
     deploymentHash: deployment_hash
   }
 }: Route.ComponentProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
-
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
       project_slug,
@@ -87,13 +79,6 @@ export default function DeploymentLayoutPage({
     }),
     initialData: loaderData.deployment
   });
-
-  let currentSelectedTab: ValueOf<typeof TABS> = TABS.LOGS;
-  if (location.pathname.match(/http\-logs\/?$/)) {
-    currentSelectedTab = TABS.HTTP_LOGS;
-  } else if (location.pathname.match(/details\/?$/)) {
-    currentSelectedTab = TABS.DETAILS;
-  }
 
   return (
     <>
@@ -176,59 +161,38 @@ export default function DeploymentLayoutPage({
           </div>
         </section>
 
-        <Tabs
-          value={currentSelectedTab}
-          className="w-full mt-5"
-          onValueChange={(value) => {
-            switch (value) {
-              case TABS.LOGS:
-                navigate(".");
-                break;
-              case TABS.HTTP_LOGS:
-                navigate("./http-logs");
-                break;
-              case TABS.DETAILS:
-                navigate("./details");
-                break;
-              default:
-                break;
-            }
-          }}
-        >
-          <TabsList className="overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start bg-background rounded-none border-b border-border">
-            <TabsTrigger value={TABS.LOGS} className="flex gap-2 items-center">
-              <span>Runtime logs</span>
-              <LogsIcon size={15} className="flex-none" />
-            </TabsTrigger>
+        <nav className="mt-5">
+          <ul
+            className={cn(
+              "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+              "inline-flex items-stretch p-0.5 text-muted-foreground"
+            )}
+          >
+            <li>
+              <NavLink to=".">
+                <span>Runtime logs</span>
+                <LogsIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
 
-            <TabsTrigger
-              value={TABS.HTTP_LOGS}
-              className="flex gap-2 items-center"
-            >
-              <span>HTTP logs</span>
-              <GlobeIcon size={15} className="flex-none" />
-            </TabsTrigger>
+            <li>
+              <NavLink to="./http-logs">
+                <span>HTTP logs</span>
+                <GlobeIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
 
-            <TabsTrigger
-              value={TABS.DETAILS}
-              className="flex gap-2 items-center"
-            >
-              <span>Details</span>
-              <InfoIcon size={15} className="flex-none" />
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={TABS.LOGS}>
-            <Outlet />
-          </TabsContent>
-
-          <TabsContent value={TABS.HTTP_LOGS}>
-            <Outlet />
-          </TabsContent>
-          <TabsContent value={TABS.DETAILS}>
-            <Outlet />
-          </TabsContent>
-        </Tabs>
+            <li>
+              <NavLink to="./details">
+                <span>Details</span>
+                <InfoIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+        <section className="mt-2">
+          <Outlet />
+        </section>
       </>
     </>
   );

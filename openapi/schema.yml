@@ -1905,7 +1905,12 @@ paths:
       - in: query
         name: request_host
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: request_id
         schema:
@@ -1913,7 +1918,12 @@ paths:
       - in: query
         name: request_ip
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: request_method
         schema:
@@ -1941,7 +1951,25 @@ paths:
       - in: query
         name: request_path
         schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_query
+        schema:
           type: string
+      - in: query
+        name: request_user_agent
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: path
         name: service_slug
         schema:
@@ -1949,9 +1977,34 @@ paths:
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -request_duration_ns
+            - -time
+            - request_duration_ns
+            - time
+        description: |-
+          Ordering
+
+          * `time` - Time
+          * `-time` - Time (descending)
+          * `request_duration_ns` - Request duration ns
+          * `-request_duration_ns` - Request duration ns (descending)
+        explode: false
+        style: form
+      - in: query
         name: status
         schema:
-          type: integer
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: time_after
         schema:
@@ -2027,6 +2080,213 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/:
+    get:
+      operationId: projects_service_details_docker_deployments_http_logs_retrieve
+      summary: Get single deployment http log
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: request_uuid
+        schema:
+          type: string
+          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLog'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/:
+    get:
+      operationId: projects_service_details_docker_deployments_http_logs_fields_list
+      summary: Get deployment http logs fields values
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: query
+        name: field
+        schema:
+          enum:
+          - request_host
+          - request_path
+          - request_user_agent
+          - request_ip
+          type: string
+          minLength: 1
+        description: |-
+          * `request_host` - request_host
+          * `request_path` - request_path
+          * `request_user_agent` - request_user_agent
+          * `request_ip` - request_ip
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: value
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
           description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
     get:
@@ -2166,6 +2426,403 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/:
+    get:
+      operationId: projects_service_details_docker_http_logs_list
+      summary: Get service HTTP logs
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: request_host
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_id
+        schema:
+          type: string
+      - in: query
+        name: request_ip
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_method
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+        description: |-
+          * `GET` - GET
+          * `POST` - POST
+          * `PUT` - PUT
+          * `DELETE` - DELETE
+          * `PATCH` - PATCH
+          * `OPTIONS` - OPTIONS
+          * `HEAD` - HEAD
+        explode: true
+        style: form
+      - in: query
+        name: request_path
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_query
+        schema:
+          type: string
+      - in: query
+        name: request_user_agent
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -request_duration_ns
+            - -time
+            - request_duration_ns
+            - time
+        description: |-
+          Ordering
+
+          * `time` - Time
+          * `-time` - Time (descending)
+          * `request_duration_ns` - Request duration ns
+          * `-request_duration_ns` - Request duration ns (descending)
+        explode: false
+        style: form
+      - in: query
+        name: status
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHttpLogList'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/:
+    get:
+      operationId: projects_service_details_docker_http_logs_retrieve
+      summary: Get single service http log
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: request_uuid
+        schema:
+          type: string
+          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLog'
+          description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/:
+    get:
+      operationId: projects_service_details_docker_http_logs_fields_list
+      summary: Get service http logs fields values
+      parameters:
+      - in: query
+        name: field
+        schema:
+          enum:
+          - request_host
+          - request_path
+          - request_user_agent
+          - request_ip
+          type: string
+          minLength: 1
+        description: |-
+          * `request_host` - request_host
+          * `request_path` - request_path
+          * `request_user_agent` - request_user_agent
+          * `request_ip` - request_ip
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: value
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
           description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
     patch:
@@ -4531,6 +5188,9 @@ components:
             type: array
             items:
               type: string
+        request_user_agent:
+          type: string
+          nullable: true
       required:
       - deployment_id
       - id
@@ -4543,6 +5203,7 @@ components:
       - request_path
       - request_protocol
       - request_query
+      - request_user_agent
       - response_headers
       - service_id
       - status
@@ -5083,25 +5744,30 @@ components:
       - project
       type: string
       description: '* `project` - project'
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
           request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-          request_path: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent'
-          request_host: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
           status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
-          request_ip: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
@@ -5111,25 +5777,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_host
-          type: string
-          description: '* `request_host` - request_host'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent:
       type: object
       properties:
@@ -5138,25 +5785,6 @@ components:
           - request_id
           type: string
           description: '* `request_id` - request_id'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_ip
-          type: string
-          description: '* `request_ip` - request_ip'
         code:
           enum:
           - null_characters_not_allowed
@@ -5190,19 +5818,38 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent:
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - request_path
+          - request_query
           type: string
-          description: '* `request_path` - request_path'
+          description: '* `request_query` - request_query'
         code:
           enum:
           - null_characters_not_allowed
           type: string
           description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
         detail:
           type: string
       required:
@@ -5262,6 +5909,13 @@ components:
       required:
       - errors
       - type
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDockerDeploymentsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
@@ -5341,6 +5995,178 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerHttpLogsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          time: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
+          status: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent'
+          request_id: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
+    ProjectsServiceDetailsDockerHttpLogsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_id
+          type: string
+          description: '* `request_id` - request_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_method
+          type: string
+          description: '* `request_method` - request_method'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_query
+          type: string
+          description: '* `request_query` - request_query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - status
+          type: string
+          description: '* `status` - status'
+        code:
+          enum:
+          - invalid
+          - max_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_value` - max_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - time
+          type: string
+          description: '* `time` - time'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsServiceDetailsDockerHttpLogsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListError'
+      required:
+      - errors
+      - type
+    ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:

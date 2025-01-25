@@ -16,7 +16,6 @@ import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
 import { useParams, useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
-import type { Writeable } from "zod";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { MultiSelect } from "~/components/multi-select";
@@ -40,20 +39,17 @@ import {
   type HTTPLogFilters,
   type HttpLog,
   REQUEST_METHODS,
-  deploymentQueries,
-  httpLogSearchSchema
+  httpLogSearchSchema,
+  serviceQueries
 } from "~/lib/queries";
+import type { Writeable } from "~/lib/types";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
-import type { Route } from "./+types/deployment-http-logs";
+import type { Route } from "./+types/service-http-logs";
 
 export async function clientLoader({
   request,
-  params: {
-    deploymentHash: deployment_hash,
-    projectSlug: project_slug,
-    serviceSlug: service_slug
-  }
+  params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
@@ -72,8 +68,7 @@ export async function clientLoader({
 
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
-      deploymentQueries.httpLogs({
-        deployment_hash,
+      serviceQueries.httpLogs({
         project_slug,
         service_slug,
         filters,
@@ -82,8 +77,7 @@ export async function clientLoader({
     ),
     search.request_id
       ? queryClient.ensureQueryData(
-          deploymentQueries.singleHttpLog({
-            deployment_hash,
+          serviceQueries.singleHttpLog({
             project_slug,
             request_uuid: search.request_id,
             service_slug
@@ -93,16 +87,11 @@ export async function clientLoader({
   ] as const);
   return { httpLogs, httpLog };
 }
-
 type SortDirection = "ascending" | "descending" | "indeterminate";
 
-export default function DeploymentHttpLogsPage({
+export default function ServiceHttpLogsPage({
   loaderData,
-  params: {
-    deploymentHash: deployment_hash,
-    projectSlug: project_slug,
-    serviceSlug: service_slug
-  }
+  params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
@@ -123,8 +112,7 @@ export default function DeploymentHttpLogsPage({
   } satisfies HTTPLogFilters;
 
   const logsQuery = useInfiniteQuery({
-    ...deploymentQueries.httpLogs({
-      deployment_hash,
+    ...serviceQueries.httpLogs({
       project_slug,
       service_slug,
       filters,
@@ -282,7 +270,6 @@ export default function DeploymentHttpLogsPage({
           virtualizer.getTotalSize() - notUndefined(items[items.length - 1]).end
         ]
       : [0, 0];
-
   return (
     <div
       className={cn(
@@ -915,8 +902,7 @@ function HostFilter({ hosts }: HostFilterProps) {
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: hostList = [] } = useQuery(
-    deploymentQueries.filterHttpLogFields({
-      deployment_hash,
+    serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       field: "request_host",
@@ -950,17 +936,13 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
-  const {
-    deploymentHash: deployment_hash,
-    projectSlug: project_slug,
-    serviceSlug: service_slug
-  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const { projectSlug: project_slug, serviceSlug: service_slug } =
+    useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: hostList = [] } = useQuery(
-    deploymentQueries.filterHttpLogFields({
-      deployment_hash,
+    serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       field: "request_path",
@@ -994,17 +976,13 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
-  const {
-    deploymentHash: deployment_hash,
-    projectSlug: project_slug,
-    serviceSlug: service_slug
-  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const { projectSlug: project_slug, serviceSlug: service_slug } =
+    useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: ipList = [] } = useQuery(
-    deploymentQueries.filterHttpLogFields({
-      deployment_hash,
+    serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       field: "request_ip",
@@ -1036,17 +1014,13 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
-  const {
-    deploymentHash: deployment_hash,
-    projectSlug: project_slug,
-    serviceSlug: service_slug
-  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const { projectSlug: project_slug, serviceSlug: service_slug } =
+    useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: uaList = [] } = useQuery(
-    deploymentQueries.filterHttpLogFields({
-      deployment_hash,
+    serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       field: "request_user_agent",

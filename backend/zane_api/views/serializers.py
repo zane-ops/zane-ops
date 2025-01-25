@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from faker import Faker
 from rest_framework import pagination
+from rest_framework.request import Request
 
 from .helpers import (
     compute_docker_service_snapshot_with_changes,
@@ -397,9 +398,11 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
             )
         return attrs
 
+
 # ==============================
 #       Projects Search        #
 # ==============================
+
 
 class ProjectSearchSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
@@ -1097,13 +1100,28 @@ class CursorSerializer(serializers.Serializer):
     order = serializers.ChoiceField(choices=["desc", "asc"], required=True)
 
 
-class DeploymentLogsPagination(pagination.CursorPagination):
+class DeploymentHttpLogsPagination(pagination.CursorPagination):
     page_size = 50
     page_size_query_param = "per_page"
-    ordering = (
-        "-time",
-        "-created_at",
-    )
+    ordering = ("-time",)
+
+    def get_ordering(self, request: Request, queryset, view):
+        filter = DeploymentHttpLogsFilterSet(
+            {"sort_by": ",".join(request.GET.getlist("sort_by"))}
+        )
+
+        if filter.is_valid():
+            ordering = tuple(
+                set(filter.form.cleaned_data.get("sort_by", self.ordering))
+            )
+            if len(ordering) > 0:
+                return ordering  # tuple(set(filter.form.cleaned_data.get("sort_by", self.ordering)))
+
+        return self.ordering
+
+
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
 
 
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
@@ -1111,6 +1129,24 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     request_method = django_filters.MultipleChoiceFilter(
         choices=HttpLog.RequestMethod.choices
     )
+    sort_by = OrderingFilter(fields=["time", "request_duration_ns"])
+    request_query = django_filters.CharFilter(
+        field_name="request_query", method="filter_query"
+    )
+    status = NumberInFilter(method="filter_multiple_values")
+    request_ip = django_filters.BaseInFilter(method="filter_multiple_values")
+    request_user_agent = django_filters.BaseInFilter(method="filter_multiple_values")
+    request_host = django_filters.BaseInFilter(
+        field_name="request_host", method="filter_multiple_values"
+    )
+    request_path = django_filters.BaseInFilter(method="filter_multiple_values")
+
+    def filter_multiple_values(self, queryset: QuerySet, name: str, value: str):
+        params = self.request.GET.getlist(name)
+        return queryset.filter(**{f"{name}__in": params})
+
+    def filter_query(self, queryset: QuerySet, name: str, value: str):
+        return queryset.filter(request_query__istartswith=value)
 
     class Meta:
         model = HttpLog
@@ -1119,10 +1155,33 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "request_method",
             "request_path",
             "request_host",
+            "request_query",
             "status",
             "request_ip",
             "request_id",
+            "request_user_agent",
         ]
+
+
+# ==============================
+#       Http logs fields       #
+# ==============================
+
+
+class HttpLogFieldsQuerySerializer(serializers.Serializer):
+    field = serializers.ChoiceField(
+        choices=[
+            "request_host",
+            "request_path",
+            "request_user_agent",
+            "request_ip",
+        ]
+    )
+    value = serializers.CharField(allow_blank=True)
+
+
+class HttpLogFieldsResponseSerializer(serializers.ListSerializer):
+    child = serializers.CharField()
 
 
 # ==============================

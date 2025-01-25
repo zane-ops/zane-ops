@@ -735,6 +735,7 @@ class HttpLogViewTests(AuthAPITestCase):
                 "host": "nginx-demo.zaneops.local",
                 "uri": "/docs?query",
                 "headers": {
+                    "X-Forwarded-For": ["2001:0db8:0000:0000:0000:ff00:0042:8329"],
                     "Upgrade-Insecure-Requests": ["1"],
                     "Accept-Language": ["en,en-US;q=0.8,fr;q=0.5,fr-FR;q=0.3"],
                     "Cookie": ["REDACTED"],
@@ -779,6 +780,7 @@ class HttpLogViewTests(AuthAPITestCase):
                 "host": "nginx-demo.zaneops.local",
                 "uri": "/abc?a=c",
                 "headers": {
+                    "X-Forwarded-For": ["88.99.73.23"],
                     "Content-Length": ["0"],
                     "User-Agent": ["HTTPie"],
                     "Connection": ["close"],
@@ -1366,7 +1368,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(self.sample_log_entries), HttpLog.objects.count())
 
-        log: HttpLog = HttpLog.objects.first()
+        log: HttpLog = HttpLog.objects.last()
         self.assertEqual(service.id, log.service_id)
         self.assertEqual(fist_deployment.hash, log.deployment_id)
         self.assertEqual(HttpLog.RequestMethod.GET, log.request_method)

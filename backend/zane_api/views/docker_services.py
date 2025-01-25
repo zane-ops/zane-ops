@@ -39,6 +39,8 @@ from .serializers import (
     DockerServiceDeploymentFilterSet,
     DockerServiceUpdateRequestSerializer,
     DockerSourceFieldChangeSerializer,
+    HttpLogFieldsQuerySerializer,
+    HttpLogFieldsResponseSerializer,
     VolumeItemChangeSerializer,
     DockerCommandFieldChangeSerializer,
     URLItemChangeSerializer,
@@ -47,7 +49,7 @@ from .serializers import (
     HealthcheckFieldChangeSerializer,
     DockerDeploymentFieldChangeRequestSerializer,
     DeploymentListPagination,
-    DeploymentLogsPagination,
+    DeploymentHttpLogsPagination,
     DeploymentHttpLogsFilterSet,
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
@@ -902,12 +904,122 @@ class DockerServiceDeploymentLogsAPIView(APIView):
                 return Response(data)
 
 
+class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
+    serializer_class = HttpLogFieldsResponseSerializer
+
+    @extend_schema(
+        summary="Get deployment http logs fields values",
+        parameters=[HttpLogFieldsQuerySerializer],
+    )
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment = DockerDeployment.objects.get(
+                service=service, hash=deployment_hash
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+        else:
+            form = HttpLogFieldsQuerySerializer(data=request.query_params)
+            if form.is_valid(raise_exception=True):
+                field = form.data["field"]
+                value = form.data["value"]
+
+                condition = {}
+                if len(value) > 0:
+                    condition = {f"{field}__istartswith": value}
+
+                values = (
+                    HttpLog.objects.filter(
+                        deployment_id=deployment.hash,
+                        service_id=service.id,
+                        **condition,
+                    )
+                    .order_by(field)
+                    .values_list(field, flat=True)
+                    .distinct()[:5]
+                )
+
+                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
+                return Response(seriaziler.data)
+
+
+class DockerServiceHttpLogsFieldsAPIView(APIView):
+    serializer_class = HttpLogFieldsResponseSerializer
+
+    @extend_schema(
+        summary="Get service http logs fields values",
+        parameters=[HttpLogFieldsQuerySerializer],
+    )
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        else:
+            form = HttpLogFieldsQuerySerializer(data=request.query_params)
+            if form.is_valid(raise_exception=True):
+                field = form.data["field"]
+                value = form.data["value"]
+
+                condition = {}
+                if len(value) > 0:
+                    condition = {f"{field}__istartswith": value}
+
+                values = (
+                    HttpLog.objects.filter(
+                        service_id=service.id,
+                        **condition,
+                    )
+                    .order_by(field)
+                    .values_list(field, flat=True)
+                    .distinct()[:5]
+                )
+
+                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
+                return Response(seriaziler.data)
+
+
 class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
     queryset = (
         HttpLog.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    pagination_class = DeploymentLogsPagination
+    pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
 
@@ -947,6 +1059,134 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
         except DockerDeployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+
+class DockerServiceHttpLogsAPIView(ListAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = (
+        HttpLog.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    pagination_class = DeploymentHttpLogsPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DeploymentHttpLogsFilterSet
+
+    @extend_schema(
+        summary="Get service HTTP logs",
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound as e:
+            if "Invalid cursor" in str(e.detail):
+                return Response(EMPTY_CURSOR_RESPONSE)
+            raise e
+
+    def get_queryset(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            return service.http_logs
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+
+
+class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = (
+        HttpLog.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
+
+    @extend_schema(summary="Get single deployment http log")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        deployment_hash = self.kwargs["deployment_hash"]
+        request_uuid = self.kwargs["request_uuid"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            deployment = DockerDeployment.objects.get(
+                service=service, hash=deployment_hash
+            )
+            http_log: HttpLog = deployment.http_logs.filter(
+                deployment_id=deployment_hash, request_id=request_uuid
+            ).first()
+
+            if http_log is None:
+                raise exceptions.NotFound(
+                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
+                )
+            return http_log
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
+            )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+
+class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = (
+        HttpLog.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
+
+    @extend_schema(summary="Get single service http log")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self):
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        request_uuid = self.kwargs["request_uuid"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            service = DockerRegistryService.objects.get(
+                slug=service_slug, project=project
+            )
+            http_log: HttpLog = service.http_logs.filter(
+                service_id=service.id, request_id=request_uuid
+            ).first()
+
+            if http_log is None:
+                raise exceptions.NotFound(
+                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
+                )
+            return http_log
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except DockerRegistryService.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this project."
             )
 
 

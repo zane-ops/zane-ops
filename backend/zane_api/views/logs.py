@@ -88,6 +88,12 @@ class LogIngestAPIView(APIView):
                                             full_url = urlparse(
                                                 f"https://{req['host']}{req['uri']}"
                                             )
+                                            client_ip = req["headers"].get(
+                                                "X-Forwarded-For", req["remote_ip"]
+                                            )
+                                            user_agent = req["headers"].get(
+                                                "User-Agent"
+                                            )
                                             http_logs.append(
                                                 HttpLog(
                                                     time=log["time"],
@@ -108,7 +114,16 @@ class LogIngestAPIView(APIView):
                                                     response_headers=log_content[
                                                         "resp_headers"
                                                     ],
-                                                    request_ip=req["remote_ip"],
+                                                    request_user_agent=(
+                                                        user_agent[0]
+                                                        if isinstance(user_agent, list)
+                                                        else None
+                                                    ),
+                                                    request_ip=(
+                                                        client_ip[0]
+                                                        if isinstance(client_ip, list)
+                                                        else client_ip
+                                                    ),
                                                     request_id=log_content.get("uuid"),
                                                     request_method=req["method"],
                                                 )

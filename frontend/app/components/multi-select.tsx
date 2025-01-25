@@ -88,6 +88,13 @@ interface MultiSelectProps
    */
   className?: string;
   value: string[];
+  align?: React.ComponentProps<typeof PopoverContent>["align"];
+  Icon?: React.ComponentType<React.ComponentProps<typeof ChevronDownIcon>>;
+  closeOnSelect?: boolean;
+  acceptArbitraryValues?: boolean;
+  ref?: React.RefObject<HTMLButtonElement>;
+  inputValue?: string;
+  onInputValueChange?: (inputValue: string) => void;
 }
 export const MultiSelect = ({
   ref,
@@ -101,22 +108,40 @@ export const MultiSelect = ({
   modalPopover = false,
   asChild = false,
   className,
+  align = "end",
+  Icon = ChevronDownIcon,
+  closeOnSelect,
+  acceptArbitraryValues = false,
+  inputValue: customInputValue,
+  onInputValueChange,
   ...props
-}: MultiSelectProps & {
-  ref?: React.RefObject<HTMLButtonElement>;
-}) => {
+}: MultiSelectProps) => {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 
   const toggleOption = (option: string) => {
     const newSelectedValues = values.includes(option)
       ? values.filter((v) => v !== option)
       : [...values, option];
+
+    if (closeOnSelect) {
+      setIsPopoverOpen(false);
+      setInputValue("");
+    }
     onValueChange(newSelectedValues);
   };
 
   const handleTogglePopover = () => {
     setIsPopoverOpen((prev) => !prev);
   };
+
+  const [value, setInputValue] = React.useState("");
+
+  const inputValue = customInputValue ?? value;
+
+  let visibleOptions = new Set(options);
+  if (inputValue.trim().length > 0 && acceptArbitraryValues) {
+    visibleOptions.add(inputValue.trim());
+  }
 
   return (
     <Popover
@@ -137,10 +162,7 @@ export const MultiSelect = ({
           )}
         >
           <div className="flex items-center gap-1 justify-between w-full mx-auto">
-            <ChevronDownIcon
-              size={15}
-              className="cursor-pointer text-muted-foreground"
-            />
+            <Icon size={15} className="cursor-pointer text-muted-foreground" />
             <div className="flex items-center gap-1">
               <span className="text-sm text-card-foreground">{label}</span>
               {values.length > 0 && (
@@ -151,14 +173,19 @@ export const MultiSelect = ({
                       {values.length} selected
                     </span>
                   ) : (
-                    values.map((val) => (
-                      <span
-                        key={val}
-                        className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground"
-                      >
-                        {capitalizeText(val)}
-                      </span>
-                    ))
+                    <>
+                      {values.map((val) => (
+                        <p
+                          key={val}
+                          className={cn(
+                            "text-sm rounded-md bg-grey/20 px-1 text-card-foreground",
+                            "whitespace-nowrap text-ellipsis overflow-x-hidden md:max-w-[150px] max-w-[50px]"
+                          )}
+                        >
+                          {capitalizeText(val)}
+                        </p>
+                      ))}
+                    </>
                   )}
                 </>
               )}
@@ -168,41 +195,51 @@ export const MultiSelect = ({
       </PopoverTrigger>
       <PopoverContent
         className="w-[200px] p-0 border-0"
-        align="end"
+        align={align}
         sideOffset={0}
         side="bottom"
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
-        <Command className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2">
+        <Command
+          shouldFilter={!acceptArbitraryValues}
+          className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2"
+        >
           <CommandPrimitive.Input
             placeholder="search"
             className="bg-inherit focus-visible:outline-hidden px-2 py-2"
+            value={inputValue}
+            onValueChange={(val) => {
+              setInputValue(val);
+              onInputValueChange?.(val);
+            }}
           />
           <hr className="-mx-2 border-border" />
           <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandPrimitive.Group>
-              {options.map((option) => {
-                const isSelected = values.includes(option);
-                return (
-                  <CommandItem
-                    key={option}
-                    onSelect={() => toggleOption(option)}
-                    className="cursor-pointer flex gap-1"
-                  >
-                    <CheckIcon
-                      size={15}
-                      className={cn(
-                        "flex-none transition-transform duration-75",
-                        isSelected ? "scale-100" : "scale-0"
-                      )}
-                    />
-                    <div className="flex items-center justify-between w-full">
-                      <span>{option}</span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
+              {[...visibleOptions]
+                .filter((option) => option.startsWith(inputValue))
+                .map((option) => {
+                  const isSelected = values.includes(option);
+                  return (
+                    <CommandItem
+                      key={option}
+                      onSelect={() => toggleOption(option)}
+                      className="cursor-pointer flex gap-1 "
+                    >
+                      <CheckIcon
+                        size={15}
+                        className={cn(
+                          "flex-none transition-transform duration-75",
+                          isSelected ? "scale-100" : "scale-0"
+                        )}
+                      />
+                      <div className="flex items-center justify-between w-full break-all">
+                        <span>{option}</span>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
             </CommandPrimitive.Group>
           </CommandPrimitive.List>
         </Command>

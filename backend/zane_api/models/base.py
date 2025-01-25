@@ -236,6 +236,10 @@ class DockerRegistryService(BaseService):
         return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
 
     @property
+    def http_logs(self):
+        return HttpLog.objects.filter(service_id=self.id)
+
+    @property
     def network_aliases(self):
         return (
             [
@@ -890,6 +894,7 @@ class HttpLog(Log):
     request_query = models.CharField(max_length=2000, null=True, blank=True)
     request_ip = models.GenericIPAddressField()
     request_id = models.CharField(null=True, max_length=255)
+    request_user_agent = models.TextField(blank=True, null=True)
 
     class Meta:
         indexes = [
@@ -900,5 +905,9 @@ class HttpLog(Log):
             models.Index(fields=["request_host"]),
             models.Index(fields=["request_path"]),
             models.Index(fields=["time"]),
+            models.Index(fields=["request_user_agent"]),
+            models.Index(fields=["request_ip"]),
+            models.Index(fields=["request_id"]),
+            models.Index(fields=["request_query"]),
         ]
-        ordering = ("time",)
+        ordering = ("-time",)

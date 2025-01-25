@@ -93,3 +93,27 @@ export function notFound(message: string = "Not Found") {
 export function isNotFoundError(error: unknown): error is ErrorResponse {
   return isRouteErrorResponse(error) && error.status === 404;
 }
+
+export function formatLogTime(time: string | Date) {
+  const date = new Date(time);
+  const now = new Date();
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const dateFormat = new Intl.DateTimeFormat("en-GB", {
+    month: "short",
+    day: "numeric",
+    timeZone: userTimeZone,
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric"
+  })
+    .format(date)
+    .replaceAll(".", "");
+
+  const hourFormat = new Intl.DateTimeFormat("en-GB", {
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    timeZone: userTimeZone
+  }).format(date);
+
+  return { dateFormat, hourFormat };
+}

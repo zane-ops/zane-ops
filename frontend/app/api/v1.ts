@@ -141,9 +141,29 @@ export interface paths {
     /** Get deployment HTTP logs */
     get: operations["projects_service_details_docker_deployments_http_logs_list"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/": {
+    /** Get single deployment http log */
+    get: operations["projects_service_details_docker_deployments_http_logs_retrieve"];
+  };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/": {
+    /** Get deployment http logs fields values */
+    get: operations["projects_service_details_docker_deployments_http_logs_fields_list"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_retrieve"];
+  };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/": {
+    /** Get service HTTP logs */
+    get: operations["projects_service_details_docker_http_logs_list"];
+  };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/": {
+    /** Get single service http log */
+    get: operations["projects_service_details_docker_http_logs_retrieve"];
+  };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/": {
+    /** Get service http logs fields values */
+    get: operations["projects_service_details_docker_http_logs_fields_list"];
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/": {
     /** Regenerate service deploy token */
@@ -890,6 +910,7 @@ export interface components {
       response_headers: {
         [key: string]: string[];
       };
+      request_user_agent: string | null;
     };
     /**
      * @description * `ADD` - Add
@@ -1133,40 +1154,15 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchTypeEnum: "project";
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestHostErrorComponent: {
-      /**
-       * @description * `request_host` - request_host
-       * @enum {string}
-       */
-      attr: "request_host";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent: {
       /**
        * @description * `request_id` - request_id
        * @enum {string}
        */
       attr: "request_id";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIpErrorComponent: {
-      /**
-       * @description * `request_ip` - request_ip
-       * @enum {string}
-       */
-      attr: "request_ip";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -1188,17 +1184,30 @@ export interface components {
       code: "invalid_choice" | "invalid_list";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestPathErrorComponent: {
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent: {
       /**
-       * @description * `request_path` - request_path
+       * @description * `request_query` - request_query
        * @enum {string}
        */
-      attr: "request_path";
+      attr: "request_query";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
        */
       code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent: {
@@ -1232,6 +1241,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListError"][];
     };
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent: {
@@ -1267,6 +1277,94 @@ export interface components {
     };
     ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsDockerHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent: {
+      /**
+       * @description * `request_id` - request_id
+       * @enum {string}
+       */
+      attr: "request_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent: {
+      /**
+       * @description * `request_method` - request_method
+       * @enum {string}
+       */
+      attr: "request_method";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
+       * @enum {string}
+       */
+      code: "invalid_choice" | "invalid_list";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent: {
+      /**
+       * @description * `request_query` - request_query
+       * @enum {string}
+       */
+      attr: "request_query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent: {
+      /**
+       * @description * `status` - status
+       * @enum {string}
+       */
+      attr: "status";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_value` - max_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_value";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent: {
+      /**
+       * @description * `time` - time
+       * @enum {string}
+       */
+      attr: "time";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsServiceDetailsDockerHttpLogsListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListError"][];
+    };
+    ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenCommandErrorComponent: {
@@ -3399,9 +3497,11 @@ export interface operations {
         cursor?: string;
         /** @description Number of results to return per page. */
         per_page?: number;
-        request_host?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_host?: string[];
         request_id?: string;
-        request_ip?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_ip?: string[];
         /**
          * @description * `GET` - GET
          * * `POST` - POST
@@ -3412,8 +3512,22 @@ export interface operations {
          * * `HEAD` - HEAD
          */
         request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
-        request_path?: string;
-        status?: number;
+        /** @description Multiple values may be separated by commas. */
+        request_path?: string[];
+        request_query?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_user_agent?: string[];
+        /**
+         * @description Ordering
+         *
+         * * `time` - Time
+         * * `-time` - Time (descending)
+         * * `request_duration_ns` - Request duration ns
+         * * `-request_duration_ns` - Request duration ns (descending)
+         */
+        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
+        /** @description Multiple values may be separated by commas. */
+        status?: string[];
         time_after?: string;
         time_before?: string;
       };
@@ -3432,6 +3546,91 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get single deployment http log */
+  projects_service_details_docker_deployments_http_logs_retrieve: {
+    parameters: {
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        request_uuid: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["HttpLog"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment http logs fields values */
+  projects_service_details_docker_deployments_http_logs_fields_list: {
+    parameters: {
+      query: {
+        /**
+         * @description * `request_host` - request_host
+         * * `request_path` - request_path
+         * * `request_user_agent` - request_user_agent
+         * * `request_ip` - request_ip
+         */
+        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
+        value: string;
+      };
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400"];
         };
       };
       401: {
@@ -3478,6 +3677,164 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get service HTTP logs */
+  projects_service_details_docker_http_logs_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        /** @description Multiple values may be separated by commas. */
+        request_host?: string[];
+        request_id?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_ip?: string[];
+        /**
+         * @description * `GET` - GET
+         * * `POST` - POST
+         * * `PUT` - PUT
+         * * `DELETE` - DELETE
+         * * `PATCH` - PATCH
+         * * `OPTIONS` - OPTIONS
+         * * `HEAD` - HEAD
+         */
+        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
+        /** @description Multiple values may be separated by commas. */
+        request_path?: string[];
+        request_query?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_user_agent?: string[];
+        /**
+         * @description Ordering
+         *
+         * * `time` - Time
+         * * `-time` - Time (descending)
+         * * `request_duration_ns` - Request duration ns
+         * * `-request_duration_ns` - Request duration ns (descending)
+         */
+        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
+        /** @description Multiple values may be separated by commas. */
+        status?: string[];
+        time_after?: string;
+        time_before?: string;
+      };
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedHttpLogList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get single service http log */
+  projects_service_details_docker_http_logs_retrieve: {
+    parameters: {
+      path: {
+        project_slug: string;
+        request_uuid: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["HttpLog"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get service http logs fields values */
+  projects_service_details_docker_http_logs_fields_list: {
+    parameters: {
+      query: {
+        /**
+         * @description * `request_host` - request_host
+         * * `request_path` - request_path
+         * * `request_user_agent` - request_user_agent
+         * * `request_ip` - request_ip
+         */
+        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
+        value: string;
+      };
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400"];
         };
       };
       401: {
