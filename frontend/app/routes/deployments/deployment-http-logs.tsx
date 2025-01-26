@@ -416,6 +416,9 @@ export default function DeploymentHttpLogsPage({
                 return (
                   <TableRow
                     className="border-border cursor-pointer"
+                    data-state={
+                      log.request_id === search.request_id ? "selected" : null
+                    }
                     key={log.id}
                     onClick={() => {
                       if (log.request_id) {

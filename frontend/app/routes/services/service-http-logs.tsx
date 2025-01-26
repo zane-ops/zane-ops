@@ -404,6 +404,9 @@ export default function ServiceHttpLogsPage({
                   <TableRow
                     className="border-border cursor-pointer"
                     key={log.id}
+                    data-state={
+                      log.request_id === search.request_id ? "selected" : null
+                    }
                     onClick={() => {
                       if (log.request_id) {
                         searchParams.set("request_id", log.request_id);
