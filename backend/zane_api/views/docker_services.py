@@ -946,7 +946,7 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
 
                 condition = {}
                 if len(value) > 0:
-                    condition = {f"{field}__icontains": value}
+                    condition = {f"{field}__startswith": value}
 
                 values = (
                     HttpLog.objects.filter(
@@ -956,7 +956,7 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
                     )
                     .order_by(field)
                     .values_list(field, flat=True)
-                    .distinct()[:5]
+                    .distinct()[:7]
                 )
 
                 seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
@@ -998,7 +998,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
 
                 condition = {}
                 if len(value) > 0:
-                    condition = {f"{field}__istartswith": value}
+                    condition = {f"{field}__startswith": value}
 
                 values = (
                     HttpLog.objects.filter(
@@ -1007,7 +1007,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
                     )
                     .order_by(field)
                     .values_list(field, flat=True)
-                    .distinct()[:5]
+                    .distinct()[:7]
                 )
 
                 seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
