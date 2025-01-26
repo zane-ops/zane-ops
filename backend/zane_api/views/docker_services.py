@@ -946,7 +946,7 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
 
                 condition = {}
                 if len(value) > 0:
-                    condition = {f"{field}__istartswith": value}
+                    condition = {f"{field}__icontains": value}
 
                 values = (
                     HttpLog.objects.filter(
