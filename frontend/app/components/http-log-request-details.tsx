@@ -167,40 +167,42 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             <span>User Agent</span>
             <TooltipProvider>
               {log.request_user_agent && (
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                      onClick={() => {
-                        searchParams.set(
-                          "request_user_agent",
-                          log.request_user_agent!
-                        );
-                        searchParams.delete("request_id");
-                        setSearchParams(searchParams, { replace: true });
-                      }}
-                    >
-                      <FilterIcon size={15} />
-                      <span className="sr-only">Add Filter</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Add Filter</TooltipContent>
-                </Tooltip>
-              )}
+                <>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                        onClick={() => {
+                          searchParams.set(
+                            "request_user_agent",
+                            log.request_user_agent!
+                          );
+                          searchParams.delete("request_id");
+                          setSearchParams(searchParams, { replace: true });
+                        }}
+                      >
+                        <FilterIcon size={15} />
+                        <span className="sr-only">Add Filter</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Add Filter</TooltipContent>
+                  </Tooltip>
 
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <CopyButton
-                    label="Copy value"
-                    value={log.request_user_agent ?? ""}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>Copy value</TooltipContent>
-              </Tooltip>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <CopyButton
+                        label="Copy value"
+                        value={log.request_user_agent}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>Copy value</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
             </TooltipProvider>
           </dt>
-          <dd className="text-sm text-grey inline-flex h-full items-center">
+          <dd className="text-sm text-grey inline-flex h-full items-center break-all">
             {log.request_user_agent ?? <span className="font-mono">N/A</span>}
           </dd>
         </div>
