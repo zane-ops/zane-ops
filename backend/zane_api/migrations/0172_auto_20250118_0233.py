@@ -10,12 +10,16 @@ def populate_client_ip(apps, schema_editor):
     HttpLog.objects.filter(request_headers__icontains="X-Forwarded-For").update(
         request_ip=Func(
             Func(
-                F("request_headers"),
-                Value("X-Forwarded-For"),
-                Value("0"),
-                function="jsonb_extract_path_text",
+                Func(
+                    F("request_headers"),
+                    Value("X-Forwarded-For"),
+                    Value("0"),
+                    function="jsonb_extract_path_text",
+                ),
+                function="split_part",  # PostgreSQL function to split strings
+                template="%(function)s(%(expressions)s, ',', 1)",  # Take the first part before the comma
             ),
-            function="inet",  # Cast the result to inet
+            function="inet",
         )
     )
 

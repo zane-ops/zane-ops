@@ -243,6 +243,11 @@ LOGGING = {
         }
     },
     "loggers": {
+        # Activate only when we really need debugging as it pollutes way too much the logs
+        # "django.db.backends": {
+        #     "handlers": ["console"],
+        #     "level": "DEBUG",
+        # },
         "gunicorn.error": {
             "handlers": ["console"],
             "level": "INFO",

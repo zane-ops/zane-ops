@@ -120,7 +120,7 @@ class LogIngestAPIView(APIView):
                                                         else None
                                                     ),
                                                     request_ip=(
-                                                        client_ip[0]
+                                                        client_ip[0].split(",")[0]
                                                         if isinstance(client_ip, list)
                                                         else client_ip
                                                     ),
