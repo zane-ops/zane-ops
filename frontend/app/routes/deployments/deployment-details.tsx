@@ -142,7 +142,7 @@ export default function DeploymentDetailsPage({
             {deployment.started_at && (
               <div className="flex items-center gap-2">
                 <dt className="flex gap-1 items-center text-grey">
-                  <PlayIcon size={15} /> <span>Started at:</span>
+                  <PlayIcon size={15} /> <span>Duration:</span>
                 </dt>
                 <dd className="flex items-center gap-1">
                   <span>{formattedTime(deployment.started_at)}</span>
