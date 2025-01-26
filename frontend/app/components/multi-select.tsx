@@ -218,7 +218,9 @@ export const MultiSelect = ({
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandPrimitive.Group>
               {[...visibleOptions]
-                .filter((option) => option.startsWith(inputValue))
+                .filter((option) =>
+                  option.toLowerCase().includes(inputValue.toLowerCase())
+                )
                 .map((option) => {
                   const isSelected = values.includes(option);
                   return (
