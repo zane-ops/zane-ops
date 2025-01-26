@@ -1,15 +1,10 @@
 import {
   AlertCircleIcon,
   ArrowRightIcon,
-  CheckIcon,
-  CopyIcon,
   ExternalLinkIcon,
-  HardDrive,
-  InfoIcon,
+  HardDriveIcon,
   LoaderIcon,
-  Plus,
   PlusIcon,
-  Route,
   Trash2Icon,
   TriangleAlertIcon,
   Undo2Icon
@@ -277,7 +272,7 @@ function ServiceVolumeItem({
               "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
             })}
           >
-            <HardDrive size={20} className="text-grey relative top-1.5" />
+            <HardDriveIcon size={20} className="text-grey relative top-1.5" />
             <div className="flex flex-col gap-2">
               <h3 className="text-lg inline-flex gap-1 items-center">
                 <span>{name}</span>
