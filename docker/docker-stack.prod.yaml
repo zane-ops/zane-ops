@@ -403,7 +403,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 1.1G
+          memory: 1.5G
     healthcheck:
       test: ["CMD-SHELL", "curl -f $$(hostname -i):9200/_cluster/health || exit 1"]
       interval: 30s
