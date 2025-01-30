@@ -77,6 +77,7 @@ export function ServiceDeployURLForm({
               placeholder="<empty>"
               className="placeholder-shown:font-mono bg-muted opacity-100 disabled:cursor-default"
               value={deployURL ?? ""}
+              readOnly
               type={isDeployURLShown ? "text" : "password"}
             />
 

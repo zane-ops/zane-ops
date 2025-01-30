@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { projectQueries, serviceQueries } from "~/lib/queries";
+import { projectQueries, resourceQueries, serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/archive-service";
@@ -43,6 +43,10 @@ export async function clientAction({
     queryKey: serviceQueries.single({ project_slug, service_slug }).queryKey
   });
   queryClient.invalidateQueries(projectQueries.serviceList(project_slug));
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      query.queryKey[0] === resourceQueries.search().queryKey[0]
+  });
 
   toast.success("Success", {
     closeButton: true,

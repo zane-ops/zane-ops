@@ -26,6 +26,7 @@ import {
 import {
   type DockerService,
   projectQueries,
+  resourceQueries,
   serverQueries,
   serviceQueries
 } from "~/lib/queries";
@@ -498,7 +499,11 @@ async function updateServiceSlug({
     queryClient.invalidateQueries(
       serviceQueries.single({ project_slug, service_slug: service_slug })
     ),
-    queryClient.invalidateQueries(projectQueries.serviceList(project_slug))
+    queryClient.invalidateQueries(projectQueries.serviceList(project_slug)),
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        query.queryKey[0] === resourceQueries.search().queryKey[0]
+    })
   ]);
 
   if (data.slug !== service_slug) {

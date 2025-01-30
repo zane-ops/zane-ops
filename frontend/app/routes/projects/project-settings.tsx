@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries } from "~/lib/queries";
+import { projectQueries, resourceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
@@ -139,7 +139,11 @@ async function archiveProject(project_slug: string) {
   }
 
   queryClient.invalidateQueries(projectQueries.single(project_slug));
-  queryClient.invalidateQueries(projectQueries.list());
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      query.queryKey[0] === resourceQueries.search().queryKey[0] ||
+      query.queryKey[0] === projectQueries.list().queryKey[0]
+  });
 
   toast.success("Project archived successfully!", { closeButton: true });
   throw redirect(`/`);

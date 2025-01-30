@@ -19,7 +19,6 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
 import {
   FieldSet,
   FieldSetCheckbox,
@@ -36,7 +35,6 @@ import {
 import { type DockerService } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
-  type clientAction,
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";

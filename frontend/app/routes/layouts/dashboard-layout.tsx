@@ -389,9 +389,6 @@ export function CommandMenu() {
             value={resourceSearchQuery}
             onFocus={() => setOpen(true)}
             onValueChange={(value) => {
-              console.log({
-                value
-              });
               setResourceSearchQuery(value);
               setOpen(true);
             }}
