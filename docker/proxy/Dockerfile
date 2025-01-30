@@ -6,7 +6,7 @@ ARG COMMIT_SHA
 ENV COMMIT_SHA=$COMMIT_SHA
 ARG ENVIRONMENT=dev
 
-RUN apk update && apk add --no-cache curl
+RUN apk update && apk add --no-cache curl jq
 
 COPY default-caddy-config-${ENVIRONMENT}.json /config/caddy/autosave.json
 CMD caddy run --resume
