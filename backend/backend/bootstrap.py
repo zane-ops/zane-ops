@@ -289,7 +289,7 @@ DEFAULT_502_FALLBACK = """
 def register_zaneops_app_on_proxy(
     proxy_url: str,
     zane_app_domain: str,
-    zane_front_internal_domain: str,
+    zane_app_internal_domain: str,
     internal_tls: bool = False,
 ):
     url_configurations = [
@@ -304,7 +304,7 @@ def register_zaneops_app_on_proxy(
                             "handle": [
                                 {
                                     "handler": "reverse_proxy",
-                                    "upstreams": [{"dial": zane_front_internal_domain}],
+                                    "upstreams": [{"dial": zane_app_internal_domain}],
                                 }
                             ]
                         }
@@ -324,7 +324,7 @@ def register_zaneops_app_on_proxy(
                             "handle": [
                                 {
                                     "handler": "reverse_proxy",
-                                    "upstreams": [{"dial": zane_front_internal_domain}],
+                                    "upstreams": [{"dial": zane_app_internal_domain}],
                                 }
                             ]
                         }
@@ -371,7 +371,7 @@ def register_zaneops_app_on_proxy(
             "on_demand": {
                 "permission": {
                     "@id": "tls-endpoint",
-                    "endpoint": f"http://{zane_front_internal_domain}/api/_proxy/check-certiticates",
+                    "endpoint": f"http://{zane_app_internal_domain}/api/_proxy/check-certiticates",
                     "module": "http",
                 }
             },
