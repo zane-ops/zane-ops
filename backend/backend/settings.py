@@ -78,7 +78,7 @@ ALLOWED_HOSTS = (
         "host.docker.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f"127.0.0.1", f".{ROOT_DOMAIN}", f"zane.api.zaneops.internal"]
+    else [f"127.0.0.1", f".{ROOT_DOMAIN}", f".zaneops.internal"]
 )
 
 SESSION_COOKIE_DOMAIN = None
@@ -384,7 +384,7 @@ if BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,
-        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        zane_app_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
     )
 
