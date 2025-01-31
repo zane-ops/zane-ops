@@ -97,23 +97,23 @@ export default function DeploymentDetailsPage({
   ).value;
 
   const changes = deployment.changes.map((ch) => {
-    // @ts-expect-error
+    // @ts-expect-error : this is to support old versions of the changes fields
     if (ch.field === "image") {
       return {
         ...ch,
         field: "source",
         new_value: { image: ch.new_value },
         old_value: { image: ch.old_value }
-      };
+      } as (typeof deployment.changes)[number];
     }
-    // @ts-expect-error
+    // @ts-expect-error : this is to support old versions of the changes fields
     if (ch.field === "credentials") {
       return {
         ...ch,
         field: "source",
         new_value: { credentials: ch.new_value },
         old_value: { credentials: ch.old_value }
-      };
+      } as (typeof deployment.changes)[number];
     }
 
     return ch;
@@ -346,6 +346,26 @@ export default function DeploymentDetailsPage({
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <UrlChangeItem change={change} key={change.id} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "healthcheck" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <HealthcheckChangeField
+                          change={change}
+                          key={change.id}
+                        />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "resource_limits" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <ResourceLimitChangeField
+                          change={change}
+                          key={change.id}
+                        />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}
@@ -886,4 +906,16 @@ function CommandChangeField({ change }: ChangeItemProps) {
       />
     </div>
   );
+}
+
+function HealthcheckChangeField({ change }: ChangeItemProps) {
+  const new_value = change.new_value as DockerService["healthcheck"] | null;
+  const old_value = change.old_value as DockerService["healthcheck"] | null;
+  return <div className="flex flex-col md:flex-row gap-4 items-center"></div>;
+}
+
+function ResourceLimitChangeField({ change }: ChangeItemProps) {
+  const new_value = change.new_value as DockerService["resource_limits"] | null;
+  const old_value = change.old_value as DockerService["resource_limits"] | null;
+  return <div className="flex flex-col md:flex-row gap-4 items-center"></div>;
 }
