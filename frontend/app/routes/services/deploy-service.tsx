@@ -42,16 +42,17 @@ export async function clientAction({
       description: fullErrorMessage,
       closeButton: true
     });
-    return;
+    return {
+      errors: error.errors
+    };
   }
-  if (data) {
-    await queryClient.invalidateQueries(
-      serviceQueries.single({ project_slug, service_slug })
-    );
-    toast.success("Success", {
-      description: "Deployment queued sucesfully !",
-      closeButton: true
-    });
-    return;
-  }
+
+  await queryClient.invalidateQueries(
+    serviceQueries.single({ project_slug, service_slug })
+  );
+  toast.success("Success", {
+    description: "Deployment queued sucesfully !",
+    closeButton: true
+  });
+  return { data };
 }

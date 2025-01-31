@@ -18,6 +18,7 @@ import {
   useNavigate
 } from "react-router";
 import { NavLink } from "~/components/nav-link";
+import { ServiceChangesModal } from "~/components/service-changes-modal";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Breadcrumb,
@@ -29,11 +30,21 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type DockerService, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
@@ -267,7 +278,7 @@ export default function ServiceDetailsLayout({
 
 type DeployServiceFormProps = {
   className?: string;
-  service: Route.ComponentProps["loaderData"]["service"];
+  service: DockerService;
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
@@ -276,16 +287,7 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
 
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
-      {service.unapplied_changes.length > 0 && (
-        <Button variant="warning" className="flex-1 md:flex-auto">
-          <TriangleAlert size={15} />
-          <span className="mx-1">
-            {service.unapplied_changes.length}&nbsp;
-            {pluralize("unapplied change", service.unapplied_changes.length)}
-          </span>
-        </Button>
-      )}
-
+      <ServiceChangesModal service={service} />
       <fetcher.Form
         method="post"
         action="./deploy-service"
