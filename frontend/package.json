@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "generate:api": "openapi-typescript ../openapi/schema.yml -o app/api/v1.ts",
-    "build": "tsc --noEmit && NODE_ENV=production react-router build",
+    "build": "NODE_ENV=production react-router build && tsc --noEmit",
     "dev": "trap 'exit 0' SIGINT; trap 'exit 0' SIGTERM; pnpm generate:api && react-router dev --host",
     "preview": "vite preview",
     "start": "react-router-serve ./build/server/index.js",
