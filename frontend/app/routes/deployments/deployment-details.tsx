@@ -911,11 +911,143 @@ function CommandChangeField({ change }: ChangeItemProps) {
 function HealthcheckChangeField({ change }: ChangeItemProps) {
   const new_value = change.new_value as DockerService["healthcheck"] | null;
   const old_value = change.old_value as DockerService["healthcheck"] | null;
-  return <div className="flex flex-col md:flex-row gap-4 items-center"></div>;
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center">
+      <fieldset className="w-full flex flex-col gap-5">
+        <div className="flex flex-col md:flex-row md:items-start gap-2">
+          <fieldset className="flex flex-col gap-1.5 flex-1">
+            <label htmlFor="healthcheck_type" className="text-muted-foreground">
+              Type
+            </label>
+            <Input
+              disabled
+              placeholder="<empty>"
+              className={cn(
+                "disabled:placeholder-shown:font-mono bg-muted",
+                "disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              readOnly
+              value={old_value?.type}
+            />
+          </fieldset>
+          <fieldset className="flex flex-col gap-1.5 flex-1">
+            <label className="text-muted-foreground">Value</label>
+            <Input
+              disabled
+              placeholder="<empty>"
+              className={cn(
+                "disabled:placeholder-shown:font-mono bg-muted",
+                "disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              readOnly
+              value={old_value?.value}
+            />
+          </fieldset>
+        </div>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label className="text-muted-foreground">Timeout (in seconds)</label>
+          <Input
+            disabled
+            placeholder="<empty>"
+            readOnly
+            value={old_value?.timeout_seconds}
+            className={cn(
+              "disabled:placeholder-shown:font-mono bg-muted",
+              "disabled:opacity-100",
+              "disabled:border-transparent"
+            )}
+          />
+        </fieldset>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label className="text-muted-foreground">Interval (in seconds)</label>
+          <Input
+            placeholder="<empty>"
+            disabled
+            readOnly
+            value={old_value?.interval_seconds}
+            className={cn(
+              "disabled:placeholder-shown:font-mono bg-muted",
+              "disabled:opacity-100",
+              "disabled:border-transparent"
+            )}
+          />
+        </fieldset>
+      </fieldset>
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+      <fieldset className="w-full flex flex-col gap-5">
+        <div className="flex flex-col md:flex-row md:items-start gap-2">
+          <fieldset className="flex flex-col gap-1.5 flex-1">
+            <label htmlFor="healthcheck_type" className="text-muted-foreground">
+              Type
+            </label>
+            <Input
+              disabled
+              placeholder="<empty>"
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              readOnly
+              value={new_value?.type}
+            />
+          </fieldset>
+          <fieldset className="flex flex-col gap-1.5 flex-1">
+            <label className="text-muted-foreground">Value</label>
+            <Input
+              disabled
+              placeholder="<empty>"
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                "disabled:border-transparent"
+              )}
+              readOnly
+              value={new_value?.value}
+            />
+          </fieldset>
+        </div>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label className="text-muted-foreground">Timeout (in seconds)</label>
+          <Input
+            disabled
+            placeholder="<empty>"
+            readOnly
+            value={new_value?.timeout_seconds}
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+              "disabled:border-transparent"
+            )}
+          />
+        </fieldset>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label className="text-muted-foreground">Interval (in seconds)</label>
+          <Input
+            placeholder="<empty>"
+            disabled
+            readOnly
+            value={new_value?.interval_seconds}
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+              "disabled:border-transparent"
+            )}
+          />
+        </fieldset>
+      </fieldset>
+    </div>
+  );
 }
 
 function ResourceLimitChangeField({ change }: ChangeItemProps) {
   const new_value = change.new_value as DockerService["resource_limits"] | null;
   const old_value = change.old_value as DockerService["resource_limits"] | null;
-  return <div className="flex flex-col md:flex-row gap-4 items-center"></div>;
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center">
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+    </div>
+  );
 }

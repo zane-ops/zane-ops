@@ -5,7 +5,9 @@ import { cn } from "~/lib/utils";
 export function Input({
   className,
   ...props
-}: Omit<React.ComponentProps<"input">, "value"> & { value?: string | null }) {
+}: Omit<React.ComponentProps<"input">, "value"> & {
+  value?: string | number | null;
+}) {
   return (
     <input
       className={cn(
