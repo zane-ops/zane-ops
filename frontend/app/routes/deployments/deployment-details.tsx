@@ -327,6 +327,13 @@ export default function DeploymentDetailsPage({
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}
+                  {field === "command" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <CommandChangeField change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
                   {field === "ports" &&
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
@@ -852,6 +859,40 @@ function UrlChangeItem({ change }: ChangeItemProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function CommandChangeField({ change }: ChangeItemProps) {
+  const new_value = change.new_value as DockerService["command"] | null;
+  const old_value = change.old_value as DockerService["command"] | null;
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center">
+      <Input
+        placeholder="<empty>"
+        disabled
+        readOnly
+        value={old_value}
+        className={cn(
+          "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+          "data-[edited]:dark:disabled:bg-secondary-foreground",
+          "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+        )}
+      />
+
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+      <Input
+        placeholder="<empty>"
+        disabled
+        readOnly
+        data-edited
+        value={new_value}
+        className={cn(
+          "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+          "data-[edited]:dark:disabled:bg-secondary-foreground",
+          "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+        )}
+      />
     </div>
   );
 }
