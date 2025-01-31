@@ -1047,7 +1047,77 @@ function ResourceLimitChangeField({ change }: ChangeItemProps) {
   const old_value = change.old_value as DockerService["resource_limits"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
+      <div className="flex flex-col md:flex-row gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="healthcheck_type" className="text-muted-foreground">
+            CPUs
+          </label>
+          <Input
+            disabled
+            readOnly
+            placeholder="<no-limit>"
+            value={old_value?.cpus}
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+              "data-[edited]:dark:disabled:bg-secondary-foreground",
+              "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+            )}
+          />
+        </fieldset>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="healthcheck_type" className="text-muted-foreground">
+            Memory (in MiB)
+          </label>
+          <Input
+            disabled
+            readOnly
+            placeholder="<no-limit>"
+            value={old_value?.memory?.value}
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+              "data-[edited]:dark:disabled:bg-secondary-foreground",
+              "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+            )}
+          />
+        </fieldset>
+      </div>
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+      <div className="flex flex-col md:flex-row gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="healthcheck_type" className="text-muted-foreground">
+            CPUs
+          </label>
+          <Input
+            disabled
+            readOnly
+            placeholder="<no-limit>"
+            data-edited
+            value={new_value?.cpus}
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+              "data-[edited]:dark:disabled:bg-secondary-foreground",
+              "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+            )}
+          />
+        </fieldset>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="healthcheck_type" className="text-muted-foreground">
+            Memory (in MiB)
+          </label>
+          <Input
+            disabled
+            readOnly
+            placeholder="<no-limit>"
+            data-edited
+            value={new_value?.memory?.value}
+            className={cn(
+              "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+              "data-[edited]:dark:disabled:bg-secondary-foreground",
+              "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+            )}
+          />
+        </fieldset>
+      </div>
     </div>
   );
 }
