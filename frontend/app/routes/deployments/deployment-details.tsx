@@ -2,16 +2,12 @@ import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import {
   ActivityIcon,
-  ArrowDown,
   ArrowDownIcon,
   ArrowRightIcon,
   BookmarkIcon,
   ChevronRightIcon,
-  CircleStopIcon,
   ContainerIcon,
   EthernetPortIcon,
-  EyeIcon,
-  EyeOffIcon,
   FilmIcon,
   GitCompareArrowsIcon,
   GlobeIcon,
@@ -22,11 +18,8 @@ import {
   KeyRoundIcon,
   LoaderIcon,
   PlayIcon,
-  PlugIcon,
   TagIcon,
   TerminalIcon,
-  TimerIcon,
-  ToyBrickIcon,
   TrendingUpIcon
 } from "lucide-react";
 import * as React from "react";
@@ -39,26 +32,12 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
-import { Alert } from "~/components/ui/alert";
-import {
-  capitalizeText,
-  formatElapsedTime,
-  formattedTime,
-  pluralize
-} from "~/utils";
+import { capitalizeText, formatElapsedTime, formattedTime } from "~/utils";
 import { type Route } from "./+types/deployment-details";
 import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
-import type { Button } from "react-day-picker";
 import { Input } from "~/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { type DockerService, deploymentQueries } from "~/lib/queries";
-import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
 
 hljs.registerLanguage("json", json);
