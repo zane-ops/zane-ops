@@ -96,10 +96,30 @@ export default function DeploymentDetailsPage({
     { language: "json" }
   ).value;
 
-  const deploymentChanges = Object.groupBy(
-    deployment.changes,
-    ({ field }) => field
-  );
+  const changes = deployment.changes.map((ch) => {
+    // @ts-expect-error
+    if (ch.field === "image") {
+      return {
+        ...ch,
+        field: "source",
+        new_value: { image: ch.new_value },
+        old_value: { image: ch.old_value }
+      };
+    }
+    // @ts-expect-error
+    if (ch.field === "credentials") {
+      return {
+        ...ch,
+        field: "source",
+        new_value: { credentials: ch.new_value },
+        old_value: { credentials: ch.old_value }
+      };
+    }
+
+    return ch;
+  });
+
+  const deploymentChanges = Object.groupBy(changes, ({ field }) => field);
 
   const serviceImage = deployment.service_snapshot.image;
   const imageParts = serviceImage.split(":");
@@ -243,39 +263,6 @@ export default function DeploymentDetailsPage({
                 </dd>
               </div>
             )}
-
-            {/* {deployment.finished_at && (
-              <div className="flex items-center gap-2">
-                <dt className="flex gap-1 items-center text-grey">
-                  <CircleStopIcon size={15} /> <span>Finished at:</span>
-                </dt>
-                <dd>{formattedTime(deployment.finished_at)}</dd>
-              </div>
-            )} */}
-
-            {/* <div className="flex items-center gap-2">
-              <dt className="flex gap-1 items-center text-grey">
-                <TimerIcon size={15} className="flex-none" />
-                <span>Total duration:</span>
-              </dt>
-              <dd>
-                {deployment.started_at && !deployment.finished_at ? (
-                  <span>{formatElapsedTime(timeElapsed)}</span>
-                ) : deployment.started_at && deployment.finished_at ? (
-                  <span>
-                    {formatElapsedTime(
-                      Math.round(
-                        (new Date(deployment.finished_at).getTime() -
-                          new Date(deployment.started_at).getTime()) /
-                          1000
-                      )
-                    )}
-                  </span>
-                ) : (
-                  <span>-</span>
-                )}
-              </dd>
-            </div> */}
           </dl>
         </div>
       </section>
@@ -294,7 +281,7 @@ export default function DeploymentDetailsPage({
             All the changes applied by this deployment.
           </p>
 
-          {deployment.changes.length === 0 && (
+          {changes.length === 0 && (
             <div
               className={cn(
                 "border-dashed border border-foreground rounded-md px-4 py-8 font-mono",
