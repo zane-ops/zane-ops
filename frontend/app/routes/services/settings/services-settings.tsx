@@ -581,9 +581,8 @@ async function requestServiceChange({
       break;
     }
     case "command": {
-      userData =
-        formData.get("command")?.toString().trim() ??
-        (null satisfies BodyOf<typeof field>["new_value"]);
+      const cmd = formData.get("command")?.toString().trim() ?? "";
+      userData = cmd.length === 0 ? null : cmd;
       break;
     }
     case "healthcheck": {
