@@ -1,6 +1,7 @@
 import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import {
+  ActivityIcon,
   ArrowDown,
   ArrowDownIcon,
   ArrowRightIcon,
@@ -16,6 +17,7 @@ import {
   GlobeIcon,
   HardDriveIcon,
   HashIcon,
+  HourglassIcon,
   InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
@@ -129,7 +131,9 @@ export default function DeploymentDetailsPage({
     ports: EthernetPortIcon,
     command: TerminalIcon,
     env_variables: KeyRoundIcon,
-    urls: GlobeIcon
+    urls: GlobeIcon,
+    resource_limits: HourglassIcon,
+    healthcheck: ActivityIcon
   };
 
   console.log({
