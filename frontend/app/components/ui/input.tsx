@@ -2,7 +2,12 @@ import * as React from "react";
 
 import { cn } from "~/lib/utils";
 
-export function Input({ className, ...props }: React.ComponentProps<"input">) {
+export function Input({
+  className,
+  ...props
+}: Omit<React.ComponentProps<"input">, "value"> & {
+  value?: string | number | null;
+}) {
   return (
     <input
       className={cn(
@@ -11,6 +16,7 @@ export function Input({ className, ...props }: React.ComponentProps<"input">) {
         className
       )}
       {...props}
+      value={props.value ?? undefined}
     />
   );
 }

@@ -429,7 +429,7 @@ function EnVariableRow({
             change_type === "UPDATE",
           "dark:bg-primary-foreground bg-primary/60 rounded-md":
             change_type === "ADD",
-          "dark:bg-red-500/30 bg-red-400/60 rounded-md":
+          "dark:bg-red-500/30 bg-red-300/60 rounded-md":
             change_type === "DELETE"
         }
       )}

@@ -1082,19 +1082,19 @@ export type HttpLog = Awaited<
 export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
 
 export const resourceQueries = {
-  search: (query: string) =>
+  search: (query?: string) =>
     queryOptions({
       queryKey: ["RESOURCES", query] as const,
       queryFn: ({ signal }) => {
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {
-              query: query.trim()
+              query: (query ?? "").trim()
             }
           },
           signal
         });
       },
-      enabled: query.trim().length > 0
+      enabled: (query ?? "").trim().length > 0
     })
 };

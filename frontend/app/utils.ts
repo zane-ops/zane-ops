@@ -122,23 +122,33 @@ export function mergeTimeAgoFormatterAndFormattedDate(
   return timeAgoFormatter(date);
 }
 
-export function formatElapsedTime(seconds: number) {
+export function formatElapsedTime(
+  seconds: number,
+  notation: "short" | "long" = "short"
+) {
   const secondsInMinute = 60;
   const secondsInHour = 60 * secondsInMinute;
   const secondsInDay = 24 * secondsInHour;
 
+  const NOTATIONS = {
+    SECONDS: notation === "short" ? "s" : " seconds",
+    MINUTES: notation === "short" ? "min" : " minutes",
+    HOURS: notation === "short" ? "h" : " hours",
+    DAYS: notation === "short" ? "d" : " days"
+  };
+
   if (seconds < secondsInMinute) {
-    return `${seconds}s`;
+    return `${seconds}${NOTATIONS.SECONDS}`;
   }
   if (seconds < secondsInHour) {
     const secondsLeftInMinute = seconds % secondsInMinute;
-    return `${Math.floor(seconds / secondsInMinute)}min ${secondsLeftInMinute}s`;
+    return `${Math.floor(seconds / secondsInMinute)}${NOTATIONS.MINUTES} ${secondsLeftInMinute}${NOTATIONS.SECONDS}`;
   }
   if (seconds < secondsInDay) {
     const hours = Math.floor(seconds / secondsInHour);
     const minutes = Math.floor((seconds % secondsInHour) / secondsInMinute);
     const secondsLeft = seconds % secondsInMinute;
-    return `${hours}h ${minutes}min ${secondsLeft}s`;
+    return `${hours}${NOTATIONS.HOURS} ${minutes}${NOTATIONS.MINUTES} ${secondsLeft}${NOTATIONS.SECONDS}`;
   }
 
   const days = Math.floor(seconds / secondsInDay);
@@ -146,7 +156,7 @@ export function formatElapsedTime(seconds: number) {
   const minutes = Math.floor((seconds % secondsInHour) / secondsInMinute);
   const secondsLeft = seconds % secondsInMinute;
 
-  return `${days}d ${hours}h ${minutes}min ${secondsLeft}s`;
+  return `${days}${NOTATIONS.DAYS} ${hours}${NOTATIONS.HOURS} ${minutes}${NOTATIONS.MINUTES} ${secondsLeft}${NOTATIONS.SECONDS}`;
 }
 
 export function capitalizeText(text: string): string {

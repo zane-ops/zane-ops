@@ -4,55 +4,53 @@ import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/deploy-service";
+import { type Route } from "./+types/discard-service-change";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     `/project/${params.projectSlug}/services/${params.serviceSlug}`
   );
 }
-
 export async function clientAction({
   request,
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const { error, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
+  const toastId = toast.loading("Discarding service change...");
+  const change_id = formData.get("change_id")?.toString();
+
+  const { error: errors, data } = await apiClient.DELETE(
+    "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
       },
-      body: {
-        commit_message: formData.get("commit_message")?.toString()
-      },
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          change_id: change_id!
         }
       }
     }
   );
 
-  if (error) {
-    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
-
-    toast.error("Error", {
-      description: fullErrorMessage,
-      closeButton: true
-    });
+  if (errors) {
+    toast.error("Failed to discard change", { id: toastId, closeButton: true });
     return {
-      errors: error.errors
+      errors
     };
   }
 
-  await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug })
-  );
-  toast.success("Success", {
-    description: "Deployment queued sucesfully !",
+  await queryClient.invalidateQueries({
+    ...serviceQueries.single({ project_slug, service_slug }),
+    exact: true
+  });
+  toast.success("Change discarded successfully", {
+    id: toastId,
     closeButton: true
   });
-  return { data };
+  return {
+    data
+  };
 }
