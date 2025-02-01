@@ -53,7 +53,6 @@ platformdirs==4.2.0
 prometheus-client==0.20.0
 prompt-toolkit==3.0.48
 protobuf==5.27.3
-psutil==5.9.8
 psycopg==3.2.3
 psycopg-binary==3.2.3
 psycopg-pool==3.2.4
