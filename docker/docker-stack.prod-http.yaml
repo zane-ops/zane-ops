@@ -1,4 +1,7 @@
 services:
   proxy:
     ports:
-      - "80:80"
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host

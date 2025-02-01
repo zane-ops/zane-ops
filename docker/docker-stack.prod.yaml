@@ -46,7 +46,10 @@ services:
         zane.stack: "true"
         zane.role: "proxy"
     ports:
-      - "443:443"
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
     volumes:
       - caddy-data:/data
       - caddy-config:/config
