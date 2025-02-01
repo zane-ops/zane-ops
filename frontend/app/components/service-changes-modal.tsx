@@ -104,7 +104,7 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
             <div
               className={cn(
                 "border-dashed border border-foreground rounded-md px-4 py-8 font-mono",
-                "flex items-center justify-center text-foreground h-120"
+                "flex items-center justify-center text-foreground h-124"
               )}
             >
               No changes queued
@@ -114,7 +114,7 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
         {service.unapplied_changes.length > 0 && (
           <Accordion
             type="multiple"
-            className="border-t border-border -mx-6 px-6 flex flex-col gap-2 h-120 overflow-auto py-4"
+            className="border-t border-border -mx-6 px-6 flex flex-col gap-2 h-124 overflow-auto py-4"
           >
             {Object.entries(serviceChangeGroups).map((item) => {
               const field = item[0] as keyof typeof serviceChangeGroups;
