@@ -88,8 +88,8 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:80/api/ping"]
       interval: 30s
-      timeout: 3m
-      start_period: 10s
+      timeout: 1m30s
+      start_period: 30s
       retries: 3
     networks:
       zane:
@@ -412,7 +412,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 15s
 volumes:
   es-data:
     labels:
