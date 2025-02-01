@@ -6,9 +6,13 @@ import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {
   change: DockerService["unapplied_changes"][number];
+  unapplied?: boolean;
 };
 
-export function VolumeChangeItem({ change }: ChangeItemProps) {
+export function VolumeChangeItem({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
   const new_value = change.new_value as DockerService["volumes"][number];
   const old_value = change.old_value as DockerService["volumes"][number];
 
@@ -21,7 +25,7 @@ export function VolumeChangeItem({ change }: ChangeItemProps) {
       <div
         className={cn("rounded-md p-4 flex items-start gap-2 bg-muted w-full", {
           "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
-          "dark:bg-red-500/20 bg-red-400/60": change.type === "DELETE"
+          "dark:bg-red-500/20 bg-red-300/60": change.type === "DELETE"
         })}
       >
         <HardDriveIcon size={20} className="text-grey relative top-1.5" />
@@ -29,10 +33,14 @@ export function VolumeChangeItem({ change }: ChangeItemProps) {
           <h3 className="text-lg inline-flex gap-1 items-center">
             <span>{(old_value ?? new_value).name}</span>
             {change.type === "ADD" && (
-              <span className="text-green-500">added</span>
+              <span className="text-green-500">
+                {unapplied && "will be"} added
+              </span>
             )}
             {change.type === "DELETE" && (
-              <span className="text-red-500">removed</span>
+              <span className="text-red-500">
+                {unapplied && "will be"} removed
+              </span>
             )}
           </h3>
           <small className="text-card-foreground inline-flex gap-1 items-center">
@@ -67,7 +75,9 @@ export function VolumeChangeItem({ change }: ChangeItemProps) {
             <div className="flex flex-col gap-2">
               <h3 className="text-lg inline-flex gap-1 items-center">
                 <span>{new_value.name}</span>
-                <span className="text-blue-500">updated</span>
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
               </h3>
               <small className="text-card-foreground inline-flex gap-1 items-center">
                 {new_value.host_path && (
@@ -87,7 +97,10 @@ export function VolumeChangeItem({ change }: ChangeItemProps) {
   );
 }
 
-export function SourceChangeField({ change }: ChangeItemProps) {
+export function SourceChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
   const new_value = change.new_value as Pick<
     DockerService,
     "image" | "credentials"
@@ -198,7 +211,10 @@ export function SourceChangeField({ change }: ChangeItemProps) {
       <div className="flex flex-col gap-4 w-full">
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="image">
-            Source Image <span className="text-blue-500">updated</span>
+            Source Image&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </label>
           <div className="relative">
             <Input
@@ -210,8 +226,8 @@ export function SourceChangeField({ change }: ChangeItemProps) {
               value={newImageParts?.image}
               aria-labelledby="image-error"
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
                 "disabled:border-transparent disabled:opacity-100",
                 "disabled:text-transparent"
               )}
@@ -228,7 +244,10 @@ export function SourceChangeField({ change }: ChangeItemProps) {
 
         <fieldset className="w-full flex flex-col gap-2">
           <legend>
-            Credentials <span className="text-blue-500">updated</span>
+            Credentials&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </legend>
           <label
             className="text-muted-foreground"
@@ -245,8 +264,8 @@ export function SourceChangeField({ change }: ChangeItemProps) {
               readOnly
               data-edited
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
                 "disabled:border-transparent disabled:opacity-100 disabled:select-none"
               )}
             />
@@ -268,8 +287,8 @@ export function SourceChangeField({ change }: ChangeItemProps) {
                 readOnly
                 data-edited
                 className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                  "data-[edited]:dark:disabled:bg-secondary-foreground",
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
                   "disabled:border-transparent disabled:opacity-100"
                 )}
               />
@@ -281,7 +300,7 @@ export function SourceChangeField({ change }: ChangeItemProps) {
   );
 }
 
-export function PortChangeItem({ change }: ChangeItemProps) {
+export function PortChangeItem({ change, unapplied = false }: ChangeItemProps) {
   const new_value = change.new_value as DockerService["ports"][number];
   const old_value = change.old_value as DockerService["ports"][number];
 
@@ -292,7 +311,7 @@ export function PortChangeItem({ change }: ChangeItemProps) {
           "w-full px-3 py-4 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
-            "dark:bg-red-500/30 bg-red-400/60": change.type === "DELETE"
+            "dark:bg-red-500/30 bg-red-300/60": change.type === "DELETE"
           }
         )}
       >
@@ -301,10 +320,10 @@ export function PortChangeItem({ change }: ChangeItemProps) {
         <span className="text-grey">{(old_value ?? new_value)?.forwarded}</span>
 
         {change.type === "ADD" && (
-          <span className="text-green-500">{change.id && "will be"} added</span>
+          <span className="text-green-500">{unapplied && "will be"} added</span>
         )}
         {change.type === "DELETE" && (
-          <span className="text-red-500">removed</span>
+          <span className="text-red-500">{unapplied && "will be"} removed</span>
         )}
       </div>
 
@@ -325,7 +344,9 @@ export function PortChangeItem({ change }: ChangeItemProps) {
             <ArrowRightIcon size={15} className="text-grey" />
             <span className="text-grey">{new_value.forwarded}</span>
 
-            <span className="text-blue-500">updated</span>
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </div>
         </>
       )}
@@ -333,7 +354,10 @@ export function PortChangeItem({ change }: ChangeItemProps) {
   );
 }
 
-export function EnvVariableChangeItem({ change }: ChangeItemProps) {
+export function EnvVariableChangeItem({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
   const new_value = change.new_value as
     | DockerService["env_variables"][number]
     | null;
@@ -350,17 +374,23 @@ export function EnvVariableChangeItem({ change }: ChangeItemProps) {
 
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
-            "dark:bg-red-500/30 bg-red-400/60": change.type === "DELETE"
+            "dark:bg-red-500/30 bg-red-300/60": change.type === "DELETE"
           }
         )}
       >
         <span>{(old_value ?? new_value)?.key}</span>
         <span className="text-grey">{"="}</span>
-        <span>{(old_value ?? new_value)?.value}</span>
+        <span>
+          <span className="text-grey">'</span>
+          {(old_value ?? new_value)?.value}
+          <span className="text-grey">'</span>
+        </span>
         <span>&nbsp;</span>
-        {change.type === "ADD" && <span className="text-green-500">added</span>}
+        {change.type === "ADD" && (
+          <span className="text-green-500">{unapplied && "will be"} added</span>
+        )}
         {change.type === "DELETE" && (
-          <span className="text-red-500">removed</span>
+          <span className="text-red-500">{unapplied && "will be"} removed</span>
         )}
       </div>
 
@@ -380,9 +410,15 @@ export function EnvVariableChangeItem({ change }: ChangeItemProps) {
           >
             <span>{new_value?.key}</span>
             <span className="text-grey">{"="}</span>
-            <span>{new_value?.value}</span>
+            <span>
+              <span className="text-grey">'</span>
+              {new_value?.value}
+              <span className="text-grey">'</span>
+            </span>
             <span>&nbsp;</span>
-            <span className="text-blue-500">updated</span>
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </div>
         </>
       )}
@@ -390,7 +426,7 @@ export function EnvVariableChangeItem({ change }: ChangeItemProps) {
   );
 }
 
-export function UrlChangeItem({ change }: ChangeItemProps) {
+export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
   const new_value = change.new_value as DockerService["urls"][number] | null;
   const old_value = change.old_value as DockerService["urls"][number] | null;
 
@@ -399,9 +435,10 @@ export function UrlChangeItem({ change }: ChangeItemProps) {
       <div
         className={cn(
           "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24 py-4",
+          "text-base",
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
-            "dark:bg-red-500/30 bg-red-400/60": change.type === "DELETE"
+            "dark:bg-red-500/30 bg-red-300/60": change.type === "DELETE"
           }
         )}
       >
@@ -427,9 +464,11 @@ export function UrlChangeItem({ change }: ChangeItemProps) {
           </div>
         )}
 
-        {change.type === "ADD" && <span className="text-green-500">added</span>}
+        {change.type === "ADD" && (
+          <span className="text-green-500">{unapplied && "will be"} added</span>
+        )}
         {change.type === "DELETE" && (
-          <span className="text-red-500">removed</span>
+          <span className="text-red-500">{unapplied && "will be"} removed</span>
         )}
       </div>
       {change.type === "UPDATE" && (
@@ -460,7 +499,9 @@ export function UrlChangeItem({ change }: ChangeItemProps) {
               </div>
             )}
 
-            <span className="text-blue-500">updated</span>
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </div>
         </>
       )}
@@ -468,7 +509,10 @@ export function UrlChangeItem({ change }: ChangeItemProps) {
   );
 }
 
-export function CommandChangeField({ change }: ChangeItemProps) {
+export function CommandChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
   const new_value = change.new_value as DockerService["command"] | null;
   const old_value = change.old_value as DockerService["command"] | null;
   return (
@@ -486,23 +530,40 @@ export function CommandChangeField({ change }: ChangeItemProps) {
       />
 
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
-      <Input
-        placeholder="<empty>"
-        disabled
-        readOnly
-        data-edited
-        value={new_value}
-        className={cn(
-          "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-          "data-[edited]:dark:disabled:bg-secondary-foreground",
-          "disabled:border-transparent disabled:opacity-100 disabled:select-none"
-        )}
-      />
+      <div className="relative w-full">
+        <Input
+          placeholder="<empty>"
+          disabled
+          readOnly
+          data-edited
+          value={new_value}
+          className={cn(
+            "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+            "data-[edited]:dark:disabled:bg-secondary-foreground",
+            "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+            "text-transparent placeholder:text-transparent"
+          )}
+        />
+        <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+          <span>
+            {new_value ?? (
+              <span className="text-grey font-mono">{`<empty>`}</span>
+            )}
+          </span>
+          &nbsp;
+          <span className="text-blue-500">
+            {unapplied && "will be"} updated
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
 
-export function HealthcheckChangeField({ change }: ChangeItemProps) {
+export function HealthcheckChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
   const new_value = change.new_value as DockerService["healthcheck"] | null;
   const old_value = change.old_value as DockerService["healthcheck"] | null;
   return (
@@ -569,12 +630,18 @@ export function HealthcheckChangeField({ change }: ChangeItemProps) {
           />
         </fieldset>
       </fieldset>
+
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+
       <fieldset className="w-full flex flex-col gap-5">
         <div className="flex flex-col md:flex-row md:items-start gap-2">
           <fieldset className="flex flex-col gap-1.5 flex-1">
             <label htmlFor="healthcheck_type" className="text-muted-foreground">
-              Type
+              <span>Type</span>
+              &nbsp;
+              <span className="text-blue-500">
+                {unapplied && "will be"} updated
+              </span>
             </label>
             <Input
               disabled
@@ -589,7 +656,13 @@ export function HealthcheckChangeField({ change }: ChangeItemProps) {
             />
           </fieldset>
           <fieldset className="flex flex-col gap-1.5 flex-1">
-            <label className="text-muted-foreground">Value</label>
+            <label className="text-muted-foreground">
+              <span>Value</span>
+              &nbsp;
+              <span className="text-blue-500">
+                {unapplied && "will be"} updated
+              </span>
+            </label>
             <Input
               disabled
               placeholder="<empty>"
@@ -604,7 +677,12 @@ export function HealthcheckChangeField({ change }: ChangeItemProps) {
           </fieldset>
         </div>
         <fieldset className="flex flex-col gap-1.5 flex-1">
-          <label className="text-muted-foreground">Timeout (in seconds)</label>
+          <label className="text-muted-foreground">
+            Timeout (in seconds)&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
+          </label>
           <Input
             disabled
             placeholder="<empty>"
@@ -618,7 +696,12 @@ export function HealthcheckChangeField({ change }: ChangeItemProps) {
           />
         </fieldset>
         <fieldset className="flex flex-col gap-1.5 flex-1">
-          <label className="text-muted-foreground">Interval (in seconds)</label>
+          <label className="text-muted-foreground">
+            Interval (in seconds)&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
+          </label>
           <Input
             placeholder="<empty>"
             disabled
@@ -636,12 +719,15 @@ export function HealthcheckChangeField({ change }: ChangeItemProps) {
   );
 }
 
-export function ResourceLimitChangeField({ change }: ChangeItemProps) {
+export function ResourceLimitChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
   const new_value = change.new_value as DockerService["resource_limits"] | null;
   const old_value = change.old_value as DockerService["resource_limits"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
-      <div className="flex flex-col md:flex-row gap-4 w-full">
+      <div className="flex flex-col  gap-4 w-full">
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="healthcheck_type" className="text-muted-foreground">
             CPUs
@@ -676,10 +762,13 @@ export function ResourceLimitChangeField({ change }: ChangeItemProps) {
         </fieldset>
       </div>
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
-      <div className="flex flex-col md:flex-row gap-4 w-full">
+      <div className="flex flex-col  gap-4 w-full">
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="healthcheck_type" className="text-muted-foreground">
-            CPUs
+            CPUs&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </label>
           <Input
             disabled
@@ -696,7 +785,10 @@ export function ResourceLimitChangeField({ change }: ChangeItemProps) {
         </fieldset>
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="healthcheck_type" className="text-muted-foreground">
-            Memory (in MiB)
+            Memory (in MiB)&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
           </label>
           <Input
             disabled
