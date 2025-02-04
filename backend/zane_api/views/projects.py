@@ -364,7 +364,7 @@ class ProjectServiceListView(APIView):
                 image_change = service.unapplied_changes.filter(
                     field=DockerDeploymentChange.ChangeField.SOURCE
                 ).first()
-                service_image = image_change.new_value.image
+                service_image = image_change.new_value["image"]
 
             parts = service_image.split(":")
             if len(parts) == 1:
