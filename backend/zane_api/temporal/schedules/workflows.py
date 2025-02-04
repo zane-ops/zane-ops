@@ -72,13 +72,3 @@ class CleanupAppLogsWorkflow:
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
-
-
-@workflow.defn(name="system-cleanup")
-class SystemCleanupWorkflow:
-    @workflow.run
-    async def run(self):
-        retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-        # the

@@ -283,21 +283,3 @@ class CleanupActivities:
             },
         )
         return LogsCleanupResult(deleted_count=deleted_count)
-
-
-class SystemCleanupActivities:
-    def __init__(self):
-        self.docker_client = get_docker_client()
-
-    @activity.defn
-    async def cleanup_images(self):
-        # self.docker_client.images.prune()
-        pass
-
-    @activity.defn
-    async def cleanup_volumes(self):
-        pass
-
-    @activity.defn
-    async def cleanup_containers(self):
-        pass

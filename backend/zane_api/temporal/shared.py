@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
+import asyncio
+
 
 from temporalio import workflow
 
@@ -16,6 +18,12 @@ from ..dtos import (
     HealthCheckDto,
     VolumeDto,
 )
+
+# Semaphore to allow multiple DeployWorkflow instances
+deploy_semaphore = asyncio.Semaphore(
+    settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS
+)  # Allow up to 5 concurrent DeployWorkflow
+system_cleanup_event = asyncio.Event()
 
 
 @dataclass

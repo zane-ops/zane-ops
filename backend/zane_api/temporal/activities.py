@@ -54,6 +54,7 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
+    from django.core.cache import cache
 
 from ..dtos import (
     DockerServiceSnapshot,
@@ -701,6 +702,27 @@ class ZaneProxyClient:
             cls.get_uri_for_deployment(deployment_hash),
             timeout=5,
         )
+
+
+class SystemCleanupActivities:
+    def __init__(self):
+        self.docker_client = get_docker_client()
+
+    @activity.defn
+    async def cleanup_images(self) -> dict:
+        return self.docker_client.images.prune(filters={"dangling": True})
+
+    @activity.defn
+    async def cleanup_volumes(self) -> dict:
+        return self.docker_client.volumes.prune(filters={})
+
+    @activity.defn
+    async def cleanup_containers(self) -> dict:
+        return self.docker_client.containers.prune(filters={})
+
+    @activity.defn
+    async def cleanup_networks(self) -> dict:
+        return self.docker_client.networks.prune(filters={})
 
 
 class DockerSwarmActivities:
