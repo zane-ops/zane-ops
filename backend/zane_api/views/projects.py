@@ -47,6 +47,7 @@ from ..models import (
     URL,
     Volume,
     DockerDeployment,
+    DockerDeploymentChange,
     GitDeployment,
 )
 from ..serializers import (
@@ -360,8 +361,10 @@ class ProjectServiceListView(APIView):
 
             service_image = service.image
             if service_image is None:
-                image_change = service.unapplied_changes.filter(field="image").first()
-                service_image = image_change.new_value
+                image_change = service.unapplied_changes.filter(
+                    field=DockerDeploymentChange.ChangeField.SOURCE
+                ).first()
+                service_image = image_change.new_value.image
 
             parts = service_image.split(":")
             if len(parts) == 1:
