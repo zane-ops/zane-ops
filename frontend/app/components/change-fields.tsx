@@ -33,12 +33,12 @@ export function VolumeChangeItem({
           <h3 className="text-lg inline-flex gap-1 items-center">
             <span>{(old_value ?? new_value).name}</span>
             {change.type === "ADD" && (
-              <span className="text-green-500">
+              <span className="text-green-500 flex-none">
                 {unapplied && "will be"} added
               </span>
             )}
             {change.type === "DELETE" && (
-              <span className="text-red-500">
+              <span className="text-red-500 flex-none">
                 {unapplied && "will be"} removed
               </span>
             )}
@@ -75,7 +75,7 @@ export function VolumeChangeItem({
             <div className="flex flex-col gap-2">
               <h3 className="text-lg inline-flex gap-1 items-center">
                 <span>{new_value.name}</span>
-                <span className="text-blue-500">
+                <span className="text-blue-500 flex-none">
                   {unapplied && "will be"} updated
                 </span>
               </h3>
@@ -212,7 +212,7 @@ export function SourceChangeField({
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="image">
             Source Image&nbsp;
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </label>
@@ -245,7 +245,7 @@ export function SourceChangeField({
         <fieldset className="w-full flex flex-col gap-2">
           <legend>
             Credentials&nbsp;
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </legend>
@@ -320,10 +320,14 @@ export function PortChangeItem({ change, unapplied = false }: ChangeItemProps) {
         <span className="text-grey">{(old_value ?? new_value)?.forwarded}</span>
 
         {change.type === "ADD" && (
-          <span className="text-green-500">{unapplied && "will be"} added</span>
+          <span className="text-green-500 flex-none">
+            {unapplied && "will be"} added
+          </span>
         )}
         {change.type === "DELETE" && (
-          <span className="text-red-500">{unapplied && "will be"} removed</span>
+          <span className="text-red-500 flex-none">
+            {unapplied && "will be"} removed
+          </span>
         )}
       </div>
 
@@ -344,7 +348,7 @@ export function PortChangeItem({ change, unapplied = false }: ChangeItemProps) {
             <ArrowRightIcon size={15} className="text-grey" />
             <span className="text-grey">{new_value.forwarded}</span>
 
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </div>
@@ -387,10 +391,14 @@ export function EnvVariableChangeItem({
         </span>
         <span>&nbsp;</span>
         {change.type === "ADD" && (
-          <span className="text-green-500">{unapplied && "will be"} added</span>
+          <span className="text-green-500 flex-none">
+            {unapplied && "will be"} added
+          </span>
         )}
         {change.type === "DELETE" && (
-          <span className="text-red-500">{unapplied && "will be"} removed</span>
+          <span className="text-red-500 flex-none">
+            {unapplied && "will be"} removed
+          </span>
         )}
       </div>
 
@@ -416,7 +424,7 @@ export function EnvVariableChangeItem({
               <span className="text-grey">'</span>
             </span>
             <span>&nbsp;</span>
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </div>
@@ -465,10 +473,14 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
         )}
 
         {change.type === "ADD" && (
-          <span className="text-green-500">{unapplied && "will be"} added</span>
+          <span className="text-green-500 flex-none">
+            {unapplied && "will be"} added
+          </span>
         )}
         {change.type === "DELETE" && (
-          <span className="text-red-500">{unapplied && "will be"} removed</span>
+          <span className="text-red-500 flex-none">
+            {unapplied && "will be"} removed
+          </span>
         )}
       </div>
       {change.type === "UPDATE" && (
@@ -499,7 +511,7 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
               </div>
             )}
 
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </div>
@@ -551,7 +563,7 @@ export function CommandChangeField({
             )}
           </span>
           &nbsp;
-          <span className="text-blue-500">
+          <span className="text-blue-500 flex-none">
             {unapplied && "will be"} updated
           </span>
         </span>
@@ -639,7 +651,7 @@ export function HealthcheckChangeField({
             <label htmlFor="healthcheck_type" className="text-muted-foreground">
               <span>Type</span>
               &nbsp;
-              <span className="text-blue-500">
+              <span className="text-blue-500 flex-none">
                 {unapplied && "will be"} updated
               </span>
             </label>
@@ -659,7 +671,7 @@ export function HealthcheckChangeField({
             <label className="text-muted-foreground">
               <span>Value</span>
               &nbsp;
-              <span className="text-blue-500">
+              <span className="text-blue-500 flex-none">
                 {unapplied && "will be"} updated
               </span>
             </label>
@@ -679,7 +691,7 @@ export function HealthcheckChangeField({
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label className="text-muted-foreground">
             Timeout (in seconds)&nbsp;
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </label>
@@ -698,7 +710,7 @@ export function HealthcheckChangeField({
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label className="text-muted-foreground">
             Interval (in seconds)&nbsp;
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </label>
@@ -766,7 +778,7 @@ export function ResourceLimitChangeField({
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="healthcheck_type" className="text-muted-foreground">
             CPUs&nbsp;
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </label>
@@ -786,7 +798,7 @@ export function ResourceLimitChangeField({
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="healthcheck_type" className="text-muted-foreground">
             Memory (in MiB)&nbsp;
-            <span className="text-blue-500">
+            <span className="text-blue-500 flex-none">
               {unapplied && "will be"} updated
             </span>
           </label>
