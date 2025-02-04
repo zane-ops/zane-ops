@@ -578,3 +578,22 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()))
+
+    def test_create_service_without_being_deployed_yet(self):
+        owner = self.loginUser()
+        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+
+        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        response = self.client.get(
+            reverse("zane_api:projects.service_list", kwargs={"slug": project.slug}),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()))
