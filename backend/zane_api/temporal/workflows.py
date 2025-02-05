@@ -635,6 +635,12 @@ class SystemCleanupWorkflow:
             )
 
             await workflow.execute_activity_method(
+                SystemCleanupActivities.cleanup_containers,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
                 SystemCleanupActivities.cleanup_volumes,
                 start_to_close_timeout=timedelta(minutes=5),
                 retry_policy=self.retry_policy,
@@ -646,11 +652,6 @@ class SystemCleanupWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_containers,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
         finally:
             # release all deployment locks
             await workflow.execute_activity(
