@@ -732,7 +732,9 @@ async def lock_deploy_semaphore():
     semaphore = AsyncSemaphore(
         key=DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
-        semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+        semaphore_timeout=timedelta(
+            minutes=5
+        ),  # this is to prevent the system cleanup from blocking for too long
     )
     await semaphore.acquire_all()
 
@@ -742,7 +744,9 @@ async def reset_deploy_semaphore():
     semaphore = AsyncSemaphore(
         key=DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
-        semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+        semaphore_timeout=timedelta(
+            minutes=5
+        ),  # this is to prevent the system cleanup from blocking for too long
     )
     await semaphore.reset()
 
