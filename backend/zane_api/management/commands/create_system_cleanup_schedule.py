@@ -6,7 +6,6 @@ from django.conf import settings
 
 from ...temporal import get_temporalio_client
 from ...temporal import SystemCleanupWorkflow
-from ...utils import Colors
 from temporalio.client import (
     Schedule,
     ScheduleActionStartWorkflow,
