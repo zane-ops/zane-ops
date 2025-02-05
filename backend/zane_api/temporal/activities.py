@@ -54,7 +54,7 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
-    from django.core.cache import cache
+    from .semaphore import AsyncSemaphore
 
 from ..dtos import (
     DockerServiceSnapshot,
@@ -704,6 +704,49 @@ class ZaneProxyClient:
         )
 
 
+DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
+
+
+@activity.defn
+async def acquire_deploy_semaphore():
+    semaphore = AsyncSemaphore(
+        key=DEPLOY_SEMAPHORE_KEY,
+        limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
+        semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+    )
+    await semaphore.acquire()
+
+
+@activity.defn
+async def release_deploy_semaphore():
+    semaphore = AsyncSemaphore(
+        key=DEPLOY_SEMAPHORE_KEY,
+        limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
+        semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+    )
+    await semaphore.release()
+
+
+@activity.defn
+async def lock_deploy_semaphore():
+    semaphore = AsyncSemaphore(
+        key=DEPLOY_SEMAPHORE_KEY,
+        limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
+        semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+    )
+    await semaphore.acquire_all()
+
+
+@activity.defn
+async def reset_deploy_semaphore():
+    semaphore = AsyncSemaphore(
+        key=DEPLOY_SEMAPHORE_KEY,
+        limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
+        semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+    )
+    await semaphore.reset()
+
+
 class SystemCleanupActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
@@ -714,15 +757,15 @@ class SystemCleanupActivities:
 
     @activity.defn
     async def cleanup_volumes(self) -> dict:
-        return self.docker_client.volumes.prune(filters={})
+        return self.docker_client.volumes.prune()
 
     @activity.defn
     async def cleanup_containers(self) -> dict:
-        return self.docker_client.containers.prune(filters={})
+        return self.docker_client.containers.prune()
 
     @activity.defn
     async def cleanup_networks(self) -> dict:
-        return self.docker_client.networks.prune(filters={})
+        return self.docker_client.networks.prune()
 
 
 class DockerSwarmActivities:
