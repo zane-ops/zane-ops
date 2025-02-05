@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
+
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():

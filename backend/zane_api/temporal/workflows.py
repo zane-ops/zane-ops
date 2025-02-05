@@ -19,14 +19,24 @@ from ..dtos import VolumeDto
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
-    from .activities import DockerSwarmActivities
-    from .shared import ProjectDetails, ArchivedProjectDetails, DockerDeploymentDetails
+    from .activities import DockerSwarmActivities, SystemCleanupActivities
+    from .shared import (
+        ProjectDetails,
+        ArchivedProjectDetails,
+        DockerDeploymentDetails,
+    )
     from django.conf import settings
     from .schedules import (
         MonitorDockerDeploymentWorkflow,
         MonitorDockerDeploymentActivities,
         CleanupActivities,
         CleanupAppLogsWorkflow,
+    )
+    from .activities import (
+        acquire_deploy_semaphore,
+        release_deploy_semaphore,
+        lock_deploy_semaphore,
+        reset_deploy_semaphore,
     )
 
 
@@ -151,6 +161,12 @@ class DeployDockerServiceWorkflow:
     async def run(
         self, deployment: DockerDeploymentDetails
     ) -> DeployDockerServiceWorkflowResult:
+        await workflow.execute_activity(
+            acquire_deploy_semaphore,
+            start_to_close_timeout=timedelta(minutes=5),
+            retry_policy=self.retry_policy,
+        )
+
         self.deployment_hash = deployment.hash
 
         print(
@@ -405,6 +421,12 @@ class DeployDockerServiceWorkflow:
                 next_queued_deployment=next_queued_deployment,
                 deployment_status_reason=healthcheck_result.reason,
             )
+        finally:
+            await workflow.execute_activity(
+                release_deploy_semaphore,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
 
     async def handle_cancellation(
         self,
@@ -590,10 +612,61 @@ class ToggleDockerServiceWorkflow:
             )
 
 
+@workflow.defn(name="system-cleanup")
+class SystemCleanupWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self):
+        await workflow.execute_activity(
+            lock_deploy_semaphore,
+            start_to_close_timeout=timedelta(minutes=5),
+            retry_policy=self.retry_policy,
+        )
+
+        try:
+            await workflow.execute_activity_method(
+                SystemCleanupActivities.cleanup_images,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                SystemCleanupActivities.cleanup_volumes,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                SystemCleanupActivities.cleanup_networks,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                SystemCleanupActivities.cleanup_containers,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+        finally:
+            # release all deployment locks
+            await workflow.execute_activity(
+                reset_deploy_semaphore,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+            pass
+
+
 def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
     cleanup_activites = CleanupActivities()
+    system_cleanup_activities = SystemCleanupActivities()
+
     return dict(
         workflows=[
             ArchiveDockerServiceWorkflow,
@@ -603,6 +676,7 @@ def get_workflows_and_activities():
             MonitorDockerDeploymentWorkflow,
             ToggleDockerServiceWorkflow,
             CleanupAppLogsWorkflow,
+            SystemCleanupWorkflow,
         ],
         activities=[
             swarm_activities.toggle_cancelling_status,
@@ -636,5 +710,13 @@ def get_workflows_and_activities():
             monitor_activities.save_deployment_status,
             monitor_activities.run_deployment_monitor_healthcheck,
             cleanup_activites.cleanup_simple_logs,
+            system_cleanup_activities.cleanup_images,
+            system_cleanup_activities.cleanup_containers,
+            system_cleanup_activities.cleanup_volumes,
+            system_cleanup_activities.cleanup_networks,
+            acquire_deploy_semaphore,
+            lock_deploy_semaphore,
+            release_deploy_semaphore,
+            reset_deploy_semaphore,
         ],
     )
