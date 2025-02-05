@@ -757,11 +757,16 @@ class SystemCleanupActivities:
 
     @activity.defn
     async def cleanup_images(self) -> dict:
-        return self.docker_client.images.prune(filters={"dangling": True})
+        return self.docker_client.images.prune(filters={"dangling": False})
 
     @activity.defn
     async def cleanup_volumes(self) -> dict:
-        return self.docker_client.volumes.prune()
+        return self.docker_client.volumes.prune(
+            filters={
+                "all": True,
+                "label!": ["zane-managed"],
+            }
+        )
 
     @activity.defn
     async def cleanup_containers(self) -> dict:
