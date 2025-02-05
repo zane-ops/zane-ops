@@ -581,18 +581,6 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
-        http_ports = [80, 443]
-        if len(snapshot.urls) > 0:
-            for port in snapshot.ports:
-                if port.host not in http_ports:
-                    raise serializers.ValidationError(
-                        {
-                            "new_value": {
-                                "non_field_errors": f"Cannot specify both a custom URL and a port with `host` other than a HTTP port (80/443)"
-                            }
-                        }
-                    )
-
         if (
             change_type == "DELETE"
             and snapshot.healthcheck is not None
