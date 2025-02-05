@@ -163,7 +163,7 @@ class DeployDockerServiceWorkflow:
     ) -> DeployDockerServiceWorkflowResult:
         await workflow.execute_activity(
             acquire_deploy_semaphore,
-            start_to_close_timeout=timedelta(seconds=5),
+            start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
 
