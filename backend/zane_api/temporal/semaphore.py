@@ -29,7 +29,7 @@ class AsyncSemaphore:
         while max_retries is None or retries < max_retries:
             if await self._acquire_lock():
                 try:
-                    count = await sync_to_async(cache.get)(self.key) or 0
+                    count = await sync_to_async(cache.get)(self.key, 0)
                     if count < self.limit:
                         await sync_to_async(cache.set)(
                             self.key, count + 1, self.semaphore_timeout
@@ -44,7 +44,7 @@ class AsyncSemaphore:
     async def release(self):
         if await self._acquire_lock():
             try:
-                count = await sync_to_async(cache.get)(self.key) or 0
+                count = await sync_to_async(cache.get)(self.key, 0)
                 if count > 0:
                     await sync_to_async(cache.set)(
                         self.key, count - 1, self.semaphore_timeout
