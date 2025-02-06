@@ -1155,7 +1155,7 @@ export interface components {
      */
     ProjectSearchTypeEnum: "project";
     ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent: {
       /**
@@ -1208,20 +1208,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent: {
-      /**
-       * @description * `status` - status
-       * @enum {string}
-       */
-      attr: "status";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_value` - max_value
-       * @enum {string}
-       */
-      code: "invalid" | "max_value";
       detail: string;
     };
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent: {
@@ -1278,7 +1264,7 @@ export interface components {
     ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsDockerHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsDockerHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent: {
       /**
@@ -1331,20 +1317,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice";
-      detail: string;
-    };
-    ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent: {
-      /**
-       * @description * `status` - status
-       * @enum {string}
-       */
-      attr: "status";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_value` - max_value
-       * @enum {string}
-       */
-      code: "invalid" | "max_value";
       detail: string;
     };
     ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent: {
