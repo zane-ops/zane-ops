@@ -349,7 +349,7 @@ export default function ServiceHttpLogsPage({
                     onClick={() => toggleSort("request_duration_ns")}
                     className="flex cursor-pointer items-center gap-2"
                   >
-                    Duration
+                    <span>Duration</span>
                     {durationSortDirection === "indeterminate" && (
                       <ChevronsUpDownIcon size={15} className="flex-none" />
                     )}
@@ -878,7 +878,7 @@ function StatusFilter({ statuses }: StatusFilterProps) {
       value={statuses}
       className="w-auto"
       name="status"
-      options={[...new Set(["200", "300", "400", "500", ...statuses])]}
+      options={[...new Set(["1xx", "2xx", "3xx", "4xx", "5xx", ...statuses])]}
       closeOnSelect
       onValueChange={(statuses) => {
         searchParams.delete("status");

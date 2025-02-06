@@ -542,7 +542,10 @@ export const httpLogSearchSchema = zfd.formData({
       z
         .array(z.string())
         .transform((array) =>
-          array.filter((val) => !Number.isNaN(val) && Number(val) > 0)
+          array.filter(
+            (val) =>
+              val.match(/\dxx/) || (!Number.isNaN(val) && Number(val) > 0)
+          )
         )
         .optional()
         .catch(undefined)

@@ -1,8 +1,9 @@
 import base64
 import dataclasses
 import json
+import re
 import time
-from typing import Any, OrderedDict
+from typing import Any, List, OrderedDict
 
 import django_filters
 from django.conf import settings
@@ -1121,7 +1122,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     request_query = django_filters.CharFilter(
         field_name="request_query", method="filter_query"
     )
-    status = NumberInFilter(method="filter_multiple_values")
+    status = django_filters.BaseInFilter(method="filter_multiple_values")
     request_ip = django_filters.BaseInFilter(method="filter_multiple_values")
     request_user_agent = django_filters.BaseInFilter(method="filter_multiple_values")
     request_host = django_filters.BaseInFilter(
@@ -1131,7 +1132,19 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
 
     def filter_multiple_values(self, queryset: QuerySet, name: str, value: str):
         params = self.request.GET.getlist(name)
-        return queryset.filter(**{f"{name}__in": params})
+
+        status_prefix_path = r"^\dxx$"
+
+        queries = Q()
+        for status in params:
+            if re.match(status_prefix_path, status):
+                prefix = int(status[0])
+                queries = queries | (
+                    Q(status__gte=(prefix * 100), status__lte=(prefix * 100) + 99)
+                )
+            if re.match(r"^\d+$", status):
+                queries = queries | Q(status=int(status))
+        return queryset.filter(queries)
 
     def filter_query(self, queryset: QuerySet, name: str, value: str):
         return queryset.filter(request_query__istartswith=value)
