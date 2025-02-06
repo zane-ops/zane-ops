@@ -238,6 +238,7 @@ export function ServiceResourceLimits({
                 variant="secondary"
                 name="intent"
                 value="request-service-change"
+                disabled={!resourceLimitsQuery.data}
               >
                 {isPending ? (
                   <>
