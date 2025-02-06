@@ -896,11 +896,8 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
-  const {
-    deploymentHash: deployment_hash,
-    projectSlug: project_slug,
-    serviceSlug: service_slug
-  } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const { projectSlug: project_slug, serviceSlug: service_slug } =
+    useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
