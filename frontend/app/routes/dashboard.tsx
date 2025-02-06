@@ -3,8 +3,9 @@ import type { Route } from "./+types/dashboard";
 import {
   ArrowDown01Icon,
   ArrowDownAZIcon,
-  ArrowUp01Icon,
+  ArrowUp10Icon,
   ArrowUpZAIcon,
+  ChevronsUpDownIcon,
   FolderIcon,
   LoaderIcon,
   SearchIcon,
@@ -68,15 +69,12 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   };
 }
 
+type SortDirection = "ascending" | "descending" | "indeterminate";
+
 export default function ProjectList({ loaderData }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = projectSearchSchema.parse(searchParams);
-  const {
-    slug = "",
-    page = 1,
-    per_page = 10,
-    sort_by = ["-updated_at"]
-  } = search;
+  const { slug = "", page = 1, per_page = 10, sort_by } = search;
 
   const navigate = useNavigate();
 
@@ -106,12 +104,29 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
     !searchParams.get("per_page") &&
     !searchParams.get("page");
 
-  const handleSort = (field: "slug" | "updated_at") => {
-    const isDescending = sort_by.includes(`-${field}`);
-    const newSortBy = sort_by.filter(
-      (criteria) => criteria !== field && criteria !== `-${field}`
+  const toggleSort = (field: "slug" | "updated_at") => {
+    let nextDirection: SortDirection = "ascending";
+
+    if (sort_by?.includes(field)) {
+      nextDirection = "descending";
+    } else if (sort_by?.includes(`-${field}`)) {
+      nextDirection = "indeterminate";
+    }
+
+    let newSortBy = (sort_by ?? []).filter(
+      (sort_field) => sort_field !== field && sort_field !== `-${field}`
     );
-    newSortBy.push(isDescending ? field : `-${field}`);
+    switch (nextDirection) {
+      case "ascending": {
+        newSortBy.push(field);
+        break;
+      }
+      case "descending": {
+        newSortBy.push(`-${field}`);
+        break;
+      }
+    }
+
     searchParams.delete("sort_by");
     newSortBy.forEach((sort_by) => {
       searchParams.append(`sort_by`, sort_by.toString());
@@ -122,11 +137,13 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
     });
   };
 
-  const getArrowDirection = (field: "slug" | "updated_at") => {
-    if (sort_by.includes(`-${field}`)) {
+  const getArrowDirection = (field: "slug" | "updated_at"): SortDirection => {
+    if (sort_by?.includes(`-${field}`)) {
       return "descending";
+    } else if (sort_by?.includes(field)) {
+      return "ascending";
     }
-    return "ascending";
+    return "indeterminate";
   };
 
   const noProjects = projectList.length === 0;
@@ -178,13 +195,17 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => handleSort("slug")}
+                        onClick={() => toggleSort("slug")}
                         className="flex cursor-pointer items-center gap-2"
                       >
                         <span>Name</span>
-                        {slugDirection === "ascending" ? (
+                        {slugDirection === "indeterminate" && (
+                          <ChevronsUpDownIcon size={15} className="flex-none" />
+                        )}
+                        {slugDirection === "ascending" && (
                           <ArrowDownAZIcon size={15} className="flex-none" />
-                        ) : (
+                        )}
+                        {slugDirection === "descending" && (
                           <ArrowUpZAIcon size={15} className="flex-none" />
                         )}
                       </button>
@@ -203,14 +224,20 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => handleSort("updated_at")}
+                        onClick={() => toggleSort("updated_at")}
                         className="flex cursor-pointer items-center gap-2 w-max"
                       >
                         <span>Last Updated</span>
-                        {updatedAtDirection === "ascending" ? (
+
+                        {updatedAtDirection === "indeterminate" && (
+                          <ChevronsUpDownIcon size={15} className="flex-none" />
+                        )}
+
+                        {updatedAtDirection === "ascending" && (
                           <ArrowDown01Icon size={15} className="flex-none" />
-                        ) : (
-                          <ArrowUp01Icon size={15} className="flex-none" />
+                        )}
+                        {updatedAtDirection === "descending" && (
+                          <ArrowUp10Icon size={15} className="flex-none" />
                         )}
                       </button>
                     </TooltipTrigger>
