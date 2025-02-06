@@ -30,12 +30,7 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
+
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries, projectSearchSchema } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -191,61 +186,43 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
           <TableHeader className="bg-toggle">
             <TableRow className="border-none">
               <TableHead>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => toggleSort("slug")}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
-                        <span>Name</span>
-                        {slugDirection === "indeterminate" && (
-                          <ChevronsUpDownIcon size={15} className="flex-none" />
-                        )}
-                        {slugDirection === "ascending" && (
-                          <ArrowDownAZIcon size={15} className="flex-none" />
-                        )}
-                        {slugDirection === "descending" && (
-                          <ArrowUpZAIcon size={15} className="flex-none" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="capitalize">{slugDirection}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <button
+                  onClick={() => toggleSort("slug")}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <span>Name</span>
+                  {slugDirection === "indeterminate" && (
+                    <ChevronsUpDownIcon size={15} className="flex-none" />
+                  )}
+                  {slugDirection === "ascending" && (
+                    <ArrowDownAZIcon size={15} className="flex-none" />
+                  )}
+                  {slugDirection === "descending" && (
+                    <ArrowUpZAIcon size={15} className="flex-none" />
+                  )}
+                </button>
               </TableHead>
               <TableHead className="hidden md:table-cell">
                 Description
               </TableHead>
               <TableHead>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => toggleSort("updated_at")}
-                        className="flex cursor-pointer items-center gap-2 w-max"
-                      >
-                        <span>Last Updated</span>
+                <button
+                  onClick={() => toggleSort("updated_at")}
+                  className="flex cursor-pointer items-center gap-2 w-max"
+                >
+                  <span>Last Updated</span>
 
-                        {updatedAtDirection === "indeterminate" && (
-                          <ChevronsUpDownIcon size={15} className="flex-none" />
-                        )}
+                  {updatedAtDirection === "indeterminate" && (
+                    <ChevronsUpDownIcon size={15} className="flex-none" />
+                  )}
 
-                        {updatedAtDirection === "ascending" && (
-                          <ArrowDown01Icon size={15} className="flex-none" />
-                        )}
-                        {updatedAtDirection === "descending" && (
-                          <ArrowUp10Icon size={15} className="flex-none" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="capitalize">{updatedAtDirection}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                  {updatedAtDirection === "ascending" && (
+                    <ArrowDown01Icon size={15} className="flex-none" />
+                  )}
+                  {updatedAtDirection === "descending" && (
+                    <ArrowUp10Icon size={15} className="flex-none" />
+                  )}
+                </button>
               </TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
