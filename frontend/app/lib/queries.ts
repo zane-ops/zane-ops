@@ -8,12 +8,8 @@ import {
 } from "@tanstack/react-query";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
-import {
-  type ApiResponse,
-  type RequestInput,
-  type RequestParams,
-  apiClient
-} from "~/api/client";
+import type { ApiResponse, RequestParams } from "~/api/client";
+import { apiClient } from "~/api/client";
 import {
   DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
@@ -62,21 +58,9 @@ export const projectSearchSchema = zfd.formData({
   page: zfd.numeric().optional().catch(undefined),
   per_page: zfd.numeric().optional().catch(undefined),
   sort_by: zfd
-    .repeatable(
-      z.array(
-        z.enum([
-          "slug",
-          "-slug",
-          "updated_at",
-          "-updated_at",
-          "archived_at",
-          "-archived_at"
-        ])
-      )
-    )
+    .repeatable(z.array(z.enum(["slug", "-slug", "updated_at", "-updated_at"])))
     .optional()
-    .catch(undefined),
-  status: z.enum(["active", "archived"]).optional().catch(undefined)
+    .catch(undefined)
 });
 
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
@@ -89,11 +73,7 @@ export const projectQueries = {
         const { data } = await apiClient.GET("/api/projects/", {
           params: {
             query: {
-              ...filters,
-              sort_by: filters.sort_by?.filter(
-                (criteria) =>
-                  criteria !== "-archived_at" && criteria !== "archived_at"
-              )
+              ...filters
             }
           },
           signal
@@ -101,33 +81,12 @@ export const projectQueries = {
         return data;
       },
       placeholderData: keepPreviousData,
-      enabled: filters.status !== "archived",
       refetchInterval: (query) => {
         if (query.state.data) {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
       }
-    }),
-  archived: (filters: ProjectSearch) =>
-    queryOptions({
-      queryKey: ["ARCHIVED_PROJECT_LIST", filters] as const,
-      queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET("/api/archived-projects/", {
-          params: {
-            query: {
-              ...filters,
-              sort_by: filters.sort_by?.filter(
-                (criteria) =>
-                  criteria !== "-updated_at" && criteria !== "updated_at"
-              )
-            }
-          },
-          signal
-        });
-        return data;
-      },
-      enabled: filters.status === "archived"
     }),
   single: (slug: string) =>
     queryOptions({
