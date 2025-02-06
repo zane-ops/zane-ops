@@ -1109,10 +1109,6 @@ class DeploymentHttpLogsPagination(pagination.CursorPagination):
         return self.ordering
 
 
-class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
-    pass
-
-
 class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     time = django_filters.DateTimeFromToRangeFilter()
     request_method = django_filters.MultipleChoiceFilter(
