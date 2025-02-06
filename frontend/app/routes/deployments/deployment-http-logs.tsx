@@ -891,7 +891,7 @@ function StatusFilter({ statuses }: StatusFilterProps) {
       value={statuses}
       className="w-auto"
       name="status"
-      options={[...new Set(["200", "300", "400", "500", ...statuses])]}
+      options={[...new Set(["1xx", "2xx", "3xx", "4xx", "5xx", ...statuses])]}
       closeOnSelect
       onValueChange={(statuses) => {
         searchParams.delete("status");
