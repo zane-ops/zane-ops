@@ -1,4 +1,4 @@
-import { type useSpinDelay } from "spin-delay";
+import type { useSpinDelay } from "spin-delay";
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
   "CANCELLED",
@@ -18,9 +18,10 @@ export const DEFAULT_LOGS_PER_PAGE = 50;
 export const MAX_VISIBLE_LOG_CHARS_LIMIT = 1_000;
 
 export const SPIN_DELAY_DEFAULT_OPTIONS: Parameters<typeof useSpinDelay>[1] = {
-  delay: 250,
-  minDuration: 200
+  delay: 150,
+  minDuration: 150
 };
+
 export const REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER = 9_999_999_999;
 export const STANDARD_HTTP_STATUS_CODES: { [key: number]: string } = {
   100: "Continue",
