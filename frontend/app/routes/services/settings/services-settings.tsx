@@ -722,7 +722,12 @@ async function cancelServiceChange({
   );
 
   if (errors) {
-    toast.error("Failed to discard change", { id: toastId, closeButton: true });
+    const fullErrorMessage = errors.errors.map((err) => err.detail).join(" ");
+    toast.error("Failed to discard change", {
+      id: toastId,
+      closeButton: true,
+      description: fullErrorMessage
+    });
     return {
       errors
     };
