@@ -443,6 +443,7 @@ class DockerRegistryService(BaseService):
                                 mount_path=change.new_value.get("mount_path"),
                                 contents=change.new_value.get("contents"),
                                 name=change.new_value.get("name", fake.slug().lower()),
+                                language=change.new_value.get("language", "plaintext"),
                             )
                         )
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
@@ -452,6 +453,9 @@ class DockerRegistryService(BaseService):
                         config.mount_path = change.new_value.get("mount_path")
                         config.contents = change.new_value.get("contents")
                         config.name = change.new_value.get("name", config.name)
+                        config.language = change.new_value.get(
+                            "language", config.language
+                        )
                         config.save()
                 case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
@@ -634,6 +638,7 @@ class Config(TimestampedModel):
     )
     mount_path = models.CharField(max_length=255)
     contents = models.TextField(blank=True)
+    language = models.CharField(default="plaintext", max_length=255)
 
     def __str__(self):
         return f"Config({self.name})"

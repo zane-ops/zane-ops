@@ -88,7 +88,13 @@ class VolumeSerializer(ModelSerializer):
 class ConfigSerializer(ModelSerializer):
     class Meta:
         model = models.Config
-        fields = ["id", "name", "mount_path", "contents"]
+        fields = [
+            "id",
+            "name",
+            "mount_path",
+            "contents",
+            "language",
+        ]
 
 
 class URLRedirectModelSerializer(serializers.Serializer):

@@ -78,6 +78,7 @@ class ConfigRequestSerializer(serializers.Serializer):
     contents = serializers.CharField(required=True, allow_blank=True)
     name = serializers.CharField(required=False)
     mount_path = serializers.URLPathField(required=True)
+    language = serializers.CharField(default="plaintext", required=False)
 
     def validate(self, attrs: dict):
         if attrs.get("name") is None:

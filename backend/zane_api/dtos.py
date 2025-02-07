@@ -19,6 +19,7 @@ class VolumeDto:
 class ConfigDto:
     mount_path: str
     contents: str
+    language: str
     name: Optional[str] = None
     id: Optional[str] = None
 
