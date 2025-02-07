@@ -721,15 +721,6 @@ class DockerServiceReverChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-    def test_prevent_reverting_url_change_if_it_result_in_invalid_state(self):
-        self.assertTrue(False)
-
-    def test_prevent_reverting_port_change_if_it_result_in_invalid_state(self):
-        self.assertTrue(False)
-
-    def test_prevent_reverting_healthcheck_change_if_it_result_in_invalid_state(self):
-        self.assertTrue(False)
-
 
 class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_config_changes(
