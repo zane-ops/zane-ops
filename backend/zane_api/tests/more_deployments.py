@@ -6,7 +6,10 @@ from ..models import (
     DockerRegistryService,
     DockerDeployment,
     DockerDeploymentChange,
+    Config,
+    Volume,
 )
+from ..serializers import ConfigSerializer
 from ..utils import jprint
 
 
@@ -161,3 +164,260 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             {"cpus": 2, "memory": {"value": 500, "unit": "MEGABYTES"}},
             resource_limit_change.new_value,
         )
+
+    def test_add_config_change(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        config = {
+            "contents": ':80 respond "hello from caddy"',
+            "mount_path": "/etc/caddy/Caddyfile",
+            "name": "caddyfile",
+        }
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": "ADD",
+            "new_value": config,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual(config, change.new_value)
+
+    def test_add_config_change_generate_random_name_if_not_provided(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        config = {
+            "contents": ':80 respond "hello from caddy"',
+            "mount_path": "/etc/caddy/Caddyfile",
+        }
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": "ADD",
+            "new_value": config,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertIsNotNone(change.new_value.get("name"))
+
+    def test_add_config_item_change_reference_previous_value(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service = DockerRegistryService.objects.get(slug="app")
+        config = Config.objects.create(
+            name="caddyfile",
+            contents=':80 respond "hello from caddy"',
+            mount_path="/etc/caddy/Caddyfile",
+        )
+        service.configs.add(config)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": "DELETE",
+            "item_id": config.id,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual(ConfigSerializer(config).data, change.old_value)
+
+    def test_validate_config_item_change_reference_non_existent_does_not_work(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": "DELETE",
+            "item_id": "cf_1oasdkjfhb",
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNone(change)
+
+    def test_validate_config_change_conflict_mount_path_with_other_config(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service = DockerRegistryService.objects.get(slug="app")
+        config = Config.objects.create(
+            name="caddyfile",
+            contents=':80 respond "I am the real file"',
+            mount_path="/etc/caddy/Caddyfile",
+        )
+        service.configs.add(config)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": dict(
+                contents=':80 respond "No ! I am the real file"',
+                mount_path="/etc/caddy/Caddyfile",
+            ),
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNone(change)
+
+    def test_validate_config_change_conflict_mount_path_with_volume(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service = DockerRegistryService.objects.get(slug="app")
+        config = Volume.objects.create(
+            name="caddyfile",
+            container_path="/etc/caddy/Caddyfile",
+        )
+        service.volumes.add(config)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": dict(
+                contents=':80 respond "This shouldn\'t work"',
+                mount_path="/etc/caddy/Caddyfile",
+            ),
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNone(change)

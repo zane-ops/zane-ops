@@ -141,6 +141,7 @@ class BaseService(TimestampedModel):
         null=True,
     )
     deploy_token = models.CharField(max_length=25, null=True, unique=True)
+    configs = models.ManyToManyField(to="Config")
 
     @property
     def host_volumes(self):
@@ -161,6 +162,8 @@ class BaseService(TimestampedModel):
         self.ports.filter().delete()
         self.urls.filter().delete()
         self.volumes.filter().delete()
+        # TODO
+        # self.configs.filter().delete()
         if self.healthcheck is not None:
             self.healthcheck.delete()
 
@@ -600,6 +603,28 @@ class Volume(TimestampedModel):
         ]
 
 
+class Config(TimestampedModel):
+    ID_PREFIX = "cf_"
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
+
+    name = models.CharField(
+        max_length=255,
+        blank=False,
+        null=False,
+        validators=[MinLengthValidator(limit_value=1)],
+    )
+    mount_path = models.CharField(max_length=255)
+    contents = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Config({self.name})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["mount_path"]),
+        ]
+
+
 class BaseDeployment(models.Model):
     queued_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True)
@@ -753,6 +778,7 @@ class DockerDeploymentChange(BaseDeploymentChange):
         URLS = "urls", _("urls")
         PORTS = "ports", _("ports")
         RESOURCE_LIMITS = "resource_limits", _("resource limits")
+        CONFIGS = "configs", _("configs")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(

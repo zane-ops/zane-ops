@@ -85,6 +85,12 @@ class VolumeSerializer(ModelSerializer):
         ]
 
 
+class ConfigSerializer(ModelSerializer):
+    class Meta:
+        model = models.Config
+        fields = ["id", "name", "mount_path", "contents"]
+
+
 class URLRedirectModelSerializer(serializers.Serializer):
     url = serializers.URLField()
     permanent = serializers.BooleanField(default=False)
@@ -159,6 +165,7 @@ class SystemEnvVariablesSerializer(serializers.Serializer):
 
 class DockerServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
+    configs = ConfigSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True)
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
@@ -195,6 +202,7 @@ class DockerServiceSerializer(ModelSerializer):
             "unapplied_changes",
             "resource_limits",
             "system_env_variables",
+            "configs",
         ]
 
 

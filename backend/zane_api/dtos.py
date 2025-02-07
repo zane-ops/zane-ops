@@ -16,6 +16,18 @@ class VolumeDto:
 
 
 @dataclass
+class ConfigDto:
+    mount_path: str
+    contents: str
+    name: Optional[str] = None
+    id: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+
+@dataclass
 class URLRedirectToDto:
     url: str
     permanent: bool = False
@@ -128,6 +140,7 @@ class DockerServiceSnapshot:
     ports: List[PortConfigurationDto] = field(default_factory=list)
     env_variables: List[EnvVariableDto] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
+    configs: List[ConfigDto] = field(default_factory=list)
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
@@ -167,6 +180,7 @@ class DockerServiceSnapshot:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
+        configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
         ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
         env_variables = [
@@ -192,6 +206,7 @@ class DockerServiceSnapshot:
             image=data["image"],
             urls=urls,
             volumes=volumes,
+            configs=configs,
             command=data.get("command"),
             ports=ports,
             env_variables=env_variables,

@@ -5,6 +5,7 @@ from typing import Sequence
 from django.db.models import Q
 
 from ..dtos import (
+    ConfigDto,
     DockerServiceSnapshot,
     VolumeDto,
     EnvVariableDto,
@@ -50,6 +51,7 @@ def compute_docker_service_snapshot(
         DockerDeploymentChange.ChangeField.ENV_VARIABLES: EnvVariableDto,
         DockerDeploymentChange.ChangeField.PORTS: PortConfigurationDto,
         DockerDeploymentChange.ChangeField.URLS: URLDto,
+        DockerDeploymentChange.ChangeField.CONFIGS: ConfigDto,
     }
 
     for change in changes:
