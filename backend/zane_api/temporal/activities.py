@@ -1887,6 +1887,29 @@ class DockerSwarmActivities:
                 volume.remove(force=True)
 
     @activity.defn
+    async def remove_old_docker_configs(self, deployment: DockerDeploymentDetails):
+        service = deployment.service
+        docker_config_names = [
+            get_config_resource_name(config.id) for config in service.configs
+        ]
+
+        docker_config_list = self.docker_client.configs.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service.project_id,
+                        parent=service.id,
+                    ).items()
+                ]
+            }
+        )
+
+        for config in docker_config_list:
+            if config.name not in docker_config_names:
+                config.remove(force=True)
+
+    @activity.defn
     async def remove_old_urls(self, deployment: DockerDeploymentDetails):
         ZaneProxyClient.cleanup_old_service_urls(deployment)
 

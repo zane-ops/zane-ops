@@ -464,6 +464,69 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         ).first()
         self.assertIsNone(change)
 
+    def test_validate_config_prevent_updating_contents(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service = DockerRegistryService.objects.get(slug="app")
+        config = Config.objects.create(
+            name="caddyfile",
+            contents=':80 respond "I am the real file"',
+            mount_path="/etc/caddy/Caddyfile",
+        )
+        service.configs.add(config)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": DockerDeploymentChange.ChangeType.UPDATE,
+            "new_value": dict(
+                contents=':80 respond "No ! I am the real file"',
+                mount_path="/etc/caddy/Caddyfile",
+            ),
+            "item_id": config.id,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNone(change)
+
+
+# TODO
+class DockerServiceReverChangesViewTests(AuthAPITestCase):
+    def test_prevent_reverting_url_change_if_it_result_in_invalid_state(self):
+        self.assertTrue(False)
+
+    def test_prevent_reverting_healthcheck_change_if_it_result_in_invalid_state(self):
+        self.assertTrue(False)
+
+    def test_prevent_reverting_volume_change_if_it_result_in_invalid_state(self):
+        self.assertTrue(False)
+
+    def test_prevent_reverting_config_change_if_it_result_in_invalid_state(self):
+        self.assertTrue(False)
+
 
 class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_config_changes(
@@ -564,6 +627,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
                         "name": "caddyfile",
+                        "language": "caddyfile",
                     },
                 ),
             ]
@@ -579,3 +643,45 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
         new_config = await service.configs.afirst()
         self.assertIsNotNone(docker_service.get_attached_config(new_config))
+
+
+class DockerServiceUpdateViewTests(AuthAPITestCase):
+    async def test_update_service_with_config_remove_deleted_config(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "contents": ':80 respond "hello from caddy"',
+                        "mount_path": "/etc/caddy/Caddyfile",
+                        "name": "caddyfile",
+                        "language": "caddyfile",
+                    },
+                ),
+            ]
+        )
+        config_to_delete: Config = await service.configs.afirst()
+
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    service=service,
+                    item_id=config_to_delete.id,
+                ),
+            ]
+        )
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, await service.deployments.acount())
+        self.assertEqual(0, len(self.fake_docker_client.config_map))
