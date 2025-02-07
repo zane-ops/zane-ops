@@ -1,4 +1,9 @@
-import { ArrowDownIcon, ArrowRightIcon, HardDriveIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowRightIcon,
+  FileSlidersIcon,
+  HardDriveIcon
+} from "lucide-react";
 import { Code } from "~/components/code";
 import { Input } from "~/components/ui/input";
 import type { DockerService } from "~/lib/queries";
@@ -803,6 +808,76 @@ export function ResourceLimitChangeField({
           />
         </fieldset>
       </div>
+    </div>
+  );
+}
+
+export function ConfigChangeItem({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as DockerService["configs"][number];
+  const old_value = change.old_value as DockerService["configs"][number];
+
+  return (
+    <div className="flex flex-col md:flex-row gap-2 items-center overflow-x-auto">
+      <div
+        className={cn("rounded-md p-4 flex items-start gap-2 bg-muted w-full", {
+          "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
+          "dark:bg-red-500/20 bg-red-300/60": change.type === "DELETE"
+        })}
+      >
+        <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg inline-flex gap-1 items-center">
+            <span>{(old_value ?? new_value).name}</span>
+            {change.type === "ADD" && (
+              <span className="text-green-500">
+                {unapplied && "will be"} added
+              </span>
+            )}
+            {change.type === "DELETE" && (
+              <span className="text-red-500">
+                {unapplied && "will be"} removed
+              </span>
+            )}
+          </h3>
+          <small className="text-card-foreground inline-flex gap-1 items-center">
+            <span className="text-grey">
+              {(old_value ?? new_value).mount_path}
+            </span>
+          </small>
+        </div>
+      </div>
+
+      {change.type === "UPDATE" && (
+        <>
+          <ArrowDownIcon
+            size={24}
+            className="text-grey md:-rotate-90 flex-none"
+          />
+
+          <div
+            className={cn(
+              "rounded-md p-4 flex items-start gap-2 bg-muted w-full",
+              "dark:bg-secondary-foreground bg-secondary/60"
+            )}
+          >
+            <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg inline-flex gap-1 items-center">
+                <span>{new_value.name}</span>
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </h3>
+              <small className="text-card-foreground inline-flex gap-1 items-center">
+                <span className="text-grey">{new_value.mount_path}</span>
+              </small>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

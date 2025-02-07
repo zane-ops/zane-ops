@@ -17,6 +17,7 @@ import * as React from "react";
 import { useFetcher } from "react-router";
 import {
   CommandChangeField,
+  ConfigChangeItem,
   EnvVariableChangeItem,
   HealthcheckChangeField,
   PortChangeItem,
@@ -143,6 +144,12 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
                       changes.map((change) => (
                         <ChangeForm key={change.id} change_id={change.id}>
                           <VolumeChangeItem unapplied change={change} />
+                        </ChangeForm>
+                      ))}
+                    {field === "configs" &&
+                      changes.map((change) => (
+                        <ChangeForm key={change.id} change_id={change.id}>
+                          <ConfigChangeItem unapplied change={change} />
                         </ChangeForm>
                       ))}
                     {field === "source" &&

@@ -269,6 +269,9 @@ function ServiceConfigItem({
               <h3 className="text-lg inline-flex gap-1 items-center">
                 <span>{name}</span>
               </h3>
+              <small className="text-card-foreground inline-flex gap-1 items-center">
+                <span className="text-grey">{mount_path}</span>
+              </small>
             </div>
           </AccordionTrigger>
           {id && (

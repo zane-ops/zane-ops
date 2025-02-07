@@ -37,6 +37,7 @@ import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
 import {
   CommandChangeField,
+  ConfigChangeItem,
   EnvVariableChangeItem,
   HealthcheckChangeField,
   PortChangeItem,
@@ -297,6 +298,13 @@ export default function DeploymentDetailsPage({
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <VolumeChangeItem change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "configs" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <ConfigChangeItem change={change} />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}
