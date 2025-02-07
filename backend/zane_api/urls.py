@@ -95,7 +95,7 @@ urlpatterns = [
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/deploy-service/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
-        views.ApplyDockerServiceDeploymentChangesAPIView.as_view(),
+        views.DeployDockerServiceAPIView.as_view(),
         name="services.docker.deploy_service",
     ),
     re_path(

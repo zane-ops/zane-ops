@@ -372,13 +372,13 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
 
-class ApplyDockerServiceDeploymentChangesAPIView(APIView):
+class DeployDockerServiceAPIView(APIView):
     serializer_class = DockerServiceDeploymentSerializer
 
     @transaction.atomic()
     @extend_schema(
         request=DockerServiceDeployRequestSerializer,
-        operation_id="applyDeploymentChanges",
+        operation_id="deployDockerService",
         summary="Deploy a docker service",
         description="Apply all pending changes for the service and trigger a new deployment.",
     )
@@ -395,7 +395,9 @@ class ApplyDockerServiceDeploymentChangesAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+            )
         ).first()
 
         if service is None:
