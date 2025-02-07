@@ -76,19 +76,6 @@ urlpatterns = [
         views.ResouceSearchAPIView.as_view(),
         name="resources.search",
     ),
-]
-
-if settings.DEBUG:
-    urlpatterns += [
-        re_path(
-            rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/request-service-changes/docker"
-            rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/_bulk/?$",
-            views.BulkRequestDockerServiceDeploymentChangesAPIView.as_view(),
-        ),
-    ]
-
-
-urlpatterns += [
     re_path(
         r"^_proxy/check-certiticates/?$",
         views.CheckCertificatesAPIView.as_view(),
