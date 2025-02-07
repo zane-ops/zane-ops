@@ -5756,7 +5756,6 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
@@ -5765,7 +5764,6 @@ components:
           time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
           request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
           request_query: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
-          status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
           sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
     ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
@@ -5850,28 +5848,6 @@ components:
           - invalid_choice
           type: string
           description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListStatusErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - status
-          type: string
-          description: '* `status` - status'
-        code:
-          enum:
-          - invalid
-          - max_value
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_value` - max_value
         detail:
           type: string
       required:
@@ -6013,7 +5989,6 @@ components:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
       - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
       discriminator:
@@ -6022,7 +5997,6 @@ components:
           time: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
           request_method: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
           request_query: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
-          status: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent'
           request_id: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
           sort_by: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
     ProjectsServiceDetailsDockerHttpLogsListErrorResponse400:
@@ -6107,28 +6081,6 @@ components:
           - invalid_choice
           type: string
           description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDockerHttpLogsListStatusErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - status
-          type: string
-          description: '* `status` - status'
-        code:
-          enum:
-          - invalid
-          - max_value
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_value` - max_value
         detail:
           type: string
       required:

@@ -1,26 +1,19 @@
 import type { Route } from "./+types/dashboard";
 
 import {
-  ArrowDown,
-  ArrowUp,
-  ChevronsUpDown,
-  Folder,
+  ArrowDown01Icon,
+  ArrowDownAZIcon,
+  ArrowUp10Icon,
+  ArrowUpZAIcon,
+  ChevronsUpDownIcon,
+  FolderIcon,
   LoaderIcon,
-  Rocket,
-  Search,
-  Settings,
-  Trash
+  SearchIcon,
+  SettingsIcon
 } from "lucide-react";
+
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { Input } from "~/components/ui/input";
-
-import {
-  Menubar,
-  MenubarContent,
-  MenubarContentItem,
-  MenubarMenu,
-  MenubarTrigger
-} from "~/components/ui/menubar";
 
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
@@ -37,12 +30,7 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
+
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries, projectSearchSchema } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -57,45 +45,31 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     slug = "",
     page = 1,
     per_page = 10,
-    sort_by = ["-updated_at"],
-    status = "active"
+    sort_by = ["-updated_at"]
   } = search;
   const filters = {
     slug,
     page,
     per_page,
-    sort_by,
-    status
+    sort_by
   };
 
-  const data = queryClient.getQueriesData({
-    exact: false,
-    predicate: (query) =>
-      query.queryKey.includes(projectQueries.list(filters).queryKey[0]) ||
-      query.queryKey.includes(projectQueries.archived(filters).queryKey[0])
-  });
-
   // fetch the data on first load to prevent showing the loading fallback
-  if (data.length === 0) {
-    await Promise.all([
-      queryClient.ensureQueryData(projectQueries.list(filters)),
-      queryClient.ensureQueryData(projectQueries.archived(filters))
-    ]);
-  }
+  const projectList = await queryClient.ensureQueryData(
+    projectQueries.list(filters)
+  );
 
-  return;
+  return {
+    projectList
+  };
 }
 
-export default function ProjectList({}: Route.ComponentProps) {
+type SortDirection = "ascending" | "descending" | "indeterminate";
+
+export default function ProjectList({ loaderData }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = projectSearchSchema.parse(searchParams);
-  const {
-    slug = "",
-    page = 1,
-    per_page = 10,
-    sort_by = ["-updated_at"],
-    status = "active"
-  } = search;
+  const { slug = "", page = 1, per_page = 10, sort_by } = search;
 
   const navigate = useNavigate();
 
@@ -103,38 +77,51 @@ export default function ProjectList({}: Route.ComponentProps) {
     slug,
     page,
     per_page,
-    sort_by,
-    status
+    sort_by
   };
 
-  const projectActiveQuery = useQuery(projectQueries.list(filters));
-  const projectArchivedQuery = useQuery(projectQueries.archived(filters));
+  const projectActiveQuery = useQuery({
+    ...projectQueries.list(filters),
+    initialData: loaderData.projectList
+  });
 
-  const query = status === "active" ? projectActiveQuery : projectArchivedQuery;
+  const query = projectActiveQuery;
 
   const projectList = query.data?.results ?? [];
   const totalProjects = query.data?.count ?? 0;
   const totalPages = Math.ceil(totalProjects / per_page);
 
-  const noResults =
-    projectList.length === 0 && slug.trim() !== "" && status === "active";
+  const noResults = projectList.length === 0 && slug.trim() !== "";
 
   const emptySearchParams =
     !(searchParams.get("slug")?.trim() ?? "") &&
     !searchParams.get("sort_by") &&
-    !searchParams.get("status") &&
     !searchParams.get("per_page") &&
     !searchParams.get("page");
 
-  const noActiveProjects = status === "active" && projectList.length === 0;
-  const noArchivedProject = status === "archived" && projectList.length === 0;
+  const toggleSort = (field: "slug" | "updated_at") => {
+    let nextDirection: SortDirection = "ascending";
 
-  const handleSort = (field: "slug" | "updated_at" | "archived_at") => {
-    const isDescending = sort_by.includes(`-${field}`);
-    const newSortBy = sort_by.filter(
-      (criteria) => criteria !== field && criteria !== `-${field}`
+    if (sort_by?.includes(field)) {
+      nextDirection = "descending";
+    } else if (sort_by?.includes(`-${field}`)) {
+      nextDirection = "indeterminate";
+    }
+
+    let newSortBy = (sort_by ?? []).filter(
+      (sort_field) => sort_field !== field && sort_field !== `-${field}`
     );
-    newSortBy.push(isDescending ? field : `-${field}`);
+    switch (nextDirection) {
+      case "ascending": {
+        newSortBy.push(field);
+        break;
+      }
+      case "descending": {
+        newSortBy.push(`-${field}`);
+        break;
+      }
+    }
+
     searchParams.delete("sort_by");
     newSortBy.forEach((sort_by) => {
       searchParams.append(`sort_by`, sort_by.toString());
@@ -145,17 +132,18 @@ export default function ProjectList({}: Route.ComponentProps) {
     });
   };
 
-  const getArrowDirection = (field: "slug" | "updated_at" | "archived_at") => {
-    if (sort_by.includes(`-${field}`)) {
+  const getArrowDirection = (field: "slug" | "updated_at"): SortDirection => {
+    if (sort_by?.includes(`-${field}`)) {
       return "descending";
+    } else if (sort_by?.includes(field)) {
+      return "ascending";
     }
-    return "ascending";
+    return "indeterminate";
   };
+
+  const noProjects = projectList.length === 0;
   const slugDirection = getArrowDirection("slug");
-  const updatedAtDirection =
-    status === "active"
-      ? getArrowDirection("updated_at")
-      : getArrowDirection("archived_at");
+  const updatedAtDirection = getArrowDirection("updated_at");
 
   const searchProjects = useDebouncedCallback((slug: string) => {
     searchParams.set("slug", slug);
@@ -180,8 +168,9 @@ export default function ProjectList({}: Route.ComponentProps) {
             {isFetchingProjects ? (
               <LoaderIcon size={20} className="animate-spin relative left-4" />
             ) : (
-              <Search size={20} className="relative left-4" />
+              <SearchIcon size={20} className="relative left-4" />
             )}
+
             <Input
               onChange={(e) => {
                 searchProjects(e.currentTarget.value);
@@ -191,106 +180,56 @@ export default function ProjectList({}: Route.ComponentProps) {
               placeholder="Ex: ZaneOps"
             />
           </div>
-
-          <div className="md:w-fit w-full">
-            <Menubar className="border border-border md:w-fit w-full">
-              <MenubarMenu>
-                <MenubarTrigger className="flex md:w-fit w-full ring-secondary md:justify-center justify-between text-sm items-center gap-1">
-                  Status
-                  <ChevronsUpDown className="w-4" />
-                </MenubarTrigger>
-                <MenubarContent className="border w-[calc(var(--radix-menubar-trigger-width)+0.5rem)] border-border md:min-w-6 md:w-auto">
-                  <MenubarContentItem
-                    onClick={() => {
-                      searchParams.set("page", "1");
-                      searchParams.set("status", "active");
-                      setSearchParams(searchParams, { replace: true });
-                    }}
-                    icon={Rocket}
-                    text="Active"
-                  />
-
-                  <MenubarContentItem
-                    onClick={() => {
-                      searchParams.set("page", "1");
-                      searchParams.set("status", "archived");
-                      setSearchParams(searchParams, { replace: true });
-                    }}
-                    icon={Trash}
-                    text="Archived"
-                  />
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
-          </div>
         </div>
 
         <Table>
           <TableHeader className="bg-toggle">
             <TableRow className="border-none">
               <TableHead>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => handleSort("slug")}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
-                        Name
-                        {slugDirection === "ascending" ? (
-                          <ArrowDown size={15} className="flex-none" />
-                        ) : (
-                          <ArrowUp size={15} className="flex-none" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="capitalize">{slugDirection}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <button
+                  onClick={() => toggleSort("slug")}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <span>Name</span>
+                  {slugDirection === "indeterminate" && (
+                    <ChevronsUpDownIcon size={15} className="flex-none" />
+                  )}
+                  {slugDirection === "ascending" && (
+                    <ArrowDownAZIcon size={15} className="flex-none" />
+                  )}
+                  {slugDirection === "descending" && (
+                    <ArrowUpZAIcon size={15} className="flex-none" />
+                  )}
+                </button>
               </TableHead>
               <TableHead className="hidden md:table-cell">
                 Description
               </TableHead>
               <TableHead>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() =>
-                          status === "active"
-                            ? handleSort("updated_at")
-                            : handleSort("archived_at")
-                        }
-                        className="flex cursor-pointer items-center gap-2 w-max"
-                      >
-                        {status === "active" ? "Last Updated" : "Archived At"}
-                        {updatedAtDirection === "ascending" ? (
-                          <ArrowDown size={15} className="flex-none" />
-                        ) : (
-                          <ArrowUp size={15} className="flex-none" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="capitalize">{updatedAtDirection}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <button
+                  onClick={() => toggleSort("updated_at")}
+                  className="flex cursor-pointer items-center gap-2 w-max"
+                >
+                  <span>Last Updated</span>
+
+                  {updatedAtDirection === "indeterminate" && (
+                    <ChevronsUpDownIcon size={15} className="flex-none" />
+                  )}
+
+                  {updatedAtDirection === "ascending" && (
+                    <ArrowDown01Icon size={15} className="flex-none" />
+                  )}
+                  {updatedAtDirection === "descending" && (
+                    <ArrowUp10Icon size={15} className="flex-none" />
+                  )}
+                </button>
               </TableHead>
-              <TableHead
-                className={cn({
-                  hidden: status === "archived"
-                })}
-              >
-                Status
-              </TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {emptySearchParams && noActiveProjects ? (
+            {emptySearchParams && noProjects && (
               <TableRow className="border-border">
                 <TableCell colSpan={5} className="text-center py-4">
                   <section className="flex gap-3 flex-col items-center justify-center grow py-20">
@@ -308,16 +247,6 @@ export default function ProjectList({}: Route.ComponentProps) {
                   </section>
                 </TableCell>
               </TableRow>
-            ) : (
-              ""
-            )}
-
-            {noArchivedProject && (
-              <TableRow className="border-border">
-                <TableCell colSpan={5} className="text-center py-4">
-                  <p className="text-2xl font-bold">No archived project</p>
-                </TableCell>
-              </TableRow>
             )}
 
             {noResults ? (
@@ -331,50 +260,35 @@ export default function ProjectList({}: Route.ComponentProps) {
                 <TableRow className="border-border" key={project.id}>
                   <TableCell className="font-medium ">
                     <Link
-                      className={cn(
-                        "flex gap-2",
-                        status === "active" && "hover:underline"
-                      )}
+                      className={cn("flex gap-2", "hover:underline")}
                       prefetch="viewport"
-                      to={
-                        status !== "active" ? "#" : `/project/${project.slug}`
-                      }
+                      to={`/project/${project.slug}`}
                     >
-                      <Folder size={18} />
+                      <FolderIcon size={18} />
                       {project.slug}
                     </Link>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {project.description}
                   </TableCell>
-                  {"updated_at" in project ? (
-                    <TableCell>{formattedDate(project.updated_at)}</TableCell>
-                  ) : (
-                    <TableCell>{formattedDate(project.archived_at)}</TableCell>
-                  )}
+                  <TableCell>{formattedDate(project.updated_at)}</TableCell>
 
-                  {"healthy_services" in project && (
-                    <TableCell
-                      className={cn({
-                        hidden: status === "archived"
-                      })}
+                  <TableCell>
+                    <StatusBadge
+                      color={
+                        project.healthy_services === project.total_services
+                          ? "green"
+                          : project.healthy_services === 0
+                            ? "red"
+                            : "yellow"
+                      }
                     >
-                      <StatusBadge
-                        color={
-                          project.healthy_services === project.total_services
-                            ? "green"
-                            : project.healthy_services === 0
-                              ? "red"
-                              : "yellow"
-                        }
-                      >
-                        <p>
-                          {project.healthy_services}/
-                          {`${project.total_services} ${pluralize("Service", project.total_services)} healthy`}
-                        </p>
-                      </StatusBadge>
-                    </TableCell>
-                  )}
+                      <p>
+                        {project.healthy_services}/
+                        {`${project.total_services} ${pluralize("Service", project.total_services)} healthy`}
+                      </p>
+                    </StatusBadge>
+                  </TableCell>
 
                   <TableCell className="flex justify-end">
                     <Link
@@ -382,7 +296,7 @@ export default function ProjectList({}: Route.ComponentProps) {
                       className="w-fit flex items-center gap-3 hover:underline"
                     >
                       Settings
-                      <Settings width={18} />
+                      <SettingsIcon width={18} />
                     </Link>
                   </TableCell>
                 </TableRow>

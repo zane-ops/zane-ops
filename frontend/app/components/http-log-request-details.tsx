@@ -1,4 +1,8 @@
-import { ChevronRightIcon, FilterIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  FilterIcon,
+  SquareArrowOutUpRightIcon
+} from "lucide-react";
 import { useSearchParams } from "react-router";
 import { CopyButton } from "~/components/copy-button";
 import {
@@ -90,7 +94,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey  inline-flex items-center">Status code</dt>
           <dd
-            className={cn("", {
+            className={cn("inline-flex items-center gap-1", {
               "text-blue-600": log.status.toString().startsWith("1"),
               "text-green-600": log.status.toString().startsWith("2"),
               "text-grey": log.status.toString().startsWith("3"),
@@ -98,7 +102,17 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               "text-red-600": log.status.toString().startsWith("5")
             })}
           >
-            {statusMessage ? `${log.status} ${statusMessage}` : log.status}
+            <span>
+              {statusMessage ? `${log.status} ${statusMessage}` : log.status}
+            </span>
+
+            <a
+              target="_blank"
+              href={`https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/${log.status}`}
+            >
+              <span className="sr-only">Link to MDN</span>
+              <SquareArrowOutUpRightIcon size={15} />
+            </a>
           </dd>
         </div>
 

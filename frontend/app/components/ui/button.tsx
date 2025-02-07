@@ -58,10 +58,7 @@ function Button({
   );
 }
 
-export type SubmitButtonProps = Omit<
-  ButtonProps,
-  "disabled" | "asChild" | "type"
-> & {
+export type SubmitButtonProps = Omit<ButtonProps, "asChild" | "type"> & {
   isPending: boolean;
 };
 
