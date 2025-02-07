@@ -184,6 +184,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             "contents": ':80 respond "hello from caddy"',
             "mount_path": "/etc/caddy/Caddyfile",
             "name": "caddyfile",
+            "language": "caddyfile",
         }
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.CONFIGS,
@@ -549,3 +550,32 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("/etc/caddy/hello.caddy", updated_config.mount_path)
         self.assertEqual(':80 respond "here lies my life"', updated_config.contents)
         self.assertEqual("hello caddyfile", updated_config.name)
+
+
+class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
+    async def test_deploy_service_with_configs(self):
+        await self.aLoginUser()
+        p, service = await self.acreate_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "contents": ':80 respond "hello from caddy"',
+                        "mount_path": "/etc/caddy/Caddyfile",
+                        "name": "caddyfile",
+                    },
+                ),
+            ]
+        )
+
+        new_deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
+
+        self.assertIsNotNone(docker_service)
+        self.assertEqual(1, len(self.fake_docker_client.config_map))
+        self.assertEqual(1, len(docker_service.configs))
+
+        new_config = await service.configs.afirst()
+        self.assertIsNotNone(docker_service.get_attached_config(new_config))

@@ -37,6 +37,7 @@ with workflow.unsafe.imports_passed_through():
         RestartPolicy,
         Resources,
         UpdateConfig,
+        ConfigReference,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -57,6 +58,7 @@ with workflow.unsafe.imports_passed_through():
     from .semaphore import AsyncSemaphore
 
 from ..dtos import (
+    ConfigDto,
     DockerServiceSnapshot,
     URLDto,
     HealthCheckDto,
@@ -1172,6 +1174,34 @@ class DockerSwarmActivities:
         return created_volumes
 
     @activity.defn
+    async def create_docker_configs_for_service(
+        self, deployment: DockerDeploymentDetails
+    ) -> List[ConfigDto]:
+        await deployment_log(
+            deployment,
+            f"Creating configuration files for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
+        )
+        service = deployment.service
+        created_configs: List[ConfigDto] = []
+        for config in service.configs:
+            try:
+                self.docker_client.configs.get(get_config_resource_name(config.id))
+            except docker.errors.NotFound:
+                self.docker_client.configs.create(
+                    name=get_config_resource_name(config.id),
+                    labels=get_resource_labels(service.project_id, parent=service.id),
+                    data=config.contents.encode("utf-8"),
+                )
+                created_configs.append(config)
+
+        await deployment_log(
+            deployment,
+            f"Configuration files created succesfully for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}  ✅",
+        )
+
+        return created_configs
+
+    @activity.defn
     async def delete_created_volumes(self, deployment: DeploymentCreateVolumesResult):
         await deployment_log(
             deployment,
@@ -1407,7 +1437,7 @@ class DockerSwarmActivities:
             }
 
             for volume in service.docker_volumes:
-                # Only include volumes that are not to be deleted
+                # Only include volumes that will not be deleted
                 docker_volume = find_item_in_list(
                     lambda v: v.name == get_volume_resource_name(volume.id),
                     docker_volume_list,
@@ -1420,6 +1450,34 @@ class DockerSwarmActivities:
                 mounts.append(
                     f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
                 )
+
+            # configs
+            configs: list[ConfigReference] = []
+            docker_config_list = self.docker_client.configs.list(
+                filters={
+                    "label": [
+                        f"{key}={value}"
+                        for key, value in get_resource_labels(
+                            service.project_id, parent=service.id
+                        ).items()
+                    ]
+                }
+            )
+            for config in service.configs:
+                # Only include configs that will not be deleted
+                docker_config = find_item_in_list(
+                    lambda v: v.name == get_config_resource_name(config.id),
+                    docker_config_list,
+                )
+
+                if docker_config is not None:
+                    configs.append(
+                        ConfigReference(
+                            config_id=docker_config.id,
+                            config_name=docker_config.name,
+                            filename=config.mount_path,
+                        )
+                    )
 
             # ports
             exposed_ports: dict[int, int] = {}
@@ -1504,6 +1562,7 @@ class DockerSwarmActivities:
                     "fluentd-sub-second-precision": "true",
                 },
                 resources=resources,
+                configs=configs,
             )
             await deployment_log(
                 deployment,

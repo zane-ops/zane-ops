@@ -15,7 +15,7 @@ from .shared import (
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
 )
-from ..dtos import VolumeDto
+from ..dtos import ConfigDto, VolumeDto
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
@@ -147,6 +147,7 @@ class DeployDockerServiceWorkflow:
     def __init__(self):
         self.cancellation_requested = False
         self.created_volumes: List[VolumeDto] = []
+        self.created_configs: List[ConfigDto] = []
         self.deployment_hash: str = None
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
@@ -241,6 +242,14 @@ class DeployDockerServiceWorkflow:
             if len(service.docker_volumes) > 0:
                 self.created_volumes = await workflow.execute_activity_method(
                     DockerSwarmActivities.create_docker_volumes_for_service,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+
+            if len(service.configs) > 0:
+                self.created_configs = await workflow.execute_activity_method(
+                    DockerSwarmActivities.create_docker_configs_for_service,
                     deployment,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
@@ -704,6 +713,7 @@ def get_workflows_and_activities():
             swarm_activities.scale_down_and_remove_docker_service_deployment,
             swarm_activities.remove_old_docker_volumes,
             swarm_activities.remove_old_urls,
+            swarm_activities.create_docker_configs_for_service,
             swarm_activities.get_previous_queued_deployment,
             swarm_activities.get_previous_production_deployment,
             swarm_activities.scale_back_service_deployment,
