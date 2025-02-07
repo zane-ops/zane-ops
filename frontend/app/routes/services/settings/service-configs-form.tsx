@@ -369,6 +369,7 @@ function ServiceConfigItem({
                       value={changedContents}
                       theme="vs-dark"
                       options={{
+                        readOnly: true,
                         minimap: {
                           enabled: false
                         }
