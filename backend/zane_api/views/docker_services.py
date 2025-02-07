@@ -331,7 +331,9 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
                 Q(slug=service_slug) & Q(project=project)
             )
             .select_related("project")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+            )
         ).first()
 
         if service is None:
@@ -352,6 +354,11 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             if snapshot.image is None:
                 raise ResourceConflict(
                     detail="Cannot revert this change because it would remove the image of the service."
+                )
+
+            if snapshot.has_duplicate_volumes():
+                raise ResourceConflict(
+                    detail="Cannot revert this change as it would cause duplicate volumes with the same host path or container path."
                 )
 
             if found_change.field == "ports" or found_change.field == "urls":

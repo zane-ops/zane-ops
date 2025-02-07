@@ -515,13 +515,116 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
 # TODO
 class DockerServiceReverChangesViewTests(AuthAPITestCase):
+    async def test_prevent_reverting_volume_change_if_it_result_in_invalid_state(self):
+        await self.aLoginUser()
+        p, service = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                        "name": "data",
+                    },
+                ),
+            ]
+        )
+
+        new_deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
+
+        self.assertIsNotNone(docker_service)
+        self.assertEqual(1, len(self.fake_docker_client.volume_map))
+        self.assertEqual(1, len(docker_service.attached_volumes))
+
+        new_volume = await service.volumes.afirst()
+
+        # what we want to do
+        changes_payload = {
+            "field": "volumes",
+            "type": "UPDATE",
+            "item_id": new_volume.id,
+            "new_value": {
+                "name": "logs",
+                "mode": Volume.VolumeMode.READ_ONLY,
+                "container_path": "/data",
+                "host_path": "/data",
+            },
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        # now try to delete and recreate the volume
+        changes_payload = {
+            "field": "volumes",
+            "type": "DELETE",
+            "item_id": new_volume.id,
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        changes_payload = {
+            "field": "volumes",
+            "type": "ADD",
+            "new_value": {
+                "name": "logs",
+                "mode": Volume.VolumeMode.READ_ONLY,
+                "container_path": "/data",
+                "host_path": "/data",
+            },
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Now revert the `delete` change (should not be allowed)
+        change: DockerDeploymentChange = await service.changes.filter(
+            applied=False,
+            type=DockerDeploymentChange.ChangeType.DELETE,
+            field=DockerDeploymentChange.ChangeField.VOLUMES,
+        ).afirst()
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.docker.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
     def test_prevent_reverting_url_change_if_it_result_in_invalid_state(self):
         self.assertTrue(False)
 
-    def test_prevent_reverting_healthcheck_change_if_it_result_in_invalid_state(self):
+    def test_prevent_reverting_port_change_if_it_result_in_invalid_state(self):
         self.assertTrue(False)
 
-    def test_prevent_reverting_volume_change_if_it_result_in_invalid_state(self):
+    def test_prevent_reverting_healthcheck_change_if_it_result_in_invalid_state(self):
         self.assertTrue(False)
 
     def test_prevent_reverting_config_change_if_it_result_in_invalid_state(self):

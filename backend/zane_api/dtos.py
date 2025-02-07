@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Literal
 
@@ -220,6 +221,27 @@ class DockerServiceSnapshot:
             slug=data["slug"],
             network_alias=data["network_alias"],
         )
+
+    def has_duplicate_volumes(self) -> bool:
+        # Create dictionaries to keep track of seen host_paths and container_paths
+        host_path_counts = defaultdict(int)
+        container_path_counts = defaultdict(int)
+
+        # Iterate through the volumes and count occurrences of host_path and container_path
+        for volume in self.volumes:
+            if volume.host_path is not None:
+                host_path_counts[volume.host_path] += 1
+            if volume.container_path is not None:
+                container_path_counts[volume.container_path] += 1
+
+        # Check if any host_path or container_path appears more than once
+        has_duplicate_host_path = any(count > 1 for count in host_path_counts.values())
+        has_duplicate_container_path = any(
+            count > 1 for count in container_path_counts.values()
+        )
+
+        # Return True if there are duplicates in either host_path or container_path
+        return has_duplicate_host_path or has_duplicate_container_path
 
 
 @dataclass
