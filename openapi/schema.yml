@@ -1190,7 +1190,7 @@ paths:
           description: ''
   /api/projects/{project_slug}/deploy-service/docker/{service_slug}/:
     put:
-      operationId: applyDeploymentChanges
+      operationId: deployDockerService
       description: Apply all pending changes for the service and trigger a new deployment.
       summary: Deploy a docker service
       parameters:
@@ -1226,7 +1226,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApplyDeploymentChangesErrorResponse400'
+                $ref: '#/components/schemas/DeployDockerServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -3509,81 +3509,6 @@ paths:
           description: ''
 components:
   schemas:
-    ApplyDeploymentChangesCommitMessageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - commit_message
-          type: string
-          description: '* `commit_message` - commit_message'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ApplyDeploymentChangesError:
-      oneOf:
-      - $ref: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ApplyDeploymentChangesCommitMessageErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/ApplyDeploymentChangesNonFieldErrorsErrorComponent'
-          commit_message: '#/components/schemas/ApplyDeploymentChangesCommitMessageErrorComponent'
-    ApplyDeploymentChangesErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ApplyDeploymentChangesValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ApplyDeploymentChangesValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ApplyDeploymentChangesNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ApplyDeploymentChangesValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ApplyDeploymentChangesError'
-      required:
-      - errors
-      - type
     ArchiveDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3725,6 +3650,93 @@ components:
       - client_error
       type: string
       description: '* `client_error` - Client Error'
+    Config:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+        mount_path:
+          type: string
+          maxLength: 255
+        contents:
+          type: string
+        language:
+          type: string
+          maxLength: 255
+      required:
+      - contents
+      - id
+      - language
+      - mount_path
+      - name
+    ConfigItemChangeFieldEnum:
+      enum:
+      - configs
+      type: string
+      description: '* `configs` - configs'
+    ConfigItemChangeRequest:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ItemChangeTypeEnum'
+        item_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        new_value:
+          $ref: '#/components/schemas/ConfigRequestRequest'
+        field:
+          $ref: '#/components/schemas/ConfigItemChangeFieldEnum'
+      required:
+      - field
+      - type
+    ConfigRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mount_path:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contents:
+          type: string
+        language:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - mount_path
+      - name
+    ConfigRequestRequest:
+      type: object
+      properties:
+        contents:
+          type: string
+        name:
+          type: string
+          minLength: 1
+        mount_path:
+          type: string
+          minLength: 1
+        language:
+          type: string
+          minLength: 1
+          default: plaintext
+      required:
+      - contents
+      - mount_path
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -4029,6 +4041,81 @@ components:
       required:
       - errors
       - type
+    DeployDockerServiceCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployDockerServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/DeployDockerServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/DeployDockerServiceCommitMessageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/DeployDockerServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/DeployDockerServiceCommitMessageErrorComponent'
+    DeployDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/DeployDockerServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/DeployDockerServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    DeployDockerServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployDockerServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeployDockerServiceError'
+      required:
+      - errors
+      - type
     DeploymentChangeRequestRequest:
       oneOf:
       - $ref: '#/components/schemas/URLItemChangeRequest'
@@ -4039,10 +4126,11 @@ components:
       - $ref: '#/components/schemas/DockerCommandFieldChangeRequest'
       - $ref: '#/components/schemas/HealthcheckFieldChangeRequest'
       - $ref: '#/components/schemas/ResourceLimitChangeRequest'
+      - $ref: '#/components/schemas/ConfigItemChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/ResourceLimitChangeRequest'
+          null: '#/components/schemas/ConfigItemChangeRequest'
     DeploymentDocker:
       type: object
       properties:
@@ -4125,8 +4213,14 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
           default: []
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Config'
+          readOnly: true
       required:
       - command
+      - configs
       - created_at
       - credentials
       - deploy_token
@@ -4232,6 +4326,7 @@ components:
       - urls
       - ports
       - resource_limits
+      - configs
       type: string
       description: |-
         * `source` - source
@@ -4242,6 +4337,7 @@ components:
         * `urls` - urls
         * `ports` - ports
         * `resource_limits` - resource limits
+        * `configs` - configs
     DockerDeploymentChangeRequest:
       type: object
       properties:
@@ -4428,8 +4524,14 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
           default: []
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Config'
+          readOnly: true
       required:
       - command
+      - configs
       - created_at
       - credentials
       - deploy_token
@@ -6769,6 +6871,9 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryValueErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryUnitErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -6803,6 +6908,9 @@ components:
           new_value.memory.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent'
           new_value.memory.value: '#/components/schemas/RequestDeploymentChangesNewValueMemoryValueErrorComponent'
           new_value.memory.unit: '#/components/schemas/RequestDeploymentChangesNewValueMemoryUnitErrorComponent'
+          new_value.contents: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
+          new_value.mount_path: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
+          new_value.language: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
     RequestDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
@@ -6916,6 +7024,34 @@ components:
             * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueContentsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.contents
+          type: string
+          description: '* `new_value.contents` - new_value.contents'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
@@ -7258,6 +7394,34 @@ components:
       - attr
       - code
       - detail
+    RequestDeploymentChangesNewValueLanguageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.language
+          type: string
+          description: '* `new_value.language` - new_value.language'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -7346,6 +7510,36 @@ components:
           description: |-
             * `invalid_choice` - invalid_choice
             * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueMountPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.mount_path
+          type: string
+          description: '* `new_value.mount_path` - new_value.mount_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:

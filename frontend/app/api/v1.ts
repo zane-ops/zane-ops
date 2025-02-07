@@ -101,7 +101,7 @@ export interface paths {
      * Deploy a docker service
      * @description Apply all pending changes for the service and trigger a new deployment.
      */
-    put: operations["applyDeploymentChanges"];
+    put: operations["deployDockerService"];
   };
   "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/": {
     /**
@@ -215,41 +215,6 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    ApplyDeploymentChangesCommitMessageErrorComponent: {
-      /**
-       * @description * `commit_message` - commit_message
-       * @enum {string}
-       */
-      attr: "commit_message";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    ApplyDeploymentChangesError: components["schemas"]["ApplyDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["ApplyDeploymentChangesCommitMessageErrorComponent"];
-    ApplyDeploymentChangesErrorResponse400: components["schemas"]["ApplyDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ApplyDeploymentChangesNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    ApplyDeploymentChangesValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ApplyDeploymentChangesError"][];
-    };
     ArchiveDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchivedProject: {
@@ -305,6 +270,38 @@ export interface components {
      * @enum {string}
      */
     ClientErrorEnum: "client_error";
+    Config: {
+      id: string;
+      name: string;
+      mount_path: string;
+      contents: string;
+      language: string;
+    };
+    /**
+     * @description * `configs` - configs
+     * @enum {string}
+     */
+    ConfigItemChangeFieldEnum: "configs";
+    ConfigItemChangeRequest: {
+      type: components["schemas"]["ItemChangeTypeEnum"];
+      item_id?: string;
+      new_value?: components["schemas"]["ConfigRequestRequest"];
+      field: components["schemas"]["ConfigItemChangeFieldEnum"];
+    };
+    ConfigRequest: {
+      id?: string;
+      name: string;
+      mount_path: string;
+      contents?: string;
+      language?: string;
+    };
+    ConfigRequestRequest: {
+      contents: string;
+      name?: string;
+      mount_path: string;
+      /** @default plaintext */
+      language?: string;
+    };
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -462,7 +459,42 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"];
+    DeployDockerServiceCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    DeployDockerServiceError: components["schemas"]["DeployDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployDockerServiceCommitMessageErrorComponent"];
+    DeployDockerServiceErrorResponse400: components["schemas"]["DeployDockerServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    DeployDockerServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    DeployDockerServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["DeployDockerServiceError"][];
+    };
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"];
     DeploymentDocker: {
       /** Format: date-time */
       created_at: string;
@@ -486,6 +518,7 @@ export interface components {
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
+      configs: readonly components["schemas"]["Config"][];
     };
     /**
      * @description * `command` - command
@@ -527,9 +560,10 @@ export interface components {
      * * `urls` - urls
      * * `ports` - ports
      * * `resource_limits` - resource limits
+     * * `configs` - configs
      * @enum {string}
      */
-    DockerDeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits";
+    DockerDeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
     DockerDeploymentChangeRequest: {
       id?: string;
       type: components["schemas"]["DockerDeploymentChangeTypeEnum"];
@@ -591,6 +625,7 @@ export interface components {
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
+      configs: readonly components["schemas"]["Config"][];
     };
     DockerServiceCard: {
       /** Format: date-time */
@@ -1671,7 +1706,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
     };
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -1740,6 +1775,23 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueContentsErrorComponent: {
+      /**
+       * @description * `new_value.contents` - new_value.contents
+       * @enum {string}
+       */
+      attr: "new_value.contents";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueCpusErrorComponent: {
@@ -1944,6 +1996,23 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RequestDeploymentChangesNewValueLanguageErrorComponent: {
+      /**
+       * @description * `new_value.language` - new_value.language
+       * @enum {string}
+       */
+      attr: "new_value.language";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent: {
       /**
        * @description * `new_value.memory.non_field_errors` - new_value.memory.non_field_errors
@@ -2001,6 +2070,24 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueMountPathErrorComponent: {
+      /**
+       * @description * `new_value.mount_path` - new_value.mount_path
+       * @enum {string}
+       */
+      attr: "new_value.mount_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueNameErrorComponent: {
@@ -3153,7 +3240,7 @@ export interface operations {
    * Deploy a docker service
    * @description Apply all pending changes for the service and trigger a new deployment.
    */
-  applyDeploymentChanges: {
+  deployDockerService: {
     parameters: {
       path: {
         project_slug: string;
@@ -3175,7 +3262,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ApplyDeploymentChangesErrorResponse400"];
+          "application/json": components["schemas"]["DeployDockerServiceErrorResponse400"];
         };
       };
       401: {
