@@ -421,3 +421,131 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             field=DockerDeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNone(change)
+
+    def test_validate_config_change_invalid_path(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        config = {
+            "contents": ':80 respond "hello from caddy"',
+            "mount_path": "/etc/caddy Caddyfile",
+            "name": "caddyfile",
+        }
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "type": "ADD",
+            "new_value": config,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+            service__slug="app",
+            field=DockerDeploymentChange.ChangeField.CONFIGS,
+        ).first()
+        self.assertIsNone(change)
+
+
+class DockerServiceApplyChangesViewTests(AuthAPITestCase):
+    def test_apply_config_changes(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        config_to_delete, config_to_update = Config.objects.bulk_create(
+            [
+                Config(
+                    mount_path="/etc/caddy/hello.caddy",
+                    contents=':8080 respond "here lies my life"',
+                    name="to delete",
+                ),
+                Config(
+                    mount_path="/etc/caddy/Caddyfile",
+                    contents=':80 respond "hey ! I am working over here !"',
+                    name="to delete",
+                ),
+            ]
+        )
+        service.configs.add(config_to_delete, config_to_update)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={"image": "caddy:2.8-alpine"},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value=dict(
+                        mount_path="/etc/caddy/Caddyfile",
+                        contents="import ./*.caddy",
+                    ),
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=config_to_update.id,
+                    new_value=dict(
+                        mount_path="/etc/caddy/hello.caddy",
+                        contents=':80 respond "here lies my life"',
+                        name="hello caddyfile",
+                    ),
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    item_id=config_to_delete.id,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(2, updated_service.configs.count())
+
+        new_volume = updated_service.configs.filter(
+            mount_path="/etc/caddy/Caddyfile"
+        ).first()
+        self.assertIsNotNone(new_volume)
+
+        deleted_volume = updated_service.configs.filter(id=config_to_delete.id).first()
+        self.assertIsNone(deleted_volume)
+
+        updated_config: Config = updated_service.configs.get(id=config_to_update.id)
+        self.assertEqual("/etc/caddy/hello.caddy", updated_config.mount_path)
+        self.assertEqual(':80 respond "here lies my life"', updated_config.contents)
+        self.assertEqual("hello caddyfile", updated_config.name)

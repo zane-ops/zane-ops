@@ -77,7 +77,7 @@ class ServicePortsRequestSerializer(serializers.Serializer):
 class ConfigRequestSerializer(serializers.Serializer):
     contents = serializers.CharField(required=True, allow_blank=True)
     name = serializers.CharField(required=False)
-    mount_path = serializers.CharField(required=True)
+    mount_path = serializers.URLPathField(required=True)
 
     def validate(self, attrs: dict):
         if attrs.get("name") is None:
@@ -89,7 +89,7 @@ class ConfigRequestSerializer(serializers.Serializer):
 
 class VolumeRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False, min_length=1)
-    container_path = serializers.CharField(max_length=255)
+    container_path = serializers.URLPathField(max_length=255)
     host_path = serializers.URLPathField(max_length=255, required=False, default=None)
     VOLUME_MODE_CHOICES = (
         ("READ_ONLY", _("READ_ONLY")),
