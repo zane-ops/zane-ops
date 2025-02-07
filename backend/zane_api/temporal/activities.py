@@ -446,11 +446,6 @@ class ZaneProxyClient:
                 "value": "{http.request.uuid}",
             },
             {
-                "handler": "encode",
-                "encodings": {"gzip": {}},
-                "prefer": ["gzip"],
-            },
-            {
                 "handler": "headers",
                 "response": {
                     "add": {
@@ -495,6 +490,13 @@ class ZaneProxyClient:
         else:
             blue_upstream = f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
             green_upstream = f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+            proxy_handlers.append(
+                {
+                    "handler": "encode",
+                    "encodings": {"gzip": {}},
+                    "prefer": ["gzip"],
+                },
+            )
             proxy_handlers.append(
                 {
                     "handler": "reverse_proxy",
@@ -1907,7 +1909,7 @@ class DockerSwarmActivities:
 
         for config in docker_config_list:
             if config.name not in docker_config_names:
-                config.remove(force=True)
+                config.remove()
 
     @activity.defn
     async def remove_old_urls(self, deployment: DockerDeploymentDetails):
