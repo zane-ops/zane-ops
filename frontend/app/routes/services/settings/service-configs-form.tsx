@@ -1,16 +1,16 @@
+import Editor, { useMonaco } from "@monaco-editor/react";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
-  ExternalLinkIcon,
+  Code,
+  FileSlidersIcon,
   HardDriveIcon,
   LoaderIcon,
   PlusIcon,
   Trash2Icon,
-  TriangleAlertIcon,
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { Code } from "~/components/code";
 import {
   Accordion,
   AccordionContent,
@@ -23,7 +23,8 @@ import {
   FieldSet,
   FieldSetInput,
   FieldSetLabel,
-  FieldSetSelect
+  FieldSetSelect,
+  FieldSetTextarea
 } from "~/components/ui/fieldset";
 import {
   SelectContent,
@@ -37,105 +38,95 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type DockerService } from "~/lib/queries";
+import type { DockerService } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
 
-export type ServiceVolumesFormProps = {
+export type ServiceConfigsFormProps = {
   project_slug: string;
   service_slug: string;
 };
 
-export function ServiceVolumesForm({
+export function ServiceConfigsForm({
   project_slug,
   service_slug
-}: ServiceVolumesFormProps) {
+}: ServiceConfigsFormProps) {
   const { data: service } = useServiceQuery({ project_slug, service_slug });
-  const volumes: Map<string, VolumeItem> = new Map();
-  for (const volume of service?.volumes ?? []) {
-    volumes.set(volume.id, {
-      ...volume,
-      id: volume.id
+  const configs: Map<string, ConfigItem> = new Map();
+  for (const config of service.configs ?? []) {
+    configs.set(config.id, {
+      ...config
     });
   }
   for (const ch of (service?.unapplied_changes ?? []).filter(
-    (ch) => ch.field === "volumes"
+    (ch) => ch.field === "configs"
   )) {
-    const newVolume = (ch.new_value ?? ch.old_value) as Omit<
-      DockerService["volumes"][number],
+    const newConfig = (ch.new_value ?? ch.old_value) as Omit<
+      DockerService["configs"][number],
       "id"
     >;
-    volumes.set(ch.item_id ?? ch.id, {
-      ...newVolume,
+    configs.set(ch.item_id ?? ch.id, {
+      ...newConfig,
       change_id: ch.id,
       id: ch.item_id,
       change_type: ch.type
     });
   }
-
   return (
     <div className="flex flex-col gap-5 max-w-4xl w-full">
       <div className="flex flex-col gap-3">
         <p className="text-gray-400">
-          Used for persisting the data from your services.
+          Used for attaching read only configurations into your services or
+          simply random files that are required for running your service.
         </p>
-
-        <Alert variant="warning">
-          <TriangleAlertIcon size={15} />
-          <AlertTitle>Warning</AlertTitle>
-          <AlertDescription>
-            Adding volumes will disable&nbsp;
-            <a href="#" className="underline inline-flex gap-1 items-center">
-              zero-downtime deployments <ExternalLinkIcon size={12} />
-            </a>
-            .
-          </AlertDescription>
-        </Alert>
       </div>
-      {volumes.size > 0 && (
+
+      {configs.size > 0 && (
         <>
           <hr className="border-border" />
           <ul className="flex flex-col gap-2">
-            {[...volumes.entries()].map(([key, volume]) => (
+            {[...configs.entries()].map(([key, config]) => (
               <li key={key}>
-                <ServiceVolumeItem {...volume} />
+                <ServiceConfigItem {...config} />
               </li>
             ))}
           </ul>
         </>
       )}
+
       <hr className="border-border" />
-      <h3 className="text-lg">Add new volume</h3>
-      <NewServiceVolumeForm />
+      <h3 className="text-lg">Add new config file</h3>
+      <NewServiceConfigForm />
     </div>
   );
 }
 
-type VolumeItem = {
+type ConfigItem = {
   change_id?: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
   id?: string | null;
-} & Omit<DockerService["volumes"][number], "id">;
+} & Omit<DockerService["configs"][number], "id">;
 
-function ServiceVolumeItem({
+function ServiceConfigItem({
   id,
   name,
-  container_path,
-  host_path,
+  mount_path,
+  contents,
+  language,
   change_type,
-  mode,
   change_id
-}: VolumeItem) {
+}: ConfigItem) {
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
+  const [changedConfigLanguage, setChangedConfigLanguage] =
+    React.useState(language);
+
+  const [changedContents, setChangedContents] = React.useState(contents);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
-
-  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read & write";
 
   const {
     fetcher: updateFetcher,
@@ -154,7 +145,7 @@ function ServiceVolumeItem({
           key
         ) as HTMLInputElement;
 
-        if (key === "mode") {
+        if (key === "language") {
           SelectTriggerRef.current?.focus();
           return;
         }
@@ -176,6 +167,14 @@ function ServiceVolumeItem({
 
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = updateFetcher.state !== "idle";
+
+  const [languageList, setLanguageList] = React.useState(["plaintext"]);
+  const monaco = useMonaco();
+
+  React.useEffect(() => {
+    setLanguageList(monaco?.languages.getLanguages().map((l) => l.id) ?? []);
+  }, [monaco]);
+
   return (
     <div className="relative group">
       <div
@@ -188,7 +187,7 @@ function ServiceVolumeItem({
             id={`cancel-${change_id}-form`}
             className="hidden"
           >
-            <input type="hidden" name="change_field" value="volumes" />
+            <input type="hidden" name="change_field" value="configs" />
             <input type="hidden" name="change_id" value={change_id} />
           </cancelFetcher.Form>
         )}
@@ -198,7 +197,7 @@ function ServiceVolumeItem({
             id={`delete-${id}-form`}
             className="hidden"
           >
-            <input type="hidden" name="change_field" value="volumes" />
+            <input type="hidden" name="change_field" value="configs" />
             <input type="hidden" name="change_type" value="DELETE" />
             <input type="hidden" name="item_id" value={id} />
           </deleteFetcher.Form>
@@ -235,10 +234,10 @@ function ServiceVolumeItem({
                     value="request-service-change"
                   >
                     <Trash2Icon size={15} className="flex-none text-red-400" />
-                    <span className="sr-only">Delete volume</span>
+                    <span className="sr-only">Delete config file</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Delete volume</TooltipContent>
+                <TooltipContent>Delete config file</TooltipContent>
               </Tooltip>
             )
           )}
@@ -265,21 +264,11 @@ function ServiceVolumeItem({
               "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
             })}
           >
-            <HardDriveIcon size={20} className="text-grey relative top-1.5" />
+            <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
             <div className="flex flex-col gap-2">
               <h3 className="text-lg inline-flex gap-1 items-center">
                 <span>{name}</span>
               </h3>
-              <small className="text-card-foreground inline-flex gap-1 items-center">
-                {host_path && (
-                  <>
-                    <span>{host_path}</span>
-                    <ArrowRightIcon size={15} className="text-grey" />
-                  </>
-                )}
-                <span className="text-grey">{container_path}</span>
-                <Code>{modeSuffix}</Code>
-              </small>
             </div>
           </AccordionTrigger>
           {id && (
@@ -289,7 +278,7 @@ function ServiceVolumeItem({
                 ref={formRef}
                 className={cn("flex flex-col gap-4 w-full")}
               >
-                <input type="hidden" name="change_field" value="volumes" />
+                <input type="hidden" name="change_field" value="configs" />
                 <input type="hidden" name="change_type" value="UPDATE" />
                 <input type="hidden" name="item_id" value={id} />
                 <FieldSet
@@ -304,23 +293,39 @@ function ServiceVolumeItem({
                     Mode
                   </label>
                   <FieldSetSelect
-                    value={changedVolumeMode}
-                    onValueChange={(mode) =>
-                      setChangedVolumeMode(mode as VolumeMode)
+                    value={changedConfigLanguage}
+                    onValueChange={(language) =>
+                      setChangedConfigLanguage(language)
                     }
                   >
                     <SelectTrigger
                       id={`volume_mode-${id}`}
                       ref={SelectTriggerRef}
                     >
-                      <SelectValue placeholder="Select a volume mode" />
+                      <SelectValue placeholder="Select a language" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="READ_WRITE">Read & Write</SelectItem>
-                      <SelectItem value="READ_ONLY">Read only</SelectItem>
+                      {languageList.map((lang) => (
+                        <SelectItem value={lang}>{lang}</SelectItem>
+                      ))}
                     </SelectContent>
                   </FieldSetSelect>
                 </FieldSet>
+
+                <FieldSet
+                  name="mount_path"
+                  className="flex flex-col gap-1.5 flex-1"
+                  errors={errors.new_value?.mount_path}
+                >
+                  <FieldSetLabel className="text-muted-foreground">
+                    mount path
+                  </FieldSetLabel>
+                  <FieldSetInput
+                    placeholder="ex: /data"
+                    defaultValue={mount_path}
+                  />
+                </FieldSet>
+
                 <FieldSet
                   errors={errors.new_value?.name}
                   name="name"
@@ -336,30 +341,38 @@ function ServiceVolumeItem({
                 </FieldSet>
 
                 <FieldSet
-                  name="container_path"
-                  className="flex flex-col gap-1.5 flex-1"
-                  errors={errors.new_value?.container_path}
-                >
-                  <FieldSetLabel className="text-muted-foreground">
-                    Container path
-                  </FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: /data"
-                    defaultValue={container_path}
-                  />
-                </FieldSet>
-                <FieldSet
-                  name="host_path"
-                  errors={errors.new_value?.host_path}
+                  name="contents"
+                  errors={errors.new_value?.contents}
                   className="flex flex-col gap-1.5 flex-1"
                 >
                   <FieldSetLabel className="text-muted-foreground">
-                    Host path
+                    contents
                   </FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: /etc/localtime"
-                    defaultValue={host_path ?? ""}
+                  <FieldSetTextarea
+                    className="sr-only"
+                    value={changedConfigLanguage}
+                    readOnly
                   />
+
+                  <div
+                    className={cn(
+                      "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                      "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[63dvw]"
+                    )}
+                  >
+                    <Editor
+                      className="w-full h-full max-w-full"
+                      language={changedConfigLanguage}
+                      value={changedContents}
+                      theme="vs-dark"
+                      options={{
+                        minimap: {
+                          enabled: false
+                        }
+                      }}
+                      onChange={(value) => setChangedContents(value ?? "")}
+                    />
+                  </div>
                 </FieldSet>
 
                 <hr className="-mx-4 border-border" />
@@ -389,7 +402,8 @@ function ServiceVolumeItem({
                     className="flex-1 md:flex-none"
                     onClick={() => {
                       reset();
-                      setChangedVolumeMode(mode);
+                      setChangedConfigLanguage(language);
+                      setChangedContents(contents);
                     }}
                   >
                     Reset
@@ -404,9 +418,7 @@ function ServiceVolumeItem({
   );
 }
 
-type VolumeMode = DockerService["volumes"][number]["mode"];
-
-function NewServiceVolumeForm() {
+function NewServiceConfigForm() {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
@@ -415,11 +427,10 @@ function NewServiceVolumeForm() {
     onSuccess() {
       formRef.current?.reset();
       (
-        formRef.current?.elements.namedItem(
-          "container_path"
-        ) as HTMLInputElement
+        formRef.current?.elements.namedItem("mount_path") as HTMLInputElement
       )?.focus();
-      setVolumeMode("READ_WRITE");
+      setLanguage("plaintext");
+      setContents("// your text here");
     },
     onSettled(data) {
       if (data.errors) {
@@ -429,7 +440,7 @@ function NewServiceVolumeForm() {
           key
         ) as HTMLInputElement;
 
-        if (key === "mode") {
+        if (key === "language") {
           SelectTriggerRef.current?.focus();
           return;
         }
@@ -441,15 +452,22 @@ function NewServiceVolumeForm() {
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
 
-  const [volumeMode, setVolumeMode] = React.useState<VolumeMode>("READ_WRITE");
+  const [language, setLanguage] = React.useState("plaintext");
+  const [contents, setContents] = React.useState("// your text here");
+  const [languageList, setLanguageList] = React.useState(["plaintext"]);
+  const monaco = useMonaco();
+
+  React.useEffect(() => {
+    setLanguageList(monaco?.languages.getLanguages().map((l) => l.id) ?? []);
+  }, [monaco]);
 
   return (
     <fetcher.Form
       method="post"
       ref={formRef}
-      className="flex flex-col gap-4 w-full border border-border rounded-md p-4"
+      className="flex flex-col gap-4 w-full border border-border rounded-md p-4 max-w-full"
     >
-      <input type="hidden" name="change_field" value="volumes" />
+      <input type="hidden" name="change_field" value="configs" />
       <input type="hidden" name="change_type" value="ADD" />
 
       {errors.new_value?.non_field_errors && (
@@ -463,46 +481,37 @@ function NewServiceVolumeForm() {
       )}
 
       <FieldSet
-        errors={errors.new_value?.mode}
-        name="mode"
+        errors={errors.new_value?.language}
+        name="language"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <label htmlFor="volume_mode" className="text-muted-foreground">
-          Mode
+        <label htmlFor="language" className="text-muted-foreground">
+          language
         </label>
         <FieldSetSelect
-          value={volumeMode}
-          onValueChange={(mode) => setVolumeMode(mode as VolumeMode)}
+          value={language}
+          onValueChange={(mode) => setLanguage(mode)}
         >
-          <SelectTrigger id="volume_mode" ref={SelectTriggerRef}>
-            <SelectValue placeholder="Select a volume mode" />
+          <SelectTrigger id="language" ref={SelectTriggerRef}>
+            <SelectValue placeholder="Select a language" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="READ_WRITE">Read & Write</SelectItem>
-            <SelectItem value="READ_ONLY">Read only</SelectItem>
+            {languageList.map((lang) => (
+              <SelectItem value={lang}>{lang}</SelectItem>
+            ))}
           </SelectContent>
         </FieldSetSelect>
       </FieldSet>
 
       <FieldSet
-        errors={errors.new_value?.container_path}
-        name="container_path"
+        errors={errors.new_value?.mount_path}
+        name="mount_path"
         className="flex flex-col gap-1.5 flex-1"
       >
         <FieldSetLabel className="text-muted-foreground">
-          Container path
+          mount path
         </FieldSetLabel>
         <FieldSetInput placeholder="ex: /data" />
-      </FieldSet>
-      <FieldSet
-        name="host_path"
-        errors={errors.new_value?.host_path}
-        className="flex flex-col gap-1.5 flex-1"
-      >
-        <FieldSetLabel className="text-muted-foreground">
-          Host path
-        </FieldSetLabel>
-        <FieldSetInput placeholder="ex: /etc/localtime" />
       </FieldSet>
       <FieldSet
         errors={errors.new_value?.name}
@@ -511,6 +520,37 @@ function NewServiceVolumeForm() {
       >
         <FieldSetLabel className="text-muted-foreground">Name</FieldSetLabel>
         <FieldSetInput placeholder="ex: postgresl-data" />
+      </FieldSet>
+
+      <FieldSet
+        name="contents"
+        errors={errors.new_value?.contents}
+        className="flex flex-col gap-1.5 flex-1"
+      >
+        <FieldSetLabel className="text-muted-foreground">
+          contents
+        </FieldSetLabel>
+        <FieldSetTextarea className="sr-only" value={contents} readOnly />
+
+        <div
+          className={cn(
+            "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+            "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[63dvw]"
+          )}
+        >
+          <Editor
+            className="w-full h-full max-w-full"
+            language={language}
+            value={contents}
+            theme="vs-dark"
+            options={{
+              minimap: {
+                enabled: false
+              }
+            }}
+            onChange={(value) => setContents(value ?? "")}
+          />
+        </div>
       </FieldSet>
 
       <hr className="-mx-4 border-border" />
@@ -540,7 +580,7 @@ function NewServiceVolumeForm() {
           className="flex-1 md:flex-none"
           onClick={() => {
             reset();
-            setVolumeMode("READ_WRITE");
+            setLanguage("plaintext");
           }}
         >
           Reset
