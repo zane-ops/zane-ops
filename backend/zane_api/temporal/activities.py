@@ -165,6 +165,10 @@ def get_volume_resource_name(volume_id: str):
     return f"vol-{volume_id}"
 
 
+def get_config_resource_name(config_id: str):
+    return f"cf-{config_id}"
+
+
 def get_swarm_service_name_for_deployment(
     deployment_hash: str,
     project_id: str,
@@ -438,6 +442,11 @@ class ZaneProxyClient:
                 "handler": "log_append",
                 "key": "zane_request_id",
                 "value": "{http.request.uuid}",
+            },
+            {
+                "handler": "encode",
+                "encodings": {"gzip": {}},
+                "prefer": ["gzip"],
             },
             {
                 "handler": "headers",

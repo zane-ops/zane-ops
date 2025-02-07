@@ -303,9 +303,14 @@ def register_zaneops_app_on_proxy(
                         {
                             "handle": [
                                 {
+                                    "handler": "encode",
+                                    "encodings": {"gzip": {}},
+                                    "prefer": ["gzip"],
+                                },
+                                {
                                     "handler": "reverse_proxy",
                                     "upstreams": [{"dial": zane_app_internal_domain}],
-                                }
+                                },
                             ]
                         }
                     ],
@@ -323,9 +328,14 @@ def register_zaneops_app_on_proxy(
                         {
                             "handle": [
                                 {
+                                    "handler": "encode",
+                                    "encodings": {"gzip": {}},
+                                    "prefer": ["gzip"],
+                                },
+                                {
                                     "handler": "reverse_proxy",
                                     "upstreams": [{"dial": zane_app_internal_domain}],
-                                }
+                                },
                             ]
                         }
                     ],
