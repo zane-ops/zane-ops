@@ -106,6 +106,17 @@ class ArchivedVolume(TimestampArchivedModel):
         return f"ArchivedVolume({self.name})"
 
 
+class ArchivedConfig(TimestampArchivedModel):
+    name = models.CharField(max_length=255)
+    mount_path = models.CharField(max_length=255)
+    contents = models.TextField(blank=True)
+    language = models.CharField(max_length=255, null=True)
+    original_id = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"ArchivedConfig({self.name})"
+
+
 class ArchivedPortConfiguration(TimestampArchivedModel):
     host = models.PositiveIntegerField(null=True)
     forwarded = models.PositiveIntegerField()
@@ -115,6 +126,7 @@ class ArchivedBaseService(TimestampArchivedModel):
     slug = models.SlugField(max_length=255)
     urls = models.ManyToManyField(to=ArchivedURL)
     volumes = models.ManyToManyField(to=ArchivedVolume)
+    configs = models.ManyToManyField(to=ArchivedConfig)
     ports = models.ManyToManyField(to=ArchivedPortConfiguration)
     original_id = models.CharField(max_length=255)
     resource_limits = models.JSONField(
@@ -203,6 +215,19 @@ class ArchivedDockerService(ArchivedBaseService):
                 for volume in service.volumes.all()
             ]
         )
+
+        archived_configs = ArchivedConfig.objects.bulk_create(
+            [
+                ArchivedConfig(
+                    name=config.name,
+                    mount_path=config.mount_path,
+                    contents=config.contents,
+                    language=config.language,
+                    original_id=config.id,
+                )
+                for config in service.configs.all()
+            ]
+        )
         ArchivedDockerEnvVariable.objects.bulk_create(
             [
                 ArchivedDockerEnvVariable(
@@ -236,5 +261,6 @@ class ArchivedDockerService(ArchivedBaseService):
         archived_service.volumes.add(*archived_volumes)
         archived_service.ports.add(*archived_ports)
         archived_service.urls.add(*archived_urls)
+        archived_service.configs.add(*archived_configs)
 
         return archived_service

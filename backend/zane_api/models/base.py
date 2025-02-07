@@ -162,8 +162,7 @@ class BaseService(TimestampedModel):
         self.ports.filter().delete()
         self.urls.filter().delete()
         self.volumes.filter().delete()
-        # TODO
-        # self.configs.filter().delete()
+        self.configs.filter().delete()
         if self.healthcheck is not None:
             self.healthcheck.delete()
 

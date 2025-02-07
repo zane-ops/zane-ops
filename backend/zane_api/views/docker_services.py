@@ -55,7 +55,7 @@ from .serializers import (
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
 )
-from ..dtos import URLDto, VolumeDto
+from ..dtos import ConfigDto, URLDto, VolumeDto
 from ..models import (
     Project,
     DockerRegistryService,
@@ -1161,6 +1161,16 @@ class ArchiveDockerServiceAPIView(APIView):
                         id=volume.original_id,
                     )
                     for volume in archived_service.volumes.all()
+                ],
+                configs=[
+                    ConfigDto(
+                        mount_path=config.mount_path,
+                        name=config.name,
+                        id=config.original_id,
+                        language=config.language,
+                        contents=config.contents,
+                    )
+                    for config in archived_service.configs.all()
                 ],
                 project_id=archived_project.original_id,
                 deployments=[

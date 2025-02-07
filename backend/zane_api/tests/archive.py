@@ -122,6 +122,49 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertIsNone(deleted_docker_service)
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
+    async def test_archive_service_with_config(self):
+        project, service = await self.acreate_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "contents": ':80 respond "hello from caddy"',
+                        "mount_path": "/etc/caddy/Caddyfile",
+                        "name": "caddyfile",
+                        "language": "caddyfile",
+                    },
+                ),
+            ]
+        )
+
+        self.assertEqual(1, len(self.fake_docker_client.config_map))
+        deployment = await service.deployments.afirst()
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_config = await Config.objects.filter(name="caddyfile").afirst()
+        self.assertIsNone(deleted_config)
+
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(original_id=service.id)
+            .prefetch_related("configs")
+            .afirst()
+        )
+        self.assertEqual(1, len(archived_service.configs.all()))
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+        self.assertEqual(0, len(self.fake_docker_client.config_map))
+
     async def test_archive_service_with_env_and_command(self):
         project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[

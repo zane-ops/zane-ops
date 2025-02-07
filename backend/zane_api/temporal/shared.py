@@ -16,6 +16,7 @@ from ..dtos import (
     DeploymentChangeDto,
     HealthCheckDto,
     VolumeDto,
+    ConfigDto,
 )
 
 
@@ -139,6 +140,7 @@ class ArchivedServiceDetails:
     deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     volumes: List[VolumeDto] = field(default_factory=list)
+    configs: List[ConfigDto] = field(default_factory=list)
 
 
 @dataclass

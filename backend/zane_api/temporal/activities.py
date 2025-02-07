@@ -921,6 +921,23 @@ class DockerSwarmActivities:
         for volume in docker_volume_list:
             volume.remove(force=True)
         print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
+
+        print("deleting config list...")
+        docker_config_list = self.docker_client.configs.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service_details.project_id,
+                        parent=service_details.original_id,
+                    ).items()
+                ]
+            }
+        )
+
+        for config in docker_config_list:
+            config.remove()
+        print(f"Deleted {len(docker_config_list)} config(s), YAY !! 🎉")
         search_client = SearchClient(
             host=settings.ELASTICSEARCH_HOST,
         )

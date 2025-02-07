@@ -739,7 +739,7 @@ class FakeDockerClient:
             self.parent = parent
             self.labels = labels if labels is not None else {}
 
-        def remove(self, force: bool):
+        def remove(self):
             self.parent.config_map.pop(self.name)
 
     class FakeService:
