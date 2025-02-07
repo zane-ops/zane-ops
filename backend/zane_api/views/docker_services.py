@@ -358,7 +358,12 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
 
             if snapshot.has_duplicate_volumes():
                 raise ResourceConflict(
-                    detail="Cannot revert this change as it would cause duplicate volumes with the same host path or container path."
+                    detail="Cannot revert this change as it would cause duplicate volumes with the same host path or container path for this service."
+                )
+
+            if snapshot.has_duplicate_configs():
+                raise ResourceConflict(
+                    detail="Cannot revert this change as it would cause duplicate config files with the same mounth path for this service."
                 )
 
             if found_change.field == "ports" or found_change.field == "urls":

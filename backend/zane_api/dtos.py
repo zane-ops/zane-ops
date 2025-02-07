@@ -243,6 +243,23 @@ class DockerServiceSnapshot:
         # Return True if there are duplicates in either host_path or container_path
         return has_duplicate_host_path or has_duplicate_container_path
 
+    def has_duplicate_configs(self) -> bool:
+        # Create dictionaries to keep track of seen host_paths and container_paths
+        mount_path_counts = defaultdict(int)
+
+        # Iterate through the volumes and count occurrences of host_path and container_path
+        for config in self.configs:
+            if config.mount_path is not None:
+                mount_path_counts[config.mount_path] += 1
+
+        # Check if any host_path or container_path appears more than once
+        has_duplicate_mount_paths = any(
+            count > 1 for count in mount_path_counts.values()
+        )
+
+        # Return True if there are duplicates in either host_path or container_path
+        return has_duplicate_mount_paths
+
 
 @dataclass
 class DeploymentChangeDto:
