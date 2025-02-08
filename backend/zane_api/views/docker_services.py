@@ -1,3 +1,4 @@
+# type: ignore
 import time
 from typing import Any
 
@@ -191,7 +192,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
 
-        service: DockerRegistryService = (
+        service: DockerRegistryService | None = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
@@ -326,7 +327,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
 
-        service: DockerRegistryService = (
+        service: DockerRegistryService | None = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
@@ -402,7 +403,7 @@ class DeployDockerServiceAPIView(APIView):
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
 
-        service: DockerRegistryService = (
+        service: DockerRegistryService | None = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
@@ -429,8 +430,10 @@ class DeployDockerServiceAPIView(APIView):
             )
             service.apply_pending_changes(deployment=new_deployment)
 
-            if service.http_port is not None:
-                new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
+            if service.urls.count() > 0:
+                new_deployment.urls.create(
+                    domain=f"{project.slug}-{service_slug}-{new_deployment.hash.replace('_', '-')}.{settings.ROOT_DOMAIN}".lower()
+                )
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = DockerDeployment.get_next_deployment_slot(

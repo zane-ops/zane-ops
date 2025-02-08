@@ -11,7 +11,11 @@ from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
 
-from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
+from ..utils import (
+    strip_slash_if_exists,
+    datetime_to_timestamp_string,
+    generate_random_chars,
+)
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 
 
@@ -63,16 +67,8 @@ class URL(models.Model):
     associated_port = models.PositiveIntegerField(null=True)
 
     @classmethod
-    def create_default_url(cls, service: "BaseService"):
-        if isinstance(service, DockerRegistryService):
-            suffix = "docker"
-        else:
-            suffix = "git"
-
-        return URL.objects.create(
-            domain=f"{service.project.slug}-{service.slug}-{suffix}.{settings.ROOT_DOMAIN}",
-            base_path="/",
-        )
+    def generate_default_domain(cls, service: "BaseService"):
+        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{settings.ROOT_DOMAIN}"
 
     def __repr__(self):
         base_path = (
@@ -372,7 +368,6 @@ class DockerRegistryService(BaseService):
         )
 
     def apply_pending_changes(self, deployment: "DockerDeployment"):
-        added_new_http_port = False
         for change in self.unapplied_changes:
             match change.field:
                 case DockerDeploymentChange.ChangeField.COMMAND:
@@ -491,6 +486,7 @@ class DockerRegistryService(BaseService):
                                 base_path=change.new_value.get("base_path"),
                                 strip_prefix=change.new_value.get("strip_prefix"),
                                 redirect_to=change.new_value.get("redirect_to"),
+                                associated_port=change.new_value.get("associated_port"),
                             )
                         )
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
@@ -501,45 +497,24 @@ class DockerRegistryService(BaseService):
                         url.base_path = change.new_value.get("base_path")
                         url.strip_prefix = change.new_value.get("strip_prefix")
                         url.redirect_to = change.new_value.get("redirect_to")
+                        url.associated_port = change.new_value.get("associated_port")
                         url.save()
                 case DockerDeploymentChange.ChangeField.PORTS:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
-                        is_http_port = change.new_value.get(
-                            "host"
-                        ) is None or change.new_value.get("host") in [80, 443]
                         self.ports.add(
                             PortConfiguration.objects.create(
-                                host=(
-                                    None
-                                    if is_http_port
-                                    else change.new_value.get("host")
-                                ),
+                                host=change.new_value.get("host"),
                                 forwarded=change.new_value.get("forwarded"),
                             )
                         )
-                        if is_http_port:
-                            added_new_http_port = True
 
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.ports.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
-                        is_http_port = change.new_value.get(
-                            "host"
-                        ) is None or change.new_value.get("host") in [80, 443]
-
                         port = self.ports.get(id=change.item_id)
-                        port.host = (
-                            None if is_http_port else change.new_value.get("host")
-                        )
+                        port.host = change.new_value.get("host")
                         port.forwarded = change.new_value.get("forwarded")
                         port.save()
-
-                        if is_http_port:
-                            added_new_http_port = True
-
-        # Always recreate an URL if there is an http port
-        if added_new_http_port and self.urls.count() == 0:
-            self.urls.add(URL.create_default_url(service=self))
 
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
@@ -663,11 +638,22 @@ class Config(TimestampedModel):
         ]
 
 
+class DeploymentURL(models.Model):
+    domain = models.URLField(null=True)
+    deployment = models.ForeignKey(
+        to="DockerDeployment",
+        on_delete=models.CASCADE,
+        related_name="urls",
+    )
+
+    class Meta:
+        indexes = [models.Index(fields=["domain"])]
+
+
 class BaseDeployment(models.Model):
     queued_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True)
     finished_at = models.DateTimeField(null=True)
-    url = models.URLField(null=True)
 
     class Meta:
         abstract = True
@@ -761,7 +747,6 @@ class DockerDeployment(BaseDeployment):
         ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
-            models.Index(fields=["url"]),
             models.Index(fields=["is_current_production"]),
         ]
 

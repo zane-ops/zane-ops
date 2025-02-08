@@ -12,7 +12,7 @@ import re
 from django.core.cache import cache
 
 
-def cache_result(ttl: int = None, cache_key: str = None):
+def cache_result(ttl: int | None = None, cache_key: str | None = None):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -147,23 +147,6 @@ class LockAcquisitionError(Exception):
         self.countdown = countdown
 
 
-@contextmanager
-def cache_lock(lock_id: str, timeout=60, margin: int = 5):
-    lock_key = f"{lock_id}_lock"
-    # Attempt to acquire the lock
-    if not cache.add(lock_key, "true", timeout=timeout):  # Lock expires in 60 seconds
-        remaining_ttl = cache.ttl(lock_key) or timeout
-        countdown = remaining_ttl + margin
-        raise LockAcquisitionError(
-            f"Failed to acquire lock for {lock_id}", countdown=countdown
-        )
-
-    try:
-        yield True
-    finally:
-        cache.delete(lock_key)  # Release the lock
-
-
 def format_seconds(seconds: float):
     seconds = round(seconds)  # Round to the nearest integer
     minutes = seconds // 60
@@ -227,7 +210,7 @@ def find_item_in_list(predicate: Callable[[T], bool], sequence: List[T]) -> Opti
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
+            return dataclasses.asdict(o)  # type: ignore
         return super().default(o)
 
 
@@ -239,8 +222,6 @@ def random_word(length: int = 10):
 def generate_random_chars(length: int):
     """
     Generate a random set of characters comprised of letters & digits
-
-    :param int length:
     """
     letters = string.ascii_letters + string.digits
     return "".join(random.choice(letters) for _ in range(length))

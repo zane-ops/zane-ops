@@ -78,6 +78,7 @@ class HealthCheckDto:
     value: str
     timeout_seconds: int
     interval_seconds: int
+    associated_port: Optional[int] = None
     id: Optional[str] = None
 
     @classmethod

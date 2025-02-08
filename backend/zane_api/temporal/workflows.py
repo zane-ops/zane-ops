@@ -150,7 +150,7 @@ class DeployDockerServiceWorkflow:
         self.cancellation_requested = False
         self.created_volumes: List[VolumeDto] = []
         self.created_configs: List[ConfigDto] = []
-        self.deployment_hash: str = None
+        self.deployment_hash: str | None = None
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
@@ -432,7 +432,7 @@ class DeployDockerServiceWorkflow:
             )
             next_queued_deployment = await self.queue_next_deployment(deployment)
             return DeployDockerServiceWorkflowResult(
-                deployment_status=final_deployment_status,
+                deployment_status=final_deployment_status[0],
                 healthcheck_result=healthcheck_result,
                 next_queued_deployment=next_queued_deployment,
                 deployment_status_reason=healthcheck_result.reason,
@@ -555,7 +555,7 @@ class DeployDockerServiceWorkflow:
             retry_policy=self.retry_policy,
         )
         if next_queued_deployment is not None:
-            await workflow.continue_as_new(next_queued_deployment)
+            workflow.continue_as_new(next_queued_deployment)
         return next_queued_deployment
 
     async def cleanup_previous_production_deployment(
