@@ -292,8 +292,8 @@ function ServiceConfigItem({
                 <input type="hidden" name="change_type" value="UPDATE" />
                 <input type="hidden" name="item_id" value={id} />
                 <FieldSet
-                  errors={errors.new_value?.mode}
-                  name="mode"
+                  errors={errors.new_value?.language}
+                  name="language"
                   className="flex flex-col gap-1.5 flex-1"
                 >
                   <label
