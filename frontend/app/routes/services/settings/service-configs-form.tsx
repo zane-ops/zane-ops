@@ -647,6 +647,7 @@ function NewServiceConfigForm() {
           onClick={() => {
             reset();
             setLanguage("plaintext");
+            setContents("// your contents here");
           }}
         >
           Reset
