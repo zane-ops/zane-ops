@@ -1,3 +1,4 @@
+import Editor from "@monaco-editor/react";
 import {
   ArrowDownIcon,
   ArrowRightIcon,
@@ -828,7 +829,7 @@ export function ConfigChangeItem({
         })}
       >
         <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 w-full">
           <h3 className="text-lg inline-flex gap-1 items-center">
             <span>{(old_value ?? new_value).name}</span>
             {change.type === "ADD" && (
@@ -847,6 +848,25 @@ export function ConfigChangeItem({
               {(old_value ?? new_value).mount_path}
             </span>
           </small>
+
+          <div
+            className={cn(
+              "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full w-full"
+            )}
+          >
+            <Editor
+              className="w-full h-full max-w-full"
+              language={(old_value ?? new_value).language}
+              value={(old_value ?? new_value).contents}
+              theme="vs-dark"
+              options={{
+                readOnly: true,
+                minimap: {
+                  enabled: false
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -864,7 +884,7 @@ export function ConfigChangeItem({
             )}
           >
             <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full">
               <h3 className="text-lg inline-flex gap-1 items-center">
                 <span>{new_value.name}</span>
                 <span className="text-blue-500">
@@ -874,6 +894,25 @@ export function ConfigChangeItem({
               <small className="text-card-foreground inline-flex gap-1 items-center">
                 <span className="text-grey">{new_value.mount_path}</span>
               </small>
+
+              <div
+                className={cn(
+                  "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full w-full"
+                )}
+              >
+                <Editor
+                  className="w-full h-full max-w-full"
+                  language={new_value.language}
+                  value={new_value.contents}
+                  theme="vs-dark"
+                  options={{
+                    readOnly: true,
+                    minimap: {
+                      enabled: false
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         </>
