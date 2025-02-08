@@ -3668,12 +3668,17 @@ components:
         language:
           type: string
           maxLength: 255
+        version:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
       required:
       - contents
       - id
       - language
       - mount_path
       - name
+      - version
     ConfigItemChangeFieldEnum:
       enum:
       - configs
@@ -3716,6 +3721,10 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        version:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
       required:
       - mount_path
       - name

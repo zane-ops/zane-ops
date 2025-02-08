@@ -276,6 +276,7 @@ export interface components {
       mount_path: string;
       contents: string;
       language: string;
+      version: number;
     };
     /**
      * @description * `configs` - configs
@@ -294,6 +295,7 @@ export interface components {
       mount_path: string;
       contents?: string;
       language?: string;
+      version?: number;
     };
     ConfigRequestRequest: {
       contents: string;
