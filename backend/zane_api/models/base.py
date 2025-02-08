@@ -60,6 +60,8 @@ class URL(models.Model):
     base_path = models.CharField(default="/", validators=[validate_url_path])
     strip_prefix = models.BooleanField(default=True)
     redirect_to = models.JSONField(max_length=2000, null=True)
+    associated_port = models.PositiveIntegerField(default=80)
+    primary = models.BooleanField(default=False)
 
     @classmethod
     def create_default_url(cls, service: "BaseService"):
@@ -98,6 +100,7 @@ class URL(models.Model):
             "domain",
             "base_path",
         )
+        indexes = [models.Index(fields=["primary"])]
 
 
 class HealthCheck(models.Model):
@@ -146,6 +149,10 @@ class BaseService(TimestampedModel):
     @property
     def host_volumes(self):
         return self.volumes.filter(host_path__isnull=False)
+
+    @property
+    def primary_url(self):
+        return self.urls.filter(primary=True).first()
 
     @property
     def docker_volumes(self):
