@@ -397,7 +397,7 @@ function ServiceConfigItem({
                 <div
                   className={cn(
                     "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[63dvw]"
+                    "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
                   )}
                 >
                   <Editor
@@ -601,7 +601,7 @@ function NewServiceConfigForm() {
         <div
           className={cn(
             "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-            "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[63dvw]"
+            "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
           )}
         >
           <Editor
