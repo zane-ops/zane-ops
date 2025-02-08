@@ -281,195 +281,203 @@ function ServiceConfigItem({
               </small>
             </div>
           </AccordionTrigger>
-          {id && (
-            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
-              <updateFetcher.Form
-                method="post"
-                ref={formRef}
-                className={cn("flex flex-col gap-4 w-full")}
+          <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+            <updateFetcher.Form
+              method="post"
+              ref={formRef}
+              className={cn("flex flex-col gap-4 w-full")}
+            >
+              {id && (
+                <>
+                  <input type="hidden" name="item_id" value={id} />
+                  <input type="hidden" name="change_field" value="configs" />
+                  <input type="hidden" name="change_type" value="UPDATE" />
+                </>
+              )}
+              <FieldSet
+                errors={errors.new_value?.language}
+                name="language"
+                className="flex flex-col gap-1.5 flex-1"
               >
-                <input type="hidden" name="change_field" value="configs" />
-                <input type="hidden" name="change_type" value="UPDATE" />
-                <input type="hidden" name="item_id" value={id} />
-                <FieldSet
-                  errors={errors.new_value?.language}
-                  name="language"
-                  className="flex flex-col gap-1.5 flex-1"
+                <label
+                  htmlFor={`language-${id}`}
+                  className="text-muted-foreground"
                 >
-                  <label
-                    htmlFor={`language-${id}`}
-                    className="text-muted-foreground"
-                  >
-                    Language
-                  </label>
-                  <FieldSetSelect
-                    value={changedConfigLanguage}
-                    onValueChange={(language) =>
-                      setChangedConfigLanguage(language)
-                    }
-                    disabled={!!change_id}
-                  >
-                    <SelectTrigger
-                      id={`language-${id}`}
-                      ref={SelectTriggerRef}
-                      data-edited={!!change_id}
-                      className={cn(
-                        "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                        "data-[edited]:dark:disabled:bg-secondary-foreground",
-                        "disabled:border-transparent disabled:opacity-100"
-                      )}
-                    >
-                      <SelectValue placeholder="Select a language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languageList.map((lang) => (
-                        <SelectItem value={lang}>{lang}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </FieldSetSelect>
-                </FieldSet>
-
-                <FieldSet
-                  name="mount_path"
-                  className="flex flex-col gap-1.5 flex-1"
-                  errors={errors.new_value?.mount_path}
+                  Language
+                </label>
+                <FieldSetSelect
+                  value={changedConfigLanguage}
+                  onValueChange={(language) =>
+                    setChangedConfigLanguage(language)
+                  }
+                  disabled={!!change_id}
                 >
-                  <FieldSetLabel className="text-muted-foreground">
-                    mount path
-                  </FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: /data"
-                    defaultValue={mount_path}
-                    disabled={!!change_id}
-                    data-edited={!!change_id}
+                  <SelectTrigger
+                    id={`language-${id}`}
+                    ref={SelectTriggerRef}
+                    data-edited={change_type === "UPDATE"}
+                    data-added={change_type === "ADD"}
                     className={cn(
-                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                      "data-[edited]:dark:disabled:bg-secondary-foreground",
+                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                      "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                      "data-[added=true]:dark:disabled:bg-primary-foreground",
                       "disabled:border-transparent disabled:opacity-100"
                     )}
-                  />
-                </FieldSet>
-
-                <FieldSet
-                  errors={errors.new_value?.name}
-                  name="name"
-                  className="flex flex-col gap-1.5 flex-1"
-                >
-                  <FieldSetLabel className="text-muted-foreground">
-                    Name
-                  </FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: postgresl-data"
-                    defaultValue={name}
-                    disabled={!!change_id}
-                    data-edited={!!change_id}
-                    className={cn(
-                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                      "data-[edited]:dark:disabled:bg-secondary-foreground",
-                      "disabled:border-transparent disabled:opacity-100"
-                    )}
-                  />
-                </FieldSet>
-
-                <FieldSet
-                  name="contents"
-                  errors={errors.new_value?.contents}
-                  className="flex flex-col gap-1.5 flex-1"
-                >
-                  <FieldSetLabel className="text-muted-foreground">
-                    contents
-                  </FieldSetLabel>
-                  <FieldSetTextarea
-                    className="sr-only"
-                    value={changedContents}
-                    readOnly
-                  />
-
-                  <div
-                    className={cn(
-                      "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                      "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[63dvw]"
-                    )}
                   >
-                    <Editor
-                      className="w-full h-full max-w-full"
-                      language={changedConfigLanguage}
-                      value={changedContents}
-                      theme="vs-dark"
-                      options={{
-                        readOnly: !!change_id,
-                        minimap: {
-                          enabled: false
-                        }
-                      }}
-                      onChange={(value) => setChangedContents(value ?? "")}
-                    />
-                  </div>
-                </FieldSet>
+                    <SelectValue placeholder="Select a language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languageList.map((lang) => (
+                      <SelectItem value={lang}>{lang}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </FieldSetSelect>
+              </FieldSet>
 
-                <hr className="-mx-4 border-border" />
-                <div className="flex justify-end items-center gap-2">
-                  {change_id ? (
-                    <>
-                      <SubmitButton
-                        variant="outline"
-                        isPending={deleteFetcher.state !== "idle"}
-                        name="intent"
-                        value="cancel-service-change"
-                        form={`cancel-${change_id}-form`}
-                      >
-                        {deleteFetcher.state !== "idle" ? (
-                          <>
-                            <LoaderIcon className="animate-spin" size={15} />
-                            <span>Discarding...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Undo2Icon size={15} className="flex-none" />
-                            <span>Discard change</span>
-                          </>
-                        )}
-                      </SubmitButton>
-                    </>
-                  ) : (
-                    <>
-                      <SubmitButton
-                        isPending={isPending}
-                        variant="secondary"
-                        className="flex-1 md:flex-none"
-                        name="intent"
-                        value="request-service-change"
-                      >
-                        {isPending ? (
-                          <>
-                            <span>Updating...</span>
-                            <LoaderIcon className="animate-spin" size={15} />
-                          </>
-                        ) : (
-                          <>
-                            <span>Update</span>
-                            <PlusIcon size={15} />
-                          </>
-                        )}
-                      </SubmitButton>
-                      <Button
-                        variant="outline"
-                        type="reset"
-                        className="flex-1 md:flex-none"
-                        onClick={() => {
-                          reset();
-                          setChangedConfigLanguage(language);
-                          setChangedContents(contents);
-                        }}
-                      >
-                        Reset
-                      </Button>
-                    </>
+              <FieldSet
+                name="mount_path"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.new_value?.mount_path}
+              >
+                <FieldSetLabel className="text-muted-foreground">
+                  mount path
+                </FieldSetLabel>
+                <FieldSetInput
+                  placeholder="ex: /data"
+                  defaultValue={mount_path}
+                  disabled={!!change_id}
+                  data-edited={change_type === "UPDATE"}
+                  data-added={change_type === "ADD"}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                    "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                    "data-[added=true]:dark:disabled:bg-primary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
                   )}
+                />
+              </FieldSet>
+
+              <FieldSet
+                errors={errors.new_value?.name}
+                name="name"
+                className="flex flex-col gap-1.5 flex-1"
+              >
+                <FieldSetLabel className="text-muted-foreground">
+                  Name
+                </FieldSetLabel>
+                <FieldSetInput
+                  placeholder="ex: postgresl-data"
+                  defaultValue={name}
+                  disabled={!!change_id}
+                  data-edited={change_type === "UPDATE"}
+                  data-added={change_type === "ADD"}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                    "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                    "data-[added=true]:dark:disabled:bg-primary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </FieldSet>
+
+              <FieldSet
+                name="contents"
+                errors={errors.new_value?.contents}
+                className="flex flex-col gap-1.5 flex-1"
+              >
+                <FieldSetLabel className="text-muted-foreground">
+                  contents
+                </FieldSetLabel>
+                <FieldSetTextarea
+                  className="sr-only"
+                  value={changedContents}
+                  readOnly
+                />
+
+                <div
+                  className={cn(
+                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                    "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[63dvw]"
+                  )}
+                >
+                  <Editor
+                    className="w-full h-full max-w-full"
+                    language={changedConfigLanguage}
+                    value={changedContents}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: !!change_id,
+                      minimap: {
+                        enabled: false
+                      }
+                    }}
+                    onChange={(value) => setChangedContents(value ?? "")}
+                  />
                 </div>
-              </updateFetcher.Form>
-            </AccordionContent>
-          )}
+              </FieldSet>
+
+              <hr className="-mx-4 border-border" />
+              <div className="flex justify-end items-center gap-2">
+                {change_id ? (
+                  <>
+                    <SubmitButton
+                      variant="outline"
+                      isPending={deleteFetcher.state !== "idle"}
+                      name="intent"
+                      value="cancel-service-change"
+                      form={`cancel-${change_id}-form`}
+                    >
+                      {deleteFetcher.state !== "idle" ? (
+                        <>
+                          <LoaderIcon className="animate-spin" size={15} />
+                          <span>Discarding...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Undo2Icon size={15} className="flex-none" />
+                          <span>Discard change</span>
+                        </>
+                      )}
+                    </SubmitButton>
+                  </>
+                ) : (
+                  <>
+                    <SubmitButton
+                      isPending={isPending}
+                      variant="secondary"
+                      className="flex-1 md:flex-none"
+                      name="intent"
+                      value="request-service-change"
+                    >
+                      {isPending ? (
+                        <>
+                          <span>Updating...</span>
+                          <LoaderIcon className="animate-spin" size={15} />
+                        </>
+                      ) : (
+                        <>
+                          <span>Update</span>
+                          <PlusIcon size={15} />
+                        </>
+                      )}
+                    </SubmitButton>
+                    <Button
+                      variant="outline"
+                      type="reset"
+                      className="flex-1 md:flex-none"
+                      onClick={() => {
+                        reset();
+                        setChangedConfigLanguage(language);
+                        setChangedContents(contents);
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </>
+                )}
+              </div>
+            </updateFetcher.Form>
+          </AccordionContent>
         </AccordionItem>
       </Accordion>
     </div>
