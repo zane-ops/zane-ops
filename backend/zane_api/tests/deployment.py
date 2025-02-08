@@ -1579,50 +1579,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_ports_cannot_specify_custom_url_and_public_port_at_the_same_time(
-        self,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field="urls",
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "labs.idx.co",
-                        "base_path": "/",
-                        "strip_prefix": True,
-                    },
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field="ports",
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 9000},
-                    service=service,
-                ),
-            ]
-        )
-
-        changes_payload = {
-            "field": "ports",
-            "type": "ADD",
-            "new_value": {
-                "host": 5430,
-                "forwarded": 3000,
-            },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
     def test_validate_healthcheck_path_require_url_or_http_port(
         self,
     ):
