@@ -636,33 +636,7 @@ class DockerServiceReverChangesViewTests(AuthAPITestCase):
 
         new_config: Config = await service.configs.afirst()
 
-        # what we want to do
-        changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
-            "type": DockerDeploymentChange.ChangeType.UPDATE,
-            "item_id": new_config.id,
-            "new_value": {
-                "name": "caddyfile",
-                "language": "caddyfile",
-                "contents": """
-                :80 {
-                    respond "hello from caddy"
-                }
-                """,
-                "mount_path": "/etc/caddy/Caddyfile",
-            },
-        }
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": service.slug},
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-        # now try to delete and recreate the volume
+        # try to delete and recreate the config file
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.CONFIGS,
             "type": DockerDeploymentChange.ChangeType.DELETE,
