@@ -899,16 +899,6 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # validate that url & host ports don't clash
         http_ports = [80, 443]
-        if len(snapshot.urls) > 0:
-            for port in snapshot.ports:
-                if port.host not in http_ports:
-                    raise serializers.ValidationError(
-                        {
-                            "new_value": {
-                                "host": f"Cannot specify both a custom URL and a `host` port other than a HTTP port (80/443)"
-                            }
-                        }
-                    )
 
         # check if port is available
         public_port = new_value.get("host")
