@@ -4,6 +4,7 @@ import {
   CheckIcon,
   ContainerIcon,
   CopyIcon,
+  FileSlidersIcon,
   FlameIcon,
   GlobeLockIcon,
   HammerIcon,
@@ -33,6 +34,7 @@ import {
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
+import { ServiceConfigsForm } from "~/routes/services/settings/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/settings/service-danger-zone-form";
 import { ServiceDeployURLForm } from "~/routes/services/settings/service-deploy-url-form";
 import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
@@ -54,8 +56,8 @@ export default function ServiceSettingsPage({
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ComponentProps) {
   return (
-    <div className="my-6 grid lg:grid-cols-12 gap-10 relative">
-      <div className="lg:col-span-10 flex flex-col">
+    <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
+      <div className="lg:col-span-10 flex flex-col max-w-full">
         <section id="details" className="flex gap-1 scroll-mt-20">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -161,6 +163,22 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
+        <section id="configs" className="flex gap-1 scroll-mt-20 max-w-full">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <FileSlidersIcon size={15} className="flex-none text-grey" />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Config files</h2>
+            <ServiceConfigsForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+            />
+          </div>
+        </section>
+
         <section id="danger" className="flex gap-1 scroll-mt-20">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
@@ -223,6 +241,15 @@ export default function ServiceSettingsPage({
                 }}
               >
                 Volumes
+              </Link>
+            </li>
+            <li>
+              <Link
+                to={{
+                  hash: "#configs"
+                }}
+              >
+                Config files
               </Link>
             </li>
             <li className="text-red-400">
@@ -634,6 +661,16 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
+    case "configs": {
+      const name = formData.get("name")?.toString();
+      userData = {
+        mount_path: formData.get("mount_path")?.toString() ?? "",
+        language: formData.get("language")?.toString(),
+        name: !name ? undefined : name,
+        contents: formData.get("contents")?.toString() ?? ""
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
     default: {
       throw new Error(`Unexpected field \`${field}\``);
     }
@@ -722,7 +759,12 @@ async function cancelServiceChange({
   );
 
   if (errors) {
-    toast.error("Failed to discard change", { id: toastId, closeButton: true });
+    const fullErrorMessage = errors.errors.map((err) => err.detail).join(" ");
+    toast.error("Failed to discard change", {
+      id: toastId,
+      closeButton: true,
+      description: fullErrorMessage
+    });
     return {
       errors
     };

@@ -5,6 +5,7 @@ from typing import Sequence
 from django.db.models import Q
 
 from ..dtos import (
+    ConfigDto,
     DockerServiceSnapshot,
     VolumeDto,
     EnvVariableDto,
@@ -50,6 +51,7 @@ def compute_docker_service_snapshot(
         DockerDeploymentChange.ChangeField.ENV_VARIABLES: EnvVariableDto,
         DockerDeploymentChange.ChangeField.PORTS: PortConfigurationDto,
         DockerDeploymentChange.ChangeField.URLS: URLDto,
+        DockerDeploymentChange.ChangeField.CONFIGS: ConfigDto,
     }
 
     for change in changes:
@@ -156,7 +158,11 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
             case "image" | "credentials":
                 if current_value != target_value:
                     existing_change = next(
-                        (change for change in changes if change.field == "source"),
+                        (
+                            change
+                            for change in changes
+                            if change.field == DockerDeploymentChange.ChangeField.SOURCE
+                        ),
                         None,
                     )
                     if existing_change is not None:
@@ -214,7 +220,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             ),
                         )
                     )
-            case "volumes" | "urls" | "env_variables" | "ports":
+            case "volumes" | "urls" | "env_variables" | "ports" | "configs":
                 current_items: dict[
                     str, VolumeDto | URLDto | EnvVariableDto | PortConfigurationDto
                 ] = {item.id: item for item in current_value}

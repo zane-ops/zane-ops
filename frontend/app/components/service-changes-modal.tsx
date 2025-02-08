@@ -17,6 +17,7 @@ import * as React from "react";
 import { useFetcher } from "react-router";
 import {
   CommandChangeField,
+  ConfigChangeItem,
   EnvVariableChangeItem,
   HealthcheckChangeField,
   PortChangeItem,
@@ -85,7 +86,7 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
           </span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[min(var(--container-3xl),calc(100%_-_var(--spacing)*8))] gap-0">
+      <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
           <DialogTitle>
             {service.unapplied_changes.length === 0 ? (
@@ -143,6 +144,12 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
                       changes.map((change) => (
                         <ChangeForm key={change.id} change_id={change.id}>
                           <VolumeChangeItem unapplied change={change} />
+                        </ChangeForm>
+                      ))}
+                    {field === "configs" &&
+                      changes.map((change) => (
+                        <ChangeForm key={change.id} change_id={change.id}>
+                          <ConfigChangeItem unapplied change={change} />
                         </ChangeForm>
                       ))}
                     {field === "source" &&

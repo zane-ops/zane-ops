@@ -16,6 +16,7 @@ from ..dtos import (
     DeploymentChangeDto,
     HealthCheckDto,
     VolumeDto,
+    ConfigDto,
 )
 
 
@@ -119,6 +120,13 @@ class DeploymentCreateVolumesResult:
 
 
 @dataclass
+class DeploymentCreateConfigsResult:
+    deployment_hash: str
+    service_id: str
+    created_configs: List[ConfigDto] = field(default_factory=list)
+
+
+@dataclass
 class SimpleDeploymentDetails:
     hash: str
     project_id: str
@@ -139,6 +147,7 @@ class ArchivedServiceDetails:
     deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     volumes: List[VolumeDto] = field(default_factory=list)
+    configs: List[ConfigDto] = field(default_factory=list)
 
 
 @dataclass

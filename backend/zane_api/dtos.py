@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Literal
 
@@ -8,6 +9,20 @@ class VolumeDto:
     mode: Literal["READ_ONLY", "READ_WRITE"]
     name: Optional[str] = None
     host_path: Optional[str] = None
+    id: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+
+@dataclass
+class ConfigDto:
+    mount_path: str
+    contents: str
+    language: str
+    version: Optional[int] = 1
+    name: Optional[str] = None
     id: Optional[str] = None
 
     @classmethod
@@ -128,6 +143,7 @@ class DockerServiceSnapshot:
     ports: List[PortConfigurationDto] = field(default_factory=list)
     env_variables: List[EnvVariableDto] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
+    configs: List[ConfigDto] = field(default_factory=list)
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
@@ -167,6 +183,7 @@ class DockerServiceSnapshot:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
+        configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
         ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
         env_variables = [
@@ -192,6 +209,7 @@ class DockerServiceSnapshot:
             image=data["image"],
             urls=urls,
             volumes=volumes,
+            configs=configs,
             command=data.get("command"),
             ports=ports,
             env_variables=env_variables,
@@ -204,6 +222,44 @@ class DockerServiceSnapshot:
             slug=data["slug"],
             network_alias=data["network_alias"],
         )
+
+    def has_duplicate_volumes(self) -> bool:
+        # Create dictionaries to keep track of seen host_paths and container_paths
+        host_path_counts = defaultdict(int)
+        container_path_counts = defaultdict(int)
+
+        # Iterate through the volumes and count occurrences of host_path and container_path
+        for volume in self.volumes:
+            if volume.host_path is not None:
+                host_path_counts[volume.host_path] += 1
+            if volume.container_path is not None:
+                container_path_counts[volume.container_path] += 1
+
+        # Check if any host_path or container_path appears more than once
+        has_duplicate_host_path = any(count > 1 for count in host_path_counts.values())
+        has_duplicate_container_path = any(
+            count > 1 for count in container_path_counts.values()
+        )
+
+        # Return True if there are duplicates in either host_path or container_path
+        return has_duplicate_host_path or has_duplicate_container_path
+
+    def has_duplicate_configs(self) -> bool:
+        # Create dictionaries to keep track of seen host_paths and container_paths
+        mount_path_counts = defaultdict(int)
+
+        # Iterate through the volumes and count occurrences of host_path and container_path
+        for config in self.configs:
+            if config.mount_path is not None:
+                mount_path_counts[config.mount_path] += 1
+
+        # Check if any host_path or container_path appears more than once
+        has_duplicate_mount_paths = any(
+            count > 1 for count in mount_path_counts.values()
+        )
+
+        # Return True if there are duplicates in either host_path or container_path
+        return has_duplicate_mount_paths
 
 
 @dataclass

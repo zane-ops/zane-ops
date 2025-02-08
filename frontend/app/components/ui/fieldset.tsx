@@ -3,6 +3,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
+import { Textarea } from "~/components/ui/textarea";
 
 import { cn } from "~/lib/utils";
 
@@ -101,6 +102,33 @@ export function FieldSetInput(
 
   return (
     <Input
+      id={id}
+      aria-invalid={Boolean(errors)}
+      aria-labelledby={`${id}-error`}
+      {...props}
+      name={props.name ?? name}
+    />
+  );
+}
+
+export function FieldSetTextarea(
+  props: Omit<
+    React.ComponentProps<typeof Textarea>,
+    "id" | "aria-invalid" | "aria-labelledby"
+  >
+) {
+  const ctx = React.use(FieldSetContext);
+
+  if (!ctx) {
+    throw new Error(
+      "<FieldSetTextarea> component should be inside of a <FieldSet> component"
+    );
+  }
+
+  const { id, errors, name } = ctx;
+
+  return (
+    <Textarea
       id={id}
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}

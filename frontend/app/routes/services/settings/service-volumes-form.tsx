@@ -10,8 +10,6 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { Form } from "react-router";
-import { toast } from "sonner";
 import { Code } from "~/components/code";
 import {
   Accordion,
@@ -21,18 +19,13 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
 import {
   FieldSet,
-  FieldSetCheckbox,
-  FieldSetErrors,
   FieldSetInput,
   FieldSetLabel,
   FieldSetSelect
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -62,21 +55,21 @@ export function ServiceVolumesForm({
 }: ServiceVolumesFormProps) {
   const { data: service } = useServiceQuery({ project_slug, service_slug });
   const volumes: Map<string, VolumeItem> = new Map();
-  for (const url of service?.volumes ?? []) {
-    volumes.set(url.id, {
-      ...url,
-      id: url.id
+  for (const volume of service?.volumes ?? []) {
+    volumes.set(volume.id, {
+      ...volume,
+      id: volume.id
     });
   }
   for (const ch of (service?.unapplied_changes ?? []).filter(
     (ch) => ch.field === "volumes"
   )) {
-    const newUrl = (ch.new_value ?? ch.old_value) as Omit<
+    const newVolume = (ch.new_value ?? ch.old_value) as Omit<
       DockerService["volumes"][number],
       "id"
     >;
     volumes.set(ch.item_id ?? ch.id, {
-      ...newUrl,
+      ...newVolume,
       change_id: ch.id,
       id: ch.item_id,
       change_type: ch.type
@@ -242,10 +235,10 @@ function ServiceVolumeItem({
                     value="request-service-change"
                   >
                     <Trash2Icon size={15} className="flex-none text-red-400" />
-                    <span className="sr-only">Delete url</span>
+                    <span className="sr-only">Delete volume</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Delete url</TooltipContent>
+                <TooltipContent>Delete volume</TooltipContent>
               </Tooltip>
             )
           )}
@@ -265,12 +258,17 @@ function ServiceVolumeItem({
           disabled={!!change_id}
         >
           <AccordionTrigger
-            className={cn("rounded-md p-4 flex items-start gap-2 bg-muted", {
-              "dark:bg-secondary-foreground bg-secondary/60 ":
-                change_type === "UPDATE",
-              "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
-              "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
-            })}
+            className={cn(
+              "rounded-md p-4 flex items-start gap-2 bg-muted",
+              "aria-expanded:rounded-b-none",
+              {
+                "dark:bg-secondary-foreground bg-secondary/60 ":
+                  change_type === "UPDATE",
+                "dark:bg-primary-foreground bg-primary/60":
+                  change_type === "ADD",
+                "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+              }
+            )}
           >
             <HardDriveIcon size={20} className="text-grey relative top-1.5" />
             <div className="flex flex-col gap-2">

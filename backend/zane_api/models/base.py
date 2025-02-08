@@ -141,6 +141,7 @@ class BaseService(TimestampedModel):
         null=True,
     )
     deploy_token = models.CharField(max_length=25, null=True, unique=True)
+    configs = models.ManyToManyField(to="Config")
 
     @property
     def host_volumes(self):
@@ -161,6 +162,7 @@ class BaseService(TimestampedModel):
         self.ports.filter().delete()
         self.urls.filter().delete()
         self.volumes.filter().delete()
+        self.configs.filter().delete()
         if self.healthcheck is not None:
             self.healthcheck.delete()
 
@@ -425,12 +427,42 @@ class DockerRegistryService(BaseService):
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.volumes.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
-                        volume = self.volumes.get(id=change.item_id)
-                        volume.host_path = change.new_value.get("host_path")
-                        volume.container_path = change.new_value.get("container_path")
-                        volume.mode = change.new_value.get("mode")
-                        volume.name = change.new_value.get("name", volume.name)
-                        volume.save()
+                        config = self.volumes.get(id=change.item_id)
+                        config.host_path = change.new_value.get("host_path")
+                        config.container_path = change.new_value.get("container_path")
+                        config.mode = change.new_value.get("mode")
+                        config.name = change.new_value.get("name", config.name)
+                        config.save()
+                case DockerDeploymentChange.ChangeField.CONFIGS:
+                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                        fake = Faker()
+                        Faker.seed(time.monotonic())
+                        self.configs.add(
+                            Config.objects.create(
+                                mount_path=change.new_value.get("mount_path"),
+                                contents=change.new_value.get("contents"),
+                                name=change.new_value.get("name", fake.slug().lower()),
+                                language=change.new_value.get("language", "plaintext"),
+                            )
+                        )
+                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                        self.configs.get(id=change.item_id).delete()
+                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                        config = self.configs.get(id=change.item_id)
+                        config.mount_path = change.new_value.get(
+                            "mount_path", config.mount_path
+                        )
+                        new_contents = change.new_value.get("contents", config.contents)
+
+                        if config.contents != new_contents:
+                            config.version += 1
+
+                        config.contents = new_contents
+                        config.name = change.new_value.get("name", config.name)
+                        config.language = change.new_value.get(
+                            "language", config.language
+                        )
+                        config.save()
                 case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
                         DockerEnvVariable.objects.create(
@@ -600,6 +632,31 @@ class Volume(TimestampedModel):
         ]
 
 
+class Config(TimestampedModel):
+    ID_PREFIX = "cf_"
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
+
+    name = models.CharField(
+        max_length=255,
+        blank=False,
+        null=False,
+        validators=[MinLengthValidator(limit_value=1)],
+    )
+    mount_path = models.CharField(max_length=255)
+    contents = models.TextField(blank=True)
+    language = models.CharField(default="plaintext", max_length=255)
+    version = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"Config({self.name})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["mount_path"]),
+            models.Index(fields=["version"]),
+        ]
+
+
 class BaseDeployment(models.Model):
     queued_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True)
@@ -753,6 +810,7 @@ class DockerDeploymentChange(BaseDeploymentChange):
         URLS = "urls", _("urls")
         PORTS = "ports", _("ports")
         RESOURCE_LIMITS = "resource_limits", _("resource limits")
+        CONFIGS = "configs", _("configs")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(

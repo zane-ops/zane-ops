@@ -30,13 +30,19 @@ from ..models import (
     DockerEnvVariable,
     PortConfiguration,
     HttpLog,
+    Config,
 )
 from ..temporal import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
     get_server_resource_limits,
 )
-from ..utils import EnhancedJSONEncoder, convert_value_to_bytes, format_storage_value
+from ..utils import (
+    EnhancedJSONEncoder,
+    convert_value_to_bytes,
+    find_item_in_list,
+    format_storage_value,
+)
 from ..validators import validate_url_path, validate_env_name
 
 from search.dtos import RuntimeLogLevel, RuntimeLogSource
@@ -68,9 +74,23 @@ class ServicePortsRequestSerializer(serializers.Serializer):
     forwarded = serializers.IntegerField(required=True, min_value=1)
 
 
+class ConfigRequestSerializer(serializers.Serializer):
+    contents = serializers.CharField(required=True, allow_blank=True)
+    name = serializers.CharField(required=False)
+    mount_path = serializers.URLPathField(required=True)
+    language = serializers.CharField(default="plaintext", required=False)
+
+    def validate(self, attrs: dict):
+        if attrs.get("name") is None:
+            fake = Faker()
+            Faker.seed(time.monotonic())
+            attrs["name"] = fake.slug().lower()
+        return attrs
+
+
 class VolumeRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False, min_length=1)
-    container_path = serializers.CharField(max_length=255)
+    container_path = serializers.URLPathField(max_length=255)
     host_path = serializers.URLPathField(max_length=255, required=False, default=None)
     VOLUME_MODE_CHOICES = (
         ("READ_ONLY", _("READ_ONLY")),
@@ -722,6 +742,64 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         return change
 
 
+class ConfigItemChangeSerializer(BaseChangeItemSerializer):
+    field = serializers.ChoiceField(choices=["configs"], required=True)
+    new_value = ConfigRequestSerializer(required=False)
+
+    def validate(self, change: dict):
+        super().validate(change)
+        service = self.get_service()
+        change_type = change["type"]
+        new_value = change.get("new_value") or {}
+
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = change["item_id"]
+
+            try:
+                service.configs.get(id=item_id)
+            except Config.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": [
+                            f"Config file with id `{item_id}` does not exist for this service."
+                        ]
+                    }
+                )
+        snapshot = compute_docker_service_snapshot_with_changes(service, change)
+
+        # validate double container paths
+        config_with_same_path = list(
+            filter(
+                lambda c: c.mount_path == new_value.get("mount_path"),
+                snapshot.configs,
+            )
+        )
+
+        if len(config_with_same_path) >= 2:
+            raise serializers.ValidationError(
+                {
+                    "new_value": {
+                        "mount_path": "Cannot specify two config files with the same `mount path` for this service."
+                    }
+                }
+            )
+
+        volume_with_same_container_path = find_item_in_list(
+            lambda v: v.container_path == new_value.get("mount_path"),
+            snapshot.volumes,
+        )
+        if volume_with_same_container_path is not None:
+            raise serializers.ValidationError(
+                {
+                    "new_value": {
+                        "mount_path": "Another volume is already attached on the same path in this service."
+                    }
+                }
+            )
+
+        return change
+
+
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
     new_value = EnvRequestSerializer(required=False)
     field = serializers.ChoiceField(choices=["env_variables"], required=True)
@@ -821,16 +899,6 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # validate that url & host ports don't clash
         http_ports = [80, 443]
-        if len(snapshot.urls) > 0:
-            for port in snapshot.ports:
-                if port.host not in http_ports:
-                    raise serializers.ValidationError(
-                        {
-                            "new_value": {
-                                "host": f"Cannot specify both a custom URL and a `host` port other than a HTTP port (80/443)"
-                            }
-                        }
-                    )
 
         # check if port is available
         public_port = new_value.get("host")
@@ -951,6 +1019,7 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
             "command",
             "healthcheck",
             "resource_limits",
+            "configs",
         ],
     )
 

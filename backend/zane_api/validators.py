@@ -34,7 +34,7 @@ def validate_url_path(value: str):
             raise ValidationError("Invalid Path")
     except ValidationError:
         raise ValidationError(
-            "should be a valid url pathname starting with `/` and not containing query parameters, `..` or `*`"
+            "should be a valid pathname starting with `/` and not containing query parameters, `..` or `*`"
         )
 
 

@@ -14,7 +14,12 @@ from django.core.cache import cache
 from django.test import AsyncClient
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from docker.types import EndpointSpec, Resources, NetworkAttachmentConfig
+from docker.types import (
+    EndpointSpec,
+    Resources,
+    NetworkAttachmentConfig,
+    ConfigReference,
+)
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -29,11 +34,13 @@ from ..models import (
     DockerRegistryService,
     DockerDeployment,
     Volume,
+    Config,
 )
 from ..temporal import (
     get_network_resource_name,
     DockerImageResultFromRegistry,
     SERVER_RESOURCE_LIMIT_COMMAND,
+    get_config_resource_name,
 )
 from ..temporal import (
     get_workflows_and_activities,
@@ -725,12 +732,23 @@ class FakeDockerClient:
         def remove(self, force: bool):
             self.parent.volume_map.pop(self.name)
 
+    class FakeConfig:
+        def __init__(self, parent: "FakeDockerClient", name: str, labels: dict = None):
+            self.name = name
+            self.id = name
+            self.parent = parent
+            self.labels = labels if labels is not None else {}
+
+        def remove(self):
+            self.parent.config_map.pop(self.name)
+
     class FakeService:
         def __init__(
             self,
             parent: "FakeDockerClient",
             name: str,
             volumes: dict[str, dict[str, str]] = None,
+            configs: list[ConfigReference] = None,
             env: dict[str, str] = None,
             endpoint: EndpointSpec = None,
             resources: Resources = None,
@@ -746,6 +764,7 @@ class FakeDockerClient:
             self.name = name
             self.parent = parent
             self.attached_volumes = {} if volumes is None else volumes
+            self.configs = [] if configs is None else configs
             self.env = {} if env is None else env
             self.endpoint = endpoint
             self.resources = resources
@@ -794,6 +813,13 @@ class FakeDockerClient:
         def get_attached_volume(self, volume: Volume):
             return self.attached_volumes.get(get_volume_resource_name(volume.id))
 
+        def get_attached_config(self, config: Config):
+            return find_item_in_list(
+                lambda c: c["ConfigID"]
+                == get_config_resource_name(config.id, config.version),
+                self.configs,
+            )
+
     class FakeContainer:
         @staticmethod
         def exec_run(cmd: str, *args, **kwargs):
@@ -811,6 +837,7 @@ class FakeDockerClient:
 
     def __init__(self):
         self.volumes = MagicMock()
+        self.configs = MagicMock()
         self.services = MagicMock()
         self.images = MagicMock()
         self.containers = MagicMock()
@@ -829,6 +856,10 @@ class FakeDockerClient:
         self.volumes.get = self.volumes_get
         self.volumes.list = self.volumes_list
 
+        self.configs.list = self.config_list
+        self.configs.create = self.config_create
+        self.configs.get = self.config_get
+
         self.networks = MagicMock()
         self.network_map = {}  # type: dict[str, FakeDockerClient.FakeNetwork]
 
@@ -836,6 +867,7 @@ class FakeDockerClient:
         self.networks.get = self.docker_get_network
 
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
+        self.config_map = {}  # type: dict[str, FakeDockerClient.FakeConfig]
         self.service_map = {
             "proxy-service": FakeDockerClient.FakeService(
                 name="zane_proxy", parent=self
@@ -878,6 +910,28 @@ class FakeDockerClient:
         self.volume_map[name] = FakeDockerClient.FakeVolume(
             parent=self, name=name, labels=labels
         )
+
+    def config_create(self, name: str, labels: dict, **kwargs):
+        self.config_map[name] = FakeDockerClient.FakeConfig(
+            parent=self,
+            name=name,
+            labels=labels,
+        )
+
+    def config_get(self, name: str):
+        if name not in self.config_map:
+            raise docker.errors.NotFound("Config Not found")
+        return self.config_map[name]
+
+    def config_list(self, filters: dict):
+        label_in_filters: list[str] = filters.get("label", [])
+        labels = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+        return [
+            config for config in self.config_map.values() if config.labels == labels
+        ]
 
     def volumes_get(self, name: str):
         if name not in self.volume_map:
@@ -940,6 +994,7 @@ class FakeDockerClient:
             endpoint=endpoint_spec,
             resources=resources,
             networks=kwargs.get("networks", []),
+            configs=kwargs.get("configs", []),
         )
 
     def login(self, username: str, password: str, registry: str, **kwargs):

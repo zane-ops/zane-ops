@@ -6,6 +6,7 @@ import {
   ChevronRightIcon,
   ContainerIcon,
   EthernetPortIcon,
+  FileSliders,
   FilmIcon,
   GitCompareArrowsIcon,
   GlobeIcon,
@@ -36,6 +37,7 @@ import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
 import {
   CommandChangeField,
+  ConfigChangeItem,
   EnvVariableChangeItem,
   HealthcheckChangeField,
   PortChangeItem,
@@ -139,7 +141,8 @@ export default function DeploymentDetailsPage({
     env_variables: KeyRoundIcon,
     urls: GlobeIcon,
     resource_limits: HourglassIcon,
-    healthcheck: ActivityIcon
+    healthcheck: ActivityIcon,
+    configs: FileSliders
   };
 
   console.log({
@@ -283,17 +286,25 @@ export default function DeploymentDetailsPage({
               (typeof deploymentChanges)[typeof field]
             >;
             const Icon = IconFieldMap[field];
+            const fieldName = field === "configs" ? "Config files" : field;
             return (
               <div key={field} className="flex flex-col gap-1.5 flex-1">
                 <h3 className="text-lg flex gap-2 items-center border-b py-2 border-border">
                   <Icon size={15} className="flex-none text-grey" />
-                  <span>{capitalizeText(field.replaceAll("_", " "))}</span>
+                  <span>{capitalizeText(fieldName.replaceAll("_", " "))}</span>
                 </h3>
                 <div className="pl-4 py-2 flex flex-col gap-2">
                   {field === "volumes" &&
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <VolumeChangeItem change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "configs" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <ConfigChangeItem change={change} />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}

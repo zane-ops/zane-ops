@@ -37,6 +37,7 @@ with workflow.unsafe.imports_passed_through():
         RestartPolicy,
         Resources,
         UpdateConfig,
+        ConfigReference,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -57,12 +58,14 @@ with workflow.unsafe.imports_passed_through():
     from .semaphore import AsyncSemaphore
 
 from ..dtos import (
+    ConfigDto,
     DockerServiceSnapshot,
     URLDto,
     HealthCheckDto,
     VolumeDto,
 )
 from .shared import (
+    DeploymentCreateConfigsResult,
     ProjectDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
@@ -163,6 +166,10 @@ def get_resource_labels(project_id: str, **kwargs):
 
 def get_volume_resource_name(volume_id: str):
     return f"vol-{volume_id}"
+
+
+def get_config_resource_name(config_id: str, version: int):
+    return f"cf-{config_id}-{version}"
 
 
 def get_swarm_service_name_for_deployment(
@@ -484,6 +491,13 @@ class ZaneProxyClient:
         else:
             blue_upstream = f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
             green_upstream = f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+            proxy_handlers.append(
+                {
+                    "handler": "encode",
+                    "encodings": {"gzip": {}},
+                    "prefer": ["gzip"],
+                },
+            )
             proxy_handlers.append(
                 {
                     "handler": "reverse_proxy",
@@ -908,6 +922,23 @@ class DockerSwarmActivities:
         for volume in docker_volume_list:
             volume.remove(force=True)
         print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
+
+        print("deleting config list...")
+        docker_config_list = self.docker_client.configs.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service_details.project_id,
+                        parent=service_details.original_id,
+                    ).items()
+                ]
+            }
+        )
+
+        for config in docker_config_list:
+            config.remove()
+        print(f"Deleted {len(docker_config_list)} config(s), YAY !! 🎉")
         search_client = SearchClient(
             host=settings.ELASTICSEARCH_HOST,
         )
@@ -1163,6 +1194,36 @@ class DockerSwarmActivities:
         return created_volumes
 
     @activity.defn
+    async def create_docker_configs_for_service(
+        self, deployment: DockerDeploymentDetails
+    ) -> List[ConfigDto]:
+        await deployment_log(
+            deployment,
+            f"Creating configuration files for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
+        )
+        service = deployment.service
+        created_configs: List[ConfigDto] = []
+        for config in service.configs:
+            try:
+                self.docker_client.configs.get(
+                    get_config_resource_name(config.id, config.version)
+                )
+            except docker.errors.NotFound:
+                self.docker_client.configs.create(
+                    name=get_config_resource_name(config.id, config.version),
+                    labels=get_resource_labels(service.project_id, parent=service.id),
+                    data=config.contents.encode("utf-8"),
+                )
+                created_configs.append(config)
+
+        await deployment_log(
+            deployment,
+            f"Configuration files created succesfully for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}  ✅",
+        )
+
+        return created_configs
+
+    @activity.defn
     async def delete_created_volumes(self, deployment: DeploymentCreateVolumesResult):
         await deployment_log(
             deployment,
@@ -1181,6 +1242,27 @@ class DockerSwarmActivities:
         await deployment_log(
             deployment,
             f"Volumes deleted succesfully for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
+        )
+
+    @activity.defn
+    async def delete_created_configs(self, deployment: DeploymentCreateConfigsResult):
+        await deployment_log(
+            deployment,
+            f"Deleting created config files for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}...",
+        )
+        for config in deployment.created_configs:
+            try:
+                docker_config = self.docker_client.configs.get(
+                    get_config_resource_name(config.id, config.version)
+                )
+            except docker.errors.NotFound:
+                pass
+            else:
+                docker_config.remove(force=True)
+
+        await deployment_log(
+            deployment,
+            f"Config files succesfully deleted for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
         )
 
     @activity.defn
@@ -1398,7 +1480,7 @@ class DockerSwarmActivities:
             }
 
             for volume in service.docker_volumes:
-                # Only include volumes that are not to be deleted
+                # Only include volumes that will not be deleted
                 docker_volume = find_item_in_list(
                     lambda v: v.name == get_volume_resource_name(volume.id),
                     docker_volume_list,
@@ -1411,6 +1493,35 @@ class DockerSwarmActivities:
                 mounts.append(
                     f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
                 )
+
+            # configs
+            configs: list[ConfigReference] = []
+            docker_config_list = self.docker_client.configs.list(
+                filters={
+                    "label": [
+                        f"{key}={value}"
+                        for key, value in get_resource_labels(
+                            service.project_id, parent=service.id
+                        ).items()
+                    ]
+                }
+            )
+            for config in service.configs:
+                # Only include configs that will not be deleted
+                docker_config = find_item_in_list(
+                    lambda v: v.name
+                    == get_config_resource_name(config.id, config.version),
+                    docker_config_list,
+                )
+
+                if docker_config is not None:
+                    configs.append(
+                        ConfigReference(
+                            config_id=docker_config.id,
+                            config_name=docker_config.name,
+                            filename=config.mount_path,
+                        )
+                    )
 
             # ports
             exposed_ports: dict[int, int] = {}
@@ -1495,6 +1606,7 @@ class DockerSwarmActivities:
                     "fluentd-sub-second-precision": "true",
                 },
                 resources=resources,
+                configs=configs,
             )
             await deployment_log(
                 deployment,
@@ -1817,6 +1929,30 @@ class DockerSwarmActivities:
         for volume in docker_volume_list:
             if volume.name not in docker_volume_names:
                 volume.remove(force=True)
+
+    @activity.defn
+    async def remove_old_docker_configs(self, deployment: DockerDeploymentDetails):
+        service = deployment.service
+        docker_config_names = [
+            get_config_resource_name(config.id, config.version)
+            for config in service.configs
+        ]
+
+        docker_config_list = self.docker_client.configs.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service.project_id,
+                        parent=service.id,
+                    ).items()
+                ]
+            }
+        )
+
+        for config in docker_config_list:
+            if config.name not in docker_config_names:
+                config.remove()
 
     @activity.defn
     async def remove_old_urls(self, deployment: DockerDeploymentDetails):

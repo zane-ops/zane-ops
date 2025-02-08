@@ -8,6 +8,7 @@ from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError, ActivityError
 
 from .shared import (
+    DeploymentCreateConfigsResult,
     DeploymentHealthcheckResult,
     SimpleDeploymentDetails,
     ArchivedServiceDetails,
@@ -15,7 +16,7 @@ from .shared import (
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
 )
-from ..dtos import VolumeDto
+from ..dtos import ConfigDto, VolumeDto
 
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
@@ -115,6 +116,7 @@ class RemoveProjectResourcesWorkflow:
 class DockerDeploymentStep(Enum):
     INITIALIZED = auto()
     VOLUMES_CREATED = auto()
+    CONFIGS_CREATED = auto()
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
     SWARM_SERVICE_CREATED = auto()
     DEPLOYMENT_EXPOSED_TO_HTTP = auto()
@@ -147,6 +149,7 @@ class DeployDockerServiceWorkflow:
     def __init__(self):
         self.cancellation_requested = False
         self.created_volumes: List[VolumeDto] = []
+        self.created_configs: List[ConfigDto] = []
         self.deployment_hash: str = None
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
@@ -249,6 +252,19 @@ class DeployDockerServiceWorkflow:
             if await check_for_cancellation(DockerDeploymentStep.VOLUMES_CREATED):
                 return await self.handle_cancellation(
                     deployment, DockerDeploymentStep.VOLUMES_CREATED
+                )
+
+            if len(service.configs) > 0:
+                self.created_configs = await workflow.execute_activity_method(
+                    DockerSwarmActivities.create_docker_configs_for_service,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+
+            if await check_for_cancellation(DockerDeploymentStep.CONFIGS_CREATED):
+                return await self.handle_cancellation(
+                    deployment, DockerDeploymentStep.CONFIGS_CREATED
                 )
 
             if (
@@ -487,6 +503,21 @@ class DeployDockerServiceWorkflow:
                     retry_policy=self.retry_policy,
                 )
         if (
+            last_completed_step >= DockerDeploymentStep.CONFIGS_CREATED
+            and len(self.created_configs) > 0
+        ):
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.delete_created_configs,
+                DeploymentCreateConfigsResult(
+                    deployment_hash=deployment.hash,
+                    service_id=deployment.service.id,
+                    created_configs=self.created_configs,
+                ),
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+        if (
             last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED
             and len(self.created_volumes) > 0
         ):
@@ -536,6 +567,13 @@ class DeployDockerServiceWorkflow:
             DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.remove_old_docker_configs,
+            current_deployment,
+            start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
 
@@ -703,11 +741,14 @@ def get_workflows_and_activities():
             swarm_activities.cleanup_previous_production_deployment,
             swarm_activities.scale_down_and_remove_docker_service_deployment,
             swarm_activities.remove_old_docker_volumes,
+            swarm_activities.remove_old_docker_configs,
             swarm_activities.remove_old_urls,
+            swarm_activities.create_docker_configs_for_service,
             swarm_activities.get_previous_queued_deployment,
             swarm_activities.get_previous_production_deployment,
             swarm_activities.scale_back_service_deployment,
             swarm_activities.create_deployment_healthcheck_schedule,
+            swarm_activities.delete_created_configs,
             monitor_activities.save_deployment_status,
             monitor_activities.run_deployment_monitor_healthcheck,
             cleanup_activites.cleanup_simple_logs,
