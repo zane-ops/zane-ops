@@ -86,7 +86,7 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
           </span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[min(var(--container-3xl),calc(100%_-_var(--spacing)*8))] gap-0">
+      <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
           <DialogTitle>
             {service.unapplied_changes.length === 0 ? (
