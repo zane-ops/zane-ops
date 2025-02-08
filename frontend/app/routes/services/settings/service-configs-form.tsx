@@ -157,6 +157,8 @@ function ServiceConfigItem({
   const { fetcher: cancelFetcher } = useFetcherWithCallbacks({
     onSuccess() {
       setAccordionValue("");
+      setChangedContents(contents);
+      setChangedConfigLanguage(language);
     }
   });
   const { fetcher: deleteFetcher } = useFetcherWithCallbacks({
@@ -254,7 +256,7 @@ function ServiceConfigItem({
         <AccordionItem
           value={`${name}`}
           className="border-none"
-          disabled={!!change_id}
+          disabled={!!change_id && change_type === "DELETE"}
         >
           <AccordionTrigger
             className={cn(
@@ -295,20 +297,27 @@ function ServiceConfigItem({
                   className="flex flex-col gap-1.5 flex-1"
                 >
                   <label
-                    htmlFor={`volume_mode-${id}`}
+                    htmlFor={`language-${id}`}
                     className="text-muted-foreground"
                   >
-                    Mode
+                    Language
                   </label>
                   <FieldSetSelect
                     value={changedConfigLanguage}
                     onValueChange={(language) =>
                       setChangedConfigLanguage(language)
                     }
+                    disabled={!!change_id}
                   >
                     <SelectTrigger
-                      id={`volume_mode-${id}`}
+                      id={`language-${id}`}
                       ref={SelectTriggerRef}
+                      data-edited={!!change_id}
+                      className={cn(
+                        "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                        "data-[edited]:dark:disabled:bg-secondary-foreground",
+                        "disabled:border-transparent disabled:opacity-100"
+                      )}
                     >
                       <SelectValue placeholder="Select a language" />
                     </SelectTrigger>
@@ -331,6 +340,13 @@ function ServiceConfigItem({
                   <FieldSetInput
                     placeholder="ex: /data"
                     defaultValue={mount_path}
+                    disabled={!!change_id}
+                    data-edited={!!change_id}
+                    className={cn(
+                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                      "data-[edited]:dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
                   />
                 </FieldSet>
 
@@ -345,6 +361,13 @@ function ServiceConfigItem({
                   <FieldSetInput
                     placeholder="ex: postgresl-data"
                     defaultValue={name}
+                    disabled={!!change_id}
+                    data-edited={!!change_id}
+                    className={cn(
+                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                      "data-[edited]:dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
                   />
                 </FieldSet>
 
@@ -358,7 +381,7 @@ function ServiceConfigItem({
                   </FieldSetLabel>
                   <FieldSetTextarea
                     className="sr-only"
-                    value={changedConfigLanguage}
+                    value={changedContents}
                     readOnly
                   />
 
@@ -374,7 +397,7 @@ function ServiceConfigItem({
                       value={changedContents}
                       theme="vs-dark"
                       options={{
-                        readOnly: true,
+                        readOnly: !!change_id,
                         minimap: {
                           enabled: false
                         }
@@ -386,37 +409,63 @@ function ServiceConfigItem({
 
                 <hr className="-mx-4 border-border" />
                 <div className="flex justify-end items-center gap-2">
-                  <SubmitButton
-                    isPending={isPending}
-                    variant="secondary"
-                    className="flex-1 md:flex-none"
-                    name="intent"
-                    value="request-service-change"
-                  >
-                    {isPending ? (
-                      <>
-                        <span>Updating...</span>
-                        <LoaderIcon className="animate-spin" size={15} />
-                      </>
-                    ) : (
-                      <>
-                        <span>Update</span>
-                        <PlusIcon size={15} />
-                      </>
-                    )}
-                  </SubmitButton>
-                  <Button
-                    variant="outline"
-                    type="reset"
-                    className="flex-1 md:flex-none"
-                    onClick={() => {
-                      reset();
-                      setChangedConfigLanguage(language);
-                      setChangedContents(contents);
-                    }}
-                  >
-                    Reset
-                  </Button>
+                  {change_id ? (
+                    <>
+                      <SubmitButton
+                        variant="outline"
+                        isPending={deleteFetcher.state !== "idle"}
+                        name="intent"
+                        value="cancel-service-change"
+                        form={`cancel-${change_id}-form`}
+                      >
+                        {deleteFetcher.state !== "idle" ? (
+                          <>
+                            <LoaderIcon className="animate-spin" size={15} />
+                            <span>Discarding...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Undo2Icon size={15} className="flex-none" />
+                            <span>Discard change</span>
+                          </>
+                        )}
+                      </SubmitButton>
+                    </>
+                  ) : (
+                    <>
+                      <SubmitButton
+                        isPending={isPending}
+                        variant="secondary"
+                        className="flex-1 md:flex-none"
+                        name="intent"
+                        value="request-service-change"
+                      >
+                        {isPending ? (
+                          <>
+                            <span>Updating...</span>
+                            <LoaderIcon className="animate-spin" size={15} />
+                          </>
+                        ) : (
+                          <>
+                            <span>Update</span>
+                            <PlusIcon size={15} />
+                          </>
+                        )}
+                      </SubmitButton>
+                      <Button
+                        variant="outline"
+                        type="reset"
+                        className="flex-1 md:flex-none"
+                        onClick={() => {
+                          reset();
+                          setChangedConfigLanguage(language);
+                          setChangedContents(contents);
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </>
+                  )}
                 </div>
               </updateFetcher.Form>
             </AccordionContent>
