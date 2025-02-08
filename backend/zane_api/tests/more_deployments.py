@@ -703,14 +703,10 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
-        config_to_delete = Config.objects.bulk_create(
-            [
-                Config(
-                    mount_path="/etc/caddy/hello.caddy",
-                    contents=':8080 respond "here lies my life"',
-                    name="to delete",
-                ),
-            ]
+        config_to_delete = Config.objects.create(
+            mount_path="/etc/caddy/hello.caddy",
+            contents=':8080 respond "here lies my life"',
+            name="to delete",
         )
         service.configs.add(config_to_delete)
 
@@ -751,7 +747,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         updated_service = DockerRegistryService.objects.get(slug="app")
-        self.assertEqual(2, updated_service.configs.count())
+        self.assertEqual(1, updated_service.configs.count())
 
         new_config = updated_service.configs.filter(
             mount_path="/etc/caddy/Caddyfile"
