@@ -464,7 +464,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         ).first()
         self.assertIsNone(change)
 
-    def test_validate_config_prevent_updating_contents(self):
+    def test_validate_config_do_not_prevent_updating_contents(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
 
@@ -504,13 +504,13 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             service__slug="app",
             field=DockerDeploymentChange.ChangeField.CONFIGS,
         ).first()
-        self.assertIsNone(change)
+        self.assertIsNotNone(change)
 
 
 class DockerServiceReverChangesViewTests(AuthAPITestCase):
@@ -729,21 +729,16 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
         service = DockerRegistryService.objects.create(slug="app", project=p)
-        config_to_delete, config_to_update = Config.objects.bulk_create(
+        config_to_delete = Config.objects.bulk_create(
             [
                 Config(
                     mount_path="/etc/caddy/hello.caddy",
                     contents=':8080 respond "here lies my life"',
                     name="to delete",
                 ),
-                Config(
-                    mount_path="/etc/caddy/Caddyfile",
-                    contents=':80 respond "hey ! I am working over here !"',
-                    name="to delete",
-                ),
             ]
         )
-        service.configs.add(config_to_delete, config_to_update)
+        service.configs.add(config_to_delete)
 
         DockerDeploymentChange.objects.bulk_create(
             [
@@ -759,17 +754,6 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                     new_value=dict(
                         mount_path="/etc/caddy/Caddyfile",
                         contents="import ./*.caddy",
-                    ),
-                    service=service,
-                ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    item_id=config_to_update.id,
-                    new_value=dict(
-                        mount_path="/etc/caddy/hello.caddy",
-                        contents=':80 respond "here lies my life"',
-                        name="hello caddyfile",
                     ),
                     service=service,
                 ),
@@ -795,18 +779,65 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         updated_service = DockerRegistryService.objects.get(slug="app")
         self.assertEqual(2, updated_service.configs.count())
 
-        new_volume = updated_service.configs.filter(
+        new_config = updated_service.configs.filter(
             mount_path="/etc/caddy/Caddyfile"
         ).first()
-        self.assertIsNotNone(new_volume)
+        self.assertIsNotNone(new_config)
 
-        deleted_volume = updated_service.configs.filter(id=config_to_delete.id).first()
-        self.assertIsNone(deleted_volume)
+        deleted_config = updated_service.configs.filter(id=config_to_delete.id).first()
+        self.assertIsNone(deleted_config)
+
+    def test_updating_config_content_increments_version(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        config_to_update = Config.objects.create(
+            mount_path="/etc/caddy/Caddyfile",
+            contents=':8080 respond "here lies my life"',
+            name="caddyfile",
+        )
+        service.configs.add(config_to_update)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={"image": "caddy:2.8-alpine"},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    item_id=config_to_update.id,
+                    new_value=dict(
+                        mount_path="/etc/caddy/Caddyfile",
+                        contents=':80 respond "hello from caddy"',
+                        name="caddyfile",
+                    ),
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_service = DockerRegistryService.objects.get(slug="app")
+        self.assertEqual(1, updated_service.configs.count())
 
         updated_config: Config = updated_service.configs.get(id=config_to_update.id)
-        self.assertEqual("/etc/caddy/hello.caddy", updated_config.mount_path)
-        self.assertEqual(':80 respond "here lies my life"', updated_config.contents)
-        self.assertEqual("hello caddyfile", updated_config.name)
+        self.assertEqual(':80 respond "hello from caddy"', updated_config.contents)
+        self.assertEqual(2, updated_config.version)
 
 
 class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
@@ -879,3 +910,60 @@ class DockerServiceUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
         self.assertEqual(0, len(self.fake_docker_client.config_map))
+
+    async def test_update_service_config_contents_recreate_config(
+        self,
+    ):
+        project, service = await self.acreate_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "contents": ':80 respond "hello from caddy"',
+                        "mount_path": "/etc/caddy/Caddyfile",
+                        "name": "caddyfile",
+                        "language": "caddyfile",
+                    },
+                ),
+            ]
+        )
+        config_to_update: Config = await service.configs.afirst()
+
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    service=service,
+                    item_id=config_to_update.id,
+                    new_value={
+                        "contents": ':80 respond "hello from caddy2"',
+                        "mount_path": "/etc/caddy/Caddyfile",
+                        "name": "caddyfile",
+                        "language": "caddyfile",
+                    },
+                ),
+            ]
+        )
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, await service.deployments.acount())
+        self.assertEqual(1, len(self.fake_docker_client.config_map))
+
+        new_deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
+
+        self.assertIsNone(docker_service.get_attached_config(config_to_update))
+
+        updated_config: Config = await service.configs.afirst()
+        self.assertIsNotNone(docker_service.get_attached_config(updated_config))

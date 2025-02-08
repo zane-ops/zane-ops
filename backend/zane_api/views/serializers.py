@@ -751,13 +751,12 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
         service = self.get_service()
         change_type = change["type"]
         new_value = change.get("new_value") or {}
-        current_config: Config | None = None
 
         if change_type in ["DELETE", "UPDATE"]:
             item_id = change["item_id"]
 
             try:
-                current_config = service.configs.get(id=item_id)
+                service.configs.get(id=item_id)
             except Config.DoesNotExist:
                 raise serializers.ValidationError(
                     {
@@ -794,18 +793,6 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
                 {
                     "new_value": {
                         "mount_path": "Another volume is already attached on the same path in this service."
-                    }
-                }
-            )
-
-        if change_type == "UPDATE" and current_config.contents != new_value.get(
-            "contents"
-        ):
-            raise serializers.ValidationError(
-                {
-                    "new_value": {
-                        "contents": f"You cannot change the content of a config file, "
-                        "you need to delete and recreate the file with the new contents."
                     }
                 }
             )

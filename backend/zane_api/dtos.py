@@ -21,6 +21,7 @@ class ConfigDto:
     mount_path: str
     contents: str
     language: str
+    version: Optional[int] = 1
     name: Optional[str] = None
     id: Optional[str] = None
 

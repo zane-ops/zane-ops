@@ -815,7 +815,8 @@ class FakeDockerClient:
 
         def get_attached_config(self, config: Config):
             return find_item_in_list(
-                lambda c: c["ConfigID"] == get_config_resource_name(config.id),
+                lambda c: c["ConfigID"]
+                == get_config_resource_name(config.id, config.version),
                 self.configs,
             )
 

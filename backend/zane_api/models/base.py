@@ -449,8 +449,15 @@ class DockerRegistryService(BaseService):
                         self.configs.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
                         config = self.configs.get(id=change.item_id)
-                        config.mount_path = change.new_value.get("mount_path")
-                        config.contents = change.new_value.get("contents")
+                        config.mount_path = change.new_value.get(
+                            "mount_path", config.mount_path
+                        )
+                        new_contents = change.new_value.get("contents", config.contents)
+
+                        if config.contents != new_contents:
+                            config.version += 1
+
+                        config.contents = new_contents
                         config.name = change.new_value.get("name", config.name)
                         config.language = change.new_value.get(
                             "language", config.language
@@ -638,6 +645,7 @@ class Config(TimestampedModel):
     mount_path = models.CharField(max_length=255)
     contents = models.TextField(blank=True)
     language = models.CharField(default="plaintext", max_length=255)
+    version = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return f"Config({self.name})"
@@ -645,6 +653,7 @@ class Config(TimestampedModel):
     class Meta:
         indexes = [
             models.Index(fields=["mount_path"]),
+            models.Index(fields=["version"]),
         ]
 
 

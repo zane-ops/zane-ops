@@ -168,8 +168,8 @@ def get_volume_resource_name(volume_id: str):
     return f"vol-{volume_id}"
 
 
-def get_config_resource_name(config_id: str):
-    return f"cf-{config_id}"
+def get_config_resource_name(config_id: str, version: int):
+    return f"cf-{config_id}-{version}"
 
 
 def get_swarm_service_name_for_deployment(
@@ -1205,10 +1205,12 @@ class DockerSwarmActivities:
         created_configs: List[ConfigDto] = []
         for config in service.configs:
             try:
-                self.docker_client.configs.get(get_config_resource_name(config.id))
+                self.docker_client.configs.get(
+                    get_config_resource_name(config.id, config.version)
+                )
             except docker.errors.NotFound:
                 self.docker_client.configs.create(
-                    name=get_config_resource_name(config.id),
+                    name=get_config_resource_name(config.id, config.version),
                     labels=get_resource_labels(service.project_id, parent=service.id),
                     data=config.contents.encode("utf-8"),
                 )
@@ -1251,7 +1253,7 @@ class DockerSwarmActivities:
         for config in deployment.created_configs:
             try:
                 docker_config = self.docker_client.configs.get(
-                    get_config_resource_name(config.id)
+                    get_config_resource_name(config.id, config.version)
                 )
             except docker.errors.NotFound:
                 pass
@@ -1507,7 +1509,8 @@ class DockerSwarmActivities:
             for config in service.configs:
                 # Only include configs that will not be deleted
                 docker_config = find_item_in_list(
-                    lambda v: v.name == get_config_resource_name(config.id),
+                    lambda v: v.name
+                    == get_config_resource_name(config.id, config.version),
                     docker_config_list,
                 )
 
@@ -1931,7 +1934,8 @@ class DockerSwarmActivities:
     async def remove_old_docker_configs(self, deployment: DockerDeploymentDetails):
         service = deployment.service
         docker_config_names = [
-            get_config_resource_name(config.id) for config in service.configs
+            get_config_resource_name(config.id, config.version)
+            for config in service.configs
         ]
 
         docker_config_list = self.docker_client.configs.list(

@@ -94,6 +94,7 @@ class ConfigSerializer(ModelSerializer):
             "mount_path",
             "contents",
             "language",
+            "version",
         ]
 
 
