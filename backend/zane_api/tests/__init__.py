@@ -9,3 +9,4 @@ from .networks import *
 from .more_deployments import *
 from .search import *
 from .archive import *
+from .cancel_deployments import *

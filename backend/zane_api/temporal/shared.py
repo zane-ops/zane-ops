@@ -120,6 +120,13 @@ class DeploymentCreateVolumesResult:
 
 
 @dataclass
+class DeploymentCreateConfigsResult:
+    deployment_hash: str
+    service_id: str
+    created_configs: List[ConfigDto] = field(default_factory=list)
+
+
+@dataclass
 class SimpleDeploymentDetails:
     hash: str
     project_id: str

@@ -65,6 +65,7 @@ from ..dtos import (
     VolumeDto,
 )
 from .shared import (
+    DeploymentCreateConfigsResult,
     ProjectDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
@@ -1239,6 +1240,27 @@ class DockerSwarmActivities:
         await deployment_log(
             deployment,
             f"Volumes deleted succesfully for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
+        )
+
+    @activity.defn
+    async def delete_created_configs(self, deployment: DeploymentCreateConfigsResult):
+        await deployment_log(
+            deployment,
+            f"Deleting created config files for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}...",
+        )
+        for config in deployment.created_configs:
+            try:
+                docker_config = self.docker_client.configs.get(
+                    get_config_resource_name(config.id)
+                )
+            except docker.errors.NotFound:
+                pass
+            else:
+                docker_config.remove(force=True)
+
+        await deployment_log(
+            deployment,
+            f"Config files succesfully deleted for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
         )
 
     @activity.defn
