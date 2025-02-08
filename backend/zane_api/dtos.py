@@ -42,6 +42,7 @@ class URLDto:
     base_path: str
     strip_prefix: bool
     id: Optional[str] = None
+    associated_port: Optional[int] = None
     redirect_to: Optional[URLRedirectToDto] = None
 
     @classmethod
@@ -111,18 +112,22 @@ class ResourceLimitsDto:
     @classmethod
     def from_dict(cls, data: Dict[str, float | dict]):
         memory_dict = data.get("memory")
-        memory = MemoryLimitDto(**memory_dict) if memory_dict is not None else None
+        memory = MemoryLimitDto(**memory_dict) if memory_dict is not None else None  # type: ignore
         return cls(
-            cpus=data.get("cpus"),
+            cpus=data.get("cpus"),  # type: ignore
             memory=memory,
         )
 
     def to_dict(self):
         return dict(
             cpu=self.cpus,
-            memory=dict(
-                unit=self.memory.unit,
-                value=self.memory.value,
+            memory=(
+                dict(
+                    unit=self.memory.unit,
+                    value=self.memory.value,
+                )
+                if self.memory is not None
+                else None
             ),
         )
 

@@ -1,3 +1,4 @@
+# type: ignore
 import dataclasses
 from dataclasses import fields
 from typing import Sequence

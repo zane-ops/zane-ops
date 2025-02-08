@@ -1,7 +1,8 @@
+# type: ignore
 import asyncio
 import json
 from datetime import timedelta
-from typing import List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict
 
 from rest_framework import status
 from temporalio import activity, workflow
@@ -90,11 +91,6 @@ def get_docker_client():
     return docker_client
 
 
-class DockerAuthConfig(TypedDict):
-    username: str
-    password: str
-
-
 def check_if_port_is_available_on_host(port: int) -> bool:
     client = get_docker_client()
     try:
@@ -111,7 +107,7 @@ def check_if_port_is_available_on_host(port: int) -> bool:
 
 
 def check_if_docker_image_exists(
-    image: str, credentials: DockerAuthConfig = None
+    image: str, credentials: dict[str, Any] | None = None
 ) -> bool:
     client = get_docker_client()
     try:
@@ -148,10 +144,10 @@ def search_images_docker_hub(term: str) -> List[DockerImageResult]:
 
     for image in result:
         images_to_return.append(
-            dict(
-                full_image=image["name"],
-                description=image["description"],
-            )
+            {
+                "full_image": image["name"],
+                "description": image["description"],
+            }
         )
     return images_to_return
 

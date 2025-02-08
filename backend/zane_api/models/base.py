@@ -1,4 +1,4 @@
-import re
+# type: ignore
 import time
 import uuid
 from typing import Union, Optional
@@ -60,8 +60,7 @@ class URL(models.Model):
     base_path = models.CharField(default="/", validators=[validate_url_path])
     strip_prefix = models.BooleanField(default=True)
     redirect_to = models.JSONField(max_length=2000, null=True)
-    associated_port = models.PositiveIntegerField(default=80)
-    primary = models.BooleanField(default=False)
+    associated_port = models.PositiveIntegerField(null=True)
 
     @classmethod
     def create_default_url(cls, service: "BaseService"):
@@ -100,7 +99,6 @@ class URL(models.Model):
             "domain",
             "base_path",
         )
-        indexes = [models.Index(fields=["primary"])]
 
 
 class HealthCheck(models.Model):
@@ -127,6 +125,7 @@ class HealthCheck(models.Model):
     value = models.CharField(max_length=255, null=False, default="/")
     interval_seconds = models.PositiveIntegerField(default=DEFAULT_INTERVAL_SECONDS)
     timeout_seconds = models.PositiveIntegerField(default=DEFAULT_TIMEOUT_SECONDS)
+    associated_port = models.PositiveIntegerField(null=True)
 
 
 class BaseService(TimestampedModel):
@@ -182,7 +181,7 @@ class PortConfiguration(models.Model):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    host = models.PositiveIntegerField(null=True, unique=True)
+    host = models.PositiveIntegerField(unique=True, null=True)
     forwarded = models.PositiveIntegerField()
 
     def __str__(self):

@@ -1,3 +1,4 @@
+# type: ignore
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
@@ -511,6 +512,123 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             field=DockerDeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNotNone(change)
+
+    def test_validate_port_require_host_port(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.PORTS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "forwarded": 8000,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_port_disable_exposing_port_to_http(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.PORTS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "host": 80,
+                "forwarded": 8000,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_add_url_changes_do_not_require_exposed_port(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.URLS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "domain": "dcr.fredkiss.dev",
+                "base_path": "/portainer",
+                "associated_port": 80,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_url_changes_require_associated_port_in_request_body(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.URLS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "domain": "dcr.fredkiss.dev",
+                "base_path": "/portainer",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_url_changes_prevent_passing_associated_port_in_request_body_if_redirect_to(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        changes_payload = {
+            "field": DockerDeploymentChange.ChangeField.URLS,
+            "type": DockerDeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "domain": "dcr.fredkiss.dev",
+                "base_path": "/portainer",
+                "associated_port": 8000,
+                "redirect_to": {
+                    "url": "https://hello.fkss.me",
+                },
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
 
 class DockerServiceReverChangesViewTests(AuthAPITestCase):
