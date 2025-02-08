@@ -258,12 +258,17 @@ function ServiceVolumeItem({
           disabled={!!change_id}
         >
           <AccordionTrigger
-            className={cn("rounded-md p-4 flex items-start gap-2 bg-muted", {
-              "dark:bg-secondary-foreground bg-secondary/60 ":
-                change_type === "UPDATE",
-              "dark:bg-primary-foreground bg-primary/60": change_type === "ADD",
-              "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
-            })}
+            className={cn(
+              "rounded-md p-4 flex items-start gap-2 bg-muted",
+              "aria-expanded:rounded-b-none",
+              {
+                "dark:bg-secondary-foreground bg-secondary/60 ":
+                  change_type === "UPDATE",
+                "dark:bg-primary-foreground bg-primary/60":
+                  change_type === "ADD",
+                "dark:bg-red-500/30 bg-red-400/60": change_type === "DELETE"
+              }
+            )}
           >
             <HardDriveIcon size={20} className="text-grey relative top-1.5" />
             <div className="flex flex-col gap-2">
