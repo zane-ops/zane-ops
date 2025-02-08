@@ -35,7 +35,7 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
 async def create_system_cleanup_schedule():
     client = await get_temporalio_client()
 
-    schedule_id = "hourly-system-cleanup"
+    schedule_id = "system-cleanup"
     schedule = Schedule(
         action=ScheduleActionStartWorkflow(
             SystemCleanupWorkflow.run,
