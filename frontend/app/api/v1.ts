@@ -669,8 +669,7 @@ export interface components {
       hash: string;
       status: components["schemas"]["DockerServiceDeploymentStatusEnum"];
       status_reason: string | null;
-      /** Format: uri */
-      url: string | null;
+      urls: readonly components["schemas"]["DockerServiceDeploymentURL"][];
       network_aliases: readonly string[];
       unprefixed_hash: string;
       service_snapshot: components["schemas"]["DeploymentDocker"];
@@ -692,6 +691,11 @@ export interface components {
      * @enum {string}
      */
     DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    DockerServiceDeploymentURL: {
+      /** Format: uri */
+      domain: string | null;
+      port: number;
+    };
     DockerServiceWebhookDeployRequestRequest: {
       commit_message?: string;
       new_image?: string;
@@ -884,6 +888,7 @@ export interface components {
       value: string;
       timeout_seconds: number;
       interval_seconds: number;
+      associated_port: number | null;
     };
     HealthCheckRequest: {
       id?: string;
@@ -891,6 +896,7 @@ export interface components {
       value?: string;
       timeout_seconds?: number;
       interval_seconds?: number;
+      associated_port?: number | null;
     };
     HealthCheckRequestRequest: {
       type: components["schemas"]["HealthCheckRequestTypeEnum"];
@@ -899,6 +905,7 @@ export interface components {
       timeout_seconds?: number;
       /** @default 30 */
       interval_seconds?: number;
+      associated_port?: number;
     };
     /**
      * @description * `PATH` - path
@@ -1144,12 +1151,12 @@ export interface components {
     PingErrorResponse400: components["schemas"]["ParseErrorResponse"];
     PortConfiguration: {
       id: string;
-      host: number | null;
+      host: number;
       forwarded: number;
     };
     PortConfigurationRequest: {
       id?: string;
-      host?: number | null;
+      host?: number;
       forwarded: number;
     };
     /**
@@ -1708,7 +1715,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
     };
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -1741,6 +1748,22 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueAssociatedPortErrorComponent: {
+      /**
+       * @description * `new_value.associated_port` - new_value.associated_port
+       * @enum {string}
+       */
+      attr: "new_value.associated_port";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
       detail: string;
     };
     RequestDeploymentChangesNewValueBasePathErrorComponent: {
@@ -1871,11 +1894,10 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueErrorComponent: {
@@ -1923,9 +1945,10 @@ export interface components {
        * * `max_string_length` - max_string_length
        * * `min_value` - min_value
        * * `null` - null
+       * * `required` - required
        * @enum {string}
        */
-      code: "invalid" | "max_string_length" | "min_value" | "null";
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
       detail: string;
     };
     RequestDeploymentChangesNewValueHostPathErrorComponent: {
@@ -2341,8 +2364,7 @@ export interface components {
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServicePortsRequestRequest: {
-      /** @default 80 */
-      host?: number;
+      host: number;
       forwarded: number;
     };
     ServiceSearch: {
@@ -2414,6 +2436,7 @@ export interface components {
       base_path: string;
       strip_prefix: boolean;
       redirect_to: components["schemas"]["URLRedirectModel"] | null;
+      associated_port: number | null;
     };
     URLModelRequest: {
       id?: string;
@@ -2422,6 +2445,7 @@ export interface components {
       base_path?: string;
       strip_prefix?: boolean;
       redirect_to: components["schemas"]["URLRedirectModelRequest"] | null;
+      associated_port?: number | null;
     };
     URLRedirectModel: {
       /** Format: uri */
@@ -2442,12 +2466,13 @@ export interface components {
       permanent?: boolean;
     };
     URLRequestRequest: {
-      domain: string;
+      domain?: string;
       /** @default / */
       base_path?: string;
       /** @default true */
       strip_prefix?: boolean;
       redirect_to?: components["schemas"]["URLRedirectRequest"];
+      associated_port?: number;
     };
     /**
      * @description * `BYTES` - bytes
