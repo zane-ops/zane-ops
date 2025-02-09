@@ -1,15 +1,10 @@
+# type: ignore
 from .base import AuthAPITestCase
 from django.urls import reverse
 from ..models import (
-    Project,
     DockerDeployment,
-    DockerRegistryService,
     DockerDeploymentChange,
-    Volume,
-    PortConfiguration,
-    URL,
     HealthCheck,
-    DockerEnvVariable,
 )
 from rest_framework import status
 import responses
@@ -128,7 +123,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                     hash=latest_deployment.hash,
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
-                    url=latest_deployment.url,
+                    urls=[url.domain for url in latest_deployment.urls.all()],
                 ),
                 healthcheck=(
                     HealthCheckDto.from_dict(

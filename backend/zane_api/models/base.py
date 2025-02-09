@@ -177,7 +177,7 @@ class PortConfiguration(models.Model):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    host = models.PositiveIntegerField(unique=True, null=True)
+    host = models.PositiveIntegerField(default=0)
     forwarded = models.PositiveIntegerField()
 
     def __str__(self):
@@ -297,11 +297,6 @@ class DockerRegistryService(BaseService):
                 "value": "{{deployment.hash}}",
                 "comment": "The hash of each deployment, this is also sent as a header `x-zane-dpl-hash`",
             },
-            {
-                "key": "ZANE_DEPLOYMENT_URL",
-                "value": "{{deployment.url}}",
-                "comment": "The url of each deployment, this is empty for services that don't have any url.",
-            },
         ]
 
     @property
@@ -404,6 +399,9 @@ class DockerRegistryService(BaseService):
 
                     self.healthcheck.type = change.new_value.get("type")
                     self.healthcheck.value = change.new_value.get("value")
+                    self.healthcheck.associated_port = change.new_value.get(
+                        "associated_port"
+                    )
                     self.healthcheck.timeout_seconds = (
                         change.new_value.get("timeout_seconds")
                         or HealthCheck.DEFAULT_TIMEOUT_SECONDS
@@ -640,6 +638,7 @@ class Config(TimestampedModel):
 
 class DeploymentURL(models.Model):
     domain = models.URLField(null=True)
+    port = models.PositiveIntegerField(default=80)
     deployment = models.ForeignKey(
         to="DockerDeployment",
         on_delete=models.CASCADE,

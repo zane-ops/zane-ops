@@ -1,3 +1,4 @@
+# type: ignore
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status

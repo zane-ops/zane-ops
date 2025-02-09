@@ -430,10 +430,17 @@ class DeployDockerServiceAPIView(APIView):
             )
             service.apply_pending_changes(deployment=new_deployment)
 
-            if service.urls.count() > 0:
-                new_deployment.urls.create(
-                    domain=f"{project.slug}-{service_slug}-{new_deployment.hash.replace('_', '-')}.{settings.ROOT_DOMAIN}".lower()
+            if service.urls.filter(associated_port__isnull=False).count() > 0:
+                ports = (
+                    service.urls.filter(associated_port__isnull=False)
+                    .values_list("associated_port", flat=True)
+                    .distinct()
                 )
+                for port in ports:
+                    new_deployment.urls.create(
+                        domain=f"{project.slug}-{service_slug}-{new_deployment.hash.replace('_', '-')}.{settings.ROOT_DOMAIN}".lower(),
+                        port=port,
+                    )
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = DockerDeployment.get_next_deployment_slot(
@@ -1128,7 +1135,7 @@ class ArchiveDockerServiceAPIView(APIView):
                 detail=f"A project with the slug `{project_slug}` does not exist."
             )
 
-        service: DockerRegistryService = (
+        service: DockerRegistryService | None = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
@@ -1144,7 +1151,7 @@ class ArchiveDockerServiceAPIView(APIView):
             )
 
         if service.deployments.count() > 0:
-            archived_project: ArchivedProject = (
+            archived_project: ArchivedProject | None = (
                 project.archived_version
                 if hasattr(project, "archived_version")
                 else None
@@ -1191,7 +1198,7 @@ class ArchiveDockerServiceAPIView(APIView):
                 deployments=[
                     SimpleDeploymentDetails(
                         hash=dpl.get("hash"),
-                        url=dpl.get("url"),
+                        urls=dpl.get("urls"),
                         project_id=archived_service.project.original_id,
                         service_id=archived_service.original_id,
                     )

@@ -112,28 +112,28 @@ class DockerSwarmTask:
         cls,
         data: dict[str, str | int | dict[str, str | int | dict]],
     ) -> "DockerSwarmTask":
-        version = Version(**data["Version"])
+        version = Version(**data["Version"])  # type: ignore
         status_data = data["Status"]
         container_status: None | ContainerStatus = None
-        container_status_data = data["Status"].get("ContainerStatus")
+        container_status_data = data["Status"].get("ContainerStatus")  # type: ignore
         if container_status_data is not None:
             container_status = ContainerStatus(
-                ExitCode=container_status_data["ExitCode"],
-                ContainerID=container_status_data.get("ContainerID"),
+                ExitCode=container_status_data["ExitCode"],  # type: ignore
+                ContainerID=container_status_data.get("ContainerID"),  # type: ignore
             )
 
         task_status = Status(
-            Timestamp=status_data["Timestamp"],
-            State=DockerSwarmTaskState(status_data["State"]),
-            Message=status_data["Message"],
+            Timestamp=status_data["Timestamp"],  # type: ignore
+            State=DockerSwarmTaskState(status_data["State"]),  # type: ignore
+            Message=status_data["Message"],  # type: ignore
             ContainerStatus=container_status,
-            Err=status_data.get("Err"),
+            Err=status_data.get("Err"),  # type: ignore
         )
         return DockerSwarmTask(
-            ID=data["ID"],
+            ID=data["ID"],  # type: ignore
             Version=version,
-            CreatedAt=data["CreatedAt"],
-            UpdatedAt=data["UpdatedAt"],
+            CreatedAt=data["CreatedAt"],  # type: ignore
+            UpdatedAt=data["UpdatedAt"],  # type: ignore
             Status=task_status,
             DesiredState=DockerSwarmTaskState(data["DesiredState"]),
         )

@@ -1,4 +1,3 @@
-# type: ignore
 import asyncio
 import json
 from datetime import timedelta
@@ -75,6 +74,7 @@ from .shared import (
     DeploymentHealthcheckResult,
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
+    DeploymentURLDto,
 )
 
 docker_client: docker.DockerClient | None = None
@@ -181,6 +181,7 @@ async def deployment_log(
         DockerDeploymentDetails
         | DeploymentHealthcheckResult
         | DeploymentCreateVolumesResult
+        | DeploymentCreateConfigsResult
     ),
     message: str,
 ):
@@ -191,7 +192,11 @@ async def deployment_log(
         case DockerDeploymentDetails():
             deployment_id = deployment.hash
             service_id = deployment.service.id
-        case DeploymentCreateVolumesResult() | DeploymentHealthcheckResult():
+        case (
+            DeploymentCreateVolumesResult()
+            | DeploymentHealthcheckResult()
+            | DeploymentCreateConfigsResult()
+        ):
             deployment_id = deployment.deployment_hash
             service_id = deployment.service_id
         case _:
@@ -248,16 +253,17 @@ class ZaneProxyClient:
         return proxy_service
 
     @classmethod
-    def _get_id_for_deployment(cls, deployment_hash: str):
-        return f"{deployment_hash}-url"
+    def _get_id_for_deployment(cls, deployment_hash: str, domain: str):
+        return f"{deployment_hash}-{domain}"
 
     @classmethod
-    def get_uri_for_deployment(cls, deployment_hash: str):
-        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_deployment(deployment_hash)}"
+    def get_uri_for_deployment(cls, deployment_hash: str, domain: str):
+        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_deployment(deployment_hash, domain)}"
 
     @classmethod
-    def _get_request_for_deployment(cls, deployment: DockerDeploymentDetails):
-        service = deployment.service
+    def _get_request_for_deployment_url(
+        cls, deployment: DockerDeploymentDetails, url: DeploymentURLDto
+    ):
         service_name = get_swarm_service_name_for_deployment(
             deployment_hash=deployment.hash,
             project_id=deployment.service.project_id,
@@ -300,8 +306,8 @@ class ZaneProxyClient:
         }
 
         return {
-            "@id": cls._get_id_for_deployment(deployment.hash),
-            "match": [{"host": [deployment.url]}],
+            "@id": cls._get_id_for_deployment(deployment.hash, url.domain),
+            "match": [{"host": [url.domain]}],
             "handle": [
                 {
                     "handler": "subroute",
@@ -310,12 +316,15 @@ class ZaneProxyClient:
                             "handle": [
                                 protect_deployment_proxy_handler,
                                 {
+                                    "handler": "encode",
+                                    "encodings": {"gzip": {}},
+                                    "prefer": ["gzip"],
+                                },
+                                {
                                     "flush_interval": -1,
                                     "handler": "reverse_proxy",
                                     "upstreams": [
-                                        {
-                                            "dial": f"{service_name}:{service.http_port.forwarded}"
-                                        }
+                                        {"dial": f"{service_name}:{url.port}"}
                                     ],
                                 },
                             ]
@@ -401,7 +410,7 @@ class ZaneProxyClient:
         previous_deployment: DockerDeployment | None,
     ):
         service = current_deployment.service
-        http_port = service.http_port
+        http_port = url.associated_port
         blue_hash = None
         green_hash = None
 
@@ -485,8 +494,8 @@ class ZaneProxyClient:
                 }
             )
         else:
-            blue_upstream = f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
-            green_upstream = f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+            blue_upstream = f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
+            green_upstream = f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
             proxy_handlers.append(
                 {
                     "handler": "encode",
@@ -564,10 +573,10 @@ class ZaneProxyClient:
                     },
                     "upstreams": [
                         {
-                            "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                            "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
                         },
                         {
-                            "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port.forwarded}"
+                            "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
                         },
                     ],
                 }
@@ -595,21 +604,27 @@ class ZaneProxyClient:
         }
 
     @classmethod
-    def insert_deployment_url(cls, deployment: DockerDeploymentDetails):
-        if deployment.url is not None:
+    def insert_deployment_urls(cls, deployment: DockerDeploymentDetails):
+        for url in deployment.urls:
             response = requests.get(
-                cls.get_uri_for_deployment(deployment.hash),
+                cls.get_uri_for_deployment(deployment.hash, url.domain),
                 timeout=5,
             )
 
             # if the domain doesn't exist we create the config for the domain
             if response.status_code == status.HTTP_404_NOT_FOUND:
-                requests.put(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
-                    headers={"content-type": "application/json"},
-                    json=cls._get_request_for_deployment(deployment),
-                    timeout=5,
+                deployment_url = find_item_in_list(
+                    lambda u: u.domain == url.domain, deployment.urls
                 )
+                if deployment_url is not None:
+                    requests.put(
+                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
+                        headers={"content-type": "application/json"},
+                        json=cls._get_request_for_deployment_url(
+                            deployment, deployment_url
+                        ),
+                        timeout=5,
+                    )
 
     @classmethod
     def upsert_service_url(
@@ -638,7 +653,7 @@ class ZaneProxyClient:
                 url, current_deployment, previous_deployment
             )
             routes.append(new_url)
-            routes = cls._sort_routes(routes)
+            routes = cls._sort_routes(routes)  # type: ignore
 
             response = requests.patch(
                 f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
@@ -648,7 +663,7 @@ class ZaneProxyClient:
             )
             if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
                 continue
-            return
+            return True
 
         raise ZaneProxyEtagError(
             f"Failed inserting the url {url} in the proxy because `Etag` precondtion failed"
@@ -696,7 +711,7 @@ class ZaneProxyClient:
         service_url_ids = [
             cls._get_id_for_service_url(service.id, url) for url in service.urls
         ]
-        for route in response.json():  # type: dict[str, str]
+        for route in response.json():
             if (
                 route["@id"].startswith(service.id)
                 and route["@id"] not in service_url_ids
@@ -707,9 +722,9 @@ class ZaneProxyClient:
                 )
 
     @classmethod
-    def remove_deployment_url(cls, deployment_hash: str):
+    def remove_deployment_url(cls, deployment_hash: str, domain: str):
         requests.delete(
-            cls.get_uri_for_deployment(deployment_hash),
+            cls.get_uri_for_deployment(deployment_hash, domain),
             timeout=5,
         )
 
@@ -807,7 +822,7 @@ class DockerSwarmActivities:
             labels=get_resource_labels(project.id),
             attachable=True,
         )
-        return network.id
+        return network.id  # type:ignore
 
     @activity.defn
     async def get_archived_project_services(
@@ -846,8 +861,8 @@ class DockerSwarmActivities:
                     project_id=archived_project.original_id,
                     deployments=[
                         SimpleDeploymentDetails(
-                            hash=dpl.get("hash"),
-                            url=dpl.get("url"),
+                            hash=dpl.get("hash"),  # type: ignore
+                            urls=dpl.get("urls"),  # type: ignore
                             project_id=service.project.original_id,
                             service_id=service.original_id,
                         )
@@ -1006,7 +1021,7 @@ class DockerSwarmActivities:
         self, healthcheck_result: DeploymentHealthcheckResult
     ) -> tuple[str, str]:
         try:
-            deployment: DockerDeployment = (
+            deployment = (
                 await DockerDeployment.objects.filter(
                     hash=healthcheck_result.deployment_hash
                 )
@@ -1022,7 +1037,7 @@ class DockerSwarmActivities:
             deployment.status_reason = healthcheck_result.reason
             if (
                 healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
-                or await deployment.service.deployments.acount() == 1
+                or await deployment.service.deployments.acount() == 1  # type: ignore
             ):
                 deployment.is_current_production = True
 
@@ -1037,10 +1052,10 @@ class DockerSwarmActivities:
             await deployment.asave()
 
             if deployment.is_current_production:
-                await deployment.service.deployments.filter(
+                await deployment.service.deployments.filter(  # type: ignore
                     ~Q(hash=healthcheck_result.deployment_hash)
                 ).aupdate(is_current_production=False)
-                await deployment.service.deployments.filter(
+                await deployment.service.deployments.filter(  # type: ignore
                     ~Q(hash=healthcheck_result.deployment_hash)
                     & Q(
                         status__in=[
@@ -1082,7 +1097,7 @@ class DockerSwarmActivities:
                 f"Deployment {Colors.ORANGE}{healthcheck_result.deployment_hash}{Colors.ENDC}"
                 f" finished with reason {Colors.GREY}{deployment.status_reason}{Colors.ENDC}.",
             )
-            return deployment.status, deployment.status_reason
+            return deployment.status, deployment.status_reason  # type: ignore
 
     @activity.defn
     async def get_previous_production_deployment(
@@ -1101,19 +1116,20 @@ class DockerSwarmActivities:
         if latest_production_deployment:
             return SimpleDeploymentDetails(
                 hash=latest_production_deployment.hash,
-                service_id=latest_production_deployment.service_id,
+                service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
-                url=latest_production_deployment.url,
+                # url=latest_production_deployment.url,
+                urls=[url.domain async for url in latest_production_deployment.urls.all()],  # type: ignore
                 service_snapshot=DockerServiceSnapshot.from_dict(
-                    latest_production_deployment.service_snapshot
+                    latest_production_deployment.service_snapshot  # type: ignore
                 ),
             )
         return None
 
     @activity.defn
     async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
-        next_deployment: DockerDeployment = (
+        next_deployment = (
             await DockerDeployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
@@ -1173,11 +1189,11 @@ class DockerSwarmActivities:
         created_volumes: List[VolumeDto] = []
         for volume in service.docker_volumes:
             try:
-                self.docker_client.volumes.get(get_volume_resource_name(volume.id))
+                self.docker_client.volumes.get(get_volume_resource_name(volume.id))  # type: ignore
             except docker.errors.NotFound:
                 created_volumes.append(volume)
                 self.docker_client.volumes.create(
-                    name=get_volume_resource_name(volume.id),
+                    name=get_volume_resource_name(volume.id),  # type: ignore
                     driver="local",
                     labels=get_resource_labels(service.project_id, parent=service.id),
                 )
@@ -1202,11 +1218,11 @@ class DockerSwarmActivities:
         for config in service.configs:
             try:
                 self.docker_client.configs.get(
-                    get_config_resource_name(config.id, config.version)
+                    get_config_resource_name(config.id, config.version)  # type: ignore
                 )
             except docker.errors.NotFound:
                 self.docker_client.configs.create(
-                    name=get_config_resource_name(config.id, config.version),
+                    name=get_config_resource_name(config.id, config.version),  # type: ignore
                     labels=get_resource_labels(service.project_id, parent=service.id),
                     data=config.contents.encode("utf-8"),
                 )
@@ -1228,7 +1244,7 @@ class DockerSwarmActivities:
         for volume in deployment.created_volumes:
             try:
                 docker_volume = self.docker_client.volumes.get(
-                    get_volume_resource_name(volume.id)
+                    get_volume_resource_name(volume.id)  # type: ignore
                 )
             except docker.errors.NotFound:
                 pass
@@ -1249,12 +1265,12 @@ class DockerSwarmActivities:
         for config in deployment.created_configs:
             try:
                 docker_config = self.docker_client.configs.get(
-                    get_config_resource_name(config.id, config.version)
+                    get_config_resource_name(config.id, config.version)  # type: ignore
                 )
             except docker.errors.NotFound:
                 pass
             else:
-                docker_config.remove(force=True)
+                docker_config.remove()
 
         await deployment_log(
             deployment,
@@ -1356,7 +1372,7 @@ class DockerSwarmActivities:
                 new_endpoint_spec = EndpointSpec()
 
                 # We don't expose HTTP ports with docker because they will be handled by caddy directly
-                for port in deployment.service_snapshot.non_http_ports:
+                for port in deployment.service_snapshot.ports:
                     exposed_ports[port.host] = port.forwarded
                 if len(exposed_ports) > 0:
                     new_endpoint_spec = EndpointSpec(ports=exposed_ports)
@@ -1454,7 +1470,6 @@ class DockerSwarmActivities:
                     f"ZANE_SERVICE_ID={service.id}",
                     f"ZANE_SERVICE_NAME={service.slug}",
                     f"ZANE_PROJECT_ID={service.project_id}",
-                    f"""ZANE_DEPLOYMENT_URL={deployment.url or '""'}""",
                 ]
             )
 
@@ -1478,7 +1493,7 @@ class DockerSwarmActivities:
             for volume in service.docker_volumes:
                 # Only include volumes that will not be deleted
                 docker_volume = find_item_in_list(
-                    lambda v: v.name == get_volume_resource_name(volume.id),
+                    lambda v: v.name == get_volume_resource_name(volume.id),  # type: ignore
                     docker_volume_list,
                 )
                 if docker_volume is not None:
@@ -1506,7 +1521,7 @@ class DockerSwarmActivities:
                 # Only include configs that will not be deleted
                 docker_config = find_item_in_list(
                     lambda v: v.name
-                    == get_config_resource_name(config.id, config.version),
+                    == get_config_resource_name(config.id, config.version),  # type: ignore
                     docker_config_list,
                 )
 
@@ -1524,7 +1539,7 @@ class DockerSwarmActivities:
             endpoint_spec: EndpointSpec | None = None
 
             # We don't expose HTTP ports with docker because they will be handled by caddy directly
-            for port in service.non_http_ports:
+            for port in service.ports:
                 exposed_ports[port.host] = port.forwarded
 
             if len(exposed_ports) > 0:
@@ -1614,7 +1629,7 @@ class DockerSwarmActivities:
         self,
         deployment: DockerDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
-        docker_deployment: DockerDeployment = (
+        docker_deployment = (
             await DockerDeployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service.id
             )
@@ -1711,13 +1726,16 @@ class DockerSwarmActivities:
                 )
 
                 if most_recent_swarm_task.state == DockerSwarmTaskState.SHUTDOWN:
-                    status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+                    status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode  # type: ignore
                     if (
                         status_code is not None and status_code != exited_without_error
                     ) or most_recent_swarm_task.Status.Err is not None:
                         deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
 
-                if most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING:
+                if (
+                    most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING
+                    and most_recent_swarm_task.container_id is not None
+                ):
                     if healthcheck is not None:
                         try:
                             print(
@@ -1732,7 +1750,7 @@ class DockerSwarmActivities:
                                     stdout=True,
                                     stderr=True,
                                     stdin=False,
-                                )  # type: int, bytes
+                                )
 
                                 if exit_code == 0:
                                     deployment_status = (
@@ -1744,7 +1762,7 @@ class DockerSwarmActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{swarm_service.name}:{deployment.service.http_port.forwarded}{healthcheck.value}"
+                                full_url = f"http://{swarm_service.name}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=min(healthcheck_time_left, 5),
@@ -1832,8 +1850,8 @@ class DockerSwarmActivities:
     ):
         # add URL conf for deployment
         service = deployment.service
-        if service.http_port is not None:
-            ZaneProxyClient.insert_deployment_url(deployment)
+        if len(service.urls_with_associated_ports) > 0:
+            ZaneProxyClient.insert_deployment_urls(deployment)
 
     @activity.defn
     async def expose_docker_service_to_http(
@@ -1841,7 +1859,7 @@ class DockerSwarmActivities:
         deployment: DockerDeploymentDetails,
     ):
         service = deployment.service
-        if service.http_port is not None:
+        if len(service.urls) > 0:
             await deployment_log(
                 deployment,
                 f"Configuring service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
@@ -1907,7 +1925,8 @@ class DockerSwarmActivities:
     async def remove_old_docker_volumes(self, deployment: DockerDeploymentDetails):
         service = deployment.service
         docker_volume_names = [
-            get_volume_resource_name(volume.id) for volume in service.docker_volumes
+            get_volume_resource_name(volume.id)  # type: ignore
+            for volume in service.docker_volumes
         ]
 
         docker_volume_list = self.docker_client.volumes.list(
@@ -1930,7 +1949,7 @@ class DockerSwarmActivities:
     async def remove_old_docker_configs(self, deployment: DockerDeploymentDetails):
         service = deployment.service
         docker_config_names = [
-            get_config_resource_name(config.id, config.version)
+            get_config_resource_name(config.id, config.version)  # type: ignore
             for config in service.configs
         ]
 
@@ -1962,15 +1981,15 @@ class DockerSwarmActivities:
             ZaneProxyClient.remove_service_url(service_details.original_id, url)
 
         for deployment in service_details.deployments:
-            if deployment.url is not None:
-                ZaneProxyClient.remove_deployment_url(deployment.hash)
+            for domain in deployment.urls:
+                ZaneProxyClient.remove_deployment_url(deployment.hash, domain)
 
     @activity.defn
     async def unexpose_docker_deployment_from_http(
         self, deployment: DockerDeploymentDetails
     ):
-        if deployment.url is not None:
-            ZaneProxyClient.remove_deployment_url(deployment.hash)
+        for url in deployment.urls:
+            ZaneProxyClient.remove_deployment_url(deployment.hash, url.domain)
 
     @activity.defn
     async def remove_changed_urls_in_deployment(
@@ -2024,7 +2043,7 @@ class DockerSwarmActivities:
         self, deployment: DockerDeploymentDetails
     ):
         try:
-            docker_deployment: DockerDeployment = (
+            docker_deployment = (
                 await DockerDeployment.objects.filter(hash=deployment.hash)
                 .select_related("service", "service__healthcheck")
                 .afirst()
@@ -2046,7 +2065,6 @@ class DockerSwarmActivities:
                     hash=deployment.hash,
                     service_id=deployment.service.id,
                     project_id=deployment.service.project_id,
-                    url=deployment.url,
                 ),
                 healthcheck=(
                     HealthCheckDto.from_dict(

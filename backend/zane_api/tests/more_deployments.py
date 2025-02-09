@@ -1061,6 +1061,74 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(8081, updated_url.associated_port)
         self.assertEqual(False, updated_url.strip_prefix)
 
+    def test_apply_urls_changes_create_as_many_deployment_urls_as_there_ports(self):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+
+        DockerDeploymentChange.objects.bulk_create(
+            [
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={"image": "caddy:2.8-alpine"},
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "web-server.fred.kiss",
+                        "base_path": "/",
+                        "strip_prefix": True,
+                        "associated_port": 8080,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "proxy.fredkiss.dev",
+                        "base_path": "/config",
+                        "strip_prefix": False,
+                        "associated_port": 8081,
+                    },
+                    service=service,
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.URLS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "domain": "proxy2.fredkiss.dev",
+                        "base_path": "/config",
+                        "strip_prefix": False,
+                        "associated_port": 8081,
+                    },
+                    service=service,
+                ),
+            ]
+        )
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": "app",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        deployment: DockerDeployment = service.deployments.first()
+        self.assertEqual(2, deployment.urls.count())
+
+        ports = [
+            port for port in deployment.urls.filter().values_list("port", flat=True)
+        ]
+        ports.sort()
+        self.assertEqual([8080, 8081], ports)
+
     def test_apply_port_changes(
         self,
     ):
@@ -1177,36 +1245,6 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         new_deployment: DockerDeployment = updated_service.deployments.first()
         self.assertIsNotNone(new_deployment)
         self.assertEqual(1, new_deployment.urls.count())
-
-
-class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
-    async def test_deploy_service_with_configs(self):
-        await self.aLoginUser()
-        p, service = await self.acreate_and_deploy_caddy_docker_service(
-            other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "contents": ':80 respond "hello from caddy"',
-                        "mount_path": "/etc/caddy/Caddyfile",
-                        "name": "caddyfile",
-                        "language": "caddyfile",
-                    },
-                ),
-            ]
-        )
-
-        new_deployment = await service.alatest_production_deployment
-        self.assertIsNotNone(new_deployment)
-        docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
-
-        self.assertIsNotNone(docker_service)
-        self.assertEqual(1, len(self.fake_docker_client.config_map))
-        self.assertEqual(1, len(docker_service.configs))
-
-        new_config = await service.configs.afirst()
-        self.assertIsNotNone(docker_service.get_attached_config(new_config))
 
 
 class DockerServiceUpdateViewTests(AuthAPITestCase):

@@ -8,7 +8,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
-    from ..models import DockerDeployment, DeploymentURL
+    from ..models import DockerDeployment
 
 from ..dtos import (
     URLDto,
@@ -32,6 +32,12 @@ class ArchivedProjectDetails:
 
 
 @dataclass
+class DeploymentURLDto:
+    domain: str
+    port: int
+
+
+@dataclass
 class DockerDeploymentDetails:
     hash: str
     slot: str
@@ -39,7 +45,7 @@ class DockerDeploymentDetails:
     queued_at: str
     workflow_id: str
     service: DockerServiceSnapshot
-    urls: List[str] = field(default_factory=list)
+    urls: List[DeploymentURLDto] = field(default_factory=list)
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
     network_alias: Optional[str] = None
@@ -51,7 +57,7 @@ class DockerDeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
-            urls=[url.domain for url in deployment.urls.all()],  # type: ignore
+            urls=[DeploymentURLDto(domain=url.domain, port=url.port) for url in deployment.urls.all()],  # type: ignore
             service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
@@ -81,7 +87,7 @@ class DockerDeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
-            urls=[url.domain for url in deployment.urls.all()],  # type: ignore
+            urls=[DeploymentURLDto(domain=url.domain, port=url.port) async for url in deployment.urls.all()],  # type: ignore
             service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
@@ -131,8 +137,8 @@ class SimpleDeploymentDetails:
     hash: str
     project_id: str
     service_id: str
+    urls: List[str] = field(default_factory=list)
     status: Optional[str] = None
-    url: Optional[str] = None
     service_snapshot: Optional[DockerServiceSnapshot] = None
 
     @property

@@ -64,7 +64,7 @@ class EnvVariableDto:
 @dataclass
 class PortConfigurationDto:
     forwarded: int
-    host: Optional[int] = None
+    host: int = 0
     id: Optional[str] = None
 
     @classmethod
@@ -161,16 +161,11 @@ class DockerServiceSnapshot:
         )
 
     @property
-    def http_port(self) -> PortConfigurationDto | None:
-        ports = self.http_ports
-        return ports[0] if len(ports) > 0 else None
-
-    @property
-    def non_http_ports(self) -> List[PortConfigurationDto]:
+    def urls_with_associated_ports(self) -> List[URLDto]:
         return list(
             filter(
-                lambda p: p.host is not None and p.host not in [80, 443],
-                self.ports,
+                lambda u: u.associated_port is not None,
+                self.urls,
             )
         )
 

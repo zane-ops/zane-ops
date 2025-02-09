@@ -300,6 +300,13 @@ class HealthCheckRequestSerializer(serializers.Serializer):
                         "associated_port": "This field is required.",
                     }
                 )
+        else:
+            if attrs.get("associated_port") is not None:
+                raise serializers.ValidationError(
+                    {
+                        "associated_port": "Cannot specify an associated port for healthcheck of types `COMMAND`.",
+                    }
+                )
 
         return attrs
 

@@ -1,3 +1,4 @@
+# type: ignore
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -199,7 +200,8 @@ class ArchivedDockerService(ArchivedBaseService):
                 else None
             ),
             deployments=[
-                dict(url=dpl.url, hash=dpl.hash) for dpl in service.deployments.all()
+                dict(urls=[url.domain for url in dpl.urls.all()], hash=dpl.hash)
+                for dpl in service.deployments.all()
             ],
         )
 

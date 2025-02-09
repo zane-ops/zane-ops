@@ -39,6 +39,7 @@ with workflow.unsafe.imports_passed_through():
         lock_deploy_semaphore,
         reset_deploy_semaphore,
     )
+    from ..utils import jprint
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -172,10 +173,8 @@ class DeployDockerServiceWorkflow:
 
         self.deployment_hash = deployment.hash
 
-        print(
-            f"\nRunning workflow `DeployDockerServiceWorkflow` with payload={deployment}"
-        )
-
+        print("Running DeployDockerServiceWorkflow with payload: ")
+        jprint(deployment)  # type: ignore
         pause_at_step = (
             DockerDeploymentStep(deployment.pause_at_step)
             if deployment.pause_at_step > 0
@@ -268,10 +267,7 @@ class DeployDockerServiceWorkflow:
                 )
 
             if (
-                (
-                    len(service.non_read_only_volumes) > 0
-                    or len(service.non_http_ports) > 0
-                )
+                (len(service.non_read_only_volumes) > 0 or len(service.ports) > 0)
                 and previous_production_deployment is not None
                 and previous_production_deployment.status
                 != DockerDeployment.DeploymentStatus.FAILED
@@ -314,7 +310,7 @@ class DeployDockerServiceWorkflow:
                         deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
                     )
 
-                if deployment.service.http_port is not None:
+                if len(deployment.service.urls) > 0:
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.expose_docker_deployment_to_http,
                         deployment,
@@ -346,7 +342,7 @@ class DeployDockerServiceWorkflow:
                 )
 
             if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
-                if deployment.service.http_port is not None:
+                if len(deployment.service.urls) > 0:
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.expose_docker_service_to_http,
                         deployment,

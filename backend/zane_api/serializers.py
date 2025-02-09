@@ -238,8 +238,10 @@ class DeploymentDockerSerializer(DockerServiceSerializer):
     image = serializers.CharField(allow_null=False)
 
 
-class DockerServiceDeploymentURLSerializer(serializers.Serializer):
-    domain = serializers.URLField()
+class DockerServiceDeploymentURLSerializer(ModelSerializer):
+    class Meta:
+        model = models.DeploymentURL
+        fields = ["domain", "port"]
 
 
 class DockerServiceDeploymentSerializer(ModelSerializer):
