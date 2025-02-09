@@ -93,11 +93,6 @@ class MonitorDockerDeploymentActivities:
         details: HealthcheckDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         try:
-            deployment = await (
-                DockerDeployment.objects.filter(hash=details.deployment.hash)
-                .select_related("service")
-                .afirst()
-            )
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=details.deployment.hash,
