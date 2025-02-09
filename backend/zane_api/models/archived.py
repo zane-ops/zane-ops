@@ -75,6 +75,7 @@ class ArchivedURL(models.Model):
     base_path = models.CharField(default="/")
     strip_prefix = models.BooleanField(default=True)
     original_id = models.CharField(null=True)
+    associated_port = models.PositiveIntegerField(null=True)
 
     def __str__(self):
         base_path = (
@@ -255,6 +256,7 @@ class ArchivedDockerService(ArchivedBaseService):
                     base_path=url.base_path,
                     strip_prefix=url.strip_prefix,
                     original_id=url.id,
+                    associated_port=url.associated_port,
                 )
                 for url in service.urls.all()
             ]

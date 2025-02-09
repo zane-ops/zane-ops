@@ -123,7 +123,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                     hash=latest_deployment.hash,
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
-                    urls=[url.domain for url in latest_deployment.urls.all()],
+                    urls=[url.domain async for url in latest_deployment.urls.all()],
                 ),
                 healthcheck=(
                     HealthCheckDto.from_dict(
