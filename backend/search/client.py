@@ -5,11 +5,18 @@ from elasticsearch import Elasticsearch, helpers
 from zane_api.utils import Colors
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
+from datetime import timedelta
 
 
 class SearchClient:
     def __init__(self, host: str):
-        self.es = Elasticsearch(host, api_key="")
+        self.es = Elasticsearch(
+            host,
+            api_key="",
+            timeout=timedelta(seconds=30).seconds,
+            retry_on_timeout=True,
+            max_retries=2,
+        )
 
     def bulk_insert(self, docs: list | Generator):
         from django.conf import settings
