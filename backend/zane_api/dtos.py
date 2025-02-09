@@ -74,7 +74,7 @@ class PortConfigurationDto:
 
 @dataclass
 class HealthCheckDto:
-    type: str
+    type: Literal["PATH", "COMMAND"]
     value: str
     timeout_seconds: int
     interval_seconds: int

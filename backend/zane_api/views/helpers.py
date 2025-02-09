@@ -201,11 +201,25 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                         )
                     pass
             case "healthcheck":
+
                 if current_value != target_value:
-                    if target_value is not None and isinstance(
-                        target_value, HealthCheckDto
-                    ):
+                    if target_value is not None:
+                        # set associated port to the http port
+                        target_value = cast(HealthCheckDto, target_value)
                         target_value.id = None
+
+                        if (
+                            target_value.associated_port is None
+                            and target_value.type == "PATH"
+                        ):
+                            if len(target_snapshot.http_ports) > 0:
+                                target_value.associated_port = (
+                                    target_snapshot.http_ports[0].forwarded
+                                )
+                            # this is an invalid state, so we ignore it
+                            else:
+                                continue
+
                     changes.append(
                         DockerDeploymentChange(
                             type=DockerDeploymentChange.ChangeType.UPDATE,
@@ -270,7 +284,9 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                                     new_value.associated_port = (
                                         target_snapshot.http_ports[0].forwarded
                                     )
-
+                                # this is an invalid state, so we ignore it
+                                else:
+                                    continue
                         changes.append(
                             DockerDeploymentChange(
                                 type=DockerDeploymentChange.ChangeType.UPDATE,
@@ -302,6 +318,9 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                                     element.associated_port = (
                                         target_snapshot.http_ports[0].forwarded
                                     )
+                                # this is an invalid state, so we ignore it
+                                else:
+                                    continue
 
                         changes.append(
                             DockerDeploymentChange(

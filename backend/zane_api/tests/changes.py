@@ -93,6 +93,14 @@ target = {
     "healthcheck": None,
     "project_id": "prj_v6nBYFktpca",
     "credentials": None,
+    "healthcheck": {
+        "id": "htc_MtmB4YDWF3m",
+        "type": "PATH",
+        "value": "/",
+        "timeout_seconds": 30,
+        "interval_seconds": 5,
+        "associated_port": None,
+    },
     "urls": [
         {
             "id": "url_drf3NEFiri8",
@@ -190,8 +198,14 @@ class DockerDeploymentChangesTests(AuthAPITestCase):
                 for change in changes
             ],
         )
+        jprint(new_snapshot)
         for url in new_snapshot.urls:
             if url.redirect_to is None:
                 self.assertIsNotNone(url.associated_port)
         for port in new_snapshot.ports:
             self.assertNotIn(port.host, [None, 80, 443])
+        if (
+            new_snapshot.healthcheck is not None
+            and new_snapshot.healthcheck.type == "PATH"
+        ):
+            self.assertIsNotNone(new_snapshot.healthcheck.associated_port)
