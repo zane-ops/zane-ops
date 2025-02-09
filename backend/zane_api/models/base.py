@@ -629,7 +629,7 @@ class Config(TimestampedModel):
 
 
 class DeploymentURL(models.Model):
-    domain = models.URLField(null=True)
+    domain = models.URLField()
     port = models.PositiveIntegerField(default=80)
     deployment = models.ForeignKey(
         to="DockerDeployment",

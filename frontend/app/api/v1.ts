@@ -693,7 +693,7 @@ export interface components {
     DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     DockerServiceDeploymentURL: {
       /** Format: uri */
-      domain: string | null;
+      domain: string;
       port: number;
     };
     DockerServiceWebhookDeployRequestRequest: {
