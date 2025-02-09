@@ -586,8 +586,8 @@ export function HealthcheckChangeField({
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
       <fieldset className="w-full flex flex-col gap-5">
-        <div className="flex flex-col md:flex-row md:items-start gap-2">
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+        <div className="grid md:grid-cols-4 md:items-start gap-2 md:grid-rows-2 place-items-stretch">
+          <fieldset className="grid gap-1.5 md:row-span-2 md:grid-rows-subgrid">
             <label htmlFor="healthcheck_type" className="text-muted-foreground">
               Type
             </label>
@@ -603,7 +603,12 @@ export function HealthcheckChangeField({
               value={old_value?.type}
             />
           </fieldset>
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+          <fieldset
+            className={cn(
+              "grid gap-1.5 md:row-span-2 md:grid-rows-subgrid",
+              old_value?.type === "PATH" ? "md:col-span-2" : "md:col-span-3"
+            )}
+          >
             <label className="text-muted-foreground">Value</label>
             <Input
               disabled
@@ -617,6 +622,24 @@ export function HealthcheckChangeField({
               value={old_value?.value}
             />
           </fieldset>
+          {old_value?.type === "PATH" && (
+            <fieldset
+              className={cn("grid gap-1.5 md:row-span-2 md:grid-rows-subgrid")}
+            >
+              <label className="text-muted-foreground">Listening port</label>
+              <Input
+                disabled
+                placeholder="<empty>"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono bg-muted",
+                  "disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                readOnly
+                value={old_value?.associated_port}
+              />
+            </fieldset>
+          )}
         </div>
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label className="text-muted-foreground">Timeout (in seconds)</label>
@@ -651,8 +674,8 @@ export function HealthcheckChangeField({
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
 
       <fieldset className="w-full flex flex-col gap-5">
-        <div className="flex flex-col md:flex-row md:items-start gap-2">
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+        <div className="grid md:grid-cols-4 md:items-start gap-2 md:grid-rows-2 place-items-stretch">
+          <fieldset className="grid gap-1.5 md:row-span-2 md:grid-rows-subgrid">
             <label htmlFor="healthcheck_type" className="text-muted-foreground">
               <span>Type</span>
               &nbsp;
@@ -672,7 +695,12 @@ export function HealthcheckChangeField({
               value={new_value?.type}
             />
           </fieldset>
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+          <fieldset
+            className={cn(
+              "grid gap-1.5 md:row-span-2 md:grid-rows-subgrid",
+              new_value?.type === "PATH" ? "md:col-span-2" : "md:col-span-3"
+            )}
+          >
             <label className="text-muted-foreground">
               <span>Value</span>
               &nbsp;
@@ -692,6 +720,31 @@ export function HealthcheckChangeField({
               value={new_value?.value}
             />
           </fieldset>
+          {new_value?.type === "PATH" && (
+            <fieldset
+              className={cn(
+                "gap-1.5 flex-1 grid md:row-span-2 md:grid-rows-subgrid"
+              )}
+            >
+              <label className="text-muted-foreground">
+                Listening port&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <Input
+                disabled
+                placeholder="<empty>"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                readOnly
+                value={new_value?.associated_port}
+              />
+            </fieldset>
+          )}
         </div>
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label className="text-muted-foreground">

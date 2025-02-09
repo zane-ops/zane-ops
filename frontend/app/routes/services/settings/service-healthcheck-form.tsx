@@ -110,7 +110,18 @@ export function ServiceHealthcheckForm({
     defaultHealthCheckAssociatedPortValue =
       urlWithAssociatedPort.associated_port;
   }
+  const urlChangeWithAssociatedPort = service.unapplied_changes.find(
+    (ch) =>
+      ch.field === "urls" &&
+      Boolean(
+        (ch.new_value as DockerService["urls"][number] | null)?.associated_port
+      )
+  ) as { new_value: DockerService["urls"][number] } | null;
 
+  if (urlChangeWithAssociatedPort?.new_value?.associated_port) {
+    defaultHealthCheckAssociatedPortValue =
+      urlChangeWithAssociatedPort.new_value.associated_port;
+  }
   return (
     <fetcher.Form
       ref={formRef}
