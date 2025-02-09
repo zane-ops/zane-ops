@@ -50,6 +50,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                 "value": "/",
                 "timeout_seconds": 5,
                 "interval_seconds": 30,
+                "associated_port": 80,
             },
             old_value=None,
             service=service,

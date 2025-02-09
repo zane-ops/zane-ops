@@ -2682,6 +2682,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                         "domain": "proxy.fredkiss.dev",
                         "base_path": "/",
                         "strip_prefix": False,
+                        "associated_port": 80,
                     },
                 )
             ]
@@ -2697,6 +2698,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                 "domain": "proxy.fredkiss.dev",
                 "base_path": "/",
                 "strip_prefix": True,
+                "associated_port": 80,
             },
             old_value=dict(
                 domain=old_url.domain,
@@ -3167,6 +3169,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
                         "domain": "caddy-demo.zaneops.local",
                         "base_path": "/",
                         "strip_prefix": True,
+                        "associated_port": 80,
                     },
                 ),
             ],
@@ -3190,6 +3193,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
                         "domain": "caddy-one.zaneops.local",
                         "base_path": "/",
                         "strip_prefix": True,
+                        "associated_port": 80,
                     },
                     service=service,
                 ),
@@ -3245,9 +3249,16 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
         self.assertEqual(3, await service.deployments.acount())
 
-        self.assertEqual(1, await service.urls.acount())
-        url: URL = await service.urls.afirst()
-        self.assertEqual("caddy-demo.zaneops.local", url.domain)
+        self.assertEqual(2, await service.urls.acount())
+        url: URL | None = await service.urls.filter(
+            domain="caddy-demo.zaneops.local"
+        ).afirst()
+        self.assertIsNotNone(url)
+
+        url: URL | None = await service.urls.filter(
+            domain="caddy-one.zaneops.local"
+        ).afirst()
+        self.assertIsNone(url)
 
         self.assertEqual(1, await service.volumes.acount())
         self.assertEqual(0, await service.env_variables.acount())
