@@ -3,6 +3,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   CopyIcon,
+  GlobeIcon,
   InfoIcon,
   LoaderIcon,
   Plus,
@@ -10,7 +11,6 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { Code } from "~/components/code";
 import {
   Accordion,
   AccordionContent,
@@ -84,12 +84,7 @@ export function ServiceURLsForm({
       <div className="flex flex-col gap-3">
         <h3 className="text-lg">URLs</h3>
         <p className="text-gray-400">
-          The domains and base path which are associated to this service. A port
-          with a host value of&nbsp;
-          <Code>80</Code>
-          &nbsp;or&nbsp;
-          <Code>443</Code>
-          &nbsp; is required to be able to add URLs to this service.
+          The domains and base path which are associated to this service.
         </p>
       </div>
       {urls.size > 0 && (
@@ -120,6 +115,7 @@ type ServiceURLFormItemProps = {
 function ServiceURLFormItem({
   domain,
   redirect_to,
+  associated_port,
   base_path,
   change_id,
   change_type,
@@ -276,7 +272,7 @@ function ServiceURLFormItem({
         >
           <AccordionTrigger
             className={cn(
-              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
+              "w-full px-3 bg-muted rounded-md gap-2 flex flex-col items-start text-start pr-24",
               "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
@@ -287,15 +283,24 @@ function ServiceURLFormItem({
               }
             )}
           >
-            <p>
-              {domain}
-              <span className="text-grey">{base_path ?? "/"}</span>
-            </p>
+            <div className="inline-flex gap-2 items-center flex-wrap">
+              <GlobeIcon size={15} className="text-grey flex-none" />
+              <p>
+                {domain}
+                <span className="text-grey">{base_path ?? "/"}</span>
+              </p>
+            </div>
             {redirect_to && (
-              <div className="inline-flex gap-2 items-center">
+              <small className="inline-flex gap-2 items-center">
                 <ArrowRightIcon size={15} className="text-grey flex-none" />
                 <span className="text-grey">{redirect_to.url}</span>
-              </div>
+              </small>
+            )}
+            {associated_port && (
+              <small className="inline-flex gap-2 items-center">
+                <ArrowRightIcon size={15} className="text-grey flex-none" />
+                <span className="text-grey">{associated_port}</span>
+              </small>
             )}
           </AccordionTrigger>
           {id && (
@@ -345,6 +350,22 @@ function ServiceURLFormItem({
                     defaultValue={base_path ?? "/"}
                   />
                 </FieldSet>
+
+                {!isRedirect && (
+                  <FieldSet
+                    errors={errors.new_value?.associated_port}
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <FieldSetLabel className="text-gray-400">
+                      Forwarded port
+                    </FieldSetLabel>
+                    <FieldSetInput
+                      placeholder="ex: /"
+                      name="associated_port"
+                      defaultValue={associated_port ?? ""}
+                    />
+                  </FieldSet>
+                )}
 
                 <FieldSet
                   className="flex-1 inline-flex gap-2 flex-col"
@@ -531,6 +552,22 @@ function NewServiceURLForm() {
           defaultValue="/"
         />
       </FieldSet>
+
+      {!isRedirect && (
+        <FieldSet
+          errors={errors.new_value?.associated_port}
+          className="flex-1 inline-flex flex-col gap-1"
+        >
+          <FieldSetLabel className="text-gray-400">
+            Forwarded port
+          </FieldSetLabel>
+          <FieldSetInput
+            placeholder="ex: /"
+            name="associated_port"
+            defaultValue={80}
+          />
+        </FieldSet>
+      )}
 
       <FieldSet
         errors={errors.new_value?.strip_prefix}

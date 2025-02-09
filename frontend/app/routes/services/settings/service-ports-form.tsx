@@ -80,18 +80,14 @@ export function ServicePortsForm({
         <p className="text-gray-400">
           This makes the service reachable externally via the ports defined
           in&nbsp;
-          <Code>host port</Code>. Using&nbsp;
-          <Code>80</Code>
-          &nbsp;or&nbsp;
-          <Code>443</Code>
-          &nbsp;will create a default URL for the service.
+          <Code>host port</Code>.
         </p>
 
         <Alert variant="warning">
           <TriangleAlertIcon size={15} />
           <AlertTitle>Warning</AlertTitle>
           <AlertDescription>
-            Using a host value other than 80 or 443 will disable&nbsp;
+            Adding ports will disable&nbsp;
             <a
               href="#"
               className="text-link underline inline-flex gap-1 items-center"

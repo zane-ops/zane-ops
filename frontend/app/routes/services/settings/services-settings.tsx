@@ -586,7 +586,7 @@ async function requestServiceChange({
     case "ports": {
       userData = {
         forwarded: Number(formData.get("forwarded")?.toString() ?? ""),
-        host: Number((formData.get("host")?.toString() ?? "").trim() || 80)
+        host: Number((formData.get("host")?.toString() ?? "").trim())
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
@@ -597,6 +597,9 @@ async function requestServiceChange({
         domain: formData.get("domain")?.toString() ?? "",
         base_path: formData.get("base_path")?.toString(),
         strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+        associated_port: isRedirect
+          ? undefined
+          : Number(formData.get("associated_port")?.toString().trim()),
         redirect_to: !isRedirect
           ? undefined
           : {
