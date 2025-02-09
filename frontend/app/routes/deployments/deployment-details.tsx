@@ -3,8 +3,10 @@ import json from "highlight.js/lib/languages/json";
 import {
   ActivityIcon,
   BookmarkIcon,
+  CheckIcon,
   ChevronRightIcon,
   ContainerIcon,
+  CopyIcon,
   EthernetPortIcon,
   FileSliders,
   FilmIcon,
@@ -23,7 +25,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
-import { Code } from "~/components/code";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Accordion,
@@ -31,7 +32,12 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
-import { capitalizeText, formatElapsedTime, formattedTime } from "~/utils";
+import {
+  capitalizeText,
+  formatElapsedTime,
+  formattedTime,
+  wait
+} from "~/utils";
 import { type Route } from "./+types/deployment-details";
 import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
@@ -46,6 +52,13 @@ import {
   UrlChangeItem,
   VolumeChangeItem
 } from "~/components/change-fields";
+import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { type DockerService, deploymentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -144,10 +157,7 @@ export default function DeploymentDetailsPage({
     healthcheck: ActivityIcon,
     configs: FileSliders
   };
-
-  console.log({
-    changes: deployment.changes
-  });
+  const [hasCopied, startTransition] = React.useTransition();
 
   return (
     <div className="my-6 flex flex-col lg:w-4/5">
@@ -396,7 +406,40 @@ export default function DeploymentDetailsPage({
                 JSON structure
               </AccordionTrigger>
               <AccordionContent className="flex flex-col gap-2">
-                <div className="overflow-x-auto max-w-full shrink min-w-0 bg-card rounded-md p-2 grow">
+                <div className="overflow-x-auto max-w-full shrink min-w-0 bg-card rounded-md p-2 grow relative">
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="px-2.5 py-0.5 absolute top-2 right-2"
+                          onClick={() => {
+                            navigator.clipboard
+                              .writeText(
+                                JSON.stringify(
+                                  deployment.service_snapshot,
+                                  null,
+                                  2
+                                )
+                              )
+                              .then(() => {
+                                console.log("copied !");
+                                // show pending state (which is success state), until the user has stopped clicking the button
+                                startTransition(() => wait(1000));
+                              });
+                          }}
+                        >
+                          {hasCopied ? (
+                            <CheckIcon size={15} className="flex-none" />
+                          ) : (
+                            <CopyIcon size={15} className="flex-none" />
+                          )}
+                          <span className="sr-only">Copy</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <pre
                     className="text-sm [&_.hljs-punctuation]:text-white dark:[&_.hljs-punctuation]:text-foreground"
                     dangerouslySetInnerHTML={{
