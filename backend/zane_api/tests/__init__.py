@@ -11,3 +11,4 @@ from .search import *
 from .archive import *
 from .cancel_deployments import *
 from .create_resources_for_deployment import *
+from .changes import *

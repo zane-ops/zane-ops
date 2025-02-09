@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Callable, TypeVar, List, Optional, Literal
+from typing import Any, Callable, TypeVar, List, Optional, Literal
 import re
 from django.core.cache import cache
 
@@ -190,7 +190,7 @@ def format_storage_value(value: int):
     return f"{value/gb:.2f} gb"
 
 
-def jprint(value: dict | list | str | int | float):
+def jprint(value: Any):
     """
     Print & format value as JSON
     """

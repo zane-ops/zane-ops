@@ -1,6 +1,7 @@
 import dataclasses
 from dataclasses import fields
 from typing import Iterable, Sequence
+from typing import cast
 
 from django.db.models import Q
 
@@ -250,13 +251,33 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             )
                         )
                     elif current_items[item_id] != target_items[item_id]:
+                        new_value = target_items[item_id]
+                        old_value = current_items[item_id]
+
+                        if service_field.name == "ports":
+                            new_value = cast(PortConfigurationDto, new_value)
+                            # Ignore http ports as they are not valid anymore
+                            if new_value.host in [None, 80, 443]:
+                                continue
+                        if service_field.name == "urls":
+                            # set associated port to the http port
+                            new_value = cast(URLDto, new_value)
+                            if (
+                                new_value.associated_port is None
+                                and new_value.redirect_to is None
+                            ):
+                                if len(target_snapshot.http_ports) > 0:
+                                    new_value.associated_port = (
+                                        target_snapshot.http_ports[0].forwarded
+                                    )
+
                         changes.append(
                             DockerDeploymentChange(
                                 type=DockerDeploymentChange.ChangeType.UPDATE,
                                 field=service_field.name,
                                 item_id=item_id,
-                                new_value=dataclasses.asdict(target_items[item_id]),
-                                old_value=dataclasses.asdict(current_items[item_id]),
+                                new_value=dataclasses.asdict(new_value),
+                                old_value=dataclasses.asdict(old_value),
                             )
                         )
 
@@ -265,6 +286,23 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                     if item_id not in current_items:
                         element = target_items[item_id]
                         element.id = None
+                        if service_field.name == "ports":
+                            element = cast(PortConfigurationDto, element)
+                            # Ignore http ports as they are not valid anymore
+                            if element.host in [None, 80, 443]:
+                                continue
+                        if service_field.name == "urls":
+                            # set associated port to the http port
+                            element = cast(URLDto, element)
+                            if (
+                                element.associated_port is None
+                                and element.redirect_to is None
+                            ):
+                                if len(target_snapshot.http_ports) > 0:
+                                    element.associated_port = (
+                                        target_snapshot.http_ports[0].forwarded
+                                    )
+
                         changes.append(
                             DockerDeploymentChange(
                                 type=DockerDeploymentChange.ChangeType.ADD,
