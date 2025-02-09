@@ -282,7 +282,7 @@ class APITestCase(TestCase):
         self.fake_docker_client = FakeDockerClient()
         self.search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
         self.ELASTICSEARCH_LOGS_INDEX = (
-            f"{settings.ELASTICSEARCH_LOGS_INDEX}-{random_word()}"
+            f"{settings.ELASTICSEARCH_LOGS_INDEX}{random_word()}"
         )
         settings_ctx = override_settings(
             ELASTICSEARCH_LOGS_INDEX=self.ELASTICSEARCH_LOGS_INDEX

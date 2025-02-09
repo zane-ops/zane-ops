@@ -24,7 +24,7 @@ class SearchClient:
         )
         self.es.index(index=index_name, document=document, refresh=settings.TESTING)
 
-    def search(self, index_name: str, query: dict = None):
+    def search(self, index_name: str, query: dict | None = None):
         print(f"====== LOGS SEARCH ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
         data = self._compute_filters(query)
@@ -154,7 +154,7 @@ class SearchClient:
         print(f"====== END LOGS SEARCH ======")
         return serializer.data
 
-    def count(self, index_name: str, query: dict = None) -> int:
+    def count(self, index_name: str, query: dict | None = None) -> int:
         print(f"====== LOGS COUNT ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
         filters = self._compute_filters(query)["filters"]
@@ -170,7 +170,7 @@ class SearchClient:
         print(f"====== END LOGS COUNT ======")
         return count
 
-    def delete(self, index_name: str, query: dict = None) -> int:
+    def delete(self, index_name: str, query: dict | None = None) -> int:
         from django.conf import settings
 
         print(f"====== LOGS DELETE ======")
@@ -191,11 +191,11 @@ class SearchClient:
         print("====== END LOGS DELETE ======")
         return response["deleted"]
 
-    def _compute_filters(self, query: dict = None):
+    def _compute_filters(self, query: dict | None = None):
         form = RuntimeLogsQuerySerializer(data=query or {})
         form.is_valid(raise_exception=True)
 
-        search_params = form.validated_data or {}
+        search_params: dict = form.validated_data or dict()  # type: ignore
         filters = []
 
         page_size = int(search_params.get("per_page", 50))
