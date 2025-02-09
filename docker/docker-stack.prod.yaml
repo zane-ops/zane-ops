@@ -123,7 +123,6 @@ services:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
-      - temporal-archival:/etc/temporal/archival
     deploy:
       replicas: 1
       update_config:
@@ -421,9 +420,6 @@ volumes:
     labels:
       zane.stack: "true"
   redis-data:
-    labels:
-      zane.stack: "true"
-  temporal-archival:
     labels:
       zane.stack: "true"
   caddy-data:

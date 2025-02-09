@@ -33,7 +33,6 @@ services:
       - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
       - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
       - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
-      - ./temporalio/archival:/etc/temporal/archival
     networks:
       zane:
         aliases:
