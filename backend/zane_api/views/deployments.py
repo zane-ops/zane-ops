@@ -12,6 +12,7 @@ from ..models import (
     Project,
     DockerDeployment,
     DockerDeploymentChange,
+    DeploymentURL,
 )
 from django.db.models import Q
 import django.db.transaction as transaction
@@ -115,8 +116,18 @@ class WebhookDeployServiceAPIView(APIView):
             )
             service.apply_pending_changes(deployment=new_deployment)
 
-            if service.http_port is not None:
-                new_deployment.url = f"{service.project.slug}-{service.slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
+            if service.urls.filter(associated_port__isnull=False).count() > 0:
+                ports = (
+                    service.urls.filter(associated_port__isnull=False)
+                    .values_list("associated_port", flat=True)
+                    .distinct()
+                )
+                for port in ports:
+                    DeploymentURL.generate_for_deployment(
+                        deployment=new_deployment,
+                        service=service,
+                        port=port,
+                    )
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = DockerDeployment.get_next_deployment_slot(

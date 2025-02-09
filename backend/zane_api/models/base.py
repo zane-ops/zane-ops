@@ -338,14 +338,6 @@ class DockerRegistryService(BaseService):
         return self.changes.filter(applied=True)
 
     @property
-    def http_port(self) -> PortConfiguration | None:
-        return self.ports.filter(host__isnull=True).first()
-
-    @property
-    async def ahttp_port(self) -> PortConfiguration | None:
-        return await self.ports.filter(host__isnull=True).afirst()
-
-    @property
     def last_queued_deployment(self) -> Union["DockerDeployment", None]:
         return (
             self.deployments.filter(
@@ -644,6 +636,19 @@ class DeploymentURL(models.Model):
         on_delete=models.CASCADE,
         related_name="urls",
     )
+
+    @classmethod
+    def generate_for_deployment(
+        cls,
+        deployment: "DockerDeployment",
+        port: int,
+        service: "DockerRegistryService",
+    ):
+        return cls.objects.create(
+            domain=f"{service.project.slug}-{service.slug}-{deployment.hash.replace('_', '-')}-{generate_random_chars(10)}.{settings.ROOT_DOMAIN}".lower(),
+            port=port,
+            deployment=deployment,
+        )
 
     class Meta:
         indexes = [models.Index(fields=["domain"])]

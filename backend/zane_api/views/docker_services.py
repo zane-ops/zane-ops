@@ -1,4 +1,3 @@
-# type: ignore
 import time
 from typing import Any
 
@@ -65,6 +64,7 @@ from ..models import (
     ArchivedDockerService,
     DockerDeploymentChange,
     HttpLog,
+    DeploymentURL,
 )
 from ..serializers import (
     ConfigSerializer,
@@ -437,8 +437,9 @@ class DeployDockerServiceAPIView(APIView):
                     .distinct()
                 )
                 for port in ports:
-                    new_deployment.urls.create(
-                        domain=f"{project.slug}-{service_slug}-{new_deployment.hash.replace('_', '-')}.{settings.ROOT_DOMAIN}".lower(),
+                    DeploymentURL.generate_for_deployment(
+                        deployment=new_deployment,
+                        service=service,
                         port=port,
                     )
 
@@ -487,7 +488,7 @@ class RedeployDockerServiceAPIView(APIView):
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
 
-        service: DockerRegistryService = (
+        service = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
@@ -525,8 +526,18 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.slot = DockerDeployment.get_next_deployment_slot(
             latest_deployment
         )
-        if len(service.urls.all()) > 0:
-            new_deployment.url = f"{project.slug}-{service_slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
+        if service.urls.filter(associated_port__isnull=False).count() > 0:
+            ports = (
+                service.urls.filter(associated_port__isnull=False)
+                .values_list("associated_port", flat=True)
+                .distinct()
+            )
+            for port in ports:
+                DeploymentURL.generate_for_deployment(
+                    deployment=new_deployment,
+                    service=service,
+                    port=port,
+                )
 
         new_deployment.service_snapshot = DockerServiceSerializer(service).data
         new_deployment.save()
@@ -568,7 +579,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
 
-        service: DockerRegistryService = (
+        service = (
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
@@ -660,6 +671,7 @@ class DockerServiceDetailsAPIView(APIView):
             else:
                 response = DockerServiceSerializer(service)
                 return Response(response.data)
+        raise NotImplementedError("unreachable")
 
     @extend_schema(
         operation_id="getDockerService",
