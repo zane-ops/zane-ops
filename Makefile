@@ -31,7 +31,13 @@ setup: ### Initial setup of the project
 	uv pip install -r ./backend/requirements.txt
 	pnpm install --frozen-lockfile
 	chmod -R a+rx ./docker/temporalio/*.sh
-	
+
+deploy-temporal-ui:
+	docker stack deploy --with-registry-auth --detach=false --compose-file docker-stack.prod-temporal-ui.yaml zane-temporal-ui
+
+stop-temporal-ui:
+	docker stack rm zane-temporal-ui
+
 migrate: ### Run db migration
 	. ./backend/venv/bin/activate && python ./backend/manage.py migrate
 
