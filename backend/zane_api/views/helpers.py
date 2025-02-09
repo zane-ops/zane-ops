@@ -1,7 +1,6 @@
-# type: ignore
 import dataclasses
 from dataclasses import fields
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from django.db.models import Q
 
@@ -45,7 +44,8 @@ def compute_all_deployment_changes(
 
 
 def compute_docker_service_snapshot(
-    service_snapshot: DockerServiceSnapshot, changes: Sequence[DeploymentChangeDto]
+    service_snapshot: DockerServiceSnapshot,
+    changes: Iterable[DeploymentChangeDto],
 ):
     field_dto_map = {
         DockerDeploymentChange.ChangeField.VOLUMES: VolumeDto,
@@ -68,8 +68,8 @@ def compute_docker_service_snapshot(
                     else None
                 )
             case DockerDeploymentChange.ChangeField.SOURCE:
-                service_snapshot.image = change.new_value["image"]
-                if change.new_value.get("credentials") is not None:
+                service_snapshot.image = change.new_value["image"]  # type: ignore
+                if change.new_value.get("credentials") is not None:  # type: ignore
                     service_snapshot.credentials = (
                         DockerCredentialsDto.from_dict(change.new_value)
                         if change.new_value is not None
@@ -82,11 +82,11 @@ def compute_docker_service_snapshot(
                     else None
                 )
             case _:
-                dto_class: type[VolumeDto] = field_dto_map[change.field]
+                dto_class: type[VolumeDto] = field_dto_map[change.field]  # type: ignore
                 items: list = getattr(service_snapshot, change.field)
 
                 if change.type == "ADD":
-                    items.append(dto_class.from_dict(change.new_value))
+                    items.append(dto_class.from_dict(change.new_value))  # type: ignore
                 if change.type == "DELETE":
                     setattr(
                         service_snapshot,
@@ -97,7 +97,7 @@ def compute_docker_service_snapshot(
                     for i, item in enumerate(items):
                         if item.id == change.item_id:
                             items[i] = dto_class.from_dict(
-                                dict(change.new_value, id=change.item_id)
+                                dict(change.new_value, id=change.item_id)  # type: ignore
                             )
 
     return service_snapshot
@@ -167,7 +167,7 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                         None,
                     )
                     if existing_change is not None:
-                        existing_change.new_value = {
+                        existing_change.new_value = {  # type: ignore
                             "image": target_snapshot.image,
                             "credentials": (
                                 target_snapshot.credentials.to_dict()
@@ -223,10 +223,20 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                     )
             case "volumes" | "urls" | "env_variables" | "ports" | "configs":
                 current_items: dict[
-                    str, VolumeDto | URLDto | EnvVariableDto | PortConfigurationDto
+                    str,
+                    VolumeDto
+                    | URLDto
+                    | EnvVariableDto
+                    | PortConfigurationDto
+                    | ConfigDto,
                 ] = {item.id: item for item in current_value}
                 target_items: dict[
-                    str, VolumeDto | URLDto | EnvVariableDto | PortConfigurationDto
+                    str,
+                    VolumeDto
+                    | URLDto
+                    | EnvVariableDto
+                    | PortConfigurationDto
+                    | ConfigDto,
                 ] = {item.id: item for item in target_value}
 
                 for item_id in current_items:
