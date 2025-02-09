@@ -77,7 +77,9 @@ class DockerServiceNetworksTests(AuthAPITestCase):
     @responses.activate
     async def test_monitor_healthcheck_path_uses_service_id_to_run_healthcheck(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        p, service = await self.acreate_and_deploy_caddy_docker_service()
+        p, service = await self.acreate_and_deploy_caddy_docker_service(
+            with_healthcheck=True
+        )
         deployment_url_pattern = re.compile(
             rf"^(http://srv-{p.id}-{service.id}).*", re.IGNORECASE
         )
@@ -85,20 +87,6 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             responses.GET,
             url=deployment_url_pattern,
             status=status.HTTP_200_OK,
-        )
-
-        await DockerDeploymentChange.objects.acreate(
-            field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
-            new_value={
-                "type": "PATH",
-                "value": "/",
-                "timeout_seconds": 5,
-                "interval_seconds": 30,
-                "associated_port": 80,
-            },
-            old_value=None,
-            service=service,
         )
 
         response = await self.async_client.put(
