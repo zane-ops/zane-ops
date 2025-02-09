@@ -11,8 +11,7 @@ import {
   Menu,
   Search,
   Send,
-  TagIcon,
-  Twitter
+  TagIcon
 } from "lucide-react";
 import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
 import { Logo } from "~/components/logo";
@@ -234,24 +233,19 @@ function Header({ user }: HeaderProps) {
 
 const socialLinks = [
   {
-    name: "Feedback",
-    url: "https://github.com/zane-ops/zane-ops/discussions",
-    icon: <Send size={15} />
-  },
-  {
     name: "Docs",
     url: "https://zaneops.dev",
     icon: <BookOpen size={15} />
   },
   {
+    name: "Feedback",
+    url: "https://github.com/zane-ops/zane-ops/discussions",
+    icon: <Send size={15} />
+  },
+  {
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
     icon: <HeartHandshake size={15} />
-  },
-  {
-    name: "Twitter",
-    url: "https://twitter.com/zaneopsdev",
-    icon: <Twitter size={15} />
   }
 ];
 
