@@ -2688,7 +2688,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ]
         )
 
-        old_url: URL = await service.urls.afirst()
+        old_url: URL = await service.urls.filter(domain="proxy.fredkiss.dev").afirst()
 
         await DockerDeploymentChange.objects.acreate(
             field=DockerDeploymentChange.ChangeField.URLS,
