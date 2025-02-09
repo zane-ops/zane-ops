@@ -264,7 +264,7 @@ class ProjectDetailsView(APIView):
 
         docker_service_list = (
             DockerRegistryService.objects.filter(Q(project=project))
-            .select_related("project")
+            .select_related("project", "healthcheck")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"
             )

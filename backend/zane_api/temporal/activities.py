@@ -838,10 +838,10 @@ class DockerSwarmActivities:
                 non_retryable=True,
             )
 
-        archived_docker_services: QuerySet[ArchivedDockerService] = (
+        archived_docker_services = (
             ArchivedDockerService.objects.filter(project=archived_project)
             .select_related("project")
-            .prefetch_related("volumes", "urls")
+            .prefetch_related("volumes", "urls", "configs")
         )
 
         archived_services: List[ArchivedServiceDetails] = []

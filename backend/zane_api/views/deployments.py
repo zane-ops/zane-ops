@@ -42,7 +42,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project)
             )
-            .select_related("project")
+            .select_related("project", "healthcheck")
             .prefetch_related("volumes", "ports", "urls", "env_variables")
         ).first()
 
@@ -76,7 +76,7 @@ class WebhookDeployServiceAPIView(APIView):
 
         service = (
             DockerRegistryService.objects.filter(deploy_token=deploy_token)
-            .select_related("project")
+            .select_related("project", "healthcheck")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
 
@@ -133,7 +133,7 @@ class WebhookDeployServiceAPIView(APIView):
             new_deployment.slot = DockerDeployment.get_next_deployment_slot(
                 latest_deployment
             )
-            new_deployment.service_snapshot = DockerServiceSerializer(service).data
+            new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
             payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
