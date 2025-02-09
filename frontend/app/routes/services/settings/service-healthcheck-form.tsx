@@ -100,6 +100,17 @@ export function ServiceHealthcheckForm({
     ? [...errors.new_value, ...(errors.non_field_errors ?? [])]
     : errors.non_field_errors;
 
+  const urlWithAssociatedPort = service.urls.find(
+    (url) => url.associated_port !== null
+  );
+  let defaultHealthCheckAssociatedPortValue =
+    service.healthcheck?.associated_port ?? 80;
+
+  if (urlWithAssociatedPort?.associated_port) {
+    defaultHealthCheckAssociatedPortValue =
+      urlWithAssociatedPort.associated_port;
+  }
+
   return (
     <fetcher.Form
       ref={formRef}
@@ -128,7 +139,7 @@ export function ServiceHealthcheckForm({
           This value will also be used to continously monitor your app.
         </p>
 
-        <div className="flex flex-col md:flex-row md:items-start gap-2">
+        <div className="flex flex-col md:grid md:grid-cols-4 md:items-start gap-2">
           <FieldSet
             errors={errors.new_value?.type}
             name="type"
@@ -168,10 +179,14 @@ export function ServiceHealthcheckForm({
               </SelectContent>
             </FieldSetSelect>
           </FieldSet>
+
           <FieldSet
             name="value"
             errors={errors.new_value?.value}
-            className="flex flex-col gap-1.5 flex-1"
+            className={cn(
+              "flex flex-col gap-1.5 flex-1",
+              healthcheckType === "PATH" ? "col-span-2" : "col-span-3"
+            )}
           >
             <FieldSetLabel className="text-muted-foreground">
               Value
@@ -193,6 +208,35 @@ export function ServiceHealthcheckForm({
               defaultValue={healthcheck?.value}
             />
           </FieldSet>
+
+          {healthcheckType === "PATH" && (
+            <FieldSet
+              name="associated_port"
+              errors={errors.new_value?.associated_port}
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <FieldSetLabel className="text-muted-foreground">
+                Listening port
+              </FieldSetLabel>
+              <FieldSetInput
+                disabled={healthcheckChange !== undefined}
+                placeholder={
+                  healthcheckChange && healthcheck === null
+                    ? "<empty>"
+                    : "ex: 80"
+                }
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                defaultValue={
+                  healthcheck?.associated_port ??
+                  defaultHealthCheckAssociatedPortValue
+                }
+              />
+            </FieldSet>
+          )}
         </div>
         <FieldSet
           errors={errors.new_value?.timeout_seconds}

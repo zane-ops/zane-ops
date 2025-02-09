@@ -618,12 +618,21 @@ async function requestServiceChange({
     case "healthcheck": {
       const removeHealthcheck =
         formData.get("intent")?.toString() === "remove-service-healthcheck";
+
+      const type = formData.get("type")?.toString() as NonNullable<
+        DockerService["healthcheck"]
+      >["type"];
+
       userData = removeHealthcheck
         ? null
         : ({
             type: formData.get("type")?.toString() as NonNullable<
               DockerService["healthcheck"]
             >["type"],
+            associated_port:
+              type === "PATH"
+                ? Number(formData.get("associated_port")?.toString())
+                : undefined,
             value: formData.get("value")?.toString() ?? "",
             timeout_seconds: Number(
               formData.get("timeout_seconds")?.toString() || 30

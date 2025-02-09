@@ -309,7 +309,7 @@ function ServicePortItem({
                     </label>
                     <Input
                       placeholder="ex: 80"
-                      defaultValue={host ?? 80}
+                      defaultValue={host}
                       id={`host-${id}`}
                       name="host"
                       aria-invalid={Boolean(errors.new_value?.host)}
@@ -410,7 +410,7 @@ function NewServicePortForm() {
         className="flex-1 inline-flex flex-col gap-1"
       >
         <FieldSetLabel className="text-gray-400">Host port</FieldSetLabel>
-        <FieldSetInput placeholder="ex: 80" defaultValue={80} name="host" />
+        <FieldSetInput placeholder="ex: 8080" name="host" />
       </FieldSet>
 
       <div className="flex gap-3 items-center pt-7 w-full md:w-auto">
