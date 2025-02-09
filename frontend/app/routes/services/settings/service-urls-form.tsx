@@ -293,7 +293,17 @@ function ServiceURLFormItem({
             {redirect_to && (
               <small className="inline-flex gap-2 items-center">
                 <ArrowRightIcon size={15} className="text-grey flex-none" />
-                <span className="text-grey">{redirect_to.url}</span>
+                <span className="text-grey">
+                  <span>{redirect_to.url}</span>
+                  &nbsp;&nbsp;
+                  <span className="text-card-foreground">
+                    [
+                    {redirect_to.permanent
+                      ? "permanent redirect"
+                      : "temporary redirect"}
+                    ]
+                  </span>
+                </span>
               </small>
             )}
             {associated_port && (

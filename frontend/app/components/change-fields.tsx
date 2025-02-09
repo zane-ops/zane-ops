@@ -439,7 +439,7 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
       <div
         className={cn(
-          "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24 py-4",
+          "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
           "text-base",
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
@@ -452,28 +452,40 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
           <span className="text-grey">
             {(old_value ?? new_value)?.base_path ?? "/"}
           </span>
+          &nbsp;
+          {change.type === "ADD" && (
+            <span className="text-green-500">
+              {unapplied && "will be"} added
+            </span>
+          )}
+          {change.type === "DELETE" && (
+            <span className="text-red-500">
+              {unapplied && "will be"} removed
+            </span>
+          )}
         </p>
         {(old_value ?? new_value)?.redirect_to && (
-          <div className="inline-flex gap-2 items-center">
+          <small className="inline-flex gap-2 items-center">
             <ArrowRightIcon size={15} className="text-grey flex-none" />
             <span className="text-grey">
               {(old_value ?? new_value)?.redirect_to?.url}
             </span>
-            <span className="text-foreground">
-              (
+            <span className="text-card-foreground">
+              [
               {(old_value ?? new_value)?.redirect_to?.permanent
-                ? "permanent"
-                : "temporary"}
-              )
+                ? "permanent redirect"
+                : "temporary redirect"}
+              ]
             </span>
-          </div>
+          </small>
         )}
-
-        {change.type === "ADD" && (
-          <span className="text-green-500">{unapplied && "will be"} added</span>
-        )}
-        {change.type === "DELETE" && (
-          <span className="text-red-500">{unapplied && "will be"} removed</span>
+        {(old_value ?? new_value)?.associated_port && (
+          <small className="inline-flex gap-2 items-center">
+            <ArrowRightIcon size={15} className="text-grey flex-none" />
+            <span className="text-grey">
+              {(old_value ?? new_value)?.associated_port}
+            </span>
+          </small>
         )}
       </div>
       {change.type === "UPDATE" && (
