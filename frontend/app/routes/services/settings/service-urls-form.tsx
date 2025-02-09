@@ -3,6 +3,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   CopyIcon,
+  ExternalLinkIcon,
   GlobeIcon,
   InfoIcon,
   LoaderIcon,
@@ -190,6 +191,24 @@ function ServiceURLFormItem({
           </deleteFetcher.Form>
         )}
         <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "px-2.5 py-0.5 focus-visible:opacity-100 group-hover:opacity-100",
+                  hasCopied ? "opacity-100" : "md:opacity-0"
+                )}
+                onClick={() => {
+                  window.open(`//${domain}${base_path}`, "_blank")?.focus();
+                }}
+              >
+                <ExternalLinkIcon size={15} className="flex-none" />
+                <span className="sr-only">Navigate to this url</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Navigate to this url</TooltipContent>
+          </Tooltip>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button
