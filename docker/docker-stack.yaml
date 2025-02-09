@@ -87,7 +87,6 @@ services:
 volumes:
   caddy-data:
   caddy-config:
-  temporal-archival:
 networks:
   zane:
     external: true

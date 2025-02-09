@@ -32,7 +32,7 @@ set -eux -o pipefail
 
 : "${SKIP_DEFAULT_NAMESPACE_CREATION:=false}"
 : "${DEFAULT_NAMESPACE:=zane}"
-: "${DEFAULT_NAMESPACE_RETENTION:=1d}"
+: "${DEFAULT_NAMESPACE_RETENTION:=7d}"
 
 : "${SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES:=false}"
 
@@ -102,9 +102,10 @@ register_default_namespace() {
     echo "Registering default namespace: ${DEFAULT_NAMESPACE}."
     if ! temporal operator namespace describe "${DEFAULT_NAMESPACE}"; then
         echo "Default namespace ${DEFAULT_NAMESPACE} not found. Creating..."
-        temporal operator namespace create --retention "${DEFAULT_NAMESPACE_RETENTION}" --description "Default namespace for ZaneOps." --history-archival-state "enabled" --visibility-archival-state "enabled" --history-uri "file:///etc/temporal/archival/history" --visibility-uri "file:///etc/temporal/archival/visibility" "${DEFAULT_NAMESPACE}"
+        temporal operator namespace create --retention "${DEFAULT_NAMESPACE_RETENTION}" --description "Default namespace for ZaneOps." --history-archival-state "disabled" --visibility-archival-state "disabled" "${DEFAULT_NAMESPACE}"
     else
-        echo "Default namespace ${DEFAULT_NAMESPACE} already registered."
+        echo "Default namespace ${DEFAULT_NAMESPACE} already registered, updating..."
+        temporal operator namespace update --retention "${DEFAULT_NAMESPACE_RETENTION}" --description "Default namespace for ZaneOps." --history-archival-state "disabled" --visibility-archival-state "disabled" "${DEFAULT_NAMESPACE}"
     fi
     echo "====== Default namespace ${DEFAULT_NAMESPACE} registration complete : ======"
     echo $(temporal operator namespace describe "${DEFAULT_NAMESPACE}")
