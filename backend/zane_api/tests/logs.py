@@ -1,3 +1,4 @@
+# type: ignore
 import datetime
 import json
 import uuid
@@ -644,15 +645,15 @@ class RuntimeLogScheduleTests(AuthAPITestCase):
             now = timezone.now()
             sample_logs = [
                 (
-                    now - timedelta(days=45),
+                    now - timedelta(days=31),
                     '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
                 ),
                 (
-                    now - timedelta(days=31),
+                    now - timedelta(days=15),
                     '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
                 ),
                 (
-                    now - timedelta(days=29),
+                    now - timedelta(days=10),
                     '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
                 ),
                 (
