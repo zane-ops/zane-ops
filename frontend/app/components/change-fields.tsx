@@ -385,9 +385,7 @@ export function EnvVariableChangeItem({
       >
         <span>{(old_value ?? new_value)?.key}</span>
         <span className="text-grey">{"="}</span>
-        <span
-          className={`hyphens-auto before:content-['\\"'] after:content-['\\"'] before:text-grey after:text-grey`}
-        >
+        <span className={`hyphens-auto`}>
           {(old_value ?? new_value)?.value}
         </span>
         <span>&nbsp;</span>
@@ -415,11 +413,7 @@ export function EnvVariableChangeItem({
           >
             <span>{new_value?.key}</span>
             <span className="text-grey">{"="}</span>
-            <span
-              className={`before:content-['\\"'] after:content-['\\"'] before:text-grey after:text-grey`}
-            >
-              {new_value?.value}
-            </span>
+            <span className={`hyphens-auto`}>{new_value?.value}</span>
             <span>&nbsp;</span>
             <span className="text-blue-500">
               {unapplied && "will be"} updated
@@ -533,35 +527,28 @@ export function CommandChangeField({
   const new_value = change.new_value as DockerService["command"] | null;
   const old_value = change.old_value as DockerService["command"] | null;
   return (
-    <div className="flex flex-col md:flex-row gap-4 items-center">
-      <Input
-        placeholder="<empty>"
-        disabled
-        readOnly
-        value={old_value}
+    <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
+      <span
         className={cn(
-          "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-          "data-[edited]:dark:disabled:bg-secondary-foreground",
-          "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+          "flex items-center text-sm p-3 flex-none min-w-fit",
+          "bg-muted rounded-md"
         )}
-      />
+      >
+        <span>
+          {old_value ?? (
+            <span className="text-grey font-mono">{`<empty>`}</span>
+          )}
+        </span>
+      </span>
 
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
-      <div className="relative w-full">
-        <Input
-          placeholder="<empty>"
-          disabled
-          readOnly
-          data-edited
-          value={new_value}
+      <div className="relative flex-none min-w-fit">
+        <span
           className={cn(
-            "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-            "data-[edited]:dark:disabled:bg-secondary-foreground",
-            "disabled:border-transparent disabled:opacity-100 disabled:select-none",
-            "text-transparent placeholder:text-transparent"
+            "flex items-center text-sm p-3 pr-2",
+            "bg-secondary/60 dark:bg-secondary-foreground rounded-md"
           )}
-        />
-        <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+        >
           <span>
             {new_value ?? (
               <span className="text-grey font-mono">{`<empty>`}</span>
@@ -886,7 +873,7 @@ export function ConfigChangeItem({
   const old_value = change.old_value as DockerService["configs"][number];
 
   return (
-    <div className="flex flex-col md:flex-row gap-2 items-center overflow-x-auto">
+    <div className="flex flex-col gap-2 items-center overflow-x-auto">
       <div
         className={cn("rounded-md p-4 flex items-start gap-2 bg-muted w-full", {
           "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
@@ -937,10 +924,7 @@ export function ConfigChangeItem({
 
       {change.type === "UPDATE" && (
         <>
-          <ArrowDownIcon
-            size={24}
-            className="text-grey md:-rotate-90 flex-none"
-          />
+          <ArrowDownIcon size={24} className="text-grey flex-none" />
 
           <div
             className={cn(
