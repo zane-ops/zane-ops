@@ -276,7 +276,9 @@ class CleanupActivities:
         deleted_count = search_client.delete(
             index_name=settings.ELASTICSEARCH_LOGS_INDEX,
             query={
-                "time_before": (today - timedelta(days=30)).isoformat(),
+                "time_before": (
+                    today - timedelta(days=14)
+                ).isoformat(),  # only keep logs for 2 weeks
             },
         )
         return LogsCleanupResult(deleted_count=deleted_count)
