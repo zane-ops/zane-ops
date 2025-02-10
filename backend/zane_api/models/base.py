@@ -146,10 +146,6 @@ class BaseService(TimestampedModel):
         return self.volumes.filter(host_path__isnull=False)
 
     @property
-    def primary_url(self):
-        return self.urls.filter(primary=True).first()
-
-    @property
     def docker_volumes(self):
         return self.volumes.filter(host_path__isnull=True)
 
