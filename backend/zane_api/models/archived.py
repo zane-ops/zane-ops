@@ -196,6 +196,7 @@ class ArchivedDockerService(ArchivedBaseService):
                     value=service.healthcheck.value,
                     interval_seconds=service.healthcheck.interval_seconds,
                     timeout_seconds=service.healthcheck.timeout_seconds,
+                    associated_port=service.healthcheck.associated_port,
                 )
                 if service.healthcheck is not None
                 else None
