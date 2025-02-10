@@ -367,20 +367,6 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
                     detail="Cannot revert this change as it would cause duplicate config files with the same mounth path for this service."
                 )
 
-            if found_change.field == "ports" or found_change.field == "urls":
-                is_healthcheck_path = (
-                    snapshot.healthcheck is not None
-                    and snapshot.healthcheck.type == "PATH"
-                )
-                service_is_not_exposed_to_http = (
-                    len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0
-                )
-                if is_healthcheck_path and service_is_not_exposed_to_http:
-                    raise ResourceConflict(
-                        f"Cannot revert this change because there is a healthcheck of type `path` attached to the service"
-                        f" and the service is not exposed to the public through an URL or another HTTP port"
-                    )
-
             found_change.delete()
             return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
