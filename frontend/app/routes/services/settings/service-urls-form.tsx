@@ -352,6 +352,21 @@ function ServiceURLFormItem({
                     </AlertDescription>
                   </Alert>
                 )}
+                {!isRedirect && (
+                  <FieldSet
+                    errors={errors.new_value?.associated_port}
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <FieldSetLabel className="text-gray-400">
+                      Forwarded port
+                    </FieldSetLabel>
+                    <FieldSetInput
+                      placeholder="ex: /"
+                      name="associated_port"
+                      defaultValue={associated_port ?? ""}
+                    />
+                  </FieldSet>
+                )}
 
                 <FieldSet
                   errors={errors.new_value?.domain}
@@ -379,22 +394,6 @@ function ServiceURLFormItem({
                     defaultValue={base_path ?? "/"}
                   />
                 </FieldSet>
-
-                {!isRedirect && (
-                  <FieldSet
-                    errors={errors.new_value?.associated_port}
-                    className="flex-1 inline-flex flex-col gap-1"
-                  >
-                    <FieldSetLabel className="text-gray-400">
-                      Forwarded port
-                    </FieldSetLabel>
-                    <FieldSetInput
-                      placeholder="ex: /"
-                      name="associated_port"
-                      defaultValue={associated_port ?? ""}
-                    />
-                  </FieldSet>
-                )}
 
                 <FieldSet
                   className="flex-1 inline-flex gap-2 flex-col"
@@ -562,26 +561,6 @@ function NewServiceURLForm() {
           </AlertDescription>
         </Alert>
       )}
-      <FieldSet
-        errors={errors.new_value?.domain}
-        className="flex-1 inline-flex flex-col gap-1"
-      >
-        <FieldSetLabel className="text-gray-400">Domain</FieldSetLabel>
-        <FieldSetInput name="domain" placeholder="ex: www.mysupersaas.co" />
-      </FieldSet>
-
-      <FieldSet
-        errors={errors.new_value?.base_path}
-        className="flex-1 inline-flex flex-col gap-1"
-      >
-        <FieldSetLabel className="text-gray-400">Base path</FieldSetLabel>
-        <FieldSetInput
-          name="base_path"
-          placeholder="ex: /api"
-          defaultValue="/"
-        />
-      </FieldSet>
-
       {!isRedirect && (
         <FieldSet
           errors={errors.new_value?.associated_port}
@@ -597,6 +576,31 @@ function NewServiceURLForm() {
           />
         </FieldSet>
       )}
+
+      <FieldSet
+        errors={errors.new_value?.domain}
+        className="flex-1 inline-flex flex-col gap-1"
+      >
+        <FieldSetLabel className="text-gray-400 inline-flex gap-1">
+          <span>Domain</span>
+          <span className="text-card-foreground">
+            (leave empty to generate)
+          </span>
+        </FieldSetLabel>
+        <FieldSetInput name="domain" placeholder="ex: www.mysupersaas.co" />
+      </FieldSet>
+
+      <FieldSet
+        errors={errors.new_value?.base_path}
+        className="flex-1 inline-flex flex-col gap-1"
+      >
+        <FieldSetLabel className="text-gray-400">Base path</FieldSetLabel>
+        <FieldSetInput
+          name="base_path"
+          placeholder="ex: /api"
+          defaultValue="/"
+        />
+      </FieldSet>
 
       <FieldSet
         errors={errors.new_value?.strip_prefix}

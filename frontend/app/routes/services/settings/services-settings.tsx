@@ -593,8 +593,9 @@ async function requestServiceChange({
     case "urls": {
       const isRedirect = formData.get("is_redirect")?.toString() === "on";
 
+      const domain = formData.get("domain")?.toString();
       userData = {
-        domain: formData.get("domain")?.toString() ?? "",
+        domain: domain ? domain : undefined,
         base_path: formData.get("base_path")?.toString(),
         strip_prefix: formData.get("strip_prefix")?.toString() === "on",
         associated_port: isRedirect
