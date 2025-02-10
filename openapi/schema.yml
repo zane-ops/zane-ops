@@ -4651,11 +4651,11 @@ components:
         status_reason:
           type: string
           nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 200
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerServiceDeploymentURL'
+          readOnly: true
         network_aliases:
           type: array
           items:
@@ -4688,7 +4688,7 @@ components:
       - status
       - status_reason
       - unprefixed_hash
-      - url
+      - urls
     DockerServiceDeploymentStatusEnum:
       enum:
       - QUEUED
@@ -4715,6 +4715,20 @@ components:
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
         * `SLEEPING` - Sleeping
+    DockerServiceDeploymentURL:
+      type: object
+      properties:
+        domain:
+          type: string
+          format: uri
+          maxLength: 200
+        port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - domain
+      - port
     DockerServiceWebhookDeployRequestRequest:
       type: object
       properties:
@@ -5157,7 +5171,13 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        associated_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
       required:
+      - associated_port
       - id
       - interval_seconds
       - timeout_seconds
@@ -5184,6 +5204,11 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        associated_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
     HealthCheckRequestRequest:
       type: object
       properties:
@@ -5201,6 +5226,9 @@ components:
           type: integer
           minimum: 5
           default: 30
+        associated_port:
+          type: integer
+          minimum: 1
       required:
       - type
       - value
@@ -5736,7 +5764,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-          nullable: true
         forwarded:
           type: integer
           maximum: 2147483647
@@ -5756,7 +5783,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-          nullable: true
         forwarded:
           type: integer
           maximum: 2147483647
@@ -6859,6 +6885,7 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToUrlErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueAssociatedPortErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesFieldErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNameErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContainerPathErrorComponent'
@@ -6896,6 +6923,7 @@ components:
           new_value.redirect_to.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent'
           new_value.redirect_to.url: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToUrlErrorComponent'
           new_value.redirect_to.permanent: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent'
+          new_value.associated_port: '#/components/schemas/RequestDeploymentChangesNewValueAssociatedPortErrorComponent'
           field: '#/components/schemas/RequestDeploymentChangesFieldErrorComponent'
           new_value.name: '#/components/schemas/RequestDeploymentChangesNewValueNameErrorComponent'
           new_value.container_path: '#/components/schemas/RequestDeploymentChangesNewValueContainerPathErrorComponent'
@@ -6977,6 +7005,32 @@ components:
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueAssociatedPortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.associated_port
+          type: string
+          description: '* `new_value.associated_port` - new_value.associated_port'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
         detail:
           type: string
       required:
@@ -7189,7 +7243,6 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -7197,7 +7250,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -7275,12 +7327,14 @@ components:
           - max_string_length
           - min_value
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `max_string_length` - max_string_length
             * `min_value` - min_value
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -8034,12 +8088,12 @@ components:
         host:
           type: integer
           minimum: 1
-          default: 80
         forwarded:
           type: integer
           minimum: 1
       required:
       - forwarded
+      - host
     ServiceSearch:
       type: object
       properties:
@@ -8187,7 +8241,13 @@ components:
           allOf:
           - $ref: '#/components/schemas/URLRedirectModel'
           nullable: true
+        associated_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
       required:
+      - associated_port
       - base_path
       - domain
       - id
@@ -8213,6 +8273,11 @@ components:
         redirect_to:
           allOf:
           - $ref: '#/components/schemas/URLRedirectModelRequest'
+          nullable: true
+        associated_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
           nullable: true
       required:
       - domain
@@ -8268,8 +8333,9 @@ components:
           default: true
         redirect_to:
           $ref: '#/components/schemas/URLRedirectRequest'
-      required:
-      - domain
+        associated_port:
+          type: integer
+          minimum: 1
     UnitEnum:
       enum:
       - BYTES

@@ -1,15 +1,10 @@
+# type: ignore
 from .base import AuthAPITestCase
 from django.urls import reverse
 from ..models import (
-    Project,
     DockerDeployment,
-    DockerRegistryService,
     DockerDeploymentChange,
-    Volume,
-    PortConfiguration,
-    URL,
     HealthCheck,
-    DockerEnvVariable,
 )
 from rest_framework import status
 import responses
@@ -55,6 +50,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                 "value": "/",
                 "timeout_seconds": 5,
                 "interval_seconds": 30,
+                "associated_port": 80,
             },
             old_value=None,
             service=service,
@@ -98,10 +94,10 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             new_value={
                 "type": "PATH",
                 "value": "/",
-                "timeout_seconds": 5,
+                "timeout_seconds": 30,
                 "interval_seconds": 30,
+                "associated_port": 80,
             },
-            old_value=None,
             service=service,
         )
 
@@ -115,6 +111,11 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        latest_deployment = await service.deployments.afirst()
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
+        )
+
         # Run monitor healthcheck manually
         latest_deployment = await service.alatest_production_deployment
         self.assertEqual(
@@ -128,7 +129,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                     hash=latest_deployment.hash,
                     service_id=latest_deployment.service.id,
                     project_id=latest_deployment.service.project_id,
-                    url=latest_deployment.url,
+                    urls=[url.domain async for url in latest_deployment.urls.all()],
                 ),
                 healthcheck=(
                     HealthCheckDto.from_dict(
@@ -138,6 +139,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                             timeout_seconds=healthcheck.timeout_seconds,
                             interval_seconds=healthcheck.interval_seconds,
                             id=healthcheck.id,
+                            associated_port=healthcheck.associated_port,
                         )
                     )
                     if healthcheck is not None
@@ -152,10 +154,10 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
 
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
+            )
             responses.assert_call_count(
                 f"http://{get_swarm_service_name_for_deployment(deployment_hash=latest_deployment.hash, project_id=p.id, service_id=service.id)}:80/".lower(),
                 2,
-            )
-            self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
             )

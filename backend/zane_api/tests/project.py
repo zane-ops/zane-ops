@@ -1,3 +1,4 @@
+# type: ignore
 from unittest.mock import patch
 
 from django.urls import reverse
@@ -15,6 +16,7 @@ from ..models import (
     PortConfiguration,
     URL,
     DockerDeploymentChange,
+    Config,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -354,6 +356,16 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                     },
                 ),
                 DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.CONFIGS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "name": "caddyfile",
+                        "mount_path": "/etc/caddy/Caddyfile",
+                        "contents": "respond hello",
+                        "language": "plaintext",
+                    },
+                ),
+                DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
@@ -376,7 +388,13 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                         "domain": "gitea.zane.local",
                         "base_path": "/",
                         "strip_prefix": True,
+                        "associated_port": 80,
                     },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={"host": 8080, "forwarded": 80},
                 ),
             ]
         )
@@ -413,6 +431,11 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNone(deleted_volume)
         self.assertEqual(1, await archived_service.volumes.acount())
 
+        # Configs are cleaned up
+        deleted_config = await Config.objects.filter(name="caddyfile").afirst()
+        self.assertIsNone(deleted_config)
+        self.assertEqual(1, await archived_service.configs.acount())
+
         # env variables are cleaned up
         deleted_envs = DockerEnvVariable.objects.filter(service__slug=service.slug)
         self.assertEqual(0, await deleted_envs.acount())
@@ -428,7 +451,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         # urls are cleaned up
         deleted_urls = URL.objects.filter(domain="gitea.zane.local", base_path="/")
         self.assertEqual(0, await deleted_urls.acount())
-        self.assertEqual(1, await archived_service.urls.acount())
+        self.assertEqual(2, await archived_service.urls.acount())
 
         # --- Docker Resources ---
         # service is removed

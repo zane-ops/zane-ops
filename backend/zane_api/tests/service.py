@@ -1,8 +1,8 @@
+# type: ignore
 import json
 import re
 from unittest.mock import patch, MagicMock
 
-import requests
 import responses
 from django.conf import settings
 from django.urls import reverse

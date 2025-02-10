@@ -385,9 +385,7 @@ export function EnvVariableChangeItem({
       >
         <span>{(old_value ?? new_value)?.key}</span>
         <span className="text-grey">{"="}</span>
-        <span
-          className={`hyphens-auto before:content-['\\"'] after:content-['\\"'] before:text-grey after:text-grey`}
-        >
+        <span className={`hyphens-auto`}>
           {(old_value ?? new_value)?.value}
         </span>
         <span>&nbsp;</span>
@@ -415,11 +413,7 @@ export function EnvVariableChangeItem({
           >
             <span>{new_value?.key}</span>
             <span className="text-grey">{"="}</span>
-            <span
-              className={`before:content-['\\"'] after:content-['\\"'] before:text-grey after:text-grey`}
-            >
-              {new_value?.value}
-            </span>
+            <span className={`hyphens-auto`}>{new_value?.value}</span>
             <span>&nbsp;</span>
             <span className="text-blue-500">
               {unapplied && "will be"} updated
@@ -439,7 +433,7 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
       <div
         className={cn(
-          "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24 py-4",
+          "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
           "text-base",
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
@@ -452,28 +446,40 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
           <span className="text-grey">
             {(old_value ?? new_value)?.base_path ?? "/"}
           </span>
+          &nbsp;
+          {change.type === "ADD" && (
+            <span className="text-green-500">
+              {unapplied && "will be"} added
+            </span>
+          )}
+          {change.type === "DELETE" && (
+            <span className="text-red-500">
+              {unapplied && "will be"} removed
+            </span>
+          )}
         </p>
         {(old_value ?? new_value)?.redirect_to && (
-          <div className="inline-flex gap-2 items-center">
+          <small className="inline-flex gap-2 items-center">
             <ArrowRightIcon size={15} className="text-grey flex-none" />
             <span className="text-grey">
               {(old_value ?? new_value)?.redirect_to?.url}
             </span>
-            <span className="text-foreground">
-              (
+            <span className="text-card-foreground">
+              [
               {(old_value ?? new_value)?.redirect_to?.permanent
-                ? "permanent"
-                : "temporary"}
-              )
+                ? "permanent redirect"
+                : "temporary redirect"}
+              ]
             </span>
-          </div>
+          </small>
         )}
-
-        {change.type === "ADD" && (
-          <span className="text-green-500">{unapplied && "will be"} added</span>
-        )}
-        {change.type === "DELETE" && (
-          <span className="text-red-500">{unapplied && "will be"} removed</span>
+        {(old_value ?? new_value)?.associated_port && (
+          <small className="inline-flex gap-2 items-center">
+            <ArrowRightIcon size={15} className="text-grey flex-none" />
+            <span className="text-grey">
+              {(old_value ?? new_value)?.associated_port}
+            </span>
+          </small>
         )}
       </div>
       {change.type === "UPDATE" && (
@@ -521,35 +527,28 @@ export function CommandChangeField({
   const new_value = change.new_value as DockerService["command"] | null;
   const old_value = change.old_value as DockerService["command"] | null;
   return (
-    <div className="flex flex-col md:flex-row gap-4 items-center">
-      <Input
-        placeholder="<empty>"
-        disabled
-        readOnly
-        value={old_value}
+    <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
+      <span
         className={cn(
-          "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-          "data-[edited]:dark:disabled:bg-secondary-foreground",
-          "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+          "flex items-center text-sm p-3 flex-none min-w-fit",
+          "bg-muted rounded-md"
         )}
-      />
+      >
+        <span>
+          {old_value ?? (
+            <span className="text-grey font-mono">{`<empty>`}</span>
+          )}
+        </span>
+      </span>
 
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
-      <div className="relative w-full">
-        <Input
-          placeholder="<empty>"
-          disabled
-          readOnly
-          data-edited
-          value={new_value}
+      <div className="relative flex-none min-w-fit">
+        <span
           className={cn(
-            "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-            "data-[edited]:dark:disabled:bg-secondary-foreground",
-            "disabled:border-transparent disabled:opacity-100 disabled:select-none",
-            "text-transparent placeholder:text-transparent"
+            "flex items-center text-sm p-3 pr-2",
+            "bg-secondary/60 dark:bg-secondary-foreground rounded-md"
           )}
-        />
-        <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+        >
           <span>
             {new_value ?? (
               <span className="text-grey font-mono">{`<empty>`}</span>
@@ -574,8 +573,8 @@ export function HealthcheckChangeField({
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
       <fieldset className="w-full flex flex-col gap-5">
-        <div className="flex flex-col md:flex-row md:items-start gap-2">
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+        <div className="grid md:grid-cols-4 md:items-start gap-2 md:grid-rows-2 place-items-stretch">
+          <fieldset className="grid gap-1.5 md:row-span-2 md:grid-rows-subgrid">
             <label htmlFor="healthcheck_type" className="text-muted-foreground">
               Type
             </label>
@@ -591,7 +590,12 @@ export function HealthcheckChangeField({
               value={old_value?.type}
             />
           </fieldset>
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+          <fieldset
+            className={cn(
+              "grid gap-1.5 md:row-span-2 md:grid-rows-subgrid",
+              old_value?.type === "PATH" ? "md:col-span-2" : "md:col-span-3"
+            )}
+          >
             <label className="text-muted-foreground">Value</label>
             <Input
               disabled
@@ -605,6 +609,24 @@ export function HealthcheckChangeField({
               value={old_value?.value}
             />
           </fieldset>
+          {old_value?.type === "PATH" && (
+            <fieldset
+              className={cn("grid gap-1.5 md:row-span-2 md:grid-rows-subgrid")}
+            >
+              <label className="text-muted-foreground">Listening port</label>
+              <Input
+                disabled
+                placeholder="<empty>"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono bg-muted",
+                  "disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                readOnly
+                value={old_value?.associated_port}
+              />
+            </fieldset>
+          )}
         </div>
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label className="text-muted-foreground">Timeout (in seconds)</label>
@@ -639,8 +661,8 @@ export function HealthcheckChangeField({
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
 
       <fieldset className="w-full flex flex-col gap-5">
-        <div className="flex flex-col md:flex-row md:items-start gap-2">
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+        <div className="grid md:grid-cols-4 md:items-start gap-2 md:grid-rows-2 place-items-stretch">
+          <fieldset className="grid gap-1.5 md:row-span-2 md:grid-rows-subgrid">
             <label htmlFor="healthcheck_type" className="text-muted-foreground">
               <span>Type</span>
               &nbsp;
@@ -660,7 +682,12 @@ export function HealthcheckChangeField({
               value={new_value?.type}
             />
           </fieldset>
-          <fieldset className="flex flex-col gap-1.5 flex-1">
+          <fieldset
+            className={cn(
+              "grid gap-1.5 md:row-span-2 md:grid-rows-subgrid",
+              new_value?.type === "PATH" ? "md:col-span-2" : "md:col-span-3"
+            )}
+          >
             <label className="text-muted-foreground">
               <span>Value</span>
               &nbsp;
@@ -680,6 +707,31 @@ export function HealthcheckChangeField({
               value={new_value?.value}
             />
           </fieldset>
+          {new_value?.type === "PATH" && (
+            <fieldset
+              className={cn(
+                "gap-1.5 flex-1 grid md:row-span-2 md:grid-rows-subgrid"
+              )}
+            >
+              <label className="text-muted-foreground">
+                Listening port&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <Input
+                disabled
+                placeholder="<empty>"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                  "disabled:border-transparent"
+                )}
+                readOnly
+                value={new_value?.associated_port}
+              />
+            </fieldset>
+          )}
         </div>
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label className="text-muted-foreground">
@@ -821,7 +873,7 @@ export function ConfigChangeItem({
   const old_value = change.old_value as DockerService["configs"][number];
 
   return (
-    <div className="flex flex-col md:flex-row gap-2 items-center overflow-x-auto">
+    <div className="flex flex-col gap-2 items-center overflow-x-auto">
       <div
         className={cn("rounded-md p-4 flex items-start gap-2 bg-muted w-full", {
           "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
@@ -872,10 +924,7 @@ export function ConfigChangeItem({
 
       {change.type === "UPDATE" && (
         <>
-          <ArrowDownIcon
-            size={24}
-            className="text-grey md:-rotate-90 flex-none"
-          />
+          <ArrowDownIcon size={24} className="text-grey flex-none" />
 
           <div
             className={cn(

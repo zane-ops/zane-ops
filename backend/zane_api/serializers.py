@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
-from rest_framework.serializers import *
+from rest_framework.serializers import *  # type: ignore
 
 from . import models
 from .validators import validate_url_path, validate_url_domain
@@ -25,7 +25,7 @@ class Error409Serializer(serializers.Serializer):
 
 class ErrorResponse409Serializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=ClientErrorEnum.choices)
-    errors = Error409Serializer(many=True)
+    errors = Error409Serializer(many=True)  # type: ignore
 
 
 class URLPathField(CharField):
@@ -108,7 +108,14 @@ class URLModelSerializer(ModelSerializer):
 
     class Meta:
         model = models.URL
-        fields = ["id", "domain", "base_path", "strip_prefix", "redirect_to"]
+        fields = [
+            "id",
+            "domain",
+            "base_path",
+            "strip_prefix",
+            "redirect_to",
+            "associated_port",
+        ]
 
 
 class DockerEnvVariableSerializer(ModelSerializer):
@@ -134,13 +141,27 @@ class PortConfigurationSerializer(ModelSerializer):
 class HealthCheckSerializer(ModelSerializer):
     class Meta:
         model = models.HealthCheck
-        fields = ["id", "type", "value", "timeout_seconds", "interval_seconds"]
+        fields = [
+            "id",
+            "type",
+            "value",
+            "timeout_seconds",
+            "interval_seconds",
+            "associated_port",
+        ]
 
 
 class DockerDeploymentChangeSerializer(ModelSerializer):
     class Meta:
         model = models.DockerDeploymentChange
-        fields = ["id", "type", "field", "new_value", "old_value", "item_id"]
+        fields = [
+            "id",
+            "type",
+            "field",
+            "new_value",
+            "old_value",
+            "item_id",
+        ]
 
 
 class DockerCredentialSerializer(serializers.Serializer):
@@ -217,6 +238,12 @@ class DeploymentDockerSerializer(DockerServiceSerializer):
     image = serializers.CharField(allow_null=False)
 
 
+class DockerServiceDeploymentURLSerializer(ModelSerializer):
+    class Meta:
+        model = models.DeploymentURL
+        fields = ["domain", "port"]
+
+
 class DockerServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
@@ -224,6 +251,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
     service_snapshot = DeploymentDockerSerializer()
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
     changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+    urls = DockerServiceDeploymentURLSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_redeploy_hash(self, obj: models.DockerDeployment):
@@ -241,7 +269,7 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
             "hash",
             "status",
             "status_reason",
-            "url",
+            "urls",
             "network_aliases",
             "unprefixed_hash",
             "service_snapshot",

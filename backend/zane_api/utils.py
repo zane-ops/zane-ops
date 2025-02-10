@@ -7,12 +7,12 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Callable, TypeVar, List, Optional, Literal
+from typing import Any, Callable, TypeVar, List, Optional, Literal
 import re
 from django.core.cache import cache
 
 
-def cache_result(ttl: int = None, cache_key: str = None):
+def cache_result(ttl: int | None = None, cache_key: str | None = None):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -112,28 +112,28 @@ class DockerSwarmTask:
         cls,
         data: dict[str, str | int | dict[str, str | int | dict]],
     ) -> "DockerSwarmTask":
-        version = Version(**data["Version"])
+        version = Version(**data["Version"])  # type: ignore
         status_data = data["Status"]
         container_status: None | ContainerStatus = None
-        container_status_data = data["Status"].get("ContainerStatus")
+        container_status_data = data["Status"].get("ContainerStatus")  # type: ignore
         if container_status_data is not None:
             container_status = ContainerStatus(
-                ExitCode=container_status_data["ExitCode"],
-                ContainerID=container_status_data.get("ContainerID"),
+                ExitCode=container_status_data["ExitCode"],  # type: ignore
+                ContainerID=container_status_data.get("ContainerID"),  # type: ignore
             )
 
         task_status = Status(
-            Timestamp=status_data["Timestamp"],
-            State=DockerSwarmTaskState(status_data["State"]),
-            Message=status_data["Message"],
+            Timestamp=status_data["Timestamp"],  # type: ignore
+            State=DockerSwarmTaskState(status_data["State"]),  # type: ignore
+            Message=status_data["Message"],  # type: ignore
             ContainerStatus=container_status,
-            Err=status_data.get("Err"),
+            Err=status_data.get("Err"),  # type: ignore
         )
         return DockerSwarmTask(
-            ID=data["ID"],
+            ID=data["ID"],  # type: ignore
             Version=version,
-            CreatedAt=data["CreatedAt"],
-            UpdatedAt=data["UpdatedAt"],
+            CreatedAt=data["CreatedAt"],  # type: ignore
+            UpdatedAt=data["UpdatedAt"],  # type: ignore
             Status=task_status,
             DesiredState=DockerSwarmTaskState(data["DesiredState"]),
         )
@@ -145,23 +145,6 @@ class LockAcquisitionError(Exception):
     def __init__(self, message: str, countdown: int):
         super().__init__(message)
         self.countdown = countdown
-
-
-@contextmanager
-def cache_lock(lock_id: str, timeout=60, margin: int = 5):
-    lock_key = f"{lock_id}_lock"
-    # Attempt to acquire the lock
-    if not cache.add(lock_key, "true", timeout=timeout):  # Lock expires in 60 seconds
-        remaining_ttl = cache.ttl(lock_key) or timeout
-        countdown = remaining_ttl + margin
-        raise LockAcquisitionError(
-            f"Failed to acquire lock for {lock_id}", countdown=countdown
-        )
-
-    try:
-        yield True
-    finally:
-        cache.delete(lock_key)  # Release the lock
 
 
 def format_seconds(seconds: float):
@@ -207,7 +190,7 @@ def format_storage_value(value: int):
     return f"{value/gb:.2f} gb"
 
 
-def jprint(value: dict | list | str | int | float):
+def jprint(value: Any):
     """
     Print & format value as JSON
     """
@@ -227,7 +210,7 @@ def find_item_in_list(predicate: Callable[[T], bool], sequence: List[T]) -> Opti
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
+            return dataclasses.asdict(o)  # type: ignore
         return super().default(o)
 
 
@@ -239,8 +222,6 @@ def random_word(length: int = 10):
 def generate_random_chars(length: int):
     """
     Generate a random set of characters comprised of letters & digits
-
-    :param int length:
     """
     letters = string.ascii_letters + string.digits
     return "".join(random.choice(letters) for _ in range(length))

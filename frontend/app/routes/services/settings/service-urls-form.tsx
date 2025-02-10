@@ -3,6 +3,8 @@ import {
   ArrowRightIcon,
   CheckIcon,
   CopyIcon,
+  ExternalLinkIcon,
+  GlobeIcon,
   InfoIcon,
   LoaderIcon,
   Plus,
@@ -10,7 +12,6 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { Code } from "~/components/code";
 import {
   Accordion,
   AccordionContent,
@@ -84,12 +85,7 @@ export function ServiceURLsForm({
       <div className="flex flex-col gap-3">
         <h3 className="text-lg">URLs</h3>
         <p className="text-gray-400">
-          The domains and base path which are associated to this service. A port
-          with a host value of&nbsp;
-          <Code>80</Code>
-          &nbsp;or&nbsp;
-          <Code>443</Code>
-          &nbsp; is required to be able to add URLs to this service.
+          The domains and base path which are associated to this service.
         </p>
       </div>
       {urls.size > 0 && (
@@ -120,6 +116,7 @@ type ServiceURLFormItemProps = {
 function ServiceURLFormItem({
   domain,
   redirect_to,
+  associated_port,
   base_path,
   change_id,
   change_type,
@@ -203,6 +200,24 @@ function ServiceURLFormItem({
                   hasCopied ? "opacity-100" : "md:opacity-0"
                 )}
                 onClick={() => {
+                  window.open(`//${domain}${base_path}`, "_blank")?.focus();
+                }}
+              >
+                <ExternalLinkIcon size={15} className="flex-none" />
+                <span className="sr-only">Navigate to this url</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Navigate to this url</TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "px-2.5 py-0.5 focus-visible:opacity-100 group-hover:opacity-100",
+                  hasCopied ? "opacity-100" : "md:opacity-0"
+                )}
+                onClick={() => {
                   navigator.clipboard
                     .writeText(`${domain}${base_path}`)
                     .then(() => {
@@ -276,7 +291,7 @@ function ServiceURLFormItem({
         >
           <AccordionTrigger
             className={cn(
-              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start flex-wrap pr-24",
+              "w-full px-3 bg-muted rounded-md gap-2 flex flex-col items-start text-start pr-24",
               "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90",
               {
                 "dark:bg-secondary-foreground bg-secondary/60 ":
@@ -287,15 +302,34 @@ function ServiceURLFormItem({
               }
             )}
           >
-            <p>
-              {domain}
-              <span className="text-grey">{base_path ?? "/"}</span>
-            </p>
+            <div className="inline-flex gap-2 items-center flex-wrap">
+              <GlobeIcon size={15} className="text-grey flex-none" />
+              <p>
+                {domain}
+                <span className="text-grey">{base_path ?? "/"}</span>
+              </p>
+            </div>
             {redirect_to && (
-              <div className="inline-flex gap-2 items-center">
+              <small className="inline-flex gap-2 items-center">
                 <ArrowRightIcon size={15} className="text-grey flex-none" />
-                <span className="text-grey">{redirect_to.url}</span>
-              </div>
+                <span className="text-grey">
+                  <span>{redirect_to.url}</span>
+                  &nbsp;&nbsp;
+                  <span className="text-card-foreground">
+                    [
+                    {redirect_to.permanent
+                      ? "permanent redirect"
+                      : "temporary redirect"}
+                    ]
+                  </span>
+                </span>
+              </small>
+            )}
+            {associated_port && (
+              <small className="inline-flex gap-2 items-center">
+                <ArrowRightIcon size={15} className="text-grey flex-none" />
+                <span className="text-grey">{associated_port}</span>
+              </small>
             )}
           </AccordionTrigger>
           {id && (
@@ -317,6 +351,21 @@ function ServiceURLFormItem({
                       {errors.new_value.non_field_errors}
                     </AlertDescription>
                   </Alert>
+                )}
+                {!isRedirect && (
+                  <FieldSet
+                    errors={errors.new_value?.associated_port}
+                    className="flex-1 inline-flex flex-col gap-1"
+                  >
+                    <FieldSetLabel className="text-gray-400">
+                      Forwarded port
+                    </FieldSetLabel>
+                    <FieldSetInput
+                      placeholder="ex: /"
+                      name="associated_port"
+                      defaultValue={associated_port ?? ""}
+                    />
+                  </FieldSet>
                 )}
 
                 <FieldSet
@@ -512,11 +561,32 @@ function NewServiceURLForm() {
           </AlertDescription>
         </Alert>
       )}
+      {!isRedirect && (
+        <FieldSet
+          errors={errors.new_value?.associated_port}
+          className="flex-1 inline-flex flex-col gap-1"
+        >
+          <FieldSetLabel className="text-gray-400">
+            Forwarded port
+          </FieldSetLabel>
+          <FieldSetInput
+            placeholder="ex: /"
+            name="associated_port"
+            defaultValue={80}
+          />
+        </FieldSet>
+      )}
+
       <FieldSet
         errors={errors.new_value?.domain}
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <FieldSetLabel className="text-gray-400">Domain</FieldSetLabel>
+        <FieldSetLabel className="text-gray-400 inline-flex gap-1">
+          <span>Domain</span>
+          <span className="text-card-foreground">
+            (leave empty to generate)
+          </span>
+        </FieldSetLabel>
         <FieldSetInput name="domain" placeholder="ex: www.mysupersaas.co" />
       </FieldSet>
 

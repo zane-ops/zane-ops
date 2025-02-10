@@ -31,6 +31,7 @@ from ..models import (
     PortConfiguration,
     HttpLog,
     Config,
+    DeploymentURL,
 )
 from ..temporal import (
     check_if_docker_image_exists,
@@ -70,7 +71,7 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
 
 
 class ServicePortsRequestSerializer(serializers.Serializer):
-    host = serializers.IntegerField(required=False, default=80, min_value=1)
+    host = serializers.IntegerField(required=True, min_value=1)
     forwarded = serializers.IntegerField(required=True, min_value=1)
 
 
@@ -126,14 +127,19 @@ class URLRedirectSerializer(serializers.Serializer):
 
 
 class URLRequestSerializer(serializers.Serializer):
-    domain = serializers.URLDomainField(required=True)
+    domain = serializers.URLDomainField(required=False)
     base_path = serializers.URLPathField(required=False, default="/")
     strip_prefix = serializers.BooleanField(required=False, default=True)
     redirect_to = URLRedirectSerializer(required=False)
+    associated_port = serializers.IntegerField(required=False, min_value=1)
 
-    def validate(self, url: dict[str, str]):
-        service: DockerRegistryService = self.context.get("service")
-        if url["domain"] == settings.ZANE_APP_DOMAIN:
+    def validate(self, attrs: dict):
+        service: DockerRegistryService = self.context.get("service")  # type: ignore
+
+        if attrs.get("domain") is None:
+            attrs["domain"] = URL.generate_default_domain(service)
+
+        if attrs["domain"] == settings.ZANE_APP_DOMAIN:
             raise serializers.ValidationError(
                 {
                     "domain": [
@@ -141,7 +147,7 @@ class URLRequestSerializer(serializers.Serializer):
                     ]
                 }
             )
-        if url["domain"] == f"*.{settings.ZANE_APP_DOMAIN}":
+        if attrs["domain"] == f"*.{settings.ZANE_APP_DOMAIN}":
             raise serializers.ValidationError(
                 {
                     "domain": [
@@ -149,7 +155,7 @@ class URLRequestSerializer(serializers.Serializer):
                     ]
                 }
             )
-        if url["domain"] == f"*.{settings.ROOT_DOMAIN}":
+        if attrs["domain"] == f"*.{settings.ROOT_DOMAIN}":
             raise serializers.ValidationError(
                 {
                     "domain": [
@@ -158,21 +164,33 @@ class URLRequestSerializer(serializers.Serializer):
                 }
             )
         existing_urls = URL.objects.filter(
-            Q(domain=url["domain"].lower())
-            & Q(base_path=url["base_path"].lower())
+            Q(domain=attrs["domain"].lower())
+            & Q(base_path=attrs["base_path"].lower())
             & ~Q(dockerregistryservice__id=service.id if service is not None else None)
         ).distinct()
         if len(existing_urls) > 0:
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        f"URL with domain `{url['domain']}` and base path `{url['base_path']}` "
+                        f"URL with domain `{attrs['domain']}` and base path `{attrs['base_path']}` "
                         f"is already assigned to another service."
                     ]
                 }
             )
 
-        domain = url["domain"]
+        existing_deployment_urls = DeploymentURL.objects.filter(
+            Q(domain=attrs["domain"].lower())
+        ).distinct()
+        if len(existing_deployment_urls) > 0:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{attrs['domain']}` is already assigned to another deployment."
+                    ]
+                }
+            )
+
+        domain = attrs["domain"]
         domain_parts = domain.split(".")
         domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
 
@@ -183,13 +201,33 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "domain": [
-                        f"URL with domain `{url['domain']}` cannot be used because it will be shadowed by the wildcard"
+                        f"URL with domain `{attrs['domain']}` cannot be used because it will be shadowed by the wildcard"
                         f" domain `{domain_as_wildcard}` which is already assigned to another service."
                     ]
                 }
             )
 
-        return url
+        if attrs.get("associated_port") is None and attrs.get("redirect_to") is None:
+            raise serializers.ValidationError(
+                {
+                    "associated_port": [
+                        f"To expose this service, you need to add an associated port to forward this URL to."
+                    ]
+                }
+            )
+        elif (
+            attrs.get("associated_port") is not None
+            and attrs.get("redirect_to") is not None
+        ):
+            raise serializers.ValidationError(
+                {
+                    "associated_port": [
+                        f"You cannot provide an associated port if this URL is redirect URL."
+                    ]
+                }
+            )
+
+        return attrs
 
 
 class MemoryLimitRequestSerializer(serializers.Serializer):
@@ -205,7 +243,7 @@ class MemoryLimitRequestSerializer(serializers.Serializer):
     def validate(self, attrs: dict[str, int | str]):
         _, max_memory = get_server_resource_limits()
         six_megabytes = 6 * 1024 * 1024
-        value_in_bytes = convert_value_to_bytes(attrs["value"], attrs["unit"])
+        value_in_bytes = convert_value_to_bytes(int(attrs["value"]), attrs["unit"])  # type: ignore
         # The documentation for docker says that we can't use less than 6mb of memory :
         # https://docs.docker.com/engine/containers/resource_constraints/#limit-a-containers-access-to-memory
         if value_in_bytes < six_megabytes:
@@ -247,14 +285,30 @@ class HealthCheckRequestSerializer(serializers.Serializer):
     value = serializers.CharField(max_length=255, required=True)
     timeout_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
     interval_seconds = serializers.IntegerField(required=False, default=30, min_value=5)
+    associated_port = serializers.IntegerField(required=False, min_value=1)
 
-    def validate(self, data: dict):
-        if data["type"] == "PATH":
+    def validate(self, attrs: dict):
+        if attrs["type"] == "PATH":
             try:
-                validate_url_path(data["value"])
+                validate_url_path(attrs["value"])
             except ValidationError as e:
                 raise serializers.ValidationError({"value": e.messages})
-        return data
+
+            if attrs.get("associated_port") is None:
+                raise serializers.ValidationError(
+                    {
+                        "associated_port": "This field is required.",
+                    }
+                )
+        else:
+            if attrs.get("associated_port") is not None:
+                raise serializers.ValidationError(
+                    {
+                        "associated_port": "Cannot specify an associated port for healthcheck of types `COMMAND`.",
+                    }
+                )
+
+        return attrs
 
 
 class EnvRequestSerializer(serializers.Serializer):
@@ -267,9 +321,9 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     image = serializers.CharField(required=True)
     credentials = DockerCredentialsRequestSerializer(required=False)
 
-    def validate(self, data: dict):
-        credentials = data.get("credentials")
-        image = data.get("image")
+    def validate(self, attrs: dict):
+        credentials = attrs.get("credentials")
+        image = attrs["image"]
 
         do_image_exists = check_if_docker_image_exists(
             image,
@@ -285,7 +339,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
                 }
             )
 
-        return data
+        return attrs
 
 
 # ==============================
@@ -310,7 +364,7 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
         if image is None:
             return None
 
-        service: DockerRegistryService = self.context.get("service")
+        service: DockerRegistryService | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 
@@ -543,7 +597,7 @@ class BaseFieldChangeSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService = self.context.get("service")
+        service: DockerRegistryServic | None = self.context.get("service")  # type: ignore
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -602,30 +656,6 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
-        if (
-            change_type == "DELETE"
-            and snapshot.healthcheck is not None
-            and snapshot.healthcheck.type == "PATH"
-        ):
-            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": {
-                            "non_field_errors": f"Cannot delete an URL if there is a path healthcheck attached to it"
-                            f" and the service is not exposed to the public through a port with a HTTP `host` (80/443)"
-                        }
-                    }
-                )
-
-        if change_type == "ADD" and len(snapshot.http_ports) == 0:
-            raise serializers.ValidationError(
-                {
-                    "new_value": {
-                        "non_field_errors": f"adding an URL requires that one port with a HTTP `host` (80/443) is set in the service."
-                    }
-                }
-            )
-
         return attrs
 
 
@@ -633,14 +663,14 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
     new_value = VolumeRequestSerializer(required=False)
     field = serializers.ChoiceField(choices=["volumes"], required=True)
 
-    def validate(self, change: dict):
-        super().validate(change)
+    def validate(self, attrs: dict):
+        super().validate(attrs)
         service = self.get_service()
-        change_type = change["type"]
-        new_value = change.get("new_value") or {}
+        change_type = attrs["type"]
+        new_value = attrs.get("new_value") or {}
         current_volume: Volume | None = None
         if change_type in ["DELETE", "UPDATE"]:
-            item_id = change["item_id"]
+            item_id = attrs["item_id"]
 
             try:
                 current_volume = service.volumes.get(id=item_id)
@@ -653,7 +683,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, change)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         # validate double container paths
         volumes_with_same_container_path = list(
@@ -692,7 +722,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if host path is not already used by another service
         if new_value.get("host_path") is not None:
-            already_existing_volumes: QuerySet[dict] = Volume.objects.filter(
+            already_existing_volumes = Volume.objects.filter(
                 Q(host_path__isnull=False)
                 & Q(host_path=new_value.get("host_path"))
                 & ~Q(dockerregistryservice__id=service.id)
@@ -739,21 +769,21 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        return change
+        return attrs
 
 
 class ConfigItemChangeSerializer(BaseChangeItemSerializer):
     field = serializers.ChoiceField(choices=["configs"], required=True)
     new_value = ConfigRequestSerializer(required=False)
 
-    def validate(self, change: dict):
-        super().validate(change)
+    def validate(self, attrs: dict):
+        super().validate(attrs)
         service = self.get_service()
-        change_type = change["type"]
-        new_value = change.get("new_value") or {}
+        change_type = attrs["type"]
+        new_value = attrs.get("new_value") or {}
 
         if change_type in ["DELETE", "UPDATE"]:
-            item_id = change["item_id"]
+            item_id = attrs["item_id"]
 
             try:
                 service.configs.get(id=item_id)
@@ -765,7 +795,7 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
                         ]
                     }
                 )
-        snapshot = compute_docker_service_snapshot_with_changes(service, change)
+        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
 
         # validate double container paths
         config_with_same_path = list(
@@ -797,7 +827,7 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
-        return change
+        return attrs
 
 
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
@@ -813,7 +843,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
             item_id = attrs["item_id"]
 
             try:
-                service.env_variables.get(id=item_id)
+                service.env_variables.get(id=item_id)  # type: ignore
             except DockerEnvVariable.DoesNotExist:
                 raise serializers.ValidationError(
                     {
@@ -886,38 +916,23 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
-        # validate double http port
-        if len(snapshot.http_ports) >= 2:
+        # do not allow for binding to http
+        if len(snapshot.http_ports) > 0:
             raise serializers.ValidationError(
                 {
                     "new_value": {
-                        "host": "Only one HTTP `host` port (80/443) is allowed,"
-                        " we cannot forward the http requests to two distinct ports."
+                        "host": "You cannot expose a service to the HTTP output (80/443),"
+                        " please add an URL if you want to expose your app to the internet."
                     }
                 }
             )
 
-        # validate that url & host ports don't clash
-        http_ports = [80, 443]
-
         # check if port is available
         public_port = new_value.get("host")
-        if public_port is not None and public_port not in http_ports:
-            is_port_available = check_if_port_is_available_on_host(public_port)
-            if not is_port_available:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": {
-                            "host": f"Port `{public_port}` is not available on the host machine."
-                        }
-                    }
-                )
 
         # check if port is not already used by another service
-        already_existing_port: PortConfiguration = PortConfiguration.objects.filter(
-            Q(host=public_port)
-            & Q(host__isnull=False)
-            & ~Q(dockerregistryservice=service)
+        already_existing_port = PortConfiguration.objects.filter(
+            Q(host=public_port) & ~Q(dockerregistryservice=service)
         ).first()
         if already_existing_port is not None:
             raise serializers.ValidationError(
@@ -928,18 +943,16 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
-        if (
-            change_type == "DELETE"
-            and snapshot.healthcheck is not None
-            and snapshot.healthcheck.type == "PATH"
+        if public_port is not None and not check_if_port_is_available_on_host(
+            public_port
         ):
-            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": f"Cannot delete a PORT if there is a path healthcheck attached to it "
-                        f"and the service is not exposed to the public through an URL or a port with a `host` HTTP (80/443)"
+            raise serializers.ValidationError(
+                {
+                    "new_value": {
+                        "host": f"Port `{public_port}` is not available on the host machine."
                     }
-                )
+                }
+            )
 
         return attrs
 
@@ -954,8 +967,8 @@ class DockerSourceRequestSerializer(serializers.Serializer):
     credentials = DockerCredentialsRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
-        image = attrs.get("image")
-        credentials = attrs.get("credentials")
+        image: str = attrs["image"]
+        credentials: dict | None = attrs.get("credentials")
         if credentials is not None and (
             len(credentials) == 0
             or (not credentials.get("username") and not credentials.get("password"))
@@ -990,21 +1003,6 @@ class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
 class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["healthcheck"], required=True)
     new_value = HealthCheckRequestSerializer(required=True, allow_null=True)
-
-    def validate(self, attrs: dict):
-        service = self.get_service()
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
-
-        new_healthcheck = attrs.get("new_value")
-        if new_healthcheck is not None and new_healthcheck.get("type") == "PATH":
-            if len(snapshot.urls) == 0 and len(snapshot.http_ports) == 0:
-                raise serializers.ValidationError(
-                    {
-                        "new_value": f"healthcheck requires that at least one `url`"
-                        f" or one port with a HTTP `host` (80/443) is set in the service."
-                    }
-                )
-        return attrs
 
 
 class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
@@ -1196,7 +1194,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     request_path = django_filters.BaseInFilter(method="filter_multiple_values")
 
     def filter_multiple_values(self, queryset: QuerySet, name: str, value: str):
-        params = self.request.GET.getlist(name)
+        params = self.request.GET.getlist(name)  # type: ignore
 
         status_prefix_path = r"^\dxx$"
 

@@ -49,6 +49,7 @@ from ..models import (
     DockerDeployment,
     DockerDeploymentChange,
     GitDeployment,
+    Config,
 )
 from ..serializers import (
     ProjectSerializer,
@@ -73,7 +74,7 @@ class ProjectsListAPIView(ListCreateAPIView):
         Project.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
-    def get_queryset(self) -> QuerySet[Project]:
+    def get_queryset(self) -> QuerySet[Project]:  # type: ignore
         queryset = Project.objects.filter(owner=self.request.user).order_by(
             "-updated_at"
         )
@@ -152,12 +153,12 @@ class ProjectsListAPIView(ListCreateAPIView):
             # To prevent collisions
             Faker.seed(time.monotonic())
             fake = Faker()
-            slug = data.get("slug", fake.slug()).lower()
+            slug = data.get("slug", fake.slug()).lower()  # type: ignore
             try:
                 new_project = Project.objects.create(
                     slug=slug,
                     owner=request.user,
-                    description=data.get("description"),
+                    description=data.get("description"),  # type: ignore
                 )
             except IntegrityError:
                 raise ResourceConflict(
@@ -175,6 +176,8 @@ class ProjectsListAPIView(ListCreateAPIView):
                 )
                 response = ProjectSerializer(new_project)
                 return Response(response.data, status=status.HTTP_201_CREATED)
+
+        raise NotImplementedError("should never reach here")
 
 
 class ArchivedProjectsListAPIView(ListAPIView):
@@ -214,8 +217,8 @@ class ProjectDetailsView(APIView):
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             try:
-                project.slug = form.data.get("slug", project.slug)
-                project.description = form.data.get("description", project.description)
+                project.slug = form.data.get("slug", project.slug)  # type: ignore
+                project.description = form.data.get("description", project.description)  # type: ignore
                 project.save()
             except IntegrityError:
                 raise ResourceConflict(
@@ -224,6 +227,7 @@ class ProjectDetailsView(APIView):
             else:
                 response = ProjectSerializer(project)
                 return Response(response.data)
+        raise NotImplementedError("should not reach here")
 
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
@@ -245,7 +249,7 @@ class ProjectDetailsView(APIView):
     )
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
-        project: Project = (
+        project = (
             Project.objects.filter(
                 slug=slug.lower(), owner=request.user
             ).select_related("archived_version")
@@ -260,7 +264,7 @@ class ProjectDetailsView(APIView):
 
         docker_service_list = (
             DockerRegistryService.objects.filter(Q(project=project))
-            .select_related("project")
+            .select_related("project", "healthcheck")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"
             )
@@ -275,13 +279,14 @@ class ProjectDetailsView(APIView):
         ).delete()
         URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         docker_service_list.delete()
 
         transaction.on_commit(
             lambda: start_workflow(
                 RemoveProjectResourcesWorkflow.run,
                 ArchivedProjectDetails(
-                    id=archived_version.id, original_id=archived_version.original_id
+                    id=archived_version.pk, original_id=archived_version.original_id
                 ),
                 id=archived_version.workflow_id,
             )
@@ -345,7 +350,7 @@ class ProjectServiceListView(APIView):
 
         service_list: list[dict] = []
         for service in docker_services:
-            url = service.url_list[0] if service.url_list else None
+            url = service.url_list[0] if service.url_list else None  # type: ignore
             status_map = {
                 DockerDeployment.DeploymentStatus.HEALTHY: "HEALTHY",
                 DockerDeployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
@@ -383,11 +388,11 @@ class ProjectServiceListView(APIView):
                         tag=tag,
                         updated_at=service.updated_at,
                         slug=service.slug,
-                        volume_number=service.volume_number,
+                        volume_number=service.volume_number,  # type: ignore
                         url=str(url) if url is not None else None,
                         status=(
-                            status_map[service.latest_deployment_status]
-                            if service.latest_deployment_status is not None
+                            status_map[service.latest_deployment_status]  # type: ignore
+                            if service.latest_deployment_status is not None  # type: ignore
                             else "NOT_DEPLOYED_YET"
                         ),
                     )

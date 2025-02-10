@@ -586,17 +586,21 @@ async function requestServiceChange({
     case "ports": {
       userData = {
         forwarded: Number(formData.get("forwarded")?.toString() ?? ""),
-        host: Number((formData.get("host")?.toString() ?? "").trim() || 80)
+        host: Number((formData.get("host")?.toString() ?? "").trim())
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
     case "urls": {
       const isRedirect = formData.get("is_redirect")?.toString() === "on";
 
+      const domain = formData.get("domain")?.toString();
       userData = {
-        domain: formData.get("domain")?.toString() ?? "",
+        domain: domain ? domain : undefined,
         base_path: formData.get("base_path")?.toString(),
         strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+        associated_port: isRedirect
+          ? undefined
+          : Number(formData.get("associated_port")?.toString().trim()),
         redirect_to: !isRedirect
           ? undefined
           : {
@@ -615,12 +619,21 @@ async function requestServiceChange({
     case "healthcheck": {
       const removeHealthcheck =
         formData.get("intent")?.toString() === "remove-service-healthcheck";
+
+      const type = formData.get("type")?.toString() as NonNullable<
+        DockerService["healthcheck"]
+      >["type"];
+
       userData = removeHealthcheck
         ? null
         : ({
             type: formData.get("type")?.toString() as NonNullable<
               DockerService["healthcheck"]
             >["type"],
+            associated_port:
+              type === "PATH"
+                ? Number(formData.get("associated_port")?.toString())
+                : undefined,
             value: formData.get("value")?.toString() ?? "",
             timeout_seconds: Number(
               formData.get("timeout_seconds")?.toString() || 30

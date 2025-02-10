@@ -1,3 +1,4 @@
+# type: ignore
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
@@ -13,6 +14,7 @@ from ..models import (
     DockerDeploymentChange,
     ArchivedURL,
     Config,
+    DeploymentURL,
 )
 from ..temporal import (
     ZaneProxyClient,
@@ -250,7 +252,18 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertIsNone(deleted_docker_service)
 
     async def test_archive_service_with_port(self):
-        project, service = await self.acreate_and_deploy_caddy_docker_service()
+        project, service = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "host": 6379,
+                        "forwarded": 6379,
+                    },
+                )
+            ]
+        )
         deployment = await service.deployments.afirst()
 
         response = await self.async_client.delete(
@@ -290,11 +303,13 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                         "domain": "thullo.fredkiss.dev",
                         "base_path": "/api",
                         "strip_prefix": True,
+                        "associated_port": 80,
                     },
                 )
             ]
         )
         deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment_url: DeploymentURL = await deployment.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(
                 service.id, await service.urls.afirst()
@@ -323,7 +338,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             .prefetch_related("urls")
             .afirst()
         )
-        self.assertEqual(1, len(archived_service.urls.all()))
+        self.assertEqual(2, len(archived_service.urls.all()))
         url: ArchivedURL = await archived_service.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(archived_service.original_id, url),
@@ -331,7 +346,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
         response = requests.get(
-            ZaneProxyClient.get_uri_for_deployment(deployment.hash),
+            ZaneProxyClient.get_uri_for_deployment(
+                deployment.hash, first_deployment_url.domain
+            ),
             timeout=5,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

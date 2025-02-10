@@ -32,6 +32,12 @@ class ArchivedProjectDetails:
 
 
 @dataclass
+class DeploymentURLDto:
+    domain: str
+    port: int
+
+
+@dataclass
 class DockerDeploymentDetails:
     hash: str
     slot: str
@@ -39,7 +45,7 @@ class DockerDeploymentDetails:
     queued_at: str
     workflow_id: str
     service: DockerServiceSnapshot
-    url: Optional[str] = None
+    urls: List[DeploymentURLDto] = field(default_factory=list)
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
     network_alias: Optional[str] = None
@@ -51,8 +57,8 @@ class DockerDeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
-            url=deployment.url,
-            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),
+            urls=[DeploymentURLDto(domain=url.domain, port=url.port) for url in deployment.urls.all()],  # type: ignore
+            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
                     dict(
@@ -63,7 +69,7 @@ class DockerDeploymentDetails:
                         item_id=change.item_id,
                     )
                 )
-                for change in deployment.changes.all()
+                for change in deployment.changes.all()  # type: ignore
             ],
             workflow_id=deployment.workflow_id,
             network_alias=deployment.network_alias,
@@ -73,7 +79,7 @@ class DockerDeploymentDetails:
     async def afrom_deployment(
         cls,
         deployment: DockerDeployment,
-        pause_at_step: Enum = None,
+        pause_at_step: Enum | None = None,
     ):
         return cls(
             pause_at_step=pause_at_step.value if pause_at_step is not None else 0,
@@ -81,8 +87,8 @@ class DockerDeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
-            url=deployment.url,
-            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),
+            urls=[DeploymentURLDto(domain=url.domain, port=url.port) async for url in deployment.urls.all()],  # type: ignore
+            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
                     dict(
@@ -93,7 +99,7 @@ class DockerDeploymentDetails:
                         item_id=change.item_id,
                     )
                 )
-                async for change in deployment.changes.all()
+                async for change in deployment.changes.all()  # type: ignore
             ],
             workflow_id=deployment.workflow_id,
             network_alias=deployment.network_alias,
@@ -131,8 +137,8 @@ class SimpleDeploymentDetails:
     hash: str
     project_id: str
     service_id: str
+    urls: List[str] = field(default_factory=list)
     status: Optional[str] = None
-    url: Optional[str] = None
     service_snapshot: Optional[DockerServiceSnapshot] = None
 
     @property
@@ -159,7 +165,7 @@ class HealthcheckDeploymentDetails:
 @dataclass
 class DeployDockerServiceWorkflowResult:
     deployment_status: str
-    deployment_status_reason: str
+    deployment_status_reason: str | None
     healthcheck_result: Optional[DeploymentHealthcheckResult] = None
     next_queued_deployment: Optional[DockerDeploymentDetails] = None
 

@@ -130,14 +130,14 @@ export function DockerServiceCard({
             className="text-sm flex items-center gap-2 text-link z-10 relative hover:underline"
           >
             <LinkIcon className="flex-none" size={15} />
-            <div className="whitespace-nowrap overflow-x-hidden  text-ellipsis ">
+            <div className="whitespace-nowrap overflow-x-hidden text-ellipsis">
               {url}
             </div>
           </a>
         )}
 
-        <p className="flex items-center gap-2 z-10 relative">
-          <Tag size={15} /> {tag}
+        <p className="flex items-center gap-2 z-10 relative text-ellipsis overflow-x-hidden whitespace-nowrap">
+          <Tag size={15} /> <span>{tag}</span>
         </p>
         <p className="flex gap-2 items-center z-10 relative">{updatedAt}</p>
       </CardContent>

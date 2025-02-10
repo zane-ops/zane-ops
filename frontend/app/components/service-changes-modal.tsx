@@ -122,6 +122,7 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
               const changes = item[1] as NonNullable<
                 (typeof serviceChangeGroups)[typeof field]
               >;
+              const fieldName = field === "configs" ? "Config files" : field;
               return (
                 <AccordionItem
                   key={field}
@@ -133,7 +134,9 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
                       size={15}
                       className="flex-none text-grey"
                     />
-                    <span>{capitalizeText(field.replaceAll("_", " "))}</span>
+                    <span>
+                      {capitalizeText(fieldName.replaceAll("_", " "))}
+                    </span>
                     <small className="text-grey">
                       {changes.length} {pluralize("change", changes.length)}
                       &nbsp;will be applied

@@ -1,3 +1,4 @@
+# type: ignore
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -74,6 +75,7 @@ class ArchivedURL(models.Model):
     base_path = models.CharField(default="/")
     strip_prefix = models.BooleanField(default=True)
     original_id = models.CharField(null=True)
+    associated_port = models.PositiveIntegerField(null=True)
 
     def __str__(self):
         base_path = (
@@ -194,12 +196,14 @@ class ArchivedDockerService(ArchivedBaseService):
                     value=service.healthcheck.value,
                     interval_seconds=service.healthcheck.interval_seconds,
                     timeout_seconds=service.healthcheck.timeout_seconds,
+                    associated_port=service.healthcheck.associated_port,
                 )
                 if service.healthcheck is not None
                 else None
             ),
             deployments=[
-                dict(url=dpl.url, hash=dpl.hash) for dpl in service.deployments.all()
+                dict(urls=[url.domain for url in dpl.urls.all()], hash=dpl.hash)
+                for dpl in service.deployments.all()
             ],
         )
 
@@ -253,6 +257,7 @@ class ArchivedDockerService(ArchivedBaseService):
                     base_path=url.base_path,
                     strip_prefix=url.strip_prefix,
                     original_id=url.id,
+                    associated_port=url.associated_port,
                 )
                 for url in service.urls.all()
             ]

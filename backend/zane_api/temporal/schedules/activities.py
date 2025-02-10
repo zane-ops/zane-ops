@@ -93,11 +93,6 @@ class MonitorDockerDeploymentActivities:
         details: HealthcheckDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         try:
-            deployment: DockerDeployment = await (
-                DockerDeployment.objects.filter(hash=details.deployment.hash)
-                .select_related("service")
-                .afirst()
-            )
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=details.deployment.hash,
@@ -166,13 +161,16 @@ class MonitorDockerDeploymentActivities:
                 )
 
                 if most_recent_swarm_task.state == DockerSwarmTaskState.SHUTDOWN:
-                    status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode
+                    status_code = most_recent_swarm_task.Status.ContainerStatus.ExitCode  # type: ignore
                     if (
                         status_code is not None and status_code != exited_without_error
                     ) or most_recent_swarm_task.Status.Err is not None:
                         deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
 
-                if most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING:
+                if (
+                    most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING
+                    and most_recent_swarm_task.container_id is not None
+                ):
                     if healthcheck is not None:
                         try:
                             print(
@@ -199,8 +197,7 @@ class MonitorDockerDeploymentActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                service_http_port = await deployment.service.ahttp_port
-                                full_url = f"http://{swarm_service.name}:{service_http_port.forwarded}{healthcheck.value}"
+                                full_url = f"http://{swarm_service.name}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=healthcheck_timeout,
@@ -279,7 +276,9 @@ class CleanupActivities:
         deleted_count = search_client.delete(
             index_name=settings.ELASTICSEARCH_LOGS_INDEX,
             query={
-                "time_before": (today - timedelta(days=30)).isoformat(),
+                "time_before": (
+                    today - timedelta(days=14)
+                ).isoformat(),  # only keep logs for 2 weeks
             },
         )
         return LogsCleanupResult(deleted_count=deleted_count)

@@ -25,6 +25,7 @@ from .serializers import (
     ServiceSearchSerializer,
 )
 
+
 class ResouceSearchAPIView(APIView):
     @extend_schema(
         operation_id="searchResources",
@@ -56,11 +57,9 @@ class ResouceSearchAPIView(APIView):
             for project in projects
         ]
 
-        services: QuerySet[DockerRegistryService] = (
-            DockerRegistryService.objects.filter(
-                slug__istartswith=query
-            ).select_related("project")[:5]
-        )
+        services = DockerRegistryService.objects.filter(
+            slug__istartswith=query
+        ).select_related("project")[:5]
 
         services_object = [
             {

@@ -80,18 +80,14 @@ export function ServicePortsForm({
         <p className="text-gray-400">
           This makes the service reachable externally via the ports defined
           in&nbsp;
-          <Code>host port</Code>. Using&nbsp;
-          <Code>80</Code>
-          &nbsp;or&nbsp;
-          <Code>443</Code>
-          &nbsp;will create a default URL for the service.
+          <Code>host port</Code>.
         </p>
 
         <Alert variant="warning">
           <TriangleAlertIcon size={15} />
           <AlertTitle>Warning</AlertTitle>
           <AlertDescription>
-            Using a host value other than 80 or 443 will disable&nbsp;
+            Adding ports will disable&nbsp;
             <a
               href="#"
               className="text-link underline inline-flex gap-1 items-center"
@@ -313,7 +309,7 @@ function ServicePortItem({
                     </label>
                     <Input
                       placeholder="ex: 80"
-                      defaultValue={host ?? 80}
+                      defaultValue={host}
                       id={`host-${id}`}
                       name="host"
                       aria-invalid={Boolean(errors.new_value?.host)}
@@ -414,7 +410,7 @@ function NewServicePortForm() {
         className="flex-1 inline-flex flex-col gap-1"
       >
         <FieldSetLabel className="text-gray-400">Host port</FieldSetLabel>
-        <FieldSetInput placeholder="ex: 80" defaultValue={80} name="host" />
+        <FieldSetInput placeholder="ex: 8080" name="host" />
       </FieldSet>
 
       <div className="flex gap-3 items-center pt-7 w-full md:w-auto">

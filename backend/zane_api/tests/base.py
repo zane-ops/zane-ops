@@ -4,14 +4,14 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import List, Callable, Optional
+from typing import Any, List, Callable, Mapping, Optional
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import AsyncClient
+from django.test import AsyncClient  # type: ignore
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from docker.types import (
@@ -20,6 +20,7 @@ from docker.types import (
     NetworkAttachmentConfig,
     ConfigReference,
 )
+from asgiref.sync import sync_to_async
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -35,6 +36,7 @@ from ..models import (
     DockerDeployment,
     Volume,
     Config,
+    URL,
 )
 from ..temporal import (
     get_network_resource_name,
@@ -276,11 +278,11 @@ class AsyncCustomAPIClient(AsyncClient):
 class APITestCase(TestCase):
     def setUp(self):
         self.client = CustomAPIClient(parent=self)
-        self.async_client = AsyncCustomAPIClient(parent=self)
+        self.async_client = AsyncCustomAPIClient(parent=self)  # type: ignore
         self.fake_docker_client = FakeDockerClient()
         self.search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
         self.ELASTICSEARCH_LOGS_INDEX = (
-            f"{settings.ELASTICSEARCH_LOGS_INDEX}-{random_word()}"
+            f"{settings.ELASTICSEARCH_LOGS_INDEX}{random_word()}"
         )
         settings_ctx = override_settings(
             ELASTICSEARCH_LOGS_INDEX=self.ELASTICSEARCH_LOGS_INDEX
@@ -310,9 +312,18 @@ class APITestCase(TestCase):
     def tearDown(self):
         cache.clear()
 
-    def assertDictContainsSubset(self, subset: dict, parent: dict, msg: object = None):
+    def assertDictContainsSubset(
+        self,
+        subset: Mapping[Any, Any],
+        dictionary: Mapping[Any, Any],
+        msg: object = None,
+    ):
         extracted_subset = dict(
-            [(key, parent[key]) for key in subset.keys() if key in parent.keys()]
+            [
+                (key, dictionary[key])
+                for key in subset.keys()
+                if key in dictionary.keys()
+            ]
         )
         self.assertEqual(subset, extracted_subset, msg)
 
@@ -357,7 +368,7 @@ class AuthAPITestCase(APITestCase):
         worker = Worker(
             env.client,
             task_queue=task_queue,
-            **get_workflows_and_activities(),
+            **get_workflows_and_activities(),  # type: ignore
         )
         await worker.__aenter__()
 
@@ -373,7 +384,7 @@ class AuthAPITestCase(APITestCase):
                 WorkflowScheduleHandle(id, interval=interval)
             )
 
-        async def pause_schedule(id: str, note: str = None):
+        async def pause_schedule(id: str, note: str | None = None):
             schedule_handle = find_item_in_list(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
@@ -381,7 +392,7 @@ class AuthAPITestCase(APITestCase):
                 schedule_handle.is_running = False
                 schedule_handle.note = note
 
-        async def unpause_schedule(id: str, note: str = None):
+        async def unpause_schedule(id: str, note: str | None = None):
             schedule_handle = find_item_in_list(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
@@ -461,7 +472,7 @@ class AuthAPITestCase(APITestCase):
     def create_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] = None,
+        other_changes: list[DockerDeploymentChange] | None = None,
     ):
         owner = self.loginUser()
         project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
@@ -516,7 +527,7 @@ class AuthAPITestCase(APITestCase):
     async def acreate_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] = None,
+        other_changes: list[DockerDeploymentChange] | None = None,
     ) -> tuple[Project, DockerRegistryService]:
         owner = await self.aLoginUser()
         response = await self.async_client.post(
@@ -577,7 +588,7 @@ class AuthAPITestCase(APITestCase):
     async def acreate_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] = None,
+        other_changes: list[DockerDeploymentChange] | None = None,
     ):
         owner = await self.aLoginUser()
         response = await self.async_client.post(
@@ -616,6 +627,7 @@ class AuthAPITestCase(APITestCase):
                         "value": "/",
                         "timeout_seconds": 30,
                         "interval_seconds": 30,
+                        "associated_port": 80,
                     },
                     service=service,
                 ),
@@ -626,9 +638,16 @@ class AuthAPITestCase(APITestCase):
         await DockerDeploymentChange.objects.abulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    field=DockerDeploymentChange.ChangeField.URLS,
                     type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
+                    new_value={
+                        "domain": await sync_to_async(URL.generate_default_domain)(
+                            service
+                        ),
+                        "associated_port": 80,
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
                     service=service,
                 ),
             ]
@@ -651,7 +670,7 @@ class AuthAPITestCase(APITestCase):
     def create_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] = None,
+        other_changes: list[DockerDeploymentChange] | None = None,
     ):
         owner = self.loginUser()
         project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
@@ -680,6 +699,7 @@ class AuthAPITestCase(APITestCase):
                         "value": "/",
                         "timeout_seconds": 30,
                         "interval_seconds": 30,
+                        "associated_port": 80,
                     },
                     service=service,
                 ),
@@ -690,9 +710,14 @@ class AuthAPITestCase(APITestCase):
         DockerDeploymentChange.objects.bulk_create(
             [
                 DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
+                    field=DockerDeploymentChange.ChangeField.URLS,
                     type=DockerDeploymentChange.ChangeType.ADD,
-                    new_value={"forwarded": 80, "host": 80},
+                    new_value={
+                        "domain": URL.generate_default_domain(service),
+                        "associated_port": 80,
+                        "base_path": "/",
+                        "strip_prefix": True,
+                    },
                     service=service,
                 ),
             ]
@@ -724,7 +749,9 @@ class FakeDockerClient:
             self.parent.network_remove(self.name)
 
     class FakeVolume:
-        def __init__(self, parent: "FakeDockerClient", name: str, labels: dict = None):
+        def __init__(
+            self, parent: "FakeDockerClient", name: str, labels: dict | None = None
+        ):
             self.name = name
             self.parent = parent
             self.labels = labels if labels is not None else {}
@@ -733,7 +760,9 @@ class FakeDockerClient:
             self.parent.volume_map.pop(self.name)
 
     class FakeConfig:
-        def __init__(self, parent: "FakeDockerClient", name: str, labels: dict = None):
+        def __init__(
+            self, parent: "FakeDockerClient", name: str, labels: dict | None = None
+        ):
             self.name = name
             self.id = name
             self.parent = parent
@@ -747,12 +776,12 @@ class FakeDockerClient:
             self,
             parent: "FakeDockerClient",
             name: str,
-            volumes: dict[str, dict[str, str]] = None,
-            configs: list[ConfigReference] = None,
-            env: dict[str, str] = None,
-            endpoint: EndpointSpec = None,
-            resources: Resources = None,
-            networks: List[NetworkAttachmentConfig] = None,
+            volumes: dict[str, dict[str, str]] | None = None,
+            configs: list[ConfigReference] | None = None,
+            env: dict[str, str] | None = None,
+            endpoint: EndpointSpec | None = None,
+            resources: Resources | None = None,
+            networks: List[NetworkAttachmentConfig] | None = None,
         ):
             self.attrs = {
                 "Spec": {
@@ -879,8 +908,8 @@ class FakeDockerClient:
         return self.service_map.get(
             get_swarm_service_name_for_deployment(
                 deployment_hash=deployment.hash,
-                service_id=deployment.service_id,
-                project_id=deployment.service.project_id,
+                service_id=deployment.service_id,  # type: ignore
+                project_id=deployment.service.project_id,  # type: ignore
             )
         )
 
@@ -898,7 +927,7 @@ class FakeDockerClient:
         return FakeDockerClient.FakeContainer()
 
     def containers_run(self, command: str, *args, **kwargs):
-        ports: dict[str, tuple[str, int]] = kwargs.get("ports")
+        ports: dict[str, tuple[str, int]] = kwargs.get("ports")  # type: ignore
         if ports is not None:
             _, port = list(ports.values())[0]
             if port == self.PORT_USED_BY_HOST:
@@ -1018,7 +1047,6 @@ class FakeDockerClient:
                 "is_automated": False,
                 "is_official": False,
                 "name": "siwecos/caddy",
-                "star_count": 0,
             },
         ]
 
