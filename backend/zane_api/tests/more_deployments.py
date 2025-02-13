@@ -772,7 +772,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(0, changes.count())
 
-    def test_validate_env_string_change_prevent_double_env_values(self):
+    def test_validate_env_string_change_prevent_double_env_values_with_changes(self):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
 
@@ -795,6 +795,44 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 new_value={"key": "POSTGRES_USER", "value": "zane"},
             )
         )
+
+        # env_variable
+        changes_payload = {
+            "new_value": (
+                'POSTGRES_USER="posgtres"\n'
+                + 'POSTGRES_DB="zaneops"\n'
+                + "POSTGRES_PASSWORD=password\n"
+            )
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_env_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_validate_env_string_change_prevent_double_env_values_with_service_envs(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+
+        create_service_payload = {
+            "slug": "app",
+            "image": "caddy:2.8-alpine",
+        }
+
+        response = self.client.post(
+            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug="app")
+
         service.env_variables.create(key="POSTGRES_DB", value="zane-db")
 
         # env_variable

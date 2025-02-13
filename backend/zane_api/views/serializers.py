@@ -1333,21 +1333,22 @@ class EnvStringChangeSerializer(serializers.Serializer):
         attrs["new_value"] = new_value
 
         # validate double `key`
+        env_changes = [
+            DeploymentChangeDto(
+                type="ADD",
+                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                new_value={
+                    "key": key,
+                    "value": value,
+                },
+            )
+            for key, value in envs.items()
+        ]
         snapshot = compute_docker_service_snapshot(
             DockerServiceSnapshot.from_dict(
                 serializers.DockerServiceSerializer(service).data  # type: ignore
             ),
-            [
-                DeploymentChangeDto(
-                    type="ADD",
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    new_value={
-                        "key": key,
-                        "value": value,
-                    },
-                )
-                for key, value in envs.items()
-            ],
+            [*env_changes, *compute_all_deployment_changes(service)],
         )
 
         for env in snapshot.duplicate_envs:
