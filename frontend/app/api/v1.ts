@@ -110,6 +110,13 @@ export interface paths {
      */
     put: operations["redeployDockerService"];
   };
+  "/api/projects/{project_slug}/request-env-changes/docker/{service_slug}/": {
+    /**
+     * Request env changes
+     * @description Request a change to the environments variables of a service.
+     */
+    put: operations["requestEnvChanges"];
+  };
   "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/": {
     /**
      * Request config changes
@@ -729,6 +736,9 @@ export interface components {
     EnvRequestRequest: {
       key: string;
       value: string;
+    };
+    EnvStringChangeRequest: {
+      new_value: string;
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -2291,6 +2301,42 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RequestDeploymentChangesError"][];
     };
+    RequestEnvChangesError: components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
+    RequestEnvChangesErrorResponse400: components["schemas"]["RequestEnvChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RequestEnvChangesNewValueErrorComponent: {
+      /**
+       * @description * `new_value` - new_value
+       * @enum {string}
+       */
+      attr: "new_value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestEnvChangesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RequestEnvChangesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RequestEnvChangesError"][];
+    };
     /**
      * @description * `GET` - GET
      * * `POST` - POST
@@ -3330,6 +3376,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["RedeployDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Request env changes
+   * @description Request a change to the environments variables of a service.
+   */
+  requestEnvChanges: {
+    parameters: {
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnvStringChangeRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["EnvStringChangeRequest"];
+        "multipart/form-data": components["schemas"]["EnvStringChangeRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DockerService"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RequestEnvChangesErrorResponse400"];
         };
       };
       401: {
