@@ -124,97 +124,99 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
               >;
               const fieldName = field === "configs" ? "Config files" : field;
               return (
-                <AccordionItem
-                  key={field}
-                  value={field}
-                  className="flex flex-col border rounded-md"
-                >
-                  <AccordionTrigger className="text-lg flex gap-2 items-center py-2 border-border bg-muted px-4">
-                    <ChevronRightIcon
-                      size={15}
-                      className="flex-none text-grey"
-                    />
-                    <span>
-                      {capitalizeText(fieldName.replaceAll("_", " "))}
-                    </span>
-                    <small className="text-grey">
-                      {changes.length} {pluralize("change", changes.length)}
-                      &nbsp;will be applied
-                    </small>
-                  </AccordionTrigger>
-                  <AccordionContent className="py-4 flex flex-col gap-2 px-4">
-                    {field === "volumes" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <VolumeChangeItem unapplied change={change} />
-                        </ChangeForm>
-                      ))}
-                    {field === "configs" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <ConfigChangeItem unapplied change={change} />
-                        </ChangeForm>
-                      ))}
-                    {field === "source" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <SourceChangeField unapplied change={change} />
-                        </ChangeForm>
-                      ))}
-                    {field === "command" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <CommandChangeField unapplied change={change} />
-                        </ChangeForm>
-                      ))}
-                    {field === "ports" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <PortChangeItem unapplied change={change} />
-                        </ChangeForm>
-                      ))}
-                    {field === "env_variables" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <EnvVariableChangeItem
-                            change={change}
-                            key={change.id}
-                            unapplied
-                          />
-                        </ChangeForm>
-                      ))}
-                    {field === "urls" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <UrlChangeItem
-                            unapplied
-                            change={change}
-                            key={change.id}
-                          />
-                        </ChangeForm>
-                      ))}
-                    {field === "healthcheck" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <HealthcheckChangeField
-                            change={change}
-                            key={change.id}
-                            unapplied
-                          />
-                        </ChangeForm>
-                      ))}
-                    {field === "resource_limits" &&
-                      changes.map((change) => (
-                        <ChangeForm key={change.id} change_id={change.id}>
-                          <ResourceLimitChangeField
-                            change={change}
-                            key={change.id}
-                            unapplied
-                          />
-                        </ChangeForm>
-                      ))}
-                  </AccordionContent>
-                </AccordionItem>
+                <div className="relative" key={field}>
+                  <DiscardMultipleForm changes={changes} />
+                  <AccordionItem
+                    value={field}
+                    className="flex flex-col border rounded-md relative"
+                  >
+                    <AccordionTrigger className="text-lg flex gap-2 items-center py-2 border-border bg-muted px-4">
+                      <ChevronRightIcon
+                        size={15}
+                        className="flex-none text-grey"
+                      />
+                      <span>
+                        {capitalizeText(fieldName.replaceAll("_", " "))}
+                      </span>
+                      <small className="text-grey">
+                        {changes.length} {pluralize("change", changes.length)}
+                        &nbsp;will be applied
+                      </small>
+                    </AccordionTrigger>
+                    <AccordionContent className="py-4 flex flex-col gap-2 px-4">
+                      {field === "volumes" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <VolumeChangeItem unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "configs" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <ConfigChangeItem unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "source" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <SourceChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "command" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <CommandChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "ports" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <PortChangeItem unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "env_variables" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <EnvVariableChangeItem
+                              change={change}
+                              key={change.id}
+                              unapplied
+                            />
+                          </ChangeForm>
+                        ))}
+                      {field === "urls" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <UrlChangeItem
+                              unapplied
+                              change={change}
+                              key={change.id}
+                            />
+                          </ChangeForm>
+                        ))}
+                      {field === "healthcheck" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <HealthcheckChangeField
+                              change={change}
+                              key={change.id}
+                              unapplied
+                            />
+                          </ChangeForm>
+                        ))}
+                      {field === "resource_limits" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <ResourceLimitChangeField
+                              change={change}
+                              key={change.id}
+                              unapplied
+                            />
+                          </ChangeForm>
+                        ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                </div>
               );
             })}
           </Accordion>
@@ -248,6 +250,42 @@ export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DiscardMultipleForm({
+  changes
+}: { changes: DockerService["unapplied_changes"] }) {
+  const fetcher = useFetcher();
+  const isPending = fetcher.state !== "idle";
+  return (
+    <fetcher.Form
+      method="post"
+      action="./discard-multiple-changes"
+      className="absolute right-4 z-10 top-1"
+    >
+      {changes.map((ch) => (
+        <input type="hidden" name="change_id" value={ch.id} />
+      ))}
+      <SubmitButton
+        isPending={isPending}
+        className="bg-transparent"
+        variant="outline"
+        size="sm"
+      >
+        {isPending ? (
+          <>
+            <LoaderIcon className="animate-spin" size={15} />
+            <span>Discarding...</span>
+          </>
+        ) : (
+          <>
+            <Undo2Icon size={15} className="flex-none" />
+            <span>Discard all</span>
+          </>
+        )}
+      </SubmitButton>
+    </fetcher.Form>
   );
 }
 

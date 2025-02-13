@@ -940,10 +940,7 @@ function DotEnvFileFormDialog() {
 
   React.useEffect(() => {
     setData(fetcher.data);
-    console.log({
-      state: fetcher.state,
-      data: fetcher.data
-    });
+
     // only focus on the correct input in case of error
     if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
       formRef.current?.reset();
