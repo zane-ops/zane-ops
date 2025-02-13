@@ -100,18 +100,21 @@ export default function ServiceSettingsPage({
             <div className="h-full border border-grey/50"></div>
           </div>
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
-            <h2 className="text-lg text-grey">Networking</h2>
+            <div className="flex flex-col gap-6">
+              <h2 className="text-lg text-grey">Networking</h2>
+              <NetworkAliasesGroup
+                project_slug={project_slug}
+                service_slug={service_slug}
+              />
+            </div>
+            <hr className="w-full max-w-4xl border-border" />
+
             <ServicePortsForm
               service_slug={service_slug}
               project_slug={project_slug}
             />
             <hr className="w-full max-w-4xl border-border" />
             <ServiceURLsForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-            />
-            <hr className="w-full max-w-4xl border-border" />
-            <NetworkAliasesGroup
               project_slug={project_slug}
               service_slug={service_slug}
             />
