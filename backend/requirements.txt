@@ -1,5 +1,6 @@
 amqp==5.3.1
 asgiref==3.8.1
+astroid==3.3.8
 async-property==0.2.2
 attrs==23.2.0
 automat==22.10.0
@@ -39,11 +40,13 @@ hyperlink==21.0.0
 idna==3.6
 incremental==22.10.0
 inflection==0.5.1
+isort==6.0.0
 jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
 kombu==5.4.2
 lib-detect-testenv==2.0.8
 markdown==3.5.2
+mccabe==0.7.0
 multiprocess==0.70.16
 mypy-extensions==1.0.0
 packaging==23.2
@@ -53,6 +56,7 @@ platformdirs==4.2.0
 prometheus-client==0.20.0
 prompt-toolkit==3.0.48
 protobuf==5.27.3
+psutil==5.9.8
 psycopg==3.2.3
 psycopg-binary==3.2.3
 psycopg-pool==3.2.4
@@ -61,11 +65,11 @@ pyasn1-modules==0.4.0
 pycparser==2.22
 pycurl==7.45.3
 pygments==2.17.2
+pylint==3.3.4
 pyopenssl==24.1.0
 python-crontab==3.2.0
 python-dateutil==2.9.0.post0
-python-dotenv==0.21.1
-python-dotenv-vault==0.6.4
+python-dotenv==1.0.1
 pytz==2024.1
 pyyaml==6.0.1
 redgreenunittest==0.1.1
@@ -81,6 +85,7 @@ six==1.16.0
 sqlparse==0.5.2
 tblib==3.0.0
 temporalio==1.6.0
+tomlkit==0.13.2
 tornado==6.4
 twisted==24.3.0
 txaio==23.1.1
@@ -94,4 +99,5 @@ uvloop==0.19.0
 vine==5.1.0
 watchdog==4.0.0
 wcwidth==0.2.13
+yapf==0.43.0
 zope-interface==6.4.post2
