@@ -19,6 +19,7 @@ import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
 import {
   Accordion,
   AccordionContent,
@@ -102,16 +103,46 @@ export default function ServiceEnvVariablesPage({
   }
 
   const system_env_variables = service.system_env_variables ?? [];
-
+  const [hasCopied, startTransition] = React.useTransition();
   return (
     <div className="my-6 flex flex-col gap-4">
       <section>
-        <h2 className="text-lg">
+        <h2 className="text-lg inline-flex gap-2 items-center">
           {env_variables.size > 0 ? (
-            <span>
-              {env_variables.size} User defined service&nbsp;
-              {pluralize("variable", env_variables.size)}
-            </span>
+            <>
+              <span>
+                {env_variables.size} User defined service&nbsp;
+                {pluralize("variable", env_variables.size)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="inline-flex gap-1 items-center"
+                onClick={() => {
+                  const value = env_variables
+                    .values()
+                    .toArray()
+                    .map((env) => `${env.name}="${env.value}"`)
+                    .join("\n");
+                  navigator.clipboard.writeText(value).then(() => {
+                    // show pending state (which is success state), until the user has stopped clicking the button
+                    startTransition(() => wait(1000));
+                  });
+                }}
+              >
+                {hasCopied ? (
+                  <>
+                    <CheckIcon size={12} className="flex-none" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <CopyIcon size={12} className="flex-none" />
+                    <span>Copy as .env</span>
+                  </>
+                )}
+              </Button>
+            </>
           ) : (
             <span>No user defined variables</span>
           )}
@@ -950,7 +981,16 @@ function DotEnvFileFormDialog() {
   }, [fetcher.state, fetcher.data]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          setData(undefined);
+          setContents(defaultValue);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline">Add from .env</Button>
       </DialogTrigger>
