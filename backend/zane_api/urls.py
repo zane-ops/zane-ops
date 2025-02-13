@@ -72,6 +72,12 @@ urlpatterns = [
         name="services.docker.request_deployment_changes",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/request-env-changes/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
+        views.RequestDockerServiceEnvChangesAPIView.as_view(),
+        name="services.docker.request_env_changes",
+    ),
+    re_path(
         r"^search-resources/?$",
         views.ResouceSearchAPIView.as_view(),
         name="resources.search",

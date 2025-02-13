@@ -40,6 +40,7 @@ from .serializers import (
     DockerServiceDeploymentFilterSet,
     DockerServiceUpdateRequestSerializer,
     DockerSourceFieldChangeSerializer,
+    EnvStringChangeSerializer,
     HttpLogFieldsQuerySerializer,
     HttpLogFieldsResponseSerializer,
     VolumeItemChangeSerializer,
@@ -90,6 +91,9 @@ from ..temporal import (
     CancelDeploymentSignalInput,
 )
 from ..utils import generate_random_chars
+from io import StringIO
+
+from dotenv import dotenv_values
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -303,6 +307,63 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
 
                 response = DockerServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_200_OK)
+
+
+class RequestDockerServiceEnvChangesAPIView(APIView):
+    serializer_class = DockerServiceSerializer
+
+    @extend_schema(
+        request=EnvStringChangeSerializer,
+        operation_id="requestEnvChanges",
+        summary="Request env changes",
+        description="Request a change to the environments variables of a service.",
+    )
+    def put(self, request: Request, project_slug: str, service_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        service = (
+            DockerRegistryService.objects.filter(
+                Q(slug=service_slug) & Q(project=project)
+            )
+            .select_related("project", "healthcheck")
+            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the project `{project_slug}`"
+            )
+
+        form = EnvStringChangeSerializer(
+            data=request.data, context={"service": service}
+        )
+        if form.is_valid(raise_exception=True):
+            data = form.data
+            new_value = data.get("new_value")  # type: ignore
+
+            values = dotenv_values(stream=StringIO(new_value))
+
+            for key, value in values.items():
+                service.add_change(
+                    DockerDeploymentChange(
+                        type=DockerDeploymentChange.ChangeType.ADD,
+                        field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                        new_value={
+                            "key": key,
+                            "value": value,
+                        },
+                        service=service,
+                    )
+                )
+
+            response = DockerServiceSerializer(service)
+            return Response(response.data, status=status.HTTP_200_OK)
 
 
 class CancelDockerServiceDeploymentChangesAPIView(APIView):

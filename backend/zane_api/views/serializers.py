@@ -1,9 +1,9 @@
 import base64
-import dataclasses
+from io import StringIO
 import json
 import re
 import time
-from typing import Any, List, OrderedDict
+from typing import Any
 
 import django_filters
 from django.conf import settings
@@ -11,11 +11,16 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q, QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
+from dotenv import dotenv_values
 from faker import Faker
 from rest_framework import pagination
 from rest_framework.request import Request
+from django.core.exceptions import ValidationError
+
+from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 
 from .helpers import (
+    compute_docker_service_snapshot,
     compute_docker_service_snapshot_with_changes,
     compute_all_deployment_changes,
 )
@@ -32,6 +37,7 @@ from ..models import (
     HttpLog,
     Config,
     DeploymentURL,
+    DockerDeploymentChange,
 )
 from ..temporal import (
     check_if_docker_image_exists,
@@ -867,7 +873,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
                 raise serializers.ValidationError(
                     {
                         "new_value": {
-                            "key": "Cannot specify two env variables with the same `key` for this service"
+                            "key": "Cannot specify two env variables with the same name for this service"
                         }
                     }
                 )
@@ -1293,3 +1299,61 @@ class GitServiceCardSerializer(BaseServiceCardSerializer):
 
 class ResourceSearchParamSerializer(serializers.Serializer):
     query = serializers.CharField(required=False)
+
+
+# =============================================
+#       Load env variables as big string      #
+# =============================================
+
+
+class EnvStringChangeSerializer(serializers.Serializer):
+    new_value = serializers.CharField(required=True, allow_blank=True)
+
+    def validate(self, attrs: dict):
+        service: DockerRegistryService | None = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+
+        envs = dotenv_values(stream=StringIO(attrs["new_value"]))
+        errors = []
+        for key, value in envs.items():
+            try:
+                validate_env_name(key)
+            except ValidationError as err:
+                errors.append(f"`{key}` is not a valid variable name : {err.message}")
+
+            if value is None:
+                envs[key] = ""
+        if len(errors) > 0:
+            raise serializers.ValidationError({"new_value": errors})
+
+        new_value = ""
+        for key, value in envs.items():
+            new_value += f"{key}='{value}'\n"
+        attrs["new_value"] = new_value
+
+        # validate double `key`
+        snapshot = compute_docker_service_snapshot(
+            DockerServiceSnapshot.from_dict(
+                serializers.DockerServiceSerializer(service).data  # type: ignore
+            ),
+            [
+                DeploymentChangeDto(
+                    type="ADD",
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    new_value={
+                        "key": key,
+                        "value": value,
+                    },
+                )
+                for key, value in envs.items()
+            ],
+        )
+
+        for env in snapshot.duplicate_envs:
+            errors.append(f"variable with name `{env}` already exists in the service")
+
+        if len(errors) > 0:
+            raise serializers.ValidationError({"new_value": errors})
+
+        return attrs

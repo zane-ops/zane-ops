@@ -262,6 +262,15 @@ class DockerServiceSnapshot:
         # Return True if there are duplicates in either host_path or container_path
         return has_duplicate_mount_paths
 
+    @property
+    def duplicate_envs(self) -> List[str]:
+        env_values = defaultdict(int)
+
+        for env in self.env_variables:
+            env_values[env.key] += 1
+
+        return [key for key, value in env_values.items() if value > 1]
+
 
 @dataclass
 class DeploymentChangeDto:

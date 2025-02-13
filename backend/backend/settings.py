@@ -17,18 +17,13 @@ from datetime import timedelta
 from pathlib import Path
 
 import uvloop
-from dotenv_vault import load_dotenv
+
 
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
 
 loop = uvloop.new_event_loop()
 asyncio.set_event_loop(loop)
-
-try:
-    load_dotenv(".env", override=True)
-except FileNotFoundError:
-    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
