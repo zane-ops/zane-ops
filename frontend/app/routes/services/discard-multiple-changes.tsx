@@ -46,6 +46,11 @@ export async function clientAction({
         .join(" ");
     }
   }
+
+  await queryClient.invalidateQueries(
+    serviceQueries.single({ project_slug, service_slug })
+  );
+
   if (fullErrorMessage) {
     toast.error("Error", {
       description: fullErrorMessage,
@@ -56,9 +61,6 @@ export async function clientAction({
     };
   }
 
-  await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug })
-  );
   toast.success("Success", {
     description: "Changes discarded successfully !",
     closeButton: true
