@@ -113,7 +113,7 @@ export default function DeploymentListPage({
     (search.status ?? []).length === 0;
 
   const currentProductionDeployment = deploymentList.find(
-    (dpl) => dpl.is_current_production && dpl.status !== "FAILED"
+    (dpl) => dpl.is_current_production
   );
 
   // all deployments that match these filters are considered `new`
