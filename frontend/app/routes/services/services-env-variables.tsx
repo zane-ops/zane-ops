@@ -8,6 +8,7 @@ import {
   EllipsisVerticalIcon,
   EyeIcon,
   EyeOffIcon,
+  FileTextIcon,
   LoaderIcon,
   PlusIcon,
   Trash2Icon,
@@ -992,7 +993,10 @@ function DotEnvFileFormDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">Add from .env</Button>
+        <Button variant="outline" className="inline-flex gap-1">
+          <FileTextIcon size={15} className="flex-none" />
+          <span>Add from .env</span>
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
