@@ -38,6 +38,7 @@ with workflow.unsafe.imports_passed_through():
         Resources,
         UpdateConfig,
         ConfigReference,
+        Healthcheck as DockerHealthcheckType,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -1597,10 +1598,12 @@ class DockerSwarmActivities:
                     parallelism=1,
                 ),
                 restart_policy=RestartPolicy(
-                    condition="on-failure",
-                    max_attempts=3,
+                    condition="any",
+                    max_attempts=5,
                     delay=int(5e9),  # delay is in nanoseconds
                 ),
+                # this disables the default container healthcheck, instead we control the healthcheck externally
+                healthcheck=DockerHealthcheckType(test=["NONE"]),
                 stop_grace_period=int(30e9),  # stop_grace_period is in nanoseconds
                 log_driver="fluentd",
                 log_driver_options={
