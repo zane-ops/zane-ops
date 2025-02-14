@@ -9,8 +9,6 @@ import {
   Redo2,
   RotateCw,
   ScrollText,
-  SquareArrowOutUpRight,
-  SquareArrowOutUpRightIcon,
   Timer
 } from "lucide-react";
 import * as React from "react";
@@ -32,6 +30,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
+import type { DockerDeployment } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-old-deployment";
@@ -52,7 +51,7 @@ export type DockerDeploymentCardProps = {
   hash: string;
   is_current_production?: boolean;
   redeploy_hash: string | null;
-  url?: string | null;
+  urls?: DockerDeployment["urls"];
 };
 
 export function DockerDeploymentCard({
@@ -64,7 +63,7 @@ export function DockerDeploymentCard({
   image,
   hash,
   redeploy_hash,
-  url,
+  urls = [],
   is_current_production = false
 }: DockerDeploymentCardProps) {
   const now = new Date();
@@ -323,17 +322,12 @@ export function DockerDeploymentCard({
                 onClick={() => navigate(`./deployments/${hash}`)}
               />
 
-              {url && (
+              {urls?.length > 0 && (
                 <>
                   <MenubarContentItem
                     icon={GlobeIcon}
                     text="View http logs"
                     onClick={() => navigate(`./deployments/${hash}/http-logs`)}
-                  />
-                  <MenubarContentItem
-                    icon={SquareArrowOutUpRightIcon}
-                    text="Go to deployment"
-                    onClick={() => window.open(`//${url}`, "_blank")?.focus()}
                   />
                 </>
               )}

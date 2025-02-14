@@ -15,6 +15,10 @@ export default [
     "./routes/services/deploy-service.tsx"
   ),
   route(
+    "project/:projectSlug/services/:serviceSlug/discard-multiple-changes",
+    "./routes/services/discard-multiple-changes.tsx"
+  ),
+  route(
     "project/:projectSlug/services/:serviceSlug/discard-change",
     "./routes/services/discard-service-change.tsx"
   ),

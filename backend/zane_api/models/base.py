@@ -186,7 +186,7 @@ class PortConfiguration(models.Model):
 
 class BaseEnvVariable(models.Model):
     key = models.CharField(max_length=255, validators=[validate_env_name])
-    value = models.CharField(max_length=255)
+    value = models.TextField(blank=True)
 
     class Meta:
         abstract = True

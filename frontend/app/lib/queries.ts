@@ -174,6 +174,10 @@ export type DockerService = ApiResponse<
   "get",
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/"
 >;
+export type DockerDeployment = ApiResponse<
+  "get",
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/"
+>;
 
 export const serviceQueries = {
   single: ({

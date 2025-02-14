@@ -277,7 +277,6 @@ export default function DeploymentListPage({
                                 ? new Date(deployment.finished_at)
                                 : undefined
                             }
-                            url={deployment.url}
                           />
                         </li>
                       ))}
@@ -309,7 +308,7 @@ export default function DeploymentListPage({
                           : undefined
                       }
                       is_current_production
-                      url={currentProductionDeployment.url}
+                      urls={currentProductionDeployment.urls}
                     />
                   </section>
                 )}
@@ -336,7 +335,7 @@ export default function DeploymentListPage({
                                 ? new Date(deployment.finished_at)
                                 : undefined
                             }
-                            url={deployment.url}
+                            urls={deployment.urls}
                           />
                         </li>
                       ))}

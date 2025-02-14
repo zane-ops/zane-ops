@@ -110,7 +110,7 @@ def compute_docker_service_snapshot_with_changes(
     deployment_changes = compute_all_deployment_changes(service, change)
 
     service_snapshot = DockerServiceSnapshot.from_dict(
-        DockerServiceSerializer(service).data
+        DockerServiceSerializer(service).data  # type: ignore
     )
     return compute_docker_service_snapshot(service_snapshot, deployment_changes)
 
