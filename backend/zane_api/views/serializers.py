@@ -15,7 +15,6 @@ from dotenv import dotenv_values
 from faker import Faker
 from rest_framework import pagination
 from rest_framework.request import Request
-from django.core.exceptions import ValidationError
 
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 
@@ -45,6 +44,7 @@ from ..temporal import (
     get_server_resource_limits,
 )
 from ..utils import (
+    Colors,
     EnhancedJSONEncoder,
     convert_value_to_bytes,
     find_item_in_list,
@@ -603,7 +603,7 @@ class BaseFieldChangeSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryServic | None = self.context.get("service")  # type: ignore
+        service: DockerRegistryService | None = self.context.get("service")  # type: ignore
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -1205,14 +1205,18 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
         status_prefix_path = r"^\dxx$"
 
         queries = Q()
-        for status in params:
-            if re.match(status_prefix_path, status):
-                prefix = int(status[0])
-                queries = queries | (
-                    Q(status__gte=(prefix * 100), status__lte=(prefix * 100) + 99)
-                )
-            if re.match(r"^\d+$", status):
-                queries = queries | Q(status=int(status))
+        if name == "status":
+            for param in params:
+                if re.match(status_prefix_path, param):
+                    prefix = int(param[0])
+                    queries = queries | (
+                        Q(status__gte=(prefix * 100), status__lte=(prefix * 100) + 99)
+                    )
+                elif re.match(r"^\d+$", param):
+                    queries = queries | Q(status=int(param))
+        else:
+            queries = Q(**{f"{name}__in": params})
+        print(f"Query: {Colors.GREY}{queries}{Colors.ENDC}")
         return queryset.filter(queries)
 
     def filter_query(self, queryset: QuerySet, name: str, value: str):
