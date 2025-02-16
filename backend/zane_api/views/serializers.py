@@ -15,7 +15,6 @@ from dotenv import dotenv_values
 from faker import Faker
 from rest_framework import pagination
 from rest_framework.request import Request
-from django.core.exceptions import ValidationError
 
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 
