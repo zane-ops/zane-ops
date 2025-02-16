@@ -90,7 +90,7 @@ from ..temporal import (
     workflow_signal,
     CancelDeploymentSignalInput,
 )
-from ..utils import generate_random_chars
+from ..utils import Colors, generate_random_chars
 from io import StringIO
 
 from dotenv import dotenv_values
@@ -1054,8 +1054,10 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
     @extend_schema(
         summary="Get service HTTP logs",
     )
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs):
         try:
+            print("====== HTTP LOGS SEARCH ======")
+            print(f"Params: {Colors.GREY}{request.query_params}{Colors.ENDC}")
             return super().get(request, *args, **kwargs)
         except exceptions.NotFound as e:
             if "Invalid cursor" in str(e.detail):

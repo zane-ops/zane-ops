@@ -48,7 +48,6 @@ lib-detect-testenv==2.0.8
 markdown==3.5.2
 mccabe==0.7.0
 multiprocess==0.70.16
-mypy-extensions==1.0.0
 packaging==23.2
 pathspec==0.12.1
 pip==24.0
