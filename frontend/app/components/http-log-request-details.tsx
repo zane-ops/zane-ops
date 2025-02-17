@@ -338,7 +338,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             </dt>
             <dd className="text-sm">
               <span className="text-grey">{"?"}</span>
-              {queryParams.entries().map(([key, value], index) => (
+              {[...queryParams.entries()].map(([key, value], index) => (
                 <span key={`${key}-${index}`}>
                   <span className="text-link">{key}</span>
                   {value && (
