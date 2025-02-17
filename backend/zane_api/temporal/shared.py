@@ -145,6 +145,10 @@ class SimpleDeploymentDetails:
     def monitor_schedule_id(self):
         return f"monitor-{self.hash}-{self.service_id}-{self.project_id}"
 
+    @property
+    def metrics_schedule_id(self):
+        return f"metrics-{self.hash}-{self.service_id}-{self.project_id}"
+
 
 @dataclass
 class ArchivedServiceDetails:
@@ -160,6 +164,17 @@ class ArchivedServiceDetails:
 class HealthcheckDeploymentDetails:
     deployment: SimpleDeploymentDetails
     healthcheck: Optional[HealthCheckDto] = None
+
+
+@dataclass
+class ServiceMetricsResult:
+    cpu_percent: float
+    memory_bytes: int
+    net_tx_bytes: int
+    net_rx_bytes: int
+    disk_read_bytes: int
+    disk_writes_bytes: int
+    deployment: SimpleDeploymentDetails
 
 
 @dataclass

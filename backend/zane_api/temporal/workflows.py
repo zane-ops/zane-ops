@@ -32,6 +32,8 @@ with workflow.unsafe.imports_passed_through():
         MonitorDockerDeploymentActivities,
         CleanupActivities,
         CleanupAppLogsWorkflow,
+        DockerDeploymentStatsActivities,
+        GetDockerDeploymentStatsWorkflow,
     )
     from .activities import (
         acquire_deploy_semaphore,
@@ -377,6 +379,13 @@ class DeployDockerServiceWorkflow:
                     start_to_close_timeout=timedelta(seconds=5),
                     retry_policy=self.retry_policy,
                 )
+
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.create_deployment_stats_schedule,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                )
             else:
                 current_deployment = SimpleDeploymentDetails(
                     hash=deployment.hash,
@@ -701,6 +710,7 @@ def get_workflows_and_activities():
     monitor_activities = MonitorDockerDeploymentActivities()
     cleanup_activites = CleanupActivities()
     system_cleanup_activities = SystemCleanupActivities()
+    metrics_activities = DockerDeploymentStatsActivities()
 
     return dict(
         workflows=[
@@ -712,10 +722,14 @@ def get_workflows_and_activities():
             ToggleDockerServiceWorkflow,
             CleanupAppLogsWorkflow,
             SystemCleanupWorkflow,
+            GetDockerDeploymentStatsWorkflow,
         ],
         activities=[
+            metrics_activities.get_deployment_stats,
+            metrics_activities.save_deployment_stats,
             swarm_activities.toggle_cancelling_status,
             swarm_activities.save_cancelled_deployment,
+            swarm_activities.create_deployment_stats_schedule,
             monitor_activities.monitor_close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,

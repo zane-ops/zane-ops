@@ -331,6 +331,7 @@ class APITestCase(TestCase):
 @dataclass
 class WorkflowScheduleHandle:
     id: str
+    workflow: Any
     interval: timedelta
     is_running: bool = True
     note: Optional[str] = None
@@ -379,9 +380,11 @@ class AuthAPITestCase(APITestCase):
             "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
         )
 
-        async def create_schedule(id: str, interval: timedelta, *args, **kwargs):
+        async def create_schedule(
+            id: str, interval: timedelta, workflow: Any, *args, **kwargs
+        ):
             self.workflow_schedules.append(
-                WorkflowScheduleHandle(id, interval=interval)
+                WorkflowScheduleHandle(id, interval=interval, workflow=workflow)
             )
 
         async def pause_schedule(id: str, note: str | None = None):
@@ -850,6 +853,133 @@ class FakeDockerClient:
             )
 
     class FakeContainer:
+        def __init__(self):
+            self.status = "running"
+
+        def stats(self, *args, **kwargs):
+            # these are example stats
+            return {
+                "read": "2025-02-14T23:06:16.118896814Z",
+                "preread": "2025-02-14T23:06:15.097411283Z",
+                "pids_stats": {"current": 41, "limit": 18446744073709552000},
+                "blkio_stats": {
+                    "io_service_bytes_recursive": [
+                        {"major": 254, "minor": 16, "op": "read", "value": 252493824},
+                        {"major": 254, "minor": 16, "op": "write", "value": 1417216},
+                        {"major": 253, "minor": 0, "op": "read", "value": 4096},
+                        {"major": 253, "minor": 0, "op": "write", "value": 0},
+                    ],
+                    "io_serviced_recursive": None,
+                    "io_queue_recursive": None,
+                    "io_service_time_recursive": None,
+                    "io_wait_time_recursive": None,
+                    "io_merged_recursive": None,
+                    "io_time_recursive": None,
+                    "sectors_recursive": None,
+                },
+                "num_procs": 0,
+                "storage_stats": {},
+                "cpu_stats": {
+                    "cpu_usage": {
+                        "total_usage": 15337487000,
+                        "usage_in_kernelmode": 2797673000,
+                        "usage_in_usermode": 12539814000,
+                    },
+                    "system_cpu_usage": 6984884420000000,
+                    "online_cpus": 12,
+                    "throttling_data": {
+                        "periods": 0,
+                        "throttled_periods": 0,
+                        "throttled_time": 0,
+                    },
+                },
+                "precpu_stats": {
+                    "cpu_usage": {
+                        "total_usage": 15320380000,
+                        "usage_in_kernelmode": 2795178000,
+                        "usage_in_usermode": 12525202000,
+                    },
+                    "system_cpu_usage": 6984872330000000,
+                    "online_cpus": 12,
+                    "throttling_data": {
+                        "periods": 0,
+                        "throttled_periods": 0,
+                        "throttled_time": 0,
+                    },
+                },
+                "memory_stats": {
+                    "usage": 234590208,
+                    "stats": {
+                        "active_anon": 172032,
+                        "active_file": 22441984,
+                        "anon": 151080960,
+                        "anon_thp": 0,
+                        "file": 82247680,
+                        "file_dirty": 0,
+                        "file_mapped": 57479168,
+                        "file_writeback": 0,
+                        "inactive_anon": 200667136,
+                        "inactive_file": 11309056,
+                        "kernel_stack": 0,
+                        "pgactivate": 1258,
+                        "pgdeactivate": 0,
+                        "pgfault": 86109,
+                        "pglazyfree": 0,
+                        "pglazyfreed": 0,
+                        "pgmajfault": 188,
+                        "pgrefill": 26887,
+                        "pgscan": 71638,
+                        "pgsteal": 53917,
+                        "shmem": 48496640,
+                        "slab": 0,
+                        "slab_reclaimable": 0,
+                        "slab_unreclaimable": 0,
+                        "sock": 0,
+                        "thp_collapse_alloc": 0,
+                        "thp_fault_alloc": 0,
+                        "unevictable": 0,
+                        "workingset_activate": 0,
+                        "workingset_nodereclaim": 0,
+                        "workingset_refault": 0,
+                    },
+                    "limit": 12591960064,
+                },
+                "name": "/srv-prj_nv2jCwsDQUV-srv_dkr_43jMSkbcuKX-dpl_dkr_Q9Y79C5SAsk.1.hl9nim19cq6antq2xz2v9aotf",
+                "id": "0c5bcfcfda62d3ae48f397bbd25e54015dbf972cf0848514744ec88443ee3062",
+                "networks": {
+                    "eth0": {
+                        "rx_bytes": 126,
+                        "rx_packets": 3,
+                        "rx_errors": 0,
+                        "rx_dropped": 0,
+                        "tx_bytes": 0,
+                        "tx_packets": 0,
+                        "tx_errors": 0,
+                        "tx_dropped": 0,
+                    },
+                    "eth1": {
+                        "rx_bytes": 4998,
+                        "rx_packets": 119,
+                        "rx_errors": 0,
+                        "rx_dropped": 0,
+                        "tx_bytes": 0,
+                        "tx_packets": 0,
+                        "tx_errors": 0,
+                        "tx_dropped": 0,
+                    },
+                    "eth2": {
+                        "rx_bytes": 1352,
+                        "rx_packets": 20,
+                        "rx_errors": 0,
+                        "rx_dropped": 0,
+                        "tx_bytes": 0,
+                        "tx_packets": 0,
+                        "tx_errors": 0,
+                        "tx_dropped": 0,
+                    },
+                },
+            }
+
         @staticmethod
         def exec_run(cmd: str, *args, **kwargs):
             if cmd == FakeDockerClient.FAILING_CMD:
