@@ -527,6 +527,22 @@ class DockerRegistryService(BaseService):
                 change.save()
 
 
+class ServiceMetric(TimestampedModel):
+    cpu_percent = models.FloatField()
+    memory_bytes = models.PositiveBigIntegerField()
+    net_tx_bytes = models.PositiveBigIntegerField()
+    net_rx_bytes = models.PositiveBigIntegerField()
+    disk_read_bytes = models.PositiveBigIntegerField()
+    disk_writes_bytes = models.PositiveBigIntegerField()
+
+    service = models.ForeignKey[DockerRegistryService](
+        to=DockerRegistryService, on_delete=models.CASCADE
+    )
+    deployment = models.ForeignKey["DockerDeployment"](
+        to="DockerDeployment", on_delete=models.CASCADE
+    )
+
+
 class GitRepositoryService(BaseService):
     ID_PREFIX = "srv_git_"
     id = ShortUUIDField(
