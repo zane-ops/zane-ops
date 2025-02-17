@@ -993,6 +993,7 @@ export const serverQueries = {
     queryKey: ["SERVICE_RESOURCE_LIMITS"],
     queryFn: async () => {
       const { data } = await apiClient.GET("/api/server/resource-limits/");
+      if (!data) throw new Error("Unknown error with the API");
       return data;
     },
     staleTime: Number.MAX_SAFE_INTEGER

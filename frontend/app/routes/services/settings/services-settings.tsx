@@ -48,8 +48,10 @@ import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  queryClient.ensureQueryData(serverQueries.resourceLimits);
-  return;
+  const limits = await queryClient.ensureQueryData(
+    serverQueries.resourceLimits
+  );
+  return { limits };
 }
 
 export default function ServiceSettingsPage({
