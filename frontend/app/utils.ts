@@ -63,7 +63,10 @@ export async function getCsrfTokenHeader() {
   return { "X-CSRFToken": getCookie("csrftoken") };
 }
 
-export function timeAgoFormatter(dateInput: string | Date): string {
+export function timeAgoFormatter(
+  dateInput: string | Date,
+  short: boolean = false
+): string {
   const date = new Date(dateInput);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -101,7 +104,10 @@ export function timeAgoFormatter(dateInput: string | Date): string {
     unit = "year";
   }
 
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat("en", {
+    numeric: "auto",
+    style: short ? "narrow" : "long"
+  });
   const formatedValue = rtf.format(-value, unit);
   return formatedValue === "now" ? "Just now" : formatedValue;
 }
@@ -223,4 +229,51 @@ export function formatDateForTimeZone(date: Date, timeZone: string) {
 
 export function metaTitle(title: string) {
   return { title: `${title} | ZaneOps` } as const;
+}
+
+export function format_storage_value(value: number) {
+  const kb = 1024;
+  const mb = 1024 * kb;
+  const gb = 1024 * mb;
+
+  if (value < kb) {
+    return { value: `${value}`, unit: "bytes" };
+  }
+  if (value < mb) {
+    return {
+      value: `${(value / kb).toFixed(2)}`,
+      unit: `KiB`
+    };
+  }
+  if (value < gb) {
+    return {
+      value: `${(value / mb).toFixed(2)}`,
+      unit: `MiB`
+    };
+  }
+
+  return {
+    value: `${(value / gb).toFixed(2)}`,
+    unit: `GiB`
+  };
+}
+
+export function convertValueToBytes(
+  value: number,
+  unit: "BYTES" | "KILOBYTES" | "MEGABYTES" | "GIGABYTES" = "BYTES"
+): number {
+  switch (unit) {
+    case "BYTES":
+      return value;
+    case "KILOBYTES":
+      return value * 1024;
+    case "MEGABYTES":
+      return value * 1024 * 1024;
+    case "GIGABYTES":
+      return value * 1024 * 1024 * 1024;
+  }
+}
+
+export function spacesToNbsp(input: string) {
+  return input.replace(/ /g, "\u00A0");
 }
