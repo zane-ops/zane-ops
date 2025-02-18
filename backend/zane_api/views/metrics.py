@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import ServiceMetricsQuery, ServiceMetricsResponseSerializer
-from ..models import Project, DockerRegistryService, ServiceMetrics
+from ..models import Project, DockerRegistryService, ServiceMetrics, DockerDeployment
 from django.utils import timezone
 from datetime import timedelta
 
@@ -31,19 +31,26 @@ class DockerServiceMetricsAPIView(APIView):
 
     @extend_schema(
         parameters=[ServiceMetricsQuery],
-        summary="Get service metrics",
+        summary="Get service or deployment metrics",
     )
     def get(
         self,
         request: Request,
         project_slug: str,
         service_slug: str,
+        deployment_hash: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
             service = DockerRegistryService.objects.get(
                 slug=service_slug, project=project
             )
+            deployment = None
+            if deployment_hash is not None:
+                deployment = DockerDeployment.objects.get(
+                    hash=deployment_hash,
+                    service=service,
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -52,6 +59,10 @@ class DockerServiceMetricsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist in this project."
             )
+        except DockerDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist in this service."
+            )
         else:
             form = ServiceMetricsQuery(data=request.query_params)
             if form.is_valid(raise_exception=True):
@@ -59,6 +70,8 @@ class DockerServiceMetricsAPIView(APIView):
 
                 now = timezone.now()
                 qs = ServiceMetrics.objects.filter(service=service)
+                if deployment is not None:
+                    qs = qs.filter(deployment=deployment)
 
                 match time_range:
                     case "LAST_HOUR":
