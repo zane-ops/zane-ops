@@ -11,7 +11,7 @@ from .activities import (
 from ..shared import (
     HealthcheckDeploymentDetails,
     DeploymentHealthcheckResult,
-    LogsCleanupResult,
+    CleanupResult,
     SimpleDeploymentDetails,
 )
 
@@ -105,12 +105,18 @@ class GetDockerDeploymentStatsWorkflow:
 @workflow.defn(name="cleanup-app-logs")
 class CleanupAppLogsWorkflow:
     @workflow.run
-    async def run(self) -> LogsCleanupResult:
+    async def run(self):
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
-        return await workflow.execute_activity_method(
+        await workflow.execute_activity_method(
             CleanupActivities.cleanup_simple_logs,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            CleanupActivities.cleanup_service_metrics,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )

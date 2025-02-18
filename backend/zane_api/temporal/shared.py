@@ -191,5 +191,5 @@ class CancelDeploymentSignalInput:
 
 
 @dataclass
-class LogsCleanupResult:
+class CleanupResult:
     deleted_count: int

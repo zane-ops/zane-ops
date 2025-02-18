@@ -6,7 +6,7 @@ from temporalio.exceptions import ApplicationError
 
 
 from ..shared import (
-    LogsCleanupResult,
+    CleanupResult,
     HealthcheckDeploymentDetails,
     DeploymentHealthcheckResult,
     ServiceMetricsResult,
@@ -27,6 +27,7 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
+    from django.utils import timezone
     from search.client import SearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 
@@ -395,7 +396,7 @@ class DockerDeploymentStatsActivities:
 
 class CleanupActivities:
     @activity.defn
-    async def cleanup_simple_logs(self) -> LogsCleanupResult:
+    async def cleanup_simple_logs(self) -> CleanupResult:
         search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
         now = timezone.now()
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -407,4 +408,12 @@ class CleanupActivities:
                 ).isoformat(),  # only keep logs for 2 weeks
             },
         )
-        return LogsCleanupResult(deleted_count=deleted_count)
+        return CleanupResult(deleted_count=deleted_count)
+
+    @activity.defn
+    async def cleanup_service_metrics(self) -> CleanupResult:
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        deleted = await ServiceMetrics.objects.filter(
+            created_at__lt=today - timedelta(days=30)
+        ).adelete()
+        return CleanupResult(deleted_count=deleted[0])
