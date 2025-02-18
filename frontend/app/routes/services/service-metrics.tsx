@@ -108,7 +108,7 @@ export default function ServiceMetricsPage({
         </FieldSet>
       </Form>
 
-      <div className="grid md:grid-cols-2 gap-12">
+      <div className="grid lg:grid-cols-2 gap-12">
         <Card className="flex flex-col">
           <CardHeader className="border-b border-border py-3">
             <CardDescription className="text-card-foreground flex items-center gap-2">
@@ -116,7 +116,7 @@ export default function ServiceMetricsPage({
               <span>cpu usage</span>
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 flex-1 min-h-80">
+          <CardContent className="p-4 flex-1 min-h-40 md:min-h-80">
             {metrics.length === 0 ? (
               <div className="flex h-full w-full items-center justify-center text-grey">
                 No data
@@ -209,7 +209,7 @@ export default function ServiceMetricsPage({
               <span>memory usage</span>
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 flex-1 min-h-80">
+          <CardContent className="p-4 flex-1 min-h-40 md:min-h-80">
             {metrics.length === 0 ? (
               <div className="flex h-full w-full items-center justify-center text-grey">
                 No data
@@ -321,7 +321,7 @@ export default function ServiceMetricsPage({
               <span>network I/O</span>
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 flex-1 min-h-80">
+          <CardContent className="p-4 flex-1 min-h-40 md:min-h-80">
             {metrics.length === 0 ? (
               <div className="flex h-full w-full items-center justify-center text-grey">
                 No data
@@ -457,7 +457,7 @@ export default function ServiceMetricsPage({
               <span>disk I/O</span>
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 flex-1 min-h-80">
+          <CardContent className="p-4 flex-1 min-h-40 md:min-h-80">
             {metrics.length === 0 ? (
               <div className="flex h-full w-full items-center justify-center text-grey">
                 No data
