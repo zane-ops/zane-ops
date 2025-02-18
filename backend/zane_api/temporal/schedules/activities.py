@@ -6,9 +6,10 @@ from temporalio.exceptions import ApplicationError
 
 
 from ..shared import (
-    LogsCleanupResult,
+    CleanupResult,
     HealthcheckDeploymentDetails,
     DeploymentHealthcheckResult,
+    ServiceMetricsResult,
     SimpleDeploymentDetails,
 )
 
@@ -18,7 +19,7 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
-    from ...models import DockerDeployment, HealthCheck
+    from ...models import DockerDeployment, HealthCheck, ServiceMetrics
     from ...utils import (
         DockerSwarmTaskState,
         DockerSwarmTask,
@@ -26,6 +27,7 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
+    from django.utils import timezone
     from search.client import SearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 
@@ -267,9 +269,134 @@ class MonitorDockerDeploymentActivities:
                 await deployment.asave()
 
 
+class DockerDeploymentStatsActivities:
+    def __init__(self):
+        self.docker_client = get_docker_client()
+
+    @activity.defn
+    async def get_deployment_stats(
+        self, details: SimpleDeploymentDetails
+    ) -> ServiceMetricsResult | None:
+        try:
+            swarm_service = self.docker_client.services.get(
+                get_swarm_service_name_for_deployment(
+                    deployment_hash=details.hash,
+                    project_id=details.project_id,
+                    service_id=details.service_id,
+                )
+            )
+        except (docker.errors.NotFound, DockerDeployment.DoesNotExist):
+            raise ApplicationError(
+                "Cannot run a healthcheck on an nonexistent deployment.",
+                non_retryable=True,
+            )
+        else:
+            task_list = swarm_service.tasks(
+                filters={"label": f"deployment_hash={details.hash}"}
+            )
+            if len(task_list) == 0:
+                return None
+            else:
+                most_recent_swarm_task = DockerSwarmTask.from_dict(
+                    max(
+                        task_list,
+                        key=lambda task: task["Version"]["Index"],
+                    )
+                )
+
+                if most_recent_swarm_task.container_id is not None:
+                    try:
+                        container = self.docker_client.containers.get(
+                            most_recent_swarm_task.container_id
+                        )
+                    except docker.errors.NotFound:
+                        return None  # this container may have been deleted already
+                    else:
+                        if container.status != "running":
+                            return  # we cannot get the stats of a dead container
+
+                        stats = container.stats(stream=False)
+
+                        # Calculate CPU usage percentage
+                        cpu_delta = (
+                            stats["cpu_stats"]["cpu_usage"]["total_usage"]
+                            - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+                        )
+                        system_delta = (
+                            stats["cpu_stats"]["system_cpu_usage"]
+                            - stats["precpu_stats"]["system_cpu_usage"]
+                        )
+                        cpu_percent: float = (
+                            (cpu_delta / system_delta)
+                            * stats["cpu_stats"]["online_cpus"]
+                            * 100
+                        )
+
+                        # Memory usage
+                        memory_usage: int = stats["memory_stats"]["usage"]
+
+                        # Network usage
+                        rx_bytes: int = sum(
+                            network["rx_bytes"]
+                            for network in stats["networks"].values()
+                        )
+                        tx_bytes: int = sum(
+                            network["tx_bytes"]
+                            for network in stats["networks"].values()
+                        )
+
+                        # Disk I/O usage
+                        read_bytes: int = sum(
+                            io["value"]
+                            for io in stats["blkio_stats"]["io_service_bytes_recursive"]
+                            if io["op"] == "read"
+                        )
+                        write_bytes: int = sum(
+                            io["value"]
+                            for io in stats["blkio_stats"]["io_service_bytes_recursive"]
+                            if io["op"] == "write"
+                        )
+
+                        return ServiceMetricsResult(
+                            cpu_percent=cpu_percent,
+                            memory_bytes=memory_usage,
+                            disk_read_bytes=read_bytes,
+                            disk_writes_bytes=write_bytes,
+                            net_rx_bytes=rx_bytes,
+                            net_tx_bytes=tx_bytes,
+                            deployment=details,
+                        )
+
+    @activity.defn
+    async def save_deployment_stats(self, metrics: ServiceMetricsResult):
+        deployment = (
+            await DockerDeployment.objects.filter(
+                hash=metrics.deployment.hash,
+            )
+            .select_related("service")
+            .afirst()
+        )
+        if deployment is None:
+            raise ApplicationError(
+                "Cannot save metrics for a non existent deployment.",
+                non_retryable=True,
+            )
+
+        await ServiceMetrics.objects.acreate(
+            cpu_percent=metrics.cpu_percent,
+            memory_bytes=metrics.memory_bytes,
+            disk_read_bytes=metrics.disk_read_bytes,
+            disk_writes_bytes=metrics.disk_writes_bytes,
+            net_rx_bytes=metrics.net_rx_bytes,
+            net_tx_bytes=metrics.net_tx_bytes,
+            deployment=deployment,
+            service=deployment.service,
+        )
+
+
 class CleanupActivities:
     @activity.defn
-    async def cleanup_simple_logs(self) -> LogsCleanupResult:
+    async def cleanup_simple_logs(self) -> CleanupResult:
         search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
         now = timezone.now()
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -281,4 +408,12 @@ class CleanupActivities:
                 ).isoformat(),  # only keep logs for 2 weeks
             },
         )
-        return LogsCleanupResult(deleted_count=deleted_count)
+        return CleanupResult(deleted_count=deleted_count)
+
+    @activity.defn
+    async def cleanup_service_metrics(self) -> CleanupResult:
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        deleted = await ServiceMetrics.objects.filter(
+            created_at__lt=today - timedelta(days=30)
+        ).adelete()
+        return CleanupResult(deleted_count=deleted[0])

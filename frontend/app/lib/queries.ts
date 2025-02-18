@@ -13,7 +13,8 @@ import { apiClient } from "~/api/client";
 import {
   DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
-  DEPLOYMENT_STATUSES
+  DEPLOYMENT_STATUSES,
+  METRICS_TIME_RANGES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
@@ -178,6 +179,16 @@ export type DockerDeployment = ApiResponse<
   "get",
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/"
 >;
+
+export const metrisSearch = z.object({
+  time_range: z
+    .enum(METRICS_TIME_RANGES)
+    .optional()
+    .default("LAST_HOUR")
+    .catch("LAST_HOUR")
+});
+
+export type MetricsFilters = z.TypeOf<typeof metrisSearch>;
 
 export const serviceQueries = {
   single: ({
@@ -402,6 +413,53 @@ export const serviceQueries = {
       initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
+    }),
+  metrics: ({
+    project_slug,
+    service_slug,
+    filters
+  }: {
+    project_slug: string;
+    service_slug: string;
+    filters?: MetricsFilters;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...serviceQueries.single({
+          project_slug,
+          service_slug
+        }).queryKey,
+        "METRICS",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/metrics/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug
+              },
+              query: {
+                ...filters
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     }),
   singleHttpLog: ({
     project_slug,
@@ -751,6 +809,57 @@ export const deploymentQueries = {
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
     }),
+  metrics: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    filters
+  }: {
+    project_slug: string;
+    deployment_hash: string;
+    service_slug: string;
+    filters?: MetricsFilters;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          deployment_hash
+        }).queryKey,
+        "METRICS",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash
+              },
+              query: {
+                ...filters
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
   httpLogs: ({
     project_slug,
     service_slug,
@@ -993,6 +1102,7 @@ export const serverQueries = {
     queryKey: ["SERVICE_RESOURCE_LIMITS"],
     queryFn: async () => {
       const { data } = await apiClient.GET("/api/server/resource-limits/");
+      if (!data) throw new Error("Unknown error with the API");
       return data;
     },
     staleTime: Number.MAX_SAFE_INTEGER

@@ -54,7 +54,8 @@ export default [
             "./routes/services/services-env-variables.tsx"
           ),
           route("settings", "./routes/services/settings/services-settings.tsx"),
-          route("http-logs", "./routes/services/service-http-logs.tsx")
+          route("http-logs", "./routes/services/service-http-logs.tsx"),
+          route("metrics", "./routes/services/service-metrics.tsx")
         ]),
 
         route(
@@ -64,6 +65,7 @@ export default [
             index("./routes/deployments/deployment-logs.tsx"),
             route("details", "./routes/deployments/deployment-details.tsx"),
             route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
+            route("metrics", "./routes/deployments/deployment-metrics.tsx"),
             route(
               "redeploy",
               "./routes/deployments/redeploy-old-deployment.tsx"

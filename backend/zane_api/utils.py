@@ -158,7 +158,7 @@ def format_seconds(seconds: float):
 
 
 def convert_value_to_bytes(
-    value: int,
+    value: float,
     unit: Literal["BYTES", "KILOBYTES", "MEGABYTES", "GIGABYTES"] = "BYTES",
 ):
     match unit:

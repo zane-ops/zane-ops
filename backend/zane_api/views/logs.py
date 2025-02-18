@@ -68,7 +68,7 @@ class LogIngestAPIView(APIView):
                                         log_content = log_serializer.data
                                         upstream: str = log_content.get(
                                             "zane_deployment_upstream"
-                                        )
+                                        )  # type: ignore
                                         deployment_id = None
                                         if "blue.zaneops.internal" in upstream:
                                             deployment_id = log_content.get(
@@ -80,10 +80,10 @@ class LogIngestAPIView(APIView):
                                             )
 
                                         if deployment_id:
-                                            req = log_content.get("request")
-                                            duration_in_seconds = log_content.get(
+                                            req = log_content["request"]
+                                            duration_in_seconds = log_content[
                                                 "duration"
-                                            )
+                                            ]
 
                                             full_url = urlparse(
                                                 f"https://{req['host']}{req['uri']}"
@@ -157,13 +157,13 @@ class LogIngestAPIView(APIView):
             start_time = datetime.now()
             search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
             search_client.bulk_insert(
-                map(
-                    lambda log: dict(
+                [
+                    dict(
                         _index=settings.ELASTICSEARCH_LOGS_INDEX,
                         **log.to_es_dict(),
-                    ),
-                    simple_logs,
-                )
+                    )
+                    for log in simple_logs
+                ]
             )
 
             HttpLog.objects.bulk_create(http_logs)

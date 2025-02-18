@@ -160,6 +160,10 @@ export interface paths {
     /** Get deployment logs */
     get: operations["projects_service_details_docker_deployments_logs_retrieve"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/": {
+    /** Get service or deployment metrics */
+    get: operations["projects_service_details_docker_deployments_metrics_list"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/": {
     /** Get service HTTP logs */
     get: operations["projects_service_details_docker_http_logs_list"];
@@ -171,6 +175,10 @@ export interface paths {
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/": {
     /** Get service http logs fields values */
     get: operations["projects_service_details_docker_http_logs_fields_list"];
+  };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/metrics/": {
+    /** Get service or deployment metrics */
+    get: operations["projects_service_details_docker_metrics_list"];
   };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/": {
     /** Regenerate service deploy token */
@@ -596,7 +604,7 @@ export interface components {
     DockerEnvVariableRequest: {
       id?: string;
       key: string;
-      value: string;
+      value?: string;
     };
     DockerImage: {
       full_image: string;
@@ -1316,6 +1324,7 @@ export interface components {
       errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListError"][];
     };
     ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent"];
@@ -1391,6 +1400,7 @@ export interface components {
       errors: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListError"][];
     };
     ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenCommandErrorComponent: {
@@ -2409,6 +2419,18 @@ export interface components {
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
+    ServiceMetrics: {
+      /** Format: date-time */
+      bucket_epoch: string;
+      /** Format: double */
+      avg_cpu: number;
+      /** Format: double */
+      avg_memory: number;
+      total_net_tx: number;
+      total_net_rx: number;
+      total_disk_read: number;
+      total_disk_write: number;
+    };
     ServicePortsRequestRequest: {
       host: number;
       forwarded: number;
@@ -3874,6 +3896,53 @@ export interface operations {
       };
     };
   };
+  /** Get service or deployment metrics */
+  projects_service_details_docker_deployments_metrics_list: {
+    parameters: {
+      query?: {
+        /**
+         * @description * `LAST_HOUR` - LAST_HOUR
+         * * `LAST_6HOURS` - LAST_6HOURS
+         * * `LAST_DAY` - LAST_DAY
+         * * `LAST_WEEK` - LAST_WEEK
+         * * `LAST_MONTH` - LAST_MONTH
+         */
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
+      };
+      path: {
+        deployment_hash: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceMetrics"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Get service HTTP logs */
   projects_service_details_docker_http_logs_list: {
     parameters: {
@@ -4013,6 +4082,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get service or deployment metrics */
+  projects_service_details_docker_metrics_list: {
+    parameters: {
+      query?: {
+        /**
+         * @description * `LAST_HOUR` - LAST_HOUR
+         * * `LAST_6HOURS` - LAST_6HOURS
+         * * `LAST_DAY` - LAST_DAY
+         * * `LAST_WEEK` - LAST_WEEK
+         * * `LAST_MONTH` - LAST_MONTH
+         */
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
+      };
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceMetrics"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerMetricsListErrorResponse400"];
         };
       };
       401: {

@@ -10,13 +10,14 @@ from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-
+from datetime import datetime, timedelta
 from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
     generate_random_chars,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
+from django.db.models import Manager
 
 
 class TimestampedModel(models.Model):
@@ -214,6 +215,15 @@ class DockerEnvVariable(BaseEnvVariable):
 
 
 class DockerRegistryService(BaseService):
+    deployments: Manager["DockerDeployment"]
+    changes: Manager["DockerDeploymentChange"]
+    ports: Manager["PortConfiguration"]
+    env_variables: Manager[DockerEnvVariable]
+    urls: Manager[URL]
+    volumes: Manager["Volume"]
+    configs: Manager["Config"]
+    project_id: str
+
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -238,6 +248,10 @@ class DockerRegistryService(BaseService):
     @property
     def http_logs(self):
         return HttpLog.objects.filter(service_id=self.id)
+
+    @property
+    def metrics(self):
+        return ServiceMetrics.objects.filter(service=self)
 
     @property
     def network_aliases(self):
@@ -296,7 +310,7 @@ class DockerRegistryService(BaseService):
         ]
 
     @property
-    def latest_production_deployment(self) -> Union["DockerDeployment", None]:
+    def latest_production_deployment(self):
         return (
             self.deployments.filter(is_current_production=True)
             .select_related("service", "service__project")
@@ -311,7 +325,7 @@ class DockerRegistryService(BaseService):
         )
 
     @property
-    async def alatest_production_deployment(self) -> Optional["DockerDeployment"]:
+    async def alatest_production_deployment(self):
         return await (
             self.deployments.filter(is_current_production=True)
             .select_related("service", "service__project", "service__healthcheck")
@@ -334,7 +348,7 @@ class DockerRegistryService(BaseService):
         return self.changes.filter(applied=True)
 
     @property
-    def last_queued_deployment(self) -> Union["DockerDeployment", None]:
+    def last_queued_deployment(self):
         return (
             self.deployments.filter(
                 is_current_production=False,
@@ -515,9 +529,9 @@ class DockerRegistryService(BaseService):
                 | DockerDeploymentChange.ChangeField.HEALTHCHECK
                 | DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
             ):
-                change_for_field: "DockerDeploymentChange" = (
-                    self.unapplied_changes.filter(field=change.field).first()
-                )
+                change_for_field = self.unapplied_changes.filter(
+                    field=change.field
+                ).first()
                 if change_for_field is not None:
                     change_for_field.new_value = change.new_value
                 else:
@@ -525,6 +539,23 @@ class DockerRegistryService(BaseService):
                 change_for_field.save()
             case _:
                 change.save()
+
+
+class ServiceMetrics(TimestampedModel):
+    cpu_percent = models.FloatField()
+    memory_bytes = models.PositiveBigIntegerField()
+    net_tx_bytes = models.PositiveBigIntegerField()
+    net_rx_bytes = models.PositiveBigIntegerField()
+    disk_read_bytes = models.PositiveBigIntegerField()
+    disk_writes_bytes = models.PositiveBigIntegerField()
+
+    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
+    deployment = models.ForeignKey["DockerDeployment"](
+        to="DockerDeployment", on_delete=models.CASCADE
+    )
+
+    class Meta:
+        indexes = [models.Index(fields=["created_at"])]
 
 
 class GitRepositoryService(BaseService):
@@ -725,6 +756,10 @@ class DockerDeployment(BaseDeployment):
     @property
     def monitor_schedule_id(self):
         return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
+
+    @property
+    def metrics_schedule_id(self):
+        return f"metrics-{self.hash}-{self.service_id}-{self.service.project_id}"
 
     @property
     def unprefixed_hash(self) -> str:

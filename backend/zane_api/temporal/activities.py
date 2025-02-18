@@ -12,7 +12,10 @@ from temporalio.service import RPCError
 from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 
 with workflow.unsafe.imports_passed_through():
-    from .schedules import MonitorDockerDeploymentWorkflow
+    from .schedules import (
+        MonitorDockerDeploymentWorkflow,
+        GetDockerDeploymentStatsWorkflow,
+    )
     from search.client import SearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     import docker
@@ -82,7 +85,22 @@ docker_client: docker.DockerClient | None = None
 SERVER_RESOURCE_LIMIT_COMMAND = (
     "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
 )
+VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
 ONE_HOUR = 3600  # seconds
+
+
+def get_docker_volume_size_in_bytes(volume_id: str) -> int:
+    client = get_docker_client()
+    docker_volume_name = get_volume_resource_name(volume_id)
+
+    result: bytes = client.containers.run(
+        image="alpine",
+        command="du -sb /data",
+        volumes={docker_volume_name: {"bind": "/data", "mode": "ro"}},
+        remove=True,
+    )
+    size_string, _ = result.decode(encoding="utf-8").split("\t")
+    return int(size_string)
 
 
 def get_docker_client():
@@ -913,9 +931,12 @@ class DockerSwarmActivities:
                 await wait_for_service_deployment_to_be_down()
 
                 swarm_service.remove()
-                print(f"Removed service. YAY !! 🎉")
+                print("Removed service. YAY !! 🎉")
                 try:
-                    await delete_schedule(deployment.monitor_schedule_id)
+                    await asyncio.gather(
+                        delete_schedule(deployment.monitor_schedule_id),
+                        delete_schedule(deployment.metrics_schedule_id),
+                    )
                 except RPCError:
                     pass
         print("deleting volume list...")
@@ -1171,8 +1192,13 @@ class DockerSwarmActivities:
             await docker_deployment.asave()
 
             try:
-                await delete_schedule(
-                    id=docker_deployment.monitor_schedule_id,
+                await asyncio.gather(
+                    delete_schedule(
+                        id=docker_deployment.monitor_schedule_id,
+                    ),
+                    delete_schedule(
+                        id=docker_deployment.metrics_schedule_id,
+                    ),
                 )
             except RPCError:
                 # The schedule probably doesn't exist
@@ -1325,16 +1351,18 @@ class DockerSwarmActivities:
 
             await wait_for_service_to_be_down()
             # Change the status to be accurate
-            docker_deployment: DockerDeployment | None = (
+            docker_deployment = (
                 await DockerDeployment.objects.filter(
                     hash=deployment.hash, service_id=deployment.service_id
-                ).afirst()
+                )
+                .select_related("service")
+                .afirst()
             )
 
             if docker_deployment is not None:
                 try:
                     await pause_schedule(
-                        id=deployment.monitor_schedule_id,
+                        id=docker_deployment.monitor_schedule_id,
                         note="Paused to prevent zero-downtime deployment",
                     )
                 except RPCError:
@@ -2042,6 +2070,40 @@ class DockerSwarmActivities:
                 ZaneProxyClient.remove_service_url(deployment.service.id, new_url)
 
     @activity.defn
+    async def create_deployment_stats_schedule(
+        self, deployment: DockerDeploymentDetails
+    ):
+        try:
+            docker_deployment = (
+                await DockerDeployment.objects.filter(hash=deployment.hash)
+                .select_related("service")
+                .afirst()
+            )
+
+            if docker_deployment is None:
+                raise DockerDeployment.DoesNotExist(
+                    f"Docker deployment with hash='{deployment.hash}' does not exist."
+                )
+        except DockerDeployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot create a stats schedule for a non existent deployment.",
+                non_retryable=True,
+            )
+        else:
+            details = SimpleDeploymentDetails(
+                hash=deployment.hash,
+                service_id=deployment.service.id,
+                project_id=deployment.service.project_id,
+            )
+            await create_schedule(
+                workflow=GetDockerDeploymentStatsWorkflow.run,
+                args=details,
+                id=docker_deployment.metrics_schedule_id,
+                interval=timedelta(seconds=5),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+            )
+
+    @activity.defn
     async def create_deployment_healthcheck_schedule(
         self, deployment: DockerDeploymentDetails
     ):
@@ -2058,7 +2120,7 @@ class DockerSwarmActivities:
                 )
         except DockerDeployment.DoesNotExist:
             raise ApplicationError(
-                "Cannot save a non existent deployment.",
+                "Cannot create a healthcheck schedule for a non existent deployment.",
                 non_retryable=True,
             )
         else:

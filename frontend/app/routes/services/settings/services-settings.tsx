@@ -47,11 +47,6 @@ import { ServiceVolumesForm } from "~/routes/services/settings/service-volumes-f
 import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
 
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  queryClient.ensureQueryData(serverQueries.resourceLimits);
-  return;
-}
-
 export default function ServiceSettingsPage({
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ComponentProps) {

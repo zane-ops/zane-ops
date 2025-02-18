@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BanIcon,
+  ChartNoAxesColumnIcon,
   ChevronRight,
   ClockArrowUpIcon,
   FastForwardIcon,
@@ -37,7 +38,11 @@ import {
 } from "~/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { deploymentQueries } from "~/lib/queries";
+import {
+  deploymentQueries,
+  serverQueries,
+  serviceQueries
+} from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -60,19 +65,28 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  let deployment = await queryClient.ensureQueryData(
-    deploymentQueries.single({
-      project_slug: params.projectSlug,
-      service_slug: params.serviceSlug,
-      deployment_hash: params.deploymentHash
-    })
-  );
+  let [service, limits, deployment] = await Promise.all([
+    queryClient.ensureQueryData(
+      serviceQueries.single({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug
+      })
+    ),
+    queryClient.ensureQueryData(serverQueries.resourceLimits),
+    queryClient.ensureQueryData(
+      deploymentQueries.single({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        deployment_hash: params.deploymentHash
+      })
+    )
+  ]);
 
-  if (!deployment) {
+  if (!deployment || !service) {
     throw notFound();
   }
 
-  return { deployment };
+  return { deployment, limits, service };
 }
 
 export default function DeploymentLayoutPage({
@@ -240,6 +254,12 @@ export default function DeploymentLayoutPage({
               <NavLink to="./details">
                 <span>Details</span>
                 <InfoIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="./metrics">
+                <span>Metrics</span>
+                <ChartNoAxesColumnIcon size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>

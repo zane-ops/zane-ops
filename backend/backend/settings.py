@@ -73,7 +73,7 @@ ALLOWED_HOSTS = (
         "host.docker.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
-    else [f"127.0.0.1", f".{ROOT_DOMAIN}", f".zaneops.internal"]
+    else ["127.0.0.1", f".{ROOT_DOMAIN}", ".zaneops.internal"]
 )
 
 SESSION_COOKIE_DOMAIN = None
@@ -355,7 +355,7 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
-    else f"zane.front.zaneops.internal:80"
+    else "zane.front.zaneops.internal:80"
 )
 ZANE_FLUENTD_HOST = os.environ.get(
     "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"

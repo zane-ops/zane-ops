@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpIcon,
+  ChartNoAxesColumn,
   ChevronRight,
   Container,
   GlobeIcon,
@@ -28,7 +29,11 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { type DockerService, serviceQueries } from "~/lib/queries";
+import {
+  type DockerService,
+  serverQueries,
+  serviceQueries
+} from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
@@ -46,18 +51,21 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  let service = await queryClient.ensureQueryData(
-    serviceQueries.single({
-      project_slug: params.projectSlug,
-      service_slug: params.serviceSlug
-    })
-  );
+  let [service, limits] = await Promise.all([
+    queryClient.ensureQueryData(
+      serviceQueries.single({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug
+      })
+    ),
+    queryClient.ensureQueryData(serverQueries.resourceLimits)
+  ]);
 
   if (!service) {
     throw notFound();
   }
 
-  return { service };
+  return { limits, service };
 }
 
 const TABS = {
@@ -247,6 +255,12 @@ export default function ServiceDetailsLayout({
               <NavLink to="./http-logs">
                 <span>Http logs</span>
                 <GlobeIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="./metrics">
+                <span>Metrics</span>
+                <ChartNoAxesColumn size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>

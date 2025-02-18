@@ -18,6 +18,12 @@ from temporalio.client import (
 )
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
+from temporalio.types import (
+    MethodAsyncNoParam,
+    MethodAsyncSingleParam,
+    ReturnType,
+    SelfType,
+)
 
 
 async def get_temporalio_client():
@@ -50,7 +56,7 @@ async def create_schedule(
     )
 
 
-async def pause_schedule(id: str, note: str = None):
+async def pause_schedule(id: str, note: str | None = None):
     client = await get_temporalio_client()
     handle = client.get_schedule_handle(
         f"schedule-{id}",
@@ -59,7 +65,7 @@ async def pause_schedule(id: str, note: str = None):
     await handle.pause(note=note)
 
 
-async def unpause_schedule(id: str, note: str = None):
+async def unpause_schedule(id: str, note: str | None = None):
     client = await get_temporalio_client()
     handle = client.get_schedule_handle(
         f"schedule-{id}",
@@ -105,7 +111,10 @@ async def start_workflow(
 
 @async_to_sync
 async def workflow_signal(
-    workflow: Union[str, Callable[..., Awaitable[Any]]],
+    workflow: Union[
+        MethodAsyncNoParam[SelfType, ReturnType],
+        MethodAsyncSingleParam[SelfType, Any, ReturnType],
+    ],
     workflow_id: str,
     signal: Union[str, Callable[..., Awaitable[Any]]],
     arg: Any = temporalio.common._arg_unset,

@@ -12,3 +12,5 @@ from .archive import *
 from .cancel_deployments import *
 from .create_resources_for_deployment import *
 from .changes import *
+from .metrics import *
+from .monitor import *

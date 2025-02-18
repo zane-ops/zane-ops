@@ -13,7 +13,6 @@ from drf_spectacular.utils import (
 )
 from faker import Faker
 from rest_framework import status, exceptions
-from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response

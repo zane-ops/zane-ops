@@ -1,4 +1,5 @@
 import base64
+from datetime import timedelta
 from io import StringIO
 import json
 import re
@@ -1362,3 +1363,30 @@ class EnvStringChangeSerializer(serializers.Serializer):
             raise serializers.ValidationError({"new_value": errors})
 
         return attrs
+
+
+# ==========================================
+#       Service & deployment metrics       #
+# ==========================================
+
+
+class ServiceMetricsSerializer(serializers.Serializer):
+    bucket_epoch = serializers.DateTimeField()
+    avg_cpu = serializers.FloatField()
+    avg_memory = serializers.FloatField()
+    total_net_tx = serializers.IntegerField()
+    total_net_rx = serializers.IntegerField()
+    total_disk_read = serializers.IntegerField()
+    total_disk_write = serializers.IntegerField()
+
+
+class ServiceMetricsResponseSerializer(serializers.ListSerializer):
+    child = ServiceMetricsSerializer()
+
+
+class ServiceMetricsQuery(serializers.Serializer):
+    time_range = serializers.ChoiceField(
+        choices=["LAST_HOUR", "LAST_6HOURS", "LAST_DAY", "LAST_WEEK", "LAST_MONTH"],
+        required=False,
+        default="LAST_HOUR",
+    )

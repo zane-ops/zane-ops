@@ -154,6 +154,12 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/metrics/?$",
+        views.DockerServiceMetricsAPIView.as_view(),
+        name="services.docker.metrics",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs"
         rf"/(?P<request_uuid>{UUID_REGEX})/?$",
         views.DockerServiceSingleHttpLogAPIView.as_view(),
@@ -189,6 +195,12 @@ urlpatterns = [
         rf"/(?P<request_uuid>{UUID_REGEX})/?$",
         views.DockerServiceDeploymentSingleHttpLogAPIView.as_view(),
         name="services.docker.deployment_http_logs.single",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/metrics/?$",
+        views.DockerServiceMetricsAPIView.as_view(),
+        name="services.docker.deployment_metrics",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/service-details/docker"

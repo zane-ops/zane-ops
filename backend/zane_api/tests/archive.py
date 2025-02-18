@@ -397,3 +397,25 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
         )
         self.assertEqual(0, len(self.workflow_schedules))
+
+    async def test_archive_should_delete_metrics_tasks_for_the_deployment(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+        initial_deployment = await service.deployments.afirst()
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0,
+            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+        )
+
+        self.assertIsNone(
+            self.get_workflow_schedule_by_id(initial_deployment.metrics_schedule_id)
+        )
+        self.assertEqual(0, len(self.workflow_schedules))
