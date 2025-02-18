@@ -105,11 +105,11 @@ class GetDockerDeploymentStatsWorkflow:
 @workflow.defn(name="cleanup-app-logs")
 class CleanupAppLogsWorkflow:
     @workflow.run
-    async def run(self):
+    async def run(self) -> CleanupResult:
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
-        await workflow.execute_activity_method(
+        result = await workflow.execute_activity_method(
             CleanupActivities.cleanup_simple_logs,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
@@ -120,3 +120,5 @@ class CleanupAppLogsWorkflow:
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
+
+        return result
