@@ -172,6 +172,10 @@ export interface paths {
     /** Get service http logs fields values */
     get: operations["projects_service_details_docker_http_logs_fields_list"];
   };
+  "/api/projects/{project_slug}/service-details/docker/{service_slug}/metrics/": {
+    /** Get service metrics */
+    get: operations["projects_service_details_docker_metrics_list"];
+  };
   "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/": {
     /** Regenerate service deploy token */
     patch: operations["regenerateServiceDeployToken"];
@@ -596,7 +600,7 @@ export interface components {
     DockerEnvVariableRequest: {
       id?: string;
       key: string;
-      value: string;
+      value?: string;
     };
     DockerImage: {
       full_image: string;
@@ -1391,6 +1395,7 @@ export interface components {
       errors: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListError"][];
     };
     ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDockerMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenCommandErrorComponent: {
@@ -2409,6 +2414,18 @@ export interface components {
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
+    ServiceMetrics: {
+      /** Format: date-time */
+      bucket_epoch: string;
+      /** Format: double */
+      avg_cpu: number;
+      /** Format: double */
+      avg_memory: number;
+      total_net_tx: number;
+      total_net_rx: number;
+      total_disk_read: number;
+      total_disk_write: number;
+    };
     ServicePortsRequestRequest: {
       host: number;
       forwarded: number;
@@ -4013,6 +4030,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get service metrics */
+  projects_service_details_docker_metrics_list: {
+    parameters: {
+      query?: {
+        /**
+         * @description * `LAST_HOUR` - LAST_HOUR
+         * * `LAST_6HOURS` - LAST_6HOURS
+         * * `LAST_DAY` - LAST_DAY
+         * * `LAST_WEEK` - LAST_WEEK
+         * * `LAST_MONTH` - LAST_MONTH
+         */
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
+      };
+      path: {
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceMetrics"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDockerMetricsListErrorResponse400"];
         };
       };
       401: {

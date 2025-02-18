@@ -2920,6 +2920,109 @@ paths:
                 items:
                   type: string
           description: ''
+  /api/projects/{project_slug}/service-details/docker/{service_slug}/metrics/:
+    get:
+      operationId: projects_service_details_docker_metrics_list
+      summary: Get service metrics
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: time_range
+        schema:
+          enum:
+          - LAST_HOUR
+          - LAST_6HOURS
+          - LAST_DAY
+          - LAST_WEEK
+          - LAST_MONTH
+          type: string
+          default: LAST_HOUR
+          minLength: 1
+        description: |-
+          * `LAST_HOUR` - LAST_HOUR
+          * `LAST_6HOURS` - LAST_6HOURS
+          * `LAST_DAY` - LAST_DAY
+          * `LAST_WEEK` - LAST_WEEK
+          * `LAST_MONTH` - LAST_MONTH
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDockerMetricsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceMetrics'
+          description: ''
   /api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
     patch:
       operationId: regenerateServiceDeployToken
@@ -4487,7 +4590,6 @@ components:
           maxLength: 255
         value:
           type: string
-          maxLength: 255
       required:
       - id
       - key
@@ -4505,11 +4607,8 @@ components:
           maxLength: 255
         value:
           type: string
-          minLength: 1
-          maxLength: 255
       required:
       - key
-      - value
     DockerImage:
       type: object
       properties:
@@ -6359,6 +6458,13 @@ components:
       - errors
       - type
     ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDockerMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -8262,6 +8368,34 @@ components:
         propertyName: type
         mapping:
           null: '#/components/schemas/GitServiceCard'
+    ServiceMetrics:
+      type: object
+      properties:
+        bucket_epoch:
+          type: string
+          format: date-time
+        avg_cpu:
+          type: number
+          format: double
+        avg_memory:
+          type: number
+          format: double
+        total_net_tx:
+          type: integer
+        total_net_rx:
+          type: integer
+        total_disk_read:
+          type: integer
+        total_disk_write:
+          type: integer
+      required:
+      - avg_cpu
+      - avg_memory
+      - bucket_epoch
+      - total_disk_read
+      - total_disk_write
+      - total_net_rx
+      - total_net_tx
     ServicePortsRequestRequest:
       type: object
       properties:
