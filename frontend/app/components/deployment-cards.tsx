@@ -1,5 +1,6 @@
 import {
   Ban,
+  ChartNoAxesColumnIcon,
   Container,
   EllipsisVertical,
   Eye,
@@ -320,6 +321,11 @@ export function DockerDeploymentCard({
                 icon={ScrollText}
                 text="View logs"
                 onClick={() => navigate(`./deployments/${hash}`)}
+              />
+              <MenubarContentItem
+                icon={ChartNoAxesColumnIcon}
+                text="View metrics"
+                onClick={() => navigate(`./deployments/${hash}/metrics`)}
               />
 
               {urls?.length > 0 && (

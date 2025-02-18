@@ -809,6 +809,57 @@ export const deploymentQueries = {
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
     }),
+  metrics: ({
+    project_slug,
+    service_slug,
+    deployment_hash,
+    filters
+  }: {
+    project_slug: string;
+    deployment_hash: string;
+    service_slug: string;
+    filters?: MetricsFilters;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          deployment_hash
+        }).queryKey,
+        "METRICS",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                deployment_hash
+              },
+              query: {
+                ...filters
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
   httpLogs: ({
     project_slug,
     service_slug,
