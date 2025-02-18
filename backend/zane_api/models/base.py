@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-
+from datetime import datetime, timedelta
 from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
@@ -248,6 +248,10 @@ class DockerRegistryService(BaseService):
     @property
     def http_logs(self):
         return HttpLog.objects.filter(service_id=self.id)
+
+    @property
+    def metrics(self):
+        return ServiceMetrics.objects.filter(service=self)
 
     @property
     def network_aliases(self):

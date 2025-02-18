@@ -10,6 +10,7 @@ from ..temporal import (
     GetDockerDeploymentStatsWorkflow,
     SimpleDeploymentDetails,
 )
+from ..utils import jprint, convert_value_to_bytes
 
 
 class DockerServiceMetricsScheduleTests(AuthAPITestCase):
@@ -67,6 +68,58 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
             metrics_count = await ServiceMetrics.objects.filter(
                 deployment__hash=deployment.hash, service=service
             ).acount()
-            metrics = await ServiceMetrics.objects.aget(service=service)
-            print(f"{metrics.cpu_percent=}")
             self.assertGreater(metrics_count, 0)
+
+
+class DockerServiceMetricsViewTests(AuthAPITestCase):
+    async def test_get_service_metrics(self):
+        project, service = await self.acreate_and_deploy_redis_docker_service()
+        initial_deployment: (
+            DockerDeployment
+        ) = await service.alatest_production_deployment  # type: ignore
+
+        await ServiceMetrics.objects.abulk_create(
+            [
+                ServiceMetrics(
+                    cpu_percent=4.98,
+                    memory_bytes=convert_value_to_bytes(250, "KILOBYTES"),
+                    net_tx_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    net_rx_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    disk_read_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    disk_writes_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    deployment=initial_deployment,
+                    service=service,
+                ),
+                ServiceMetrics(
+                    cpu_percent=6.12,
+                    memory_bytes=convert_value_to_bytes(1.6, "MEGABYTES"),
+                    net_tx_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    net_rx_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    disk_read_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    disk_writes_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    deployment=initial_deployment,
+                    service=service,
+                ),
+                ServiceMetrics(
+                    cpu_percent=3.56,
+                    memory_bytes=convert_value_to_bytes(5895, "KILOBYTES"),
+                    net_tx_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    net_rx_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    disk_read_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    disk_writes_bytes=convert_value_to_bytes(45, "KILOBYTES"),
+                    deployment=initial_deployment,
+                    service=service,
+                ),
+            ]
+        )
+
+        response = await self.async_client.get(
+            reverse(
+                "zane_api:services.docker.metrics",
+                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        jprint(response.json())
+        self.assertEqual(3, len(response.json()))

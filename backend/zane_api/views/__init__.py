@@ -9,3 +9,4 @@ from .proxy import *
 from .status import *
 from .deployments import *
 from .search import *
+from .metrics import *
