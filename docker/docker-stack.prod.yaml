@@ -14,7 +14,6 @@ x-backend-vars: &env-vars
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
   ELASTICSEARCH_HOST: http://zane.search:9200
-  IMAGE_VERSION: ${IMAGE_VERSION:-latest}
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
 
 services:
