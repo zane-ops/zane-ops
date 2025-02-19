@@ -31,9 +31,7 @@ jobs:
           context: ./docker/proxy
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
-            ghcr.io/zane-ops/proxy:${{ github.sha }}
+          tags: ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/proxy:${{ github.sha }}
           cache-from: |
             type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/proxy:canary
