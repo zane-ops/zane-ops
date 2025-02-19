@@ -110,4 +110,6 @@ jobs:
             ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/app:latest
           cache-to: type=inline
-          build-args: COMMIT_SHA=${{ github.sha }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            IMAGE_VERSION=${{ needs.extract-version.outputs.tag }}

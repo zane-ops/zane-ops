@@ -87,4 +87,6 @@ jobs:
             type=registry,ref=ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}
             type=registry,ref=ghcr.io/zane-ops/app:canary
           cache-to: type=inline
-          build-args: COMMIT_SHA=${{ github.sha }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            IMAGE_VERSION=pr-${{ github.event.pull_request.number }}

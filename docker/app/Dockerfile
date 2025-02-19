@@ -11,7 +11,9 @@ RUN apt update && apt install -y caddy libpq-dev supervisor gcc python3-dev
 
 # environment variables
 ARG COMMIT_SHA
+ARG IMAGE_VERSION
 ENV COMMIT_SHA=$COMMIT_SHA
+ENV IMAGE_VERSION=$IMAGE_VERSION
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/venv
