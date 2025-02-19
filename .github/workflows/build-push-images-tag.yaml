@@ -1,10 +1,29 @@
-name: Build and Push Pull Requests Images
+name: Build and Push Latest Images
 on:
-  pull_request:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  release: 
+    types: 
+      [published]
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
+  extract-version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      major: ${{ steps.version.outputs.major }}
+    steps:
+      - name: Extract version info
+        id: version
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          MAJOR="${TAG%%.*}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+  
   build-push-proxy:
+    needs: extract-version
     name: Build and Push Zane Proxy
     runs-on: ubuntu-latest
     permissions:
@@ -31,16 +50,14 @@ jobs:
           context: ./docker/proxy
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
-            ghcr.io/zane-ops/proxy:${{ github.sha }}
-          cache-from: |
-            type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/zane-ops/proxy:canary
+          tags: ghcr.io/zane-ops/proxy:latest,ghcr.io/zane-ops/proxy:${{ github.sha }},ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }},ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:latest
           cache-to: type=inline
           build-args: |
             ENVIRONMENT=prod 
             COMMIT_SHA=${{ github.sha }}
+
+
   build-push-app:
     name: Build and Push Zane App
     runs-on: ubuntu-latest
@@ -52,9 +69,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
       - name: Cache pnpm dependencies
         uses: actions/cache@v3
         with:
@@ -62,7 +76,7 @@ jobs:
           key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-cache-
-      - name: Build frontend with node
+      - name: Build app with node
         run: |
           npm install -g pnpm@8
           pnpm install --frozen-lockfile
@@ -84,10 +98,8 @@ jobs:
           file: ./docker/app/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/app:${{ github.sha }}
-          cache-from: |
-            type=registry,ref=ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/zane-ops/app:canary
+          tags: ghcr.io/zane-ops/app:canary,ghcr.io/zane-ops/app:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:canary
           cache-to: type=inline
           build-args: COMMIT_SHA=${{ github.sha }}
   build-push-temporal:
@@ -118,9 +130,7 @@ jobs:
           file: ./docker/temporalio/server.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/temporal-with-archival:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/temporal-with-archival:${{ github.sha }}
-          cache-from: |
-            type=registry,ref=ghcr.io/zane-ops/temporal-with-archival:pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/zane-ops/temporal-with-archival:canary
+          tags: ghcr.io/zane-ops/temporal-with-archival:canary,ghcr.io/zane-ops/temporal-with-archival:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/temporal-with-archival:canary
           cache-to: type=inline
         
