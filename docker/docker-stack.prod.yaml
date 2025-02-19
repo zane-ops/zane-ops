@@ -14,7 +14,6 @@ x-backend-vars: &env-vars
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
   ELASTICSEARCH_HOST: http://zane.search:9200
-  IMAGE_VERSION: ${IMAGE_VERSION:-latest}
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
 
 services:
@@ -118,7 +117,7 @@ services:
       - POSTGRES_SEEDS=zane.db
       - SERVICES=history,matching,frontend,worker
       - BIND_ON_IP=0.0.0.0
-    image: ghcr.io/zane-ops/temporal-with-archival:${IMAGE_VERSION}
+    image: temporalio/auto-setup:1.24.2
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
