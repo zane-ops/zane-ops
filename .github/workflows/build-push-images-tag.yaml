@@ -50,11 +50,7 @@ jobs:
           context: ./docker/proxy
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/proxy:latest
-            ghcr.io/zane-ops/proxy:${{ github.sha }}
-            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}
+          tags: ghcr.io/zane-ops/proxy:latest,ghcr.io/zane-ops/proxy:${{ github.sha }},ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }},ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:latest
           cache-to: type=inline
           build-args: |
@@ -63,7 +59,6 @@ jobs:
 
 
   build-push-app:
-    needs: extract-version
     name: Build and Push Zane App
     runs-on: ubuntu-latest
     permissions:
@@ -103,16 +98,11 @@ jobs:
           file: ./docker/app/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/app:latest
-            ghcr.io/zane-ops/app:${{ github.sha }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/app:latest
+          tags: ghcr.io/zane-ops/app:canary,ghcr.io/zane-ops/app:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:canary
           cache-to: type=inline
           build-args: COMMIT_SHA=${{ github.sha }}
   build-push-temporal:
-    needs: extract-version
     name: Build and Push Zane Temporalio image
     runs-on: ubuntu-latest
     permissions:
@@ -140,11 +130,7 @@ jobs:
           file: ./docker/temporalio/server.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/temporal-with-archival:latest
-            ghcr.io/zane-ops/temporal-with-archival:${{ github.sha }}
-            ghcr.io/zane-ops/temporal-with-archival:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/temporal-with-archival:${{ needs.extract-version.outputs.tag }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/temporal-with-archival:latest
+          tags: ghcr.io/zane-ops/temporal-with-archival:canary,ghcr.io/zane-ops/temporal-with-archival:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/temporal-with-archival:canary
           cache-to: type=inline
         
