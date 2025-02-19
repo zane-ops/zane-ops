@@ -58,7 +58,7 @@ export function ServiceDeployURLForm({
           <p className="text-gray-400">
             Your private URL to&nbsp;
             <a
-              href="#"
+              href="https://zaneops.dev/api-reference/openapi/#tag/deploy-service"
               target="_blank"
               className="text-link underline inline-flex gap-1 items-center"
             >
