@@ -89,7 +89,7 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 create-user: ### Create the first user to login in into the dashboard
-	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
+	@docker exec -it $$(docker ps -qf "name=zane_app") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
 
 stop: ### Take down zaneops and scale down all services created in zaneops
 	@echo -e "====== \x1b[94mTaking down zaneops...\x1b[0m ======"
