@@ -1239,10 +1239,12 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    def test_validate_url_cannot_use_subdomain_if_wildcard_exists(self):
+    def test_validate_url_cannot_use_subdomain_if_wildcard_exists_and_is_used_by_another_service(
+        self,
+    ):
         owner = self.loginUser()
         p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        _ = DockerRegistryService.objects.create(slug="app", project=p)
         redis = DockerRegistryService.objects.create(
             slug="cache-db", image="redis", project=p
         )

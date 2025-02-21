@@ -202,14 +202,14 @@ class URLRequestSerializer(serializers.Serializer):
         domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
 
         existing_parent_domain = URL.objects.filter(
-            domain=domain_as_wildcard.lower()
+            Q(domain=domain_as_wildcard.lower()) & ~Q(dockerregistryservice=service)
         ).distinct()
         if len(existing_parent_domain) > 0:
             raise serializers.ValidationError(
                 {
                     "domain": [
                         f"URL with domain `{attrs['domain']}` cannot be used because it will be shadowed by the wildcard"
-                        f" domain `{domain_as_wildcard}` which is already assigned to another service."
+                        f" domain `{domain_as_wildcard}` which is already assigned."
                     ]
                 }
             )
@@ -662,6 +662,26 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 }
             )
+
+        if change_type == "ADD":
+            domain = new_value["domain"]
+            domain_parts = domain.split(".")
+            domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+
+            existing_parent_domain = URL.objects.filter(
+                Q(domain=domain_as_wildcard.lower())
+            ).distinct()
+            if len(existing_parent_domain) > 0:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "domain": [
+                                f"Cannot add URL with domain `{domain}` as it will be shadowed by the wildcard"
+                                + f" domain `{domain_as_wildcard}` which is already assigned."
+                            ]
+                        }
+                    }
+                )
 
         return attrs
 

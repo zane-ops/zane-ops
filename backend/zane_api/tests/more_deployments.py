@@ -889,6 +889,61 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(0, changes.count())
 
+    def test_validate_url_can_update_subdomain_if_wildcard_exists_and_is_attached_to_same_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        new_url = URL.objects.create(domain="*.gh.fredkiss.dev", associated_port=80)
+        service.urls.add(new_url)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "UPDATE",
+            "item_id": new_url.id,
+            "new_value": {
+                "domain": "*.gh.fredkiss.dev",
+                "associated_port": 3000,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_validate_url_cannot_add_subdomain_even_if_wildcard_exists_and_is_attached_to_same_service(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        service = DockerRegistryService.objects.create(slug="app", project=p)
+        new_url = URL.objects.create(domain="*.gh.fredkiss.dev", associated_port=80)
+        service.urls.add(new_url)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {
+                "domain": "abc.gh.fredkiss.dev",
+                "associated_port": 3000,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
 
 class DockerServiceRevertChangesViewTests(AuthAPITestCase):
     async def test_prevent_reverting_volume_change_if_it_result_in_invalid_state(self):
