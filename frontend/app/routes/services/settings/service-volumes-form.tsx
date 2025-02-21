@@ -88,7 +88,11 @@ export function ServiceVolumesForm({
           <AlertTitle>Warning</AlertTitle>
           <AlertDescription>
             Adding volumes will disable&nbsp;
-            <a href="#" className="underline inline-flex gap-1 items-center">
+            <a
+              href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
+              target="_blank"
+              className="text-link underline inline-flex gap-1 items-center"
+            >
               zero-downtime deployments <ExternalLinkIcon size={12} />
             </a>
             .
