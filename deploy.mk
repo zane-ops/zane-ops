@@ -84,6 +84,7 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"; \
 	echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"; \
 	echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"; \
+	echo -e "\nit can take up to 5 minutes to start on the first deploy. \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
