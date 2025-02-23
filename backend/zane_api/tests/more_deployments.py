@@ -917,6 +917,37 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+    def test_validate_url_can_use_wildcard_subdomain_if_wildcard_exists_and_is_attached_to_another_service_on_another_path(
+        self,
+    ):
+        owner = self.loginUser()
+        p = Project.objects.create(slug="zaneops", owner=owner)
+        _ = DockerRegistryService.objects.create(slug="app", project=p)
+        new_url = URL.objects.create(domain="*.gh.fredkiss.dev", associated_port=80)
+        redis = DockerRegistryService.objects.create(
+            slug="cache-db", image="redis", project=p
+        )
+        redis.urls.add(new_url)
+
+        changes_payload = {
+            "field": "urls",
+            "type": "ADD",
+            "new_value": {
+                "domain": "*.gh.fredkiss.dev",
+                "base_path": "/api",
+                "associated_port": 3000,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={"project_slug": p.slug, "service_slug": "app"},
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
     def test_validate_url_cannot_add_subdomain_even_if_wildcard_exists_and_is_attached_to_same_service(
         self,
     ):

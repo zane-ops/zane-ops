@@ -202,14 +202,16 @@ class URLRequestSerializer(serializers.Serializer):
         domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
 
         existing_parent_domain = URL.objects.filter(
-            Q(domain=domain_as_wildcard.lower()) & ~Q(dockerregistryservice=service)
+            Q(domain=domain_as_wildcard.lower())
+            & ~Q(dockerregistryservice=service)
+            & Q(base_path=attrs["base_path"].lower())
         ).distinct()
         if len(existing_parent_domain) > 0:
             raise serializers.ValidationError(
                 {
                     "domain": [
                         f"URL with domain `{attrs['domain']}` cannot be used because it will be shadowed by the wildcard"
-                        f" domain `{domain_as_wildcard}` which is already assigned."
+                        f" domain `{domain_as_wildcard}` which is already assigned to another service."
                     ]
                 }
             )
@@ -670,6 +672,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
 
             existing_parent_domain = URL.objects.filter(
                 Q(domain=domain_as_wildcard.lower())
+                & Q(base_path=new_value["base_path"].lower())
             ).distinct()
             if len(existing_parent_domain) > 0:
                 raise serializers.ValidationError(
