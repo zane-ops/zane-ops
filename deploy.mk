@@ -11,7 +11,7 @@ help: ### Show this help
 
 setup: ### Launch initial setup before installing zaneops
 	@echo -e "====== \x1b[94m⚒️  INITIAL SETUP OF ZANEOPS ⚒️\x1b[0m ======"
-	@echo "Step 1️⃣ : initializing docker swarm..."
+	@echo "Step 1️⃣ : Verifying docker swarm status..."
 	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \
 		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -qw "true"; then \
 			echo "Swarm is enabled and this node is a manager, skipping swarm initialization 👍"; \
@@ -23,6 +23,11 @@ setup: ### Launch initial setup before installing zaneops
 		fi \
 	else \
 		echo -e "❌ ERROR: Docker Swarm is disabled, please enable it with \x1b[96mdocker swarm init --advertise-addr <SERVER_IP>\x1b[0m. ZaneOps needs be installed on a docker swarm manager. ❌" >&2; \
+		echo -e "\x1b[96mSERVER_IP\x1b[0m is the IP address of your server:"; \
+		echo -e "> You can use your server's public IP."; \
+		echo -e "> If you have private networking, use the private IP (e.g., \x1b[33m10.0.0.x\x1b[0m)."; \
+		echo -e "> If you are installing locally, use \x1b[33m127.0.0.1\x1b[0m."; \
+		echo "\n See docs for more information : \x1b[96mhttps://zaneops.dev/installation/#process\x1b[0m"; \
 		exit 1; \
 	fi
 	@echo "Step 1️⃣ Done ✅"
