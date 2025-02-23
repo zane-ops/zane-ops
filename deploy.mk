@@ -27,7 +27,7 @@ setup: ### Launch initial setup before installing zaneops
 		echo -e "> You can use your server's public IP."; \
 		echo -e "> If you have private networking, use the private IP (e.g., \x1b[33m10.0.0.x\x1b[0m)."; \
 		echo -e "> If you are installing locally, use \x1b[33m127.0.0.1\x1b[0m."; \
-		echo "\n See docs for more information : \x1b[96mhttps://zaneops.dev/installation/#process\x1b[0m"; \
+		echo "\nSee docs for more information : \x1b[96mhttps://zaneops.dev/installation/#process\x1b[0m"; \
 		exit 1; \
 	fi
 	@echo "Step 1️⃣ Done ✅"
