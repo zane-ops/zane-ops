@@ -22,7 +22,8 @@ setup: ### Launch initial setup before installing zaneops
 			exit 1; \
 		fi \
 	else \
-		docker swarm init; \
+		echo -e "❌ ERROR: Docker Swarm is disabled, please enable it with \x1b[96mdocker swarm init\x1b[0m. ZaneOps needs be installed on a docker swarm manager. ❌" >&2; \
+		exit 1; \
 	fi
 	@echo "Step 1️⃣ Done ✅"
 	@echo "Step 2️⃣: Preparing the current folder..."
