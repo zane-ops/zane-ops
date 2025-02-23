@@ -67,49 +67,6 @@ You can view all the in-app screenshots in the [documentation](https://zaneops.d
     </picture>
   </p>
 
-## 🛣️ ROADMAP 
-
-<details>
-<summary>Click to see the roadmap</summary>
-
-- **beta** :
-   - [x] Docker services frontend 
-     - [x] Details page 
-     - [x] Env variables page
-     - [x] Settings page
-     - [x] Single deployment application logs page
-     - [ ] Single deployment page details 
-     - [ ] Single deployment http logs page
-     - [x] deploy & redeploy deployments
-   - [ ] Project frontend
-     - [ ] settings page 
-   - [ ] Tons of tutorials
-     - [ ] Examples of deploying different kind of apps
-  - [x] Rewrite from celery to temporal (not sure)
-
-- **v1** :
-
-  - [ ] Managing environments (stating, production, and ephemeral envs)
-  - [ ] Support workers (A.K.A sleeping services)
-  - [ ] Git services API
-    - [ ] create service from a public repo
-    - [ ] deploy service  
-      - [ ] Building service with Dockerfile
-      - [ ] Building service with nixpacks  
-    - [ ] archive service
-    - [ ] Pull Request environments & deploying automatically
-    - [ ] Auto-comments with deployment status on github
-  - [ ] Git services frontend & API (same as docker services)
-
-<!-- - **v2** :
-  - [ ] Static websites support
-  - [ ] CRONs support for services
-  - [ ] Template support
-    - [ ] Allow also for seeding templates
-  - [ ] Multi-server support -->
-</details>
-
-
 ## ❤️ Contributing
 
 Interested in contributing? Check out the [contribution guidelines](./CONTRIBUTING.md).
