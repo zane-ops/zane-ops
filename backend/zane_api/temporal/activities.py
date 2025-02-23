@@ -2139,6 +2139,7 @@ class DockerSwarmActivities:
                             timeout_seconds=healthcheck.timeout_seconds,
                             interval_seconds=healthcheck.interval_seconds,
                             id=healthcheck.id,
+                            associated_port=healthcheck.associated_port,
                         )
                     )
                     if healthcheck is not None

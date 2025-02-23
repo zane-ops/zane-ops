@@ -79,8 +79,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
             alt="logo"
           />
           <p className="text-white px-5 ">
-            Embrace ZaneOps, Your Self-Hosted PaaS Solution for Seamless Web
-            Service Management.
+            your all-in-one platform for deploying your apps with ✨ zen ✨.
           </p>
         </div>
 

@@ -12,6 +12,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
+import { Code } from "~/components/code";
 import {
   Accordion,
   AccordionContent,
@@ -85,7 +86,8 @@ export function ServiceURLsForm({
       <div className="flex flex-col gap-3">
         <h3 className="text-lg">URLs</h3>
         <p className="text-gray-400">
-          The domains and base path which are associated to this service.
+          The domains and base path which are associated to this service. Use{" "}
+          <Code>*.example.com</Code> for wildcard support.
         </p>
       </div>
       {urls.size > 0 && (
