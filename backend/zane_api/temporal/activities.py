@@ -2127,7 +2127,7 @@ class DockerSwarmActivities:
                 workflow=GetDockerDeploymentStatsWorkflow.run,
                 args=details,
                 id=docker_deployment.metrics_schedule_id,
-                interval=timedelta(seconds=5),
+                interval=timedelta(seconds=30),
                 task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             )
 
