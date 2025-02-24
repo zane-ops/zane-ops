@@ -1223,6 +1223,65 @@ class DockerSwarmActivities:
             await docker_deployment.asave()
 
     @activity.defn
+    async def cleanup_previous_unclean_deployments(
+        self, deployment: DockerDeploymentDetails
+    ) -> List[str]:
+        # let's cleanup other deployments if they weren't cleaned up correctly
+        previous_deployments = DockerDeployment.objects.filter(
+            Q(service_id=deployment.service.id)
+            & Q(is_current_production=False)
+            & ~Q(hash=deployment.hash)
+            & ~Q(status=DockerDeployment.DeploymentStatus.FAILED)
+            & ~Q(status=DockerDeployment.DeploymentStatus.REMOVED)
+            & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
+        ).select_related("service", "service__project")
+
+        deployments: List[DockerDeployment] = []
+
+        async for docker_deployment in previous_deployments:
+            print(f"Found uncleaned deployment : {docker_deployment.hash=}")
+            swarm_service_name = get_swarm_service_name_for_deployment(
+                deployment_hash=docker_deployment.hash,
+                project_id=docker_deployment.service.project.id,
+                service_id=docker_deployment.service.id,
+            )
+
+            try:
+                self.docker_client.services.get(swarm_service_name)
+            except docker.errors.NotFound:
+                # if the service hasn't been cleanup correctly
+                deployments.append(docker_deployment)
+            else:
+                print(
+                    f"Found rogue deployment : {docker_deployment.hash=} with service: {swarm_service_name=}"
+                )
+
+        jobs: List[Coroutine[Any, Any, None]] = []
+        for docker_deployment in deployments:
+            jobs.extend(
+                [
+                    delete_schedule(
+                        id=docker_deployment.monitor_schedule_id,
+                    ),
+                    delete_schedule(
+                        id=docker_deployment.metrics_schedule_id,
+                    ),
+                ]
+            )
+        try:
+            # delete schedules
+            await asyncio.gather(*jobs, return_exceptions=True)
+        except RPCError:
+            # The schedule probably don't exist
+            pass
+
+        await previous_deployments.aupdate(
+            status=DockerDeployment.DeploymentStatus.REMOVED
+        )
+
+        return [dpl.hash for dpl in deployments]
+
+    @activity.defn
     async def create_docker_volumes_for_service(
         self, deployment: DockerDeploymentDetails
     ) -> List[VolumeDto]:
