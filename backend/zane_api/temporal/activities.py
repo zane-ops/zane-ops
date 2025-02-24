@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import timedelta
-from typing import Any, List, Optional, TypedDict
+from typing import Any, Coroutine, List, Optional, TypedDict
 
 from rest_framework import status
 from temporalio import activity, workflow
@@ -1176,10 +1176,41 @@ class DockerSwarmActivities:
         return None
 
     @activity.defn
+    async def delete_previous_production_deployment_schedules(
+        self, deployment: SimpleDeploymentDetails
+    ):
+        docker_deployment = (
+            await DockerDeployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service_id
+            )
+            .select_related("service")
+            .afirst()
+        )
+
+        if docker_deployment is not None:
+            try:
+                # delete schedule
+                await asyncio.gather(
+                    delete_schedule(
+                        id=docker_deployment.monitor_schedule_id,
+                    ),
+                    delete_schedule(
+                        id=docker_deployment.metrics_schedule_id,
+                    ),
+                )
+                print(
+                    f"Deleted previous production deployment schedules : {docker_deployment.hash=} {docker_deployment.monitor_schedule_id=} {docker_deployment.metrics_schedule_id=}"
+                )
+            except RPCError as e:
+                print(f"Error deleting previous deployment schedules: {e}")
+                # The schedule probably doesn't exist
+                pass
+
+    @activity.defn
     async def cleanup_previous_production_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
-        docker_deployment: DockerDeployment | None = (
+        docker_deployment = (
             await DockerDeployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service_id
             )
@@ -1190,19 +1221,6 @@ class DockerSwarmActivities:
         if docker_deployment is not None:
             docker_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
             await docker_deployment.asave()
-
-            try:
-                await asyncio.gather(
-                    delete_schedule(
-                        id=docker_deployment.monitor_schedule_id,
-                    ),
-                    delete_schedule(
-                        id=docker_deployment.metrics_schedule_id,
-                    ),
-                )
-            except RPCError:
-                # The schedule probably doesn't exist
-                pass
 
     @activity.defn
     async def create_docker_volumes_for_service(
@@ -1361,11 +1379,21 @@ class DockerSwarmActivities:
 
             if docker_deployment is not None:
                 try:
-                    await pause_schedule(
-                        id=docker_deployment.monitor_schedule_id,
-                        note="Paused to prevent zero-downtime deployment",
+                    await asyncio.gather(
+                        pause_schedule(
+                            id=docker_deployment.monitor_schedule_id,
+                            note="Paused to prevent zero-downtime deployment",
+                        ),
+                        pause_schedule(
+                            id=docker_deployment.metrics_schedule_id,
+                            note="Paused to prevent zero-downtime deployment",
+                        ),
                     )
+                    print(f"Paused schedule {docker_deployment.monitor_schedule_id=}")
                 except RPCError:
+                    print(
+                        f"Error pausing schedule {docker_deployment.monitor_schedule_id=}"
+                    )
                     # The schedule probably doesn't exist
                     pass
                 finally:

@@ -569,6 +569,13 @@ class DeployDockerServiceWorkflow:
         current_deployment: DockerDeploymentDetails,
     ):
         await workflow.execute_activity_method(
+            DockerSwarmActivities.delete_previous_production_deployment_schedules,
+            previous_deployment,
+            start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
             DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=60),
@@ -749,6 +756,7 @@ def get_workflows_and_activities():
             swarm_activities.expose_docker_service_to_http,
             swarm_activities.finish_and_save_deployment,
             swarm_activities.cleanup_previous_production_deployment,
+            swarm_activities.delete_previous_production_deployment_schedules,
             swarm_activities.scale_down_and_remove_docker_service_deployment,
             swarm_activities.remove_old_docker_volumes,
             swarm_activities.remove_old_docker_configs,
