@@ -1231,6 +1231,7 @@ class DockerSwarmActivities:
             Q(service_id=deployment.service.id)
             & Q(is_current_production=False)
             & ~Q(hash=deployment.hash)
+            & ~Q(status=DockerDeployment.DeploymentStatus.QUEUED)
             & ~Q(status=DockerDeployment.DeploymentStatus.FAILED)
             & ~Q(status=DockerDeployment.DeploymentStatus.REMOVED)
             & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
