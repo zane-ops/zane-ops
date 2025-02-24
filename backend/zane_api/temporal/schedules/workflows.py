@@ -17,6 +17,7 @@ from ..shared import (
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
+    from ...models import DockerDeployment
 
 
 @workflow.defn(name="monitor-docker-deployment-workflow")
@@ -49,6 +50,10 @@ class MonitorDockerDeploymentWorkflow:
             )
         )
 
+        # Do not run healthcheck if deployment is sleeping
+        if deployment_status == DockerDeployment.DeploymentStatus.SLEEPING:
+            return deployment_status, deployment_status_reason
+
         healthcheck_result = DeploymentHealthcheckResult(
             deployment_hash=payload.deployment.hash,
             status=deployment_status,
@@ -71,7 +76,7 @@ class MonitorDockerDeploymentWorkflow:
 class GetDockerDeploymentStatsWorkflow:
     @workflow.run
     async def run(self, payload: SimpleDeploymentDetails):
-        print(f"\nRunning workflow GetDockerDeploymentWorkflow with {payload=}")
+        print(f"\nRunning workflow GetDockerDeploymentStatsWorkflow with {payload=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )

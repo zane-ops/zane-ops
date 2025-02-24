@@ -95,6 +95,10 @@ class MonitorDockerDeploymentActivities:
         details: HealthcheckDeploymentDetails,
     ) -> tuple[DockerDeployment.DeploymentStatus, str]:
         try:
+            docker_deployment = await DockerDeployment.objects.aget(
+                hash=details.deployment.hash,
+            )
+
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=details.deployment.hash,
@@ -108,6 +112,12 @@ class MonitorDockerDeploymentActivities:
                 non_retryable=True,
             )
         else:
+            if docker_deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
+                return (
+                    DockerDeployment.DeploymentStatus.SLEEPING,
+                    "Deployment is sleeping, skipping monitoring health check ",
+                )
+
             healthcheck = details.healthcheck
 
             healthcheck_timeout = (
@@ -278,6 +288,9 @@ class DockerDeploymentStatsActivities:
         self, details: SimpleDeploymentDetails
     ) -> ServiceMetricsResult | None:
         try:
+            docker_deployment = await DockerDeployment.objects.aget(
+                hash=details.hash,
+            )
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
                     deployment_hash=details.hash,
@@ -291,6 +304,9 @@ class DockerDeploymentStatsActivities:
                 non_retryable=True,
             )
         else:
+            if docker_deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
+                return None
+
             task_list = swarm_service.tasks(
                 filters={"label": f"deployment_hash={details.hash}"}
             )
