@@ -881,7 +881,7 @@ class DockerSwarmActivities:
                     deployments=[
                         SimpleDeploymentDetails(
                             hash=dpl.get("hash"),  # type: ignore
-                            urls=dpl.get("urls"),  # type: ignore
+                            urls=dpl.get("urls") or [],  # type: ignore
                             project_id=service.project.original_id,
                             service_id=service.original_id,
                         )
