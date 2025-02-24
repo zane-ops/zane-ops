@@ -31,6 +31,7 @@ type CommonServiceCardProps = {
     | "SLEEPING"
     | "NOT_DEPLOYED_YET"
     | "DEPLOYING"
+    | "FAILED"
     | "CANCELLED";
   volumeNumber?: number;
   url?: string | null;
@@ -66,7 +67,8 @@ export function DockerServiceCard({
                     "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
                     {
                       "bg-green-400": status === "HEALTHY",
-                      "bg-red-400": status === "UNHEALTHY",
+                      "bg-red-400":
+                        status === "UNHEALTHY" || status === "FAILED",
                       "bg-yellow-400": status === "SLEEPING",
                       "bg-secondary/60": status === "DEPLOYING"
                     }
@@ -79,7 +81,7 @@ export function DockerServiceCard({
                   "relative inline-flex rounded-full h-4 w-4 bg-green-500",
                   {
                     "bg-green-500": status === "HEALTHY",
-                    "bg-red-500": status === "UNHEALTHY",
+                    "bg-red-500": status === "UNHEALTHY" || status === "FAILED",
                     "bg-yellow-500": status === "SLEEPING",
                     "bg-gray-400":
                       status === "NOT_DEPLOYED_YET" || status === "CANCELLED",
@@ -95,6 +97,7 @@ export function DockerServiceCard({
               {status === "HEALTHY" && "✅ Healthy"}
               {status === "SLEEPING" && "🌙 Sleeping"}
               {status === "UNHEALTHY" && "❌ Unhealthy"}
+              {status === "FAILED" && "❌ Failed"}
               {status === "DEPLOYING" && "⏳ Deploying..."}
               {status === "CANCELLED" && "🚫 Cancelled"}
               {status === "NOT_DEPLOYED_YET" && "🚧 Not deployed yet"}

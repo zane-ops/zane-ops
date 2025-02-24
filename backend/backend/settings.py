@@ -330,6 +330,7 @@ SPECTACULAR_SETTINGS = {
         "ServiceStatusEnum": (
             ("HEALTHY", "Healthy"),
             ("UNHEALTHY", "Unhealthy"),
+            ("FAILED", "Failed"),
             ("SLEEPING", "Sleeping"),
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
             ("DEPLOYING", "Deploying"),

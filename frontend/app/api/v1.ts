@@ -2452,12 +2452,13 @@ export interface components {
     /**
      * @description * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
+     * * `FAILED` - Failed
      * * `SLEEPING` - Sleeping
      * * `NOT_DEPLOYED_YET` - Not deployed yet
      * * `DEPLOYING` - Deploying
      * @enum {string}
      */
-    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "FAILED" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
     Settings: {
       root_domain: string;
       image_version: string;

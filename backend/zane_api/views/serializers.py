@@ -1299,6 +1299,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
     STATUS_CHOICES = (
         ("HEALTHY", _("Healthy")),
         ("UNHEALTHY", _("Unhealthy")),
+        ("FAILED", _("Failed")),
         ("SLEEPING", _("Sleeping")),
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
         ("DEPLOYING", _("Deploying")),
