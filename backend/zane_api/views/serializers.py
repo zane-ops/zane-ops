@@ -202,7 +202,9 @@ class URLRequestSerializer(serializers.Serializer):
         domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
 
         existing_parent_domain = URL.objects.filter(
-            domain=domain_as_wildcard.lower()
+            Q(domain=domain_as_wildcard.lower())
+            & ~Q(dockerregistryservice=service)
+            & Q(base_path=attrs["base_path"].lower())
         ).distinct()
         if len(existing_parent_domain) > 0:
             raise serializers.ValidationError(
@@ -662,6 +664,27 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 }
             )
+
+        if change_type == "ADD":
+            domain = new_value["domain"]
+            domain_parts = domain.split(".")
+            domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+
+            existing_parent_domain = URL.objects.filter(
+                Q(domain=domain_as_wildcard.lower())
+                & Q(base_path=new_value["base_path"].lower())
+            ).distinct()
+            if len(existing_parent_domain) > 0:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "domain": [
+                                f"Cannot add URL with domain `{domain}` as it will be shadowed by the wildcard"
+                                + f" domain `{domain_as_wildcard}` which is already assigned."
+                            ]
+                        }
+                    }
+                )
 
         return attrs
 
@@ -1276,6 +1299,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
     STATUS_CHOICES = (
         ("HEALTHY", _("Healthy")),
         ("UNHEALTHY", _("Unhealthy")),
+        ("FAILED", _("Failed")),
         ("SLEEPING", _("Sleeping")),
         ("NOT_DEPLOYED_YET", _("Not deployed yet")),
         ("DEPLOYING", _("Deploying")),

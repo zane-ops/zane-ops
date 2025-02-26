@@ -425,3 +425,48 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertIsNotNone(first_deployment.status_reason)
         self.assertIsNotNone(first_deployment.finished_at)
+
+    async def test_clean_non_cleaned_up_previous_deployments_if_weird_error(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        first_deployment = await service.deployments.aearliest("queued_at")
+        first_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
+        await first_deployment.asave()
+
+        second_deployment = await service.deployments.filter(
+            queued_at__gt=first_deployment.queued_at
+        ).aearliest("queued_at")
+        second_deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+        await second_deployment.asave()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_deployment = await service.deployments.aearliest("queued_at")
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
+        )
+        second_deployment = await service.deployments.filter(
+            queued_at__gt=first_deployment.queued_at
+        ).aearliest("queued_at")
+        self.assertEqual(
+            DockerDeployment.DeploymentStatus.REMOVED, second_deployment.status
+        )

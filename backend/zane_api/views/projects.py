@@ -341,9 +341,8 @@ class ProjectServiceListView(APIView):
                     DockerDeployment.objects.filter(
                         Q(service_id=OuterRef("pk"))
                         & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
-                    )
-                    .order_by("-queued_at")
-                    .values("status")[:1]
+                        & Q(is_current_production=True)
+                    ).values("status")[:1]
                 ),
             )
         )
@@ -354,7 +353,7 @@ class ProjectServiceListView(APIView):
             status_map = {
                 DockerDeployment.DeploymentStatus.HEALTHY: "HEALTHY",
                 DockerDeployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.FAILED: "UNHEALTHY",
+                DockerDeployment.DeploymentStatus.FAILED: "FAILED",
                 DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
                 DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
                 DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
@@ -369,7 +368,7 @@ class ProjectServiceListView(APIView):
                 image_change = service.unapplied_changes.filter(
                     field=DockerDeploymentChange.ChangeField.SOURCE
                 ).first()
-                service_image = image_change.new_value["image"]
+                service_image = image_change.new_value["image"]  # type: ignore
 
             parts = service_image.split(":")
             if len(parts) == 1:

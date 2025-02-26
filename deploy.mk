@@ -11,7 +11,7 @@ help: ### Show this help
 
 setup: ### Launch initial setup before installing zaneops
 	@echo -e "====== \x1b[94m⚒️  INITIAL SETUP OF ZANEOPS ⚒️\x1b[0m ======"
-	@echo "Step 1️⃣ : initializing docker swarm..."
+	@echo "Step 1️⃣ : Verifying docker swarm status..."
 	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \
 		if docker info --format '{{.Swarm.ControlAvailable}}' | grep -qw "true"; then \
 			echo "Swarm is enabled and this node is a manager, skipping swarm initialization 👍"; \
@@ -22,7 +22,13 @@ setup: ### Launch initial setup before installing zaneops
 			exit 1; \
 		fi \
 	else \
-		docker swarm init; \
+		echo -e "❌ ERROR: Docker Swarm is disabled, please enable it with \x1b[96mdocker swarm init --advertise-addr <SERVER_IP>\x1b[0m. ZaneOps needs be installed on a docker swarm manager. ❌" >&2; \
+		echo -e "\x1b[96mSERVER_IP\x1b[0m is the IP address of your server:"; \
+		echo -e "> You can use your server's public IP."; \
+		echo -e "> If you have private networking, use the private IP (e.g., \x1b[33m10.0.0.x\x1b[0m)."; \
+		echo -e "> If you are installing locally, use \x1b[33m127.0.0.1\x1b[0m."; \
+		echo "\nSee docs for more information : \x1b[96mhttps://zaneops.dev/installation/#process\x1b[0m"; \
+		exit 1; \
 	fi
 	@echo "Step 1️⃣ Done ✅"
 	@echo "Step 2️⃣: Preparing the current folder..."
@@ -38,7 +44,6 @@ setup: ### Launch initial setup before installing zaneops
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
 	@chmod -R a+x ./temporalio/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
@@ -85,11 +90,16 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"; \
 	echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"; \
 	echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"; \
+	echo -e "\nit can take up to 5 minutes to start on the first deploy. \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
 
 create-user: ### Create the first user to login in into the dashboard
-	@docker exec -it $$(docker ps -qf "name=zane_api") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
+	@docker exec -it $$(docker ps -qf "name=zane_app") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
+
+reset-password: ### Reset user password
+	@if [ -z "$(user)" ]; then echo -e "Error: \x1b[33m\$$user\x1b[0m variable is required. Usage: \x1b[96mmake reset-password user=username\x1b[0m"; exit 1; fi
+	@docker exec -it $$(docker ps -qf "name=zane_app") /bin/bash -c "source /venv/bin/activate && python manage.py changepassword $(user)"
 
 stop: ### Take down zaneops and scale down all services created in zaneops
 	@echo -e "====== \x1b[94mTaking down zaneops...\x1b[0m ======"

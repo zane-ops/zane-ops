@@ -6,6 +6,7 @@ import {
   CommandIcon,
   GitCommitVertical,
   HeartHandshake,
+  HeartIcon,
   HelpCircle,
   LogOut,
   Menu,
@@ -246,6 +247,11 @@ const socialLinks = [
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
     icon: <HeartHandshake size={15} />
+  },
+  {
+    name: "Sponsor this project",
+    url: "https://github.com/sponsors/Fredkiss3",
+    icon: <HeartIcon size={15} />
   }
 ];
 
