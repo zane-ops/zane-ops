@@ -1220,6 +1220,7 @@ class DockerSwarmActivities:
 
         if docker_deployment is not None:
             docker_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
+            docker_deployment.is_current_production = False
             await docker_deployment.asave()
 
     @activity.defn
