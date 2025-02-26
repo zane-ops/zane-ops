@@ -147,8 +147,15 @@ export function DockerServiceCard({
 
       <Separator />
       <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">
-        <HardDrive size={20} /> {volumeNumber}
-        {volumeNumber > 1 ? " Volumes" : " Volume"}
+        <HardDrive size={20} />
+        {volumeNumber > 0 ? (
+          <span>
+            {volumeNumber}
+            {volumeNumber > 1 ? " Volumes" : " Volume"}
+          </span>
+        ) : (
+          <>No Volume attached</>
+        )}
       </CardFooter>
     </Card>
   );
