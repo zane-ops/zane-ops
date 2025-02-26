@@ -374,13 +374,6 @@ class DeployDockerServiceWorkflow:
                     )
 
                 await workflow.execute_activity_method(
-                    DockerSwarmActivities.cleanup_previous_unclean_deployments,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
-                )
-
-                await workflow.execute_activity_method(
                     DockerSwarmActivities.create_deployment_healthcheck_schedule,
                     deployment,
                     start_to_close_timeout=timedelta(seconds=5),
@@ -420,6 +413,12 @@ class DeployDockerServiceWorkflow:
                 DockerSwarmActivities.finish_and_save_deployment,
                 healthcheck_result,
                 start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.cleanup_previous_unclean_deployments,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
             next_queued_deployment = await self.queue_next_deployment(deployment)
