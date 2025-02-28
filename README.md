@@ -21,7 +21,7 @@
 
 ## 🚀 Installation
 
-Follow the [instructions](https://zaneops.dev/get-started/) in the documentation to install and setup zaneops.
+Follow the [instructions](https://zaneops.dev/installation/) in the documentation to install and setup zaneops.
 
 ## 📸 Some Screenshots
 
