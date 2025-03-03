@@ -8,6 +8,24 @@ x-backend-vars: &env-vars
   ELASTICSEARCH_HOST: http://zane.search:9200
   
 services:
+  loki:
+    image: grafana/loki:3.4
+    ports:
+      - "3100:3100"
+    volumes:
+      # - ./loki/config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+    environment:
+      - GF_USERS_DEFAULT_THEME=light
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
   proxy-test:
     image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
@@ -208,7 +226,7 @@ volumes:
   redis-data:
   redisinsight:
   caddy-data:
-  pgadmin-data:
+  loki-data:
 networks:
   zane:
     external: true

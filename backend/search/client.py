@@ -32,7 +32,7 @@ class SearchClient:
         self.es.index(index=index_name, document=document, refresh=settings.TESTING)
 
     def search(self, index_name: str, query: dict | None = None):
-        print(f"====== LOGS SEARCH ======")
+        print("====== LOGS SEARCH ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
         data = self._compute_filters(query)
 
@@ -158,11 +158,11 @@ class SearchClient:
         print(
             f"Found {Colors.BLUE}{total}{Colors.ENDC} logs in ElasticSearch in {Colors.GREEN}{query_time_ms}ms{Colors.ENDC}"
         )
-        print(f"====== END LOGS SEARCH ======")
+        print("====== END LOGS SEARCH ======")
         return serializer.data
 
     def count(self, index_name: str, query: dict | None = None) -> int:
-        print(f"====== LOGS COUNT ======")
+        print("====== LOGS COUNT ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
         filters = self._compute_filters(query)["filters"]
         count = self.es.count(
@@ -174,13 +174,13 @@ class SearchClient:
         print(
             f"Found {Colors.BLUE}{count}{Colors.ENDC} logs in ElasticSearch index {Colors.BLUE}{index_name}{Colors.ENDC}"
         )
-        print(f"====== END LOGS COUNT ======")
+        print("====== END LOGS COUNT ======")
         return count
 
     def delete(self, index_name: str, query: dict | None = None) -> int:
         from django.conf import settings
 
-        print(f"====== LOGS DELETE ======")
+        print("====== LOGS DELETE ======")
         print(f"Index: {Colors.BLUE}{index_name}{Colors.ENDC}")
 
         filters = self._compute_filters(query)["filters"]
