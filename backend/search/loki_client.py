@@ -67,18 +67,13 @@ class LokiSearchClient:
             raise Exception(f"Insert failed: {response.text}")
 
     def search(self, query: dict | None = None):
-        """
-        Search logs in Loki using parameters similar to the Elasticsearch client.
-        The query dict is processed via RuntimeLogsQuerySerializer to extract filters,
-        which are then converted into a LogQL query.
-        Pagination (cursor) is not supported by Loki, so results are returned as-is.
-        """
         print("====== LOGS SEARCH (Loki) ======")
         data = self._compute_filters(query)
         query_string = data["query_string"]
         limit = data["page_size"]
         start_ns = data["start"]
         end_ns = data["end"]
+        prev_cursor = data.get("prev_cursor")
 
         params = {
             "query": query_string,
@@ -97,16 +92,13 @@ class LokiSearchClient:
 
         result = response.json()
         hits = []
-        total = 0
-        # Loki returns data as streams; each stream contains a list of log entries.
+        # Loki returns streams; each stream contains a list of log entries.
         for stream in result.get("data", {}).get("result", []):
             for ts, log_line in stream.get("values", []):
-                total += 1
                 try:
                     log_data = json.loads(log_line)
                 except Exception:
                     log_data = {"raw": log_line}
-                # Reformat the log entry to mimic the expected output
                 hit = {
                     "id": log_data.get("id", ""),
                     "time": log_data.get("time", ""),
@@ -116,16 +108,43 @@ class LokiSearchClient:
                     "deployment_id": log_data.get("deployment_id", ""),
                     "content": log_data.get("content", ""),
                     "content_text": log_data.get("content_text", ""),
+                    "timestamp": int(ts),  # timestamp for pagination
                 }
                 hits.append(hit)
+
+        # Ensure ascending order by timestamp
+        hits = sorted(hits, key=lambda x: x["timestamp"])
+        total = len(hits)
+
+        # Implement custom cursor pagination:
+        next_cursor = None
+        if total == limit and total > 0:
+            last_timestamp = hits[-1]["timestamp"]
+            cursor_obj = {"last": last_timestamp}
+            next_cursor = base64.b64encode(json.dumps(cursor_obj).encode()).decode()
+
+        # For simplicity, previous cursor is returned if provided in the query.
+        previous_cursor = prev_cursor
 
         serializer = RuntimeLogsSearchSerializer(
             {
                 "query_time_ms": query_time_ms,
                 "total": total,
-                "results": hits,
-                "next": None,
-                "previous": None,
+                "results": [
+                    {
+                        "id": hit["id"],
+                        "time": hit["time"],
+                        "level": hit["level"],
+                        "source": hit["source"],
+                        "service_id": hit["service_id"],
+                        "deployment_id": hit["deployment_id"],
+                        "content": {"raw": hit["content"]},
+                        "content_text": hit["content_text"],
+                    }
+                    for hit in hits
+                ],
+                "next": next_cursor,
+                "previous": previous_cursor,
             }
         )
 
@@ -136,16 +155,11 @@ class LokiSearchClient:
         return serializer.data
 
     def count(self, query: dict | None = None) -> int:
-        """
-        Count logs matching the query.
-        Since Loki does not provide a direct count endpoint, we perform a search
-        with a high limit and count the returned log entries.
-        """
         data = self._compute_filters(query)
         query_string = data["query_string"]
         params = {
             "query": query_string,
-            "limit": 10000,  # adjust limit if needed
+            "limit": 10000,
             "start": data["start"],
             "end": data["end"],
         }
@@ -162,17 +176,11 @@ class LokiSearchClient:
         return total
 
     def _compute_filters(self, query: dict | None = None):
-        """
-        Compute a LogQL query from the input query parameters.
-        Uses RuntimeLogsQuerySerializer to validate and extract filters.
-        Converts filters into a label selector and optional pipeline stages.
-        """
         form = RuntimeLogsQuerySerializer(data=query or {})
         form.is_valid(raise_exception=True)
         search_params: dict = form.validated_data or {}  # type: ignore
         page_size = int(search_params.get("per_page", 50))
 
-        # Build label selectors from provided filters.
         label_selectors = []
         if search_params.get("service_id"):
             label_selectors.append(f'service_id="{search_params["service_id"]}"')
@@ -196,7 +204,7 @@ class LokiSearchClient:
             else '{level=~".*"}'
         )
 
-        # Convert time range filters to Unix epoch in nanoseconds.
+        # Default time range: start=0, end=now.
         start_ns = 0
         end_ns = int(time.time() * 1e9)
         if search_params.get("time_after"):
@@ -206,17 +214,35 @@ class LokiSearchClient:
             dt = datetime.datetime.fromisoformat(search_params["time_before"])
             end_ns = int(dt.timestamp() * 1e9)
 
-        # Append a pipeline stage to search within the log's content_text if a query is provided.
+        # Default order.
+        order = "desc"
+        cursor = search_params.get("cursor")
+        if cursor:
+            try:
+                decoded = base64.b64decode(cursor).decode("utf-8")
+                cursor_data = json.loads(decoded)
+                # Expecting sort to be a list with one timestamp value.
+                last_timestamp = int(cursor_data["sort"][0])
+                order = cursor_data["order"]
+                if order == "asc":
+                    start_ns = last_timestamp + 1
+                else:
+                    end_ns = last_timestamp - 1
+            except Exception:
+                pass
+
         text_query = ""
         if search_params.get("query"):
             term = search_params["query"]
-            # This regex matches any log whose content_text contains the search term.
             text_query = f' | json | content_text =~ ".*{term}.*"'
 
         query_string = base_selector + text_query
+
         return {
             "query_string": query_string,
             "page_size": page_size,
             "start": start_ns,
             "end": end_ns,
+            "order": order,
+            "cursor": cursor,
         }
