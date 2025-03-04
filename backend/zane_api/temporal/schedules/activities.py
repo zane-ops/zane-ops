@@ -366,13 +366,22 @@ class DockerDeploymentStatsActivities:
 
                         # Disk I/O usage
                         read_bytes: int = sum(
-                            io["value"]
-                            for io in stats["blkio_stats"]["io_service_bytes_recursive"]
-                            if io["op"] == "read"
+                            io.get("value", 0)
+                            for io in (
+                                stats.get("blkio_stats", {}).get(
+                                    "io_service_bytes_recursive", []
+                                )
+                            )
+                            if io.get("op") == "read"
                         )
+
                         write_bytes: int = sum(
                             io["value"]
-                            for io in stats["blkio_stats"]["io_service_bytes_recursive"]
+                            for io in (
+                                stats.get("blkio_stats", {}).get(
+                                    "io_service_bytes_recursive", []
+                                )
+                            )
                             if io["op"] == "write"
                         )
 
