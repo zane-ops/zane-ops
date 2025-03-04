@@ -7,7 +7,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.db.models import Q
 from . import serializers
-from ..models import URL, DeploymentURL
+from ..models import URL, DockerDeployment, GitDeployment, DeploymentURL
 
 
 class CertificateCheckSerializer(serializers.Serializer):
