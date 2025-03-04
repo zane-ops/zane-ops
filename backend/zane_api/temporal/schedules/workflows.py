@@ -92,7 +92,7 @@ class GetDockerDeploymentStatsWorkflow:
             DockerDeploymentStatsActivities.get_deployment_stats,
             payload,
             retry_policy=retry_policy,
-            start_to_close_timeout=timedelta(seconds=10),
+            start_to_close_timeout=timedelta(seconds=30),
         )
 
         if metrics_result:
@@ -101,7 +101,7 @@ class GetDockerDeploymentStatsWorkflow:
                 DockerDeploymentStatsActivities.save_deployment_stats,
                 metrics_result,
                 retry_policy=retry_policy,
-                start_to_close_timeout=timedelta(seconds=10),
+                start_to_close_timeout=timedelta(seconds=30),
             )
 
         return metrics_result
