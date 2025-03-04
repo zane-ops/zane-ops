@@ -7,7 +7,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.db.models import Q
 from . import serializers
-from ..models import URL, DockerDeployment, GitDeployment
+from ..models import URL, DockerDeployment, GitDeployment, DeploymentURL
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -38,17 +38,10 @@ class CheckCertificatesAPIView(APIView):
                 Q(domain=domain) | Q(domain=domain_as_wildcard)
             ).count()
 
-            existing_docker_deployment_urls = DockerDeployment.objects.filter(
-                url=domain
+            existing_docker_deployment_urls = DeploymentURL.objects.filter(
+                domain=domain
             ).count()
-            existing_git_deployment_urls = GitDeployment.objects.filter(
-                url=domain
-            ).count()
-            total_urls = (
-                existing_urls
-                + existing_docker_deployment_urls
-                + existing_git_deployment_urls
-            )
+            total_urls = existing_urls + existing_docker_deployment_urls
             if total_urls > 0:
                 return Response({"validated": True}, status=status.HTTP_200_OK)
         raise exceptions.PermissionDenied(
