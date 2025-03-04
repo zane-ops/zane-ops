@@ -48,7 +48,6 @@ from ..models import (
     Volume,
     DockerDeployment,
     DockerDeploymentChange,
-    GitDeployment,
     Config,
 )
 from ..serializers import (
@@ -86,8 +85,7 @@ class ProjectsListAPIView(ListCreateAPIView):
         docker_total = DockerDeployment.objects.filter(
             Q(is_current_production=True)
             & (
-                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
-                | Q(status=DockerDeployment.DeploymentStatus.UNHEALTHY)
+                Q(status=DockerDeployment.DeploymentStatus.UNHEALTHY)
                 | Q(status=DockerDeployment.DeploymentStatus.FAILED)
             )
         ).values("service")

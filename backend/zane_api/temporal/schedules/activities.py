@@ -27,7 +27,6 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
-    from django.utils import timezone
     from search.client import SearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 
