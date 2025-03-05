@@ -1,4 +1,5 @@
 import json
+import traceback
 from urllib.parse import urlparse
 
 from drf_spectacular.utils import extend_schema
@@ -21,6 +22,7 @@ from .serializers import (
 from ..models import HttpLog
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.client import SearchClient
+from search.loki_client import LokiSearchClient
 from search.constants import ELASTICSEARCH_BYTE_LIMIT
 from django.conf import settings
 from django.utils import timezone
@@ -156,6 +158,7 @@ class LogIngestAPIView(APIView):
 
             start_time = datetime.now()
             search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+            loki_search_client = LokiSearchClient(host=settings.LOKI_HOST)
             search_client.bulk_insert(
                 [
                     dict(
@@ -165,6 +168,8 @@ class LogIngestAPIView(APIView):
                     for log in simple_logs
                 ]
             )
+
+            loki_search_client.bulk_insert(simple_logs)
 
             HttpLog.objects.bulk_create(http_logs)
             end_time = datetime.now()

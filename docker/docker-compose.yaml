@@ -6,6 +6,7 @@ x-backend-vars: &env-vars
   ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   ELASTICSEARCH_HOST: http://zane.search:9200
+  LOKI_HOST: http://zane.loki:3100
   
 services:
   loki:
@@ -15,7 +16,11 @@ services:
     volumes:
       - ./loki/config.yaml:/etc/loki/local-config.yaml
       - loki-data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
+    networks:
+      zane:
+        aliases:
+          - zane.loki
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -23,9 +28,16 @@ services:
     depends_on:
       - loki
     environment:
-      - GF_USERS_DEFAULT_THEME=light
+      - GF_USERS_DEFAULT_THEME=system
+      # Basic Configuration
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
     volumes:
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      # Persistent Storage
+      - grafana-data:/var/lib/grafana
+    networks:
+      - zane
   proxy-test:
     image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
@@ -227,6 +239,7 @@ volumes:
   redisinsight:
   caddy-data:
   loki-data:
+  grafana-data:
 networks:
   zane:
     external: true

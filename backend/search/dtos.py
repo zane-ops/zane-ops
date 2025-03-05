@@ -2,6 +2,8 @@ import datetime
 from typing import Any, Dict, Literal, Optional
 from dataclasses import dataclass
 
+from zane_api.utils import iso_to_ns
+
 
 class RuntimeLogLevel:
     ERROR = "ERROR"
@@ -34,11 +36,10 @@ class RuntimeLogDto:
             "service_id": self.service_id,
             "deployment_id": self.deployment_id,
             "time": (
-                self.time.timestamp()
+                self.time.timestamp() * 1e9
                 if isinstance(self.time, datetime.datetime)
-                else int(self.time)
-            )
-            * 1e9,  # multiply to nanoseconds
+                else iso_to_ns(self.time)
+            ),  # multiply to nanoseconds
             "created_at": (
                 self.created_at.isoformat()
                 if isinstance(self.created_at, datetime.datetime)

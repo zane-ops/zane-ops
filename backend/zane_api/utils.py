@@ -3,7 +3,6 @@ import datetime
 import json
 import random
 import string
-from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
@@ -305,3 +304,38 @@ def truncate_utf8(utf8_string: str, limit: int) -> list[str]:
         result.append(truncated)
 
     return result
+
+
+def iso_to_ns(iso_string: str) -> int:
+    """
+    Convert an ISO datetime string with nanosecond precision to a timestamp in nanoseconds.
+
+    Parameters:
+        iso_string (str): ISO datetime string with nanoseconds, e.g. "2025-03-04T17:37:00.033944066+0000"
+
+    Returns:
+        int: Timestamp in nanoseconds since the Unix epoch.
+
+    Raises:
+        ValueError: If the input string is not in the expected ISO datetime format.
+    """
+    # Split into datetime part, fractional seconds, and timezone offset
+    match = re.match(r"(.*?)(\.\d+)?([+-]\d{4})$", iso_string)
+    if not match:
+        return int(datetime.datetime.fromisoformat(iso_string).timestamp() * 1e9)
+
+    main_part, frac, tz_str = match.group(1), match.group(2), match.group(3)
+    frac = frac if frac else ".0"
+
+    # Parse datetime ignoring fractional seconds
+    dt = datetime.datetime.strptime(main_part + tz_str, "%Y-%m-%dT%H:%M:%S%z")
+
+    # Ensure fractional seconds have exactly 9 digits (nanosecond precision)
+    frac_digits = frac[1:].ljust(9, "0")[:9]
+    nano_frac = int(frac_digits)
+
+    # Calculate total nanoseconds since Unix epoch
+    epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+    seconds_since_epoch = int((dt - epoch).total_seconds())
+    total_ns = seconds_since_epoch * 10**9 + nano_frac
+    return total_ns

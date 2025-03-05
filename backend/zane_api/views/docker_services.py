@@ -20,6 +20,7 @@ from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
 from search.client import SearchClient
+from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
 
 from .base import (
@@ -874,10 +875,13 @@ class DockerServiceDeploymentLogsAPIView(APIView):
             )
         else:
             form = DeploymentLogsQuerySerializer(data=request.query_params)
+            print(f"{request.query_params=}")
             if form.is_valid(raise_exception=True):
-                search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+                # search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+                search_client = LokiSearchClient(host=settings.LOKI_HOST)
+                # loki_search_client.bulk_insert(simple_logs)
                 data = search_client.search(
-                    index_name=settings.ELASTICSEARCH_LOGS_INDEX,
+                    # index_name=settings.ELASTICSEARCH_LOGS_INDEX,
                     query=dict(**form.validated_data, deployment_id=deployment.hash),  # type: ignore
                 )
                 return Response(data)

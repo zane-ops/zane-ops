@@ -4,6 +4,7 @@ auth_enabled: false
 server:
   http_listen_port: 3100
 
+
 ingester:
   lifecycler:
     ring:
@@ -12,26 +13,56 @@ ingester:
       replication_factor: 1
   chunk_idle_period: 5m
   chunk_target_size: 1048576
+  # WAL-related ingester configurations
+  wal:
+    enabled: true
+    dir: /loki/wal/ingester
+    replay_memory_ceiling: 500M
 
 schema_config:
   configs:
     - from: 2020-10-15
-      store: boltdb
+      store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
 
 storage_config:
-  boltdb:
-    directory: /loki/index
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
   filesystem:
     directory: /loki/chunks
 
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  retention_delete_worker_count: 5
+  compaction_interval: 24m
+  delete_request_store: filesystem
+
 limits_config:
-  enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 336h # 14 days
   max_query_lookback: 336h # 14 days
   retention_period: 336h   # 14 days
+  deletion_mode: filter-and-delete
+
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 336h
+
+query_scheduler:
+  # the TSDB index dispatches many more, but each individually smaller, requests. 
+  # We increase the pending request queue sizes to compensate.
+  max_outstanding_requests_per_tenant: 32768
+
+querier:
+  # Each `querier` component process runs a number of parallel workers to process queries simultaneously.
+  # You may want to adjust this up or down depending on your resource usage
+  # (more available cpu and memory can tolerate higher values and vice versa),
+  # but we find the most success running at around `16` with tsdb
+  max_concurrent: 16

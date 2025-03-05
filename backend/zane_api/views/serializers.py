@@ -1172,7 +1172,7 @@ class DeploymentLogsQuerySerializer(serializers.Serializer):
             decoded_string = decoded_data.decode("utf-8")
             serializer = CursorSerializer(data=json.loads(decoded_string))
             serializer.is_valid(raise_exception=True)
-        except (ValidationError, ValueError):
+        except (serializers.ValidationError, ValueError):
             raise serializers.ValidationError(
                 {
                     "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."

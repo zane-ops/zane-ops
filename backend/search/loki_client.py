@@ -3,10 +3,12 @@ import json
 import time
 import datetime
 import requests
-from typing import Iterator
-from zane_api.utils import Colors
+from datetime import timedelta
+from typing import Sequence
+from zane_api.utils import Colors, jprint
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
+from django.conf import settings
 
 
 class LokiSearchClient:
@@ -14,7 +16,7 @@ class LokiSearchClient:
         # host should include the protocol and port, e.g., "http://localhost:3100"
         self.base_url = host.rstrip("/")
 
-    def bulk_insert(self, docs: Iterator[RuntimeLogDto | dict]):
+    def bulk_insert(self, docs: Sequence[RuntimeLogDto | dict]):
         """
         Push multiple log entries to Loki.
         Each document must follow the structure of RuntimeLogDto or its dict representation.
@@ -30,6 +32,7 @@ class LokiSearchClient:
                 "deployment_id": log_dict.get("deployment_id") or "unknown",
                 "level": log_dict.get("level"),
                 "source": log_dict.get("source"),
+                "app": f"{settings.LOKI_APP_NAME}",
             }
             # Construct a label selector string
             label_key = ",".join([f'{k}="{v}"' for k, v in labels.items()])
@@ -41,6 +44,7 @@ class LokiSearchClient:
 
         payload = {"streams": list(streams.values())}
         response = requests.post(f"{self.base_url}/loki/api/v1/push", json=payload)
+        # jprint(payload)
         if response.status_code not in (200, 204):
             raise Exception(f"Bulk insert failed: {response.text}")
 
@@ -57,6 +61,7 @@ class LokiSearchClient:
             "deployment_id": log_dict.get("deployment_id") or "unknown",
             "level": log_dict.get("level"),
             "source": log_dict.get("source"),
+            "app": f"{settings.LOKI_APP_NAME}",
         }
         ts = str(log_dict.get("time"))
         payload = {
@@ -68,12 +73,14 @@ class LokiSearchClient:
 
     def search(self, query: dict | None = None):
         print("====== LOGS SEARCH (Loki) ======")
-        data = self._compute_filters(query)
-        query_string = data["query_string"]
-        limit = data["page_size"]
-        start_ns = data["start"]
-        end_ns = data["end"]
-        prev_cursor = data.get("prev_cursor")
+        filters = self._compute_filters(query)
+        print(f"{filters=}")
+        query_string = filters["query_string"]
+        limit = filters["page_size"]
+        start_ns = filters["start"]
+        end_ns = filters["end"]
+        input_cursor = filters.get("cursor")
+        order = filters["order"]
 
         params = {
             "query": query_string,
@@ -112,41 +119,45 @@ class LokiSearchClient:
                 }
                 hits.append(hit)
 
-        # Ensure ascending order by timestamp
-        hits = sorted(hits, key=lambda x: x["timestamp"])
+        # Sort hits according to the requested order.
+        reverse = True if order == "desc" else False
+        hits = sorted(hits, key=lambda x: x["timestamp"], reverse=reverse)
         total = len(hits)
 
-        # Implement custom cursor pagination:
+        # Generate next cursor if total equals page size.
         next_cursor = None
         if total == limit and total > 0:
             last_timestamp = hits[-1]["timestamp"]
-            cursor_obj = {"last": last_timestamp}
+            cursor_obj = {"sort": [str(last_timestamp)], "order": order}
             next_cursor = base64.b64encode(json.dumps(cursor_obj).encode()).decode()
 
-        # For simplicity, previous cursor is returned if provided in the query.
-        previous_cursor = prev_cursor
+        # Use the provided cursor as previous.
+        previous_cursor = input_cursor if input_cursor else None
 
-        serializer = RuntimeLogsSearchSerializer(
-            {
-                "query_time_ms": query_time_ms,
-                "total": total,
-                "results": [
-                    {
-                        "id": hit["id"],
-                        "time": hit["time"],
-                        "level": hit["level"],
-                        "source": hit["source"],
-                        "service_id": hit["service_id"],
-                        "deployment_id": hit["deployment_id"],
-                        "content": {"raw": hit["content"]},
-                        "content_text": hit["content_text"],
-                    }
-                    for hit in hits
-                ],
-                "next": next_cursor,
-                "previous": previous_cursor,
-            }
-        )
+        data = {
+            "query_time_ms": query_time_ms,
+            "total": total,
+            "results": [
+                {
+                    "id": hit["id"],
+                    "time": datetime.datetime.fromtimestamp(
+                        (hit["time"] // 1_000) / 1e6
+                    ).isoformat(),  # remove nanoseconds, then divide by 1 million to get microseconds
+                    "level": hit["level"],
+                    "source": hit["source"],
+                    "service_id": hit["service_id"],
+                    "deployment_id": hit["deployment_id"],
+                    "content": hit["content"],
+                    "content_text": hit["content_text"],
+                }
+                for hit in hits
+            ],
+            "next": next_cursor,
+            "previous": previous_cursor,
+        }
+        jprint(data)
+
+        serializer = RuntimeLogsSearchSerializer(data)
 
         print(
             f"Found {Colors.BLUE}{total}{Colors.ENDC} logs in Loki in {Colors.GREEN}{query_time_ms}ms{Colors.ENDC}"
@@ -155,13 +166,15 @@ class LokiSearchClient:
         return serializer.data
 
     def count(self, query: dict | None = None) -> int:
-        data = self._compute_filters(query)
-        query_string = data["query_string"]
+        filters = self._compute_filters(query)
+        print("====== LOGS COUNT (Loki) ======")
+        print(f"{filters=}")
+        query_string = filters["query_string"]
         params = {
             "query": query_string,
-            "limit": 10000,
-            "start": data["start"],
-            "end": data["end"],
+            "limit": 5000,
+            "start": filters["start"],
+            "end": filters["end"],
         }
         response = requests.get(
             f"{self.base_url}/loki/api/v1/query_range", params=params
@@ -173,7 +186,29 @@ class LokiSearchClient:
             len(stream.get("values", []))
             for stream in result.get("data", {}).get("result", [])
         )
+        print("====== END LOGS COUNT (Loki) ======")
         return total
+
+    def delete(self, query: dict | None = None):
+        print("====== LOGS DELETE (Loki) ======")
+        filters = self._compute_filters(query)
+        print(f"{filters=}")
+        query_string = filters["query_string"]
+
+        now = datetime.datetime.now()
+        start = now - timedelta(days=30)
+        end = now + timedelta(days=30)
+        params = {
+            "query": query_string,
+            "start": int(start.timestamp() * 1e9),
+            "end": int(end.timestamp() * 1e9),
+        }
+
+        response = requests.post(f"{self.base_url}/loki/api/v1/delete", params=params)
+        if response.status_code != 204:
+            raise Exception(f"Delete failed: {response.text}")
+        print("====== END LOGS DELETE (Loki) ======")
+        return True
 
     def _compute_filters(self, query: dict | None = None):
         form = RuntimeLogsQuerySerializer(data=query or {})
@@ -181,7 +216,7 @@ class LokiSearchClient:
         search_params: dict = form.validated_data or {}  # type: ignore
         page_size = int(search_params.get("per_page", 50))
 
-        label_selectors = []
+        label_selectors: list[str] = []
         if search_params.get("service_id"):
             label_selectors.append(f'service_id="{search_params["service_id"]}"')
         if search_params.get("deployment_id"):
@@ -198,11 +233,9 @@ class LokiSearchClient:
                 label_selectors.append('source=~"(' + "|".join(sources) + ')"')
             else:
                 label_selectors.append(f'source="{sources}"')
-        base_selector = (
-            "{" + ",".join(label_selectors) + "}"
-            if label_selectors
-            else '{level=~".*"}'
-        )
+
+        label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
+        base_selector = "{" + ",".join(label_selectors) + "}"
 
         # Default time range: start=0, end=now.
         start_ns = 0
