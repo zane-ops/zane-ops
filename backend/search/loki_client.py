@@ -303,7 +303,7 @@ class LokiSearchClient:
                     # start : 0
                     end_ns = (
                         cursor_ts + 1
-                    )  # we set `+1` here because loki does not include end timestamp
+                    )  # we set `+1` here because loki does not include logs containing the end timestamp
                     pass
                 else:
                     start_ns = cursor_ts
