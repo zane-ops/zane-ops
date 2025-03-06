@@ -242,6 +242,17 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(simple_logs), len(response.json()["results"]))
+        elements = response.json()["results"]
+
+        # Check that logs are sorted in reverse order of time
+        self.assertEqual(
+            sorted(
+                elements,
+                key=lambda log: datetime.datetime.fromisoformat(log["timestamp"]),
+                reverse=True,
+            ),
+            elements,
+        )
 
     def test_paginate(self):
         p, service = self.create_and_deploy_redis_docker_service()
@@ -350,13 +361,21 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         second_page = response.json()
         self.assertEqual(5, len(second_page["results"]))
+
         # Check that no item from first page appears in second page
-        first_page_contents = {item["id"] for item in first_page["results"]}
-        second_page_contents = {item["id"] for item in second_page["results"]}
+        first_page_contents = {
+            (item["id"], item["time"]) for item in first_page["results"]
+        }
+        second_page_contents = {
+            (item["id"], item["time"]) for item in second_page["results"]
+        }
+        jprint([*first_page_contents])
+        jprint([*second_page_contents])
+
+        # Since we know there are only 10 logs, there shouldn't be a next page
+        self.assertIsNone(second_page["next"])
+
         self.assertEqual(0, len(first_page_contents.intersection(second_page_contents)))
-        # Since we know there is 11 logs, there should still be a next page
-        next_cursor = second_page["next"]
-        self.assertIsNotNone(second_page["next"])
 
     def test_paginate_get_previous_page(self):
         p, service = self.create_and_deploy_redis_docker_service()
@@ -424,7 +443,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         previous_cursor = second_page["previous"]
         self.assertEqual(5, len(second_page["results"]))
         self.assertIsNotNone(second_page["previous"])
-        # the second page still has a next page because we know there are 11 logs
+        # the second page still has a next page because we know there are 12 logs
         # and we only fetched 10 in the first two pages
         self.assertIsNotNone(second_page["next"])
 
@@ -443,11 +462,6 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         previous_page = response.json()
         self.assertEqual(len(first_page["results"]), len(previous_page["results"]))
-        jprint([(item["id"], item["created_at"]) for item in first_page["results"]])
-        jprint([(item["id"], item["created_at"]) for item in second_page["results"]])
-        jprint([(item["id"], item["created_at"]) for item in previous_page["results"]])
-        # jprint(second_page)
-        # jprint(previous_page)
         self.assertEqual(first_page["results"], previous_page["results"])
 
     # def test_complex_filter(self):
