@@ -10,6 +10,7 @@ class RuntimeLogSerializer(serializers.Serializer):
     service_id = serializers.CharField(allow_null=True)
     deployment_id = serializers.CharField(allow_null=True)
     time = serializers.DateTimeField()
+    created_at = serializers.DateTimeField()
     content = serializers.JSONField(allow_null=True)
     content_text = serializers.CharField(allow_null=True, allow_blank=True)
     level = serializers.ChoiceField(choices=[("ERROR", "Error"), ("INFO", "Info")])

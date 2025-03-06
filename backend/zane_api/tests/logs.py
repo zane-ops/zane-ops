@@ -308,7 +308,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 ),
                 "source": "stdout" if i % 2 == 0 else "stderr",
             }
-            for i, (time, content) in enumerate(self.sample_log_contents)
+            for i, (time, content) in enumerate(self.sample_log_contents[:10])
         ]
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
@@ -347,9 +347,6 @@ class RuntimeLogViewTests(AuthAPITestCase):
             ),
             QUERY_STRING=f"per_page=5&cursor={next_cursor}",
         )
-        jprint(first_page)
-        print(f"{next_cursor=}")
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         second_page = response.json()
         self.assertEqual(5, len(second_page["results"]))
@@ -445,6 +442,12 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         previous_page = response.json()
+        self.assertEqual(len(first_page["results"]), len(previous_page["results"]))
+        jprint([(item["id"], item["created_at"]) for item in first_page["results"]])
+        jprint([(item["id"], item["created_at"]) for item in second_page["results"]])
+        jprint([(item["id"], item["created_at"]) for item in previous_page["results"]])
+        # jprint(second_page)
+        # jprint(previous_page)
         self.assertEqual(first_page["results"], previous_page["results"])
 
     # def test_complex_filter(self):

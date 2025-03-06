@@ -5,10 +5,11 @@ import datetime
 import requests
 from datetime import timedelta
 from typing import Sequence
-from zane_api.utils import Colors, jprint
+from zane_api.utils import Colors
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
 from django.conf import settings
+from uuid import uuid4
 
 
 class LokiSearchClient:
@@ -25,6 +26,7 @@ class LokiSearchClient:
         for doc in docs:
             # Convert RuntimeLogDto to dict if needed
             log_dict = doc.to_dict() if isinstance(doc, RuntimeLogDto) else doc
+            log_dict["id"] = str(uuid4())
 
             # Define labels for Loki from key fields.
             labels = {
@@ -44,7 +46,6 @@ class LokiSearchClient:
 
         payload = {"streams": list(streams.values())}
         response = requests.post(f"{self.base_url}/loki/api/v1/push", json=payload)
-        # jprint(payload)
         if response.status_code not in (200, 204):
             raise Exception(f"Bulk insert failed: {response.text}")
 
@@ -55,6 +56,7 @@ class LokiSearchClient:
         log_dict = (
             document.to_dict() if isinstance(document, RuntimeLogDto) else document
         )
+        log_dict["id"] = str(uuid4())
 
         labels = {
             "service_id": log_dict.get("service_id") or "unknown",
@@ -76,15 +78,14 @@ class LokiSearchClient:
         filters = self._compute_filters(query)
         print(f"{filters=}")
         query_string = filters["query_string"]
-        limit = filters["page_size"]
+        page_size = filters["page_size"]
         start_ns = filters["start"]
         end_ns = filters["end"]
-        input_cursor = filters.get("cursor")
         order = filters["order"]
 
         params = {
             "query": query_string,
-            "limit": limit,
+            "limit": page_size + 1,
             "start": start_ns,
             "end": end_ns,
         }
@@ -115,28 +116,54 @@ class LokiSearchClient:
                     "deployment_id": log_data.get("deployment_id", ""),
                     "content": log_data.get("content", ""),
                     "content_text": log_data.get("content_text", ""),
+                    "created_at": log_data.get("created_at", ""),
                     "timestamp": int(ts),  # timestamp for pagination
                 }
                 hits.append(hit)
 
-        # Sort hits according to the requested order.
-        reverse = True if order == "desc" else False
-        hits = sorted(hits, key=lambda x: x["timestamp"], reverse=reverse)
-        total = len(hits)
-
         # Generate next cursor if total equals page size.
         next_cursor = None
-        if total == limit and total > 0:
-            last_timestamp = hits[-1]["timestamp"]
-            cursor_obj = {"sort": [str(last_timestamp)], "order": order}
+        if len(hits) > page_size:
+            # Pop the extra item to avoid overlap.
+            extra_item = hits.pop()
+            cursor_obj = {"sort": [str(extra_item["timestamp"])], "order": order}
             next_cursor = base64.b64encode(json.dumps(cursor_obj).encode()).decode()
 
-        # Use the provided cursor as previous.
-        previous_cursor = input_cursor if input_cursor else None
+        # Generate previous cursor only if there is at least one log in the inverse order.
+        previous_cursor = None
+        if hits:
+            first_timestamp = hits[0]["timestamp"]
+            # Prepare parameters to check existence of a previous log.
+            prev_params = {
+                "query": query_string,
+                "limit": 1,
+                "start": first_timestamp + 1,
+                # "end": int(time.time() * 1e9),
+                "direction": "forward",
+            }
+
+            prev_response = requests.get(
+                f"{self.base_url}/loki/api/v1/query_range", params=prev_params
+            )
+            prev_exists = False
+            if prev_response.status_code == 200:
+                prev_result = prev_response.json()
+                for stream in prev_result.get("data", {}).get("result", []):
+                    if stream.get("values") and len(stream["values"]) > 0:
+                        prev_exists = True
+                        break
+            if prev_exists:
+                previous_cursor_obj = {
+                    "sort": [str(first_timestamp)],
+                    "order": "asc",
+                }
+                previous_cursor = base64.b64encode(
+                    json.dumps(previous_cursor_obj).encode()
+                ).decode()
 
         data = {
             "query_time_ms": query_time_ms,
-            "total": total,
+            "total": len(hits),
             "results": [
                 {
                     "id": hit["id"],
@@ -149,18 +176,18 @@ class LokiSearchClient:
                     "deployment_id": hit["deployment_id"],
                     "content": hit["content"],
                     "content_text": hit["content_text"],
+                    "created_at": hit["created_at"],
                 }
                 for hit in hits
             ],
             "next": next_cursor,
             "previous": previous_cursor,
         }
-        jprint(data)
 
         serializer = RuntimeLogsSearchSerializer(data)
 
         print(
-            f"Found {Colors.BLUE}{total}{Colors.ENDC} logs in Loki in {Colors.GREEN}{query_time_ms}ms{Colors.ENDC}"
+            f"Found {Colors.BLUE}{len(hits)}{Colors.ENDC} logs in Loki in {Colors.GREEN}{query_time_ms}ms{Colors.ENDC}"
         )
         print("====== END LOGS SEARCH (Loki) ======")
         return serializer.data
@@ -197,12 +224,11 @@ class LokiSearchClient:
 
         now = datetime.datetime.now()
         start = now - timedelta(days=30)
-        end = now + timedelta(days=30)
         params = {
             "query": query_string,
-            "start": int(start.timestamp() * 1e9),
-            "end": int(end.timestamp() * 1e9),
+            "start": int(start.timestamp()),
         }
+        print(f"{params=}")
 
         response = requests.post(f"{self.base_url}/loki/api/v1/delete", params=params)
         if response.status_code != 204:
@@ -255,12 +281,17 @@ class LokiSearchClient:
                 decoded = base64.b64decode(cursor).decode("utf-8")
                 cursor_data = json.loads(decoded)
                 # Expecting sort to be a list with one timestamp value.
-                last_timestamp = int(cursor_data["sort"][0])
                 order = cursor_data["order"]
-                if order == "asc":
-                    start_ns = last_timestamp + 1
+                cursor_ts = int(cursor_data["sort"][0])
+
+                if order == "desc":
+                    # start : 0
+                    end_ns = cursor_ts - 1
+                    pass
                 else:
-                    end_ns = last_timestamp - 1
+                    start_ns = cursor_ts + 1
+                    # end : now
+                    pass
             except Exception:
                 pass
 

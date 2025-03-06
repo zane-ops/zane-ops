@@ -1,7 +1,7 @@
 # type: ignore
 import time
 import uuid
-from typing import Union, Optional
+from typing import Optional
 
 from django.conf import settings
 from django.core.validators import MinLengthValidator
@@ -10,7 +10,6 @@ from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-from datetime import datetime, timedelta
 from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
