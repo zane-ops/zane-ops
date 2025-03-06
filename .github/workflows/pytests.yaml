@@ -10,17 +10,10 @@ jobs:
     timeout-minutes: 5
     
     services:
-      elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-        env:
-          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-          discovery.type: single-node
-          xpack.security.enabled: "false"
-          xpack.security.http.ssl.enabled: "false"
-          xpack.monitoring.collection.enabled: "false"
+      loki:
+        image: grafana/loki:3.4
         ports:
-          - "9200:9200"
-          - "9300:9300"
+          - "3100:3100"
       postgres:
         image: postgres:16-alpine
         env:

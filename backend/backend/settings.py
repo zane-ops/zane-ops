@@ -392,6 +392,7 @@ COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
 # elastic search config
 ELASTICSEARCH_HOST = os.environ.get("ELASTICSEARCH_HOST", "http://127.0.0.1:9200")
 ELASTICSEARCH_LOGS_INDEX = "logs"
+
 LOKI_HOST = os.environ.get("LOKI_HOST", "http://127.0.0.1:3100")
 LOKI_APP_NAME = "zaneops"
 
