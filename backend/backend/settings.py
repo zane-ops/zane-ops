@@ -392,3 +392,5 @@ COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
 
 LOKI_HOST = os.environ.get("LOKI_HOST", "http://127.0.0.1:3100")
 LOKI_APP_NAME = "zaneops"
+
+CI = os.environ.get("CI", "false")

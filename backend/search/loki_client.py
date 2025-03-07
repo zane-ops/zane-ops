@@ -11,6 +11,7 @@ from django.conf import settings
 from uuid import uuid4
 import re
 from rest_framework import status
+import os
 
 
 class LokiSearchClient:
@@ -278,15 +279,21 @@ class LokiSearchClient:
         label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
         base_selector = "{" + ",".join(label_selectors) + "}"
 
-        # Default time range: start=0, end=now.
-        start_ns = 0
+        # Default time range: start=29 days ago, end=now.
+        start_ns = (
+            (datetime.datetime.now() - timedelta(days=29)).timestamp() * 1e9
+            if settings.CI  # only on CI
+            else 0
+        )
         end_ns = None
         if search_params.get("time_after"):
-            dt = datetime.datetime.fromisoformat(search_params["time_after"])
+            print(f"{search_params['time_after']=}")
+            dt = search_params["time_after"]
             start_ns = int(dt.timestamp() * 1e9)
         if search_params.get("time_before"):
-            dt = datetime.datetime.fromisoformat(search_params["time_before"])
-            end_ns = int(dt.timestamp() * 1e9)
+            print(f"{search_params['time_before']=}")
+            dt = search_params["time_before"]
+            end_ns = int(dt.timestamp() * 1e9) + 1
 
         # Default order.
         order = "desc"
@@ -305,11 +312,9 @@ class LokiSearchClient:
                     end_ns = (
                         cursor_ts + 1
                     )  # we set `+1` here because loki does not include logs containing the end timestamp
-                    pass
                 else:
                     start_ns = cursor_ts
                     # end : now
-                    pass
             except Exception:
                 pass
 

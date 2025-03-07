@@ -150,54 +150,57 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
         self.assertIsNotNone(log["service_id"])
 
 
+now = datetime.datetime.now()
+
+
 class RuntimeLogViewTests(AuthAPITestCase):
     sample_log_contents = [
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=11)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:43 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=10)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:42 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=9)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:39 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=8)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:37 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=7)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:34 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=6)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:32 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=5)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:29 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=4)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=3)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=2)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now - timedelta(days=1)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime.now().isoformat(),
+            (now).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0?00] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
     ]
@@ -464,55 +467,53 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertEqual(len(first_page["results"]), len(previous_page["results"]))
         self.assertEqual(first_page["results"], previous_page["results"])
 
-    # def test_complex_filter(self):
-    #     p, service = self.create_and_deploy_redis_docker_service()
-    #     deployment: DockerDeployment = service.deployments.first()
+    def test_complex_filter(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        deployment: DockerDeployment = service.deployments.first()
 
-    #     # Insert logs
-    #     simple_logs = [
-    #         {
-    #             "log": content,
-    #             "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-    #             "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-    #             "time": time.isoformat(),
-    #             "tag": json.dumps(
-    #                 {
-    #                     "deployment_id": deployment.hash,
-    #                     "service_id": service.id,
-    #                 }
-    #             ),
-    #             "source": "stdout" if i % 2 == 0 else "stderr",
-    #         }
-    #         for i, (time, content) in enumerate(self.sample_log_contents)
-    #     ]
-    #     response = self.client.post(
-    #         reverse("zane_api:logs.ingest"),
-    #         data=simple_logs,
-    #         headers={
-    #             "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
-    #         },
-    #     )
-    #     self.assertEqual(status.HTTP_200_OK, response.status_code)
+        # Insert logs
+        simple_logs = [
+            {
+                "log": content,
+                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
+                "time": time,
+                "tag": json.dumps(
+                    {
+                        "deployment_id": deployment.hash,
+                        "service_id": service.id,
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, (time, content) in enumerate(self.sample_log_contents)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    #     time_after = datetime.datetime(
-    #         2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc
-    #     )
-    #     time_before = datetime.datetime(
-    #         2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc
-    #     )
-    #     response = self.client.get(
-    #         reverse(
-    #             "zane_api:services.docker.deployment_logs",
-    #             kwargs={
-    #                 "project_slug": p.slug,
-    #                 "service_slug": service.slug,
-    #                 "deployment_hash": deployment.hash,
-    #             },
-    #         ),
-    #         QUERY_STRING=f"level=ERROR&time_after={time_after.strftime('%Y-%m-%dT%H:%M:%SZ')}&time_before={time_before.strftime('%Y-%m-%dT%H:%M:%SZ')}",
-    #     )
-    #     self.assertEqual(status.HTTP_200_OK, response.status_code)
-    #     self.assertEqual(2, len(response.json()["results"]))
+        time_after = now - timedelta(days=10)
+
+        time_before = now - timedelta(days=8)
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.deployment_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "deployment_hash": deployment.hash,
+                },
+            ),
+            QUERY_STRING=f"time_after={time_after.isoformat()}&time_before={time_before.isoformat()}",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, len(response.json()["results"]))
 
     def test_filter_by_query(self):
         p, service = self.create_and_deploy_redis_docker_service()
