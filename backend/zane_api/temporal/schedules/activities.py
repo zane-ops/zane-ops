@@ -230,31 +230,37 @@ class MonitorDockerDeploymentActivities:
                             )
                             deployment_status_reason = str(e)
 
-                print(
-                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
-                )
-                await deployment_log(
-                    deployment=details.deployment,
-                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
-                    f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
-                )
                 status_color = (
                     Colors.GREEN
                     if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
                     else Colors.RED
                 )
 
-                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
-                    status_flag = "✅"
-                elif deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
-                    status_flag = "❌"
-                else:
-                    status_flag = "🏁"
-                await deployment_log(
-                    deployment=details.deployment,
-                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
-                    f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
+                print(
+                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
                 )
+
+                unhealthy = (
+                    deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                )
+
+                if unhealthy:
+                    if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                        status_flag = "❌"
+                    else:
+                        status_flag = "🏁"
+
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                        f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                    )
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
+                    )
+
                 return deployment_status, deployment_status_reason
 
     @activity.defn
