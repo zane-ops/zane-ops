@@ -4,7 +4,7 @@ import datetime
 import requests
 from datetime import timedelta
 from typing import Sequence
-from zane_api.utils import Colors
+from zane_api.utils import Colors, jprint
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
 from django.conf import settings
@@ -38,7 +38,7 @@ class LokiSearchClient:
             }
             # Construct a label selector string
             label_key = ",".join([f'{k}="{v}"' for k, v in labels.items()])
-            ts = str(log_dict.get("time"))
+            ts = f"{log_dict.get('time'):.0f}"
             value = json.dumps(log_dict)
             if label_key not in streams:
                 streams[label_key] = {"stream": labels, "values": []}
@@ -65,7 +65,7 @@ class LokiSearchClient:
             "source": log_dict.get("source"),
             "app": f"{settings.LOKI_APP_NAME}",
         }
-        ts = str(log_dict.get("time"))
+        ts = f"{log_dict.get('time'):.0f}"
         payload = {
             "streams": [{"stream": labels, "values": [[ts, json.dumps(log_dict)]]}]
         }
