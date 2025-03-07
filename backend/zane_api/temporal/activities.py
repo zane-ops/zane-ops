@@ -17,6 +17,7 @@ with workflow.unsafe.imports_passed_through():
         GetDockerDeploymentStatsWorkflow,
     )
     from search.client import SearchClient
+    from search.loki_client import LokiSearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     import docker
     import docker.errors
@@ -46,7 +47,7 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from django.utils import timezone
     from time import monotonic
-    from django.db.models import Q, QuerySet, Case, When, Value, F
+    from django.db.models import Q, Case, When, Value, F
     from ..utils import (
         strip_slash_if_exists,
         find_item_in_list,
@@ -972,11 +973,10 @@ class DockerSwarmActivities:
         for config in docker_config_list:
             config.remove()
         print(f"Deleted {len(docker_config_list)} config(s), YAY !! 🎉")
-        search_client = SearchClient(
-            host=settings.ELASTICSEARCH_HOST,
+        search_client = LokiSearchClient(
+            host=settings.LOKI_HOST,
         )
         search_client.delete(
-            index_name=settings.ELASTICSEARCH_LOGS_INDEX,
             query=dict(service_id=service_details.original_id),
         )
 

@@ -371,8 +371,6 @@ class RuntimeLogViewTests(AuthAPITestCase):
         second_page_contents = {
             (item["id"], item["time"]) for item in second_page["results"]
         }
-        jprint([*first_page_contents])
-        jprint([*second_page_contents])
 
         # Since we know there are only 10 logs, there shouldn't be a next page
         self.assertIsNone(second_page["next"])
@@ -592,7 +590,8 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # get all deleted stream that are for processing
-        response = requests.get(self.search_client.base_url + "/api/v1/delete")
+        response = requests.get(self.search_client.base_url + "/loki/api/v1/delete")
+        response.raise_for_status()
         deleted_streams = response.json()
 
         response = await self.async_client.delete(
@@ -608,7 +607,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertIsNone(deleted_service)
 
         # if the logs haven been sent for processing, there should be one new stream in the delete queue
-        response = requests.get(self.search_client.base_url + "/api/v1/delete")
+        response = requests.get(self.search_client.base_url + "/loki/api/v1/delete")
         new_deleted_streams = response.json()
         self.assertGreater(len(new_deleted_streams), len(deleted_streams))
 
