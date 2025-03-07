@@ -31,6 +31,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
     @responses.activate
     async def test_healthcheck_path_uses_service_id_to_run_healthcheck(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
 
         p, service = await self.acreate_and_deploy_caddy_docker_service()
         deployment_url_pattern = re.compile(
@@ -78,6 +79,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
     @responses.activate
     async def test_monitor_healthcheck_path_uses_service_id_to_run_healthcheck(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
         p, service = await self.acreate_and_deploy_caddy_docker_service()
         deployment_url_pattern = re.compile(
             rf"^(http://srv-{p.id}-{service.id}).*", re.IGNORECASE

@@ -386,6 +386,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
     async def test_create_service_with_healtheck_path_success(self):
         deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
         responses.add(
             responses.GET,
             url=re.compile(deployment_url_pattern),
@@ -405,6 +406,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
     async def test_create_service_with_healtheck_path_error(self):
         deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
         responses.add(
             responses.GET,
             url=re.compile(deployment_url_pattern),
