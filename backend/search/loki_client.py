@@ -244,11 +244,7 @@ class LokiSearchClient:
         print(f"{params=}")
 
         response = requests.post(f"{self.base_url}/loki/api/v1/delete", params=params)
-        if response.status_code not in (
-            status.HTTP_204_NO_CONTENT,
-            # status.HTTP_404_NOT_FOUND,
-        ):  # if no logs were found for the items, it will throw a 404 error
-            raise Exception(f"Delete failed: {response.text}")
+        response.raise_for_status()
         print("====== END LOGS DELETE (Loki) ======")
         return True
 
