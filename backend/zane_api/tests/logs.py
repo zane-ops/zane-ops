@@ -1464,10 +1464,9 @@ class DeploymentSystemLogViewTests(AuthAPITestCase):
 
         first_deployment: DockerDeployment = await service.deployments.afirst()
         system_logs_total = self.search_client.count(
-            index_name=self.ELASTICSEARCH_LOGS_INDEX,
             query={
                 "source": [RuntimeLogSource.SYSTEM],
                 "deployment_id": first_deployment.hash,
             },
         )
-        self.assertNotEqual(0, system_logs_total)
+        self.assertGreater(system_logs_total, 0)

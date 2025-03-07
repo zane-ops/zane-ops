@@ -136,7 +136,7 @@ class LogIngestAPIView(APIView):
                             pass
                         case _:
                             deployment_id = json_tag["deployment_id"]
-                            simple_logs.extend(
+                            simple_logs.append(
                                 RuntimeLogDto(
                                     time=log["time"],
                                     created_at=timezone.now(),
@@ -148,28 +148,14 @@ class LogIngestAPIView(APIView):
                                     source=RuntimeLogSource.SERVICE,
                                     service_id=service_id,
                                     deployment_id=deployment_id,
-                                    content=message,
-                                    content_text=escape_ansi(message),
-                                )
-                                for message in truncate_utf8(
-                                    log["log"], ELASTICSEARCH_BYTE_LIMIT
+                                    content=log["log"],
+                                    content_text=escape_ansi(log["log"]),
                                 )
                             )
 
             start_time = datetime.now()
-            search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
-            loki_search_client = LokiSearchClient(host=settings.LOKI_HOST)
-            search_client.bulk_insert(
-                [
-                    dict(
-                        _index=settings.ELASTICSEARCH_LOGS_INDEX,
-                        **log.to_es_dict(),
-                    )
-                    for log in simple_logs
-                ]
-            )
-
-            loki_search_client.bulk_insert(simple_logs)
+            search_client = LokiSearchClient(host=settings.LOKI_HOST)
+            search_client.bulk_insert(simple_logs)
 
             HttpLog.objects.bulk_create(http_logs)
             end_time = datetime.now()

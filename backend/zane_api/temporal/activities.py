@@ -16,7 +16,6 @@ with workflow.unsafe.imports_passed_through():
         MonitorDockerDeploymentWorkflow,
         GetDockerDeploymentStatsWorkflow,
     )
-    from search.client import SearchClient
     from search.loki_client import LokiSearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     import docker
@@ -221,11 +220,10 @@ async def deployment_log(
             service_id = deployment.service_id
         case _:
             raise TypeError(f"unsupported type {type(deployment)}")
-    search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+    search_client = LokiSearchClient(host=settings.LOKI_HOST)
 
     MAX_COLORED_CHARS = 1000
     search_client.insert(
-        index_name=settings.ELASTICSEARCH_LOGS_INDEX,
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
             level=RuntimeLogLevel.INFO,
