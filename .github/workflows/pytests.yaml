@@ -14,6 +14,8 @@ jobs:
         image: fredkiss3/grafana-loki:3.4
         ports:
           - "3100:3100"
+        volumes:
+          - loki-data:/loki
       postgres:
         image: postgres:16-alpine
         env:
