@@ -10,7 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .base import InternalZaneAppPermission
-from ..utils import Colors, escape_ansi, truncate_utf8
+from ..utils import Colors, escape_ansi
 from datetime import datetime
 
 from .helpers import ZaneServices
@@ -21,9 +21,7 @@ from .serializers import (
 )
 from ..models import HttpLog
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
-from search.client import SearchClient
 from search.loki_client import LokiSearchClient
-from search.constants import ELASTICSEARCH_BYTE_LIMIT
 from django.conf import settings
 from django.utils import timezone
 
@@ -67,7 +65,7 @@ class LogIngestAPIView(APIView):
                                         data=content
                                     )
                                     if log_serializer.is_valid():
-                                        log_content = log_serializer.data
+                                        log_content = log_serializer.data  # type: ignore
                                         upstream: str = log_content.get(
                                             "zane_deployment_upstream"
                                         )  # type: ignore

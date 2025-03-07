@@ -389,15 +389,6 @@ if BACKEND_COMPONENT == "API":
 IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")
 COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
 
-# elastic search config
-ELASTICSEARCH_HOST = os.environ.get("ELASTICSEARCH_HOST", "http://127.0.0.1:9200")
-ELASTICSEARCH_LOGS_INDEX = "logs"
 
 LOKI_HOST = os.environ.get("LOKI_HOST", "http://127.0.0.1:3100")
 LOKI_APP_NAME = "zaneops"
-
-if BACKEND_COMPONENT == "API" and not TESTING:
-    from search.client import SearchClient
-
-    search_client = SearchClient(host=ELASTICSEARCH_HOST)
-    search_client.create_log_index_if_not_exists(index_name=ELASTICSEARCH_LOGS_INDEX)

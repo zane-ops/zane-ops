@@ -4,7 +4,7 @@ import datetime
 import requests
 from datetime import timedelta
 from typing import Sequence
-from zane_api.utils import Colors, jprint
+from zane_api.utils import Colors
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
 from django.conf import settings

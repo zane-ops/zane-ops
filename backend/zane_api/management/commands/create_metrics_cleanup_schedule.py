@@ -33,7 +33,7 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
     return ScheduleUpdate(schedule=new_schedule)
 
 
-async def create_logs_cleanup_schedule():
+async def create_metrics_cleanup_schedule():
     client = await get_temporalio_client()
 
     schedule_id = "daily-logs-cleanup"
@@ -70,4 +70,4 @@ class Command(BaseCommand):
     help = "Create log cleanup schedule"
 
     def handle(self, *args, **options):
-        asyncio.run(create_logs_cleanup_schedule())
+        asyncio.run(create_metrics_cleanup_schedule())
