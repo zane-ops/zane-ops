@@ -23,6 +23,8 @@ class LokiSearchClient:
         Push multiple log entries to Loki.
         Each document must follow the structure of RuntimeLogDto or its dict representation.
         """
+        if len(docs) == 0:
+            return
         streams = {}
         for doc in docs:
             # Convert RuntimeLogDto to dict if needed
