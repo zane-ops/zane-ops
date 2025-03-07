@@ -17,6 +17,8 @@ from .base import AuthAPITestCase
 from ..models import DockerDeployment, DockerRegistryService, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
 
+import requests
+
 # from search.constants import ELASTICSEARCH_BYTE_LIMIT
 import urllib.request
 
@@ -248,7 +250,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertEqual(
             sorted(
                 elements,
-                key=lambda log: datetime.datetime.fromisoformat(log["timestamp"]),
+                key=lambda log: log["timestamp"],
                 reverse=True,
             ),
             elements,
@@ -544,7 +546,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        url_encoded_query = urllib.request.pathname2url('* +0?00] "POST /')
+        url_encoded_query = urllib.request.pathname2url('* +0?00] "post /')
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_logs",
@@ -589,6 +591,10 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+        # get all deleted stream that are for processing
+        response = requests.get(self.search_client.base_url + "/api/v1/delete")
+        deleted_streams = response.json()
+
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
@@ -601,11 +607,10 @@ class RuntimeLogViewTests(AuthAPITestCase):
         ).afirst()
         self.assertIsNone(deleted_service)
 
-        logs_for_service = self.search_client.search(
-            index_name=self.ELASTICSEARCH_LOGS_INDEX,
-            query={"service_id": service.id},
-        )
-        self.assertEqual(0, logs_for_service["total"])
+        # if the logs haven been sent for processing, there should be one new stream in the delete queue
+        response = requests.get(self.search_client.base_url + "/api/v1/delete")
+        new_deleted_streams = response.json()
+        self.assertGreater(len(new_deleted_streams), len(deleted_streams))
 
 
 class RuntimeLogScheduleTests(AuthAPITestCase):

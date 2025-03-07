@@ -1,15 +1,15 @@
 import base64
 import json
-import time
 import datetime
 import requests
 from datetime import timedelta
 from typing import Sequence
-from zane_api.utils import Colors, jprint
+from zane_api.utils import Colors
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
 from django.conf import settings
 from uuid import uuid4
+import re
 
 
 class LokiSearchClient:
@@ -76,8 +76,7 @@ class LokiSearchClient:
     def search(self, query: dict | None = None):
         print("\n====== LOGS SEARCH (Loki) ======")
         filters = self._compute_filters(query)
-        print("filters=")
-        jprint(filters)
+        print(f"filters={Colors.GREY}{filters}{Colors.ENDC}")
         query_string = filters["query_string"]
         page_size = filters["page_size"]
         start_ns = filters["start"]
@@ -113,24 +112,20 @@ class LokiSearchClient:
         hits: list[dict] = []
         # Loki returns streams; each stream contains a list of log entries.
         for stream in result.get("data", {}).get("result", []):
-            for ts, log_line in stream.get("values", []):
-                try:
-                    log_data = json.loads(log_line)
-                except Exception:
-                    continue
-                hit = {
-                    "id": log_data.get("id", ""),
-                    "time": log_data.get("time", ""),
-                    "level": log_data.get("level", ""),
-                    "source": log_data.get("source", ""),
-                    "service_id": log_data.get("service_id", ""),
-                    "deployment_id": log_data.get("deployment_id", ""),
-                    "content": log_data.get("content", ""),
-                    "content_text": log_data.get("content_text", ""),
-                    "created_at": log_data.get("created_at", ""),
-                    "timestamp": int(ts),  # timestamp for pagination
-                }
-                hits.append(hit)
+            log_data = stream["stream"]
+            hit = {
+                "id": log_data.get("id", ""),
+                "time": int(log_data.get("time", "")),
+                "level": log_data.get("level", ""),
+                "source": log_data.get("source", ""),
+                "service_id": log_data.get("service_id", ""),
+                "deployment_id": log_data.get("deployment_id", ""),
+                "content": log_data.get("content", ""),
+                "content_text": log_data.get("content_text", ""),
+                "created_at": log_data.get("created_at", ""),
+                "timestamp": int(log_data.get("time", "0")),  # timestamp for pagination
+            }
+            hits.append(hit)
 
         hits = sorted(
             hits, key=lambda hit: (hit["timestamp"], hit["created_at"]), reverse=True
@@ -312,13 +307,14 @@ class LokiSearchClient:
             except Exception:
                 pass
 
-        text_query = ""
+        text_query = " | json "
         if search_params.get("query"):
-            term = search_params["query"]
-            text_query = f' | json | content_text =~ ".*{term}.*"'
+            term: str = search_params["query"]
+            term = re.escape(term).replace("\\", "\\\\").replace('"', '\\"')
+            text_query += '| line_format "{{.content_text}}" |~ "(?i)' + f"{term}" + '"'
 
         query_string = base_selector + text_query
-
+        print(f"query_string={Colors.GREY}{query_string}{Colors.ENDC}")
         return {
             "query_string": query_string,
             "page_size": page_size,
