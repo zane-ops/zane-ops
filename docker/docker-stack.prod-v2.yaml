@@ -377,10 +377,8 @@ services:
           memory: 200M
   loki:
     image: grafana/loki:3.4
-    ports:
-      - "3100:3100"
     volumes:
-      - ./loki/config.yaml:/etc/loki/local-config.yaml
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
     networks:
@@ -402,7 +400,13 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 1.0G
+          memory: 1G
+      healthcheck:
+        test: wget --quiet --tries=1 --output-document=- http://localhost:3100/ready | grep -q -w ready || exit 1
+        start_period: 20s
+        interval: 10s
+        timeout: 1s
+        retries: 12  # try for 2 minutes
 volumes:
   loki-data:
     labels:
