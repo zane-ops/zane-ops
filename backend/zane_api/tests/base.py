@@ -281,12 +281,8 @@ class APITestCase(TestCase):
         self.async_client = AsyncCustomAPIClient(parent=self)  # type: ignore
         self.fake_docker_client = FakeDockerClient()
         self.search_client = LokiSearchClient(host=settings.LOKI_HOST)
-        self.ELASTICSEARCH_LOGS_INDEX = (
-            f"{settings.ELASTICSEARCH_LOGS_INDEX}{random_word()}"
-        )
         self.LOKI_APP_NAME = f"testing-{random_word()}"
         settings_ctx = override_settings(
-            ELASTICSEARCH_LOGS_INDEX=self.ELASTICSEARCH_LOGS_INDEX,
             LOKI_APP_NAME=self.LOKI_APP_NAME,
         )
         settings_ctx.__enter__()
