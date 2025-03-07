@@ -11,7 +11,7 @@ jobs:
     
     services:
       loki:
-        image: grafana/loki:3.4
+        image: fredkiss3/grafana-loki:3.4
         ports:
           - "3100:3100"
       postgres:

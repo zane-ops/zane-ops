@@ -243,11 +243,8 @@ class LokiSearchClient:
         }
         print(f"{params=}")
 
-        if settings.CI != "true":
-            response = requests.post(
-                f"{self.base_url}/loki/api/v1/delete", params=params
-            )
-            response.raise_for_status()
+        response = requests.post(f"{self.base_url}/loki/api/v1/delete", params=params)
+        response.raise_for_status()
         print("====== END LOGS DELETE (Loki) ======")
         return True
 
