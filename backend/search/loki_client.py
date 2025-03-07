@@ -10,6 +10,7 @@ from .dtos import RuntimeLogDto
 from django.conf import settings
 from uuid import uuid4
 import re
+from rest_framework import status
 
 
 class LokiSearchClient:
@@ -46,7 +47,7 @@ class LokiSearchClient:
 
         payload = {"streams": list(streams.values())}
         response = requests.post(f"{self.base_url}/loki/api/v1/push", json=payload)
-        if response.status_code not in (200, 204):
+        if response.status_code not in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT):
             raise Exception(f"Bulk insert failed: {response.text}")
 
     def insert(self, document: dict | RuntimeLogDto):
@@ -70,7 +71,7 @@ class LokiSearchClient:
             "streams": [{"stream": labels, "values": [[ts, json.dumps(log_dict)]]}]
         }
         response = requests.post(f"{self.base_url}/loki/api/v1/push", json=payload)
-        if response.status_code not in (200, 204):
+        if response.status_code not in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT):
             raise Exception(f"Insert failed: {response.text}")
 
     def search(self, query: dict | None = None):
@@ -97,7 +98,7 @@ class LokiSearchClient:
         response = requests.get(
             f"{self.base_url}/loki/api/v1/query_range", params=params
         )
-        if response.status_code != 200:
+        if response.status_code != status.HTTP_200_OK:
             raise Exception(f"Search failed: {response.text}")
 
         summary = (
@@ -156,7 +157,7 @@ class LokiSearchClient:
                 f"{self.base_url}/loki/api/v1/query_range", params=prev_params
             )
             prev_exists = False
-            if prev_response.status_code == 200:
+            if prev_response.status_code == status.HTTP_200_OK:
                 prev_result = prev_response.json()
                 for stream in prev_result.get("data", {}).get("result", []):
                     if stream.get("values") and len(stream["values"]) > 0:
@@ -215,7 +216,7 @@ class LokiSearchClient:
         response = requests.get(
             f"{self.base_url}/loki/api/v1/query_range", params=params
         )
-        if response.status_code != 200:
+        if response.status_code != status.HTTP_200_OK:
             raise Exception(f"Count failed: {response.text}")
         result = response.json()
         total = sum(
@@ -240,7 +241,10 @@ class LokiSearchClient:
         print(f"{params=}")
 
         response = requests.post(f"{self.base_url}/loki/api/v1/delete", params=params)
-        if response.status_code != 204:
+        if response.status_code not in (
+            status.HTTP_204_NO_CONTENT,
+            status.HTTP_404_NOT_FOUND,
+        ):  # if no logs were found for the items, it will throw a 404 error
             raise Exception(f"Delete failed: {response.text}")
         print("====== END LOGS DELETE (Loki) ======")
         return True
