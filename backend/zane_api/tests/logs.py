@@ -34,7 +34,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": datetime.datetime.now().isoformat(),
+                "time": (datetime.datetime.now() - timedelta(seconds=1)).isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -144,7 +144,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
         self.assertEqual(RuntimeLogLevel.INFO, log["level"])
         self.assertIsNotNone(log["time"])
         self.assertEqual(
-            simple_logs[0]["log"],
+            simple_logs[-1]["log"],
             log["content"],
         )
         self.assertIsNotNone(log["service_id"])
