@@ -36,7 +36,7 @@ class RuntimeLogDto:
             "service_id": self.service_id,
             "deployment_id": self.deployment_id,
             "time": (
-                self.time.timestamp() * 1e9
+                int(self.time.timestamp() * 10**9)
                 if isinstance(self.time, datetime.datetime)
                 else iso_to_ns(self.time)
             ),  # multiply to nanoseconds

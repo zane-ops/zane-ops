@@ -246,7 +246,7 @@ class LokiSearchClient:
         response = requests.post(f"{self.base_url}/loki/api/v1/delete", params=params)
         if response.status_code not in (
             status.HTTP_204_NO_CONTENT,
-            status.HTTP_404_NOT_FOUND,
+            # status.HTTP_404_NOT_FOUND,
         ):  # if no logs were found for the items, it will throw a 404 error
             raise Exception(f"Delete failed: {response.text}")
         print("====== END LOGS DELETE (Loki) ======")
@@ -282,7 +282,7 @@ class LokiSearchClient:
         # Default time range: start=29 days ago, end=now.
         start_ns = (
             (datetime.datetime.now() - timedelta(days=29)).timestamp() * 1e9
-            if settings.CI  # only on CI
+            if settings.CI == "true"  # only on CI
             else 0
         )
         end_ns = None
