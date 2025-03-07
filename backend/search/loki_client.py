@@ -114,16 +114,16 @@ class LokiSearchClient:
         for stream in result.get("data", {}).get("result", []):
             log_data = stream["stream"]
             hit = {
-                "id": log_data.get("id", ""),
-                "time": int(log_data.get("time", "")),
-                "level": log_data.get("level", ""),
-                "source": log_data.get("source", ""),
-                "service_id": log_data.get("service_id", ""),
-                "deployment_id": log_data.get("deployment_id", ""),
-                "content": log_data.get("content", ""),
-                "content_text": log_data.get("content_text", ""),
-                "created_at": log_data.get("created_at", ""),
-                "timestamp": int(log_data.get("time", "0")),  # timestamp for pagination
+                "id": log_data["id"],
+                "time": int(float(log_data["time"])),
+                "level": log_data["level"],
+                "source": log_data["source"],
+                "service_id": log_data["service_id"],
+                "deployment_id": log_data["deployment_id"],
+                "content": log_data["content"],
+                "content_text": log_data["content_text"],
+                "created_at": log_data["created_at"],
+                "timestamp": int(float(log_data["time"])),  # timestamp for pagination
             }
             hits.append(hit)
 
