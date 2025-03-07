@@ -277,7 +277,18 @@ class LokiSearchClient:
                 label_selectors.append(f'source="{sources}"')
 
         label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
-        base_selector = "{" + ",".join(label_selectors) + "}"
+        base_selector = "{" + ",".join(label_selectors) + "} | json"
+
+        if search_params.get("time_after"):
+            print(f"{search_params['time_after']=}")
+            dt = search_params["time_after"]
+            dt = int(dt.timestamp() * 1e9)
+            base_selector = " ".join([base_selector, f"| time >= {dt}"])
+        if search_params.get("time_before"):
+            print(f"{search_params['time_before']=}")
+            dt = search_params["time_before"]
+            dt = int(dt.timestamp() * 1e9)
+            base_selector = " ".join([base_selector, f"| time <= {dt}"])
 
         # Default time range: start=29 days ago, end=now.
         start_ns = (
@@ -286,14 +297,6 @@ class LokiSearchClient:
             else 0
         )
         end_ns = None
-        if search_params.get("time_after"):
-            print(f"{search_params['time_after']=}")
-            dt = search_params["time_after"]
-            start_ns = int(dt.timestamp() * 1e9)
-        if search_params.get("time_before"):
-            print(f"{search_params['time_before']=}")
-            dt = search_params["time_before"]
-            end_ns = int(dt.timestamp() * 1e9) + 1
 
         # Default order.
         order = "desc"
@@ -318,13 +321,13 @@ class LokiSearchClient:
             except Exception:
                 pass
 
-        text_query = " | json "
+        text_query = ""
         if search_params.get("query"):
             term: str = search_params["query"]
             term = re.escape(term).replace("\\", "\\\\").replace('"', '\\"')
-            text_query += '| line_format "{{.content_text}}" |~ "(?i)' + f"{term}" + '"'
+            text_query = '| line_format "{{.content_text}}" |~ "(?i)' + f"{term}" + '"'
 
-        query_string = base_selector + text_query
+        query_string = " ".join([base_selector, text_query])
         print(f"query_string={Colors.GREY}{query_string}{Colors.ENDC}")
         return {
             "query_string": query_string,
