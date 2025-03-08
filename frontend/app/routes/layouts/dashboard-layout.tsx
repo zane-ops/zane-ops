@@ -128,14 +128,6 @@ function Header({ user }: HeaderProps) {
           <div className="flex mx-2 w-full justify-center items-center">
             <CommandMenu />
           </div>
-
-          <a
-            href="https://github.com/zane-ops/zane-ops"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <HelpCircle className="w-16 stroke-[1.5px] opacity-70" />
-          </a>
         </div>
 
         <fetcher.Form
