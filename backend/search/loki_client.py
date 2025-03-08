@@ -48,7 +48,6 @@ class LokiSearchClient:
             streams[label_key]["values"].append([ts, value])
 
         payload = {"streams": list(streams.values())}
-        jprint(payload)
         response = requests.post(
             f"{self.base_url}/loki/api/v1/push",
             json=payload,
