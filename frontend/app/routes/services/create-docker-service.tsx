@@ -243,6 +243,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             type="text"
             defaultValue={actionData?.userData?.slug}
             aria-describedby="slug-error"
+            aria-invalid={!!errors.slug}
           />
           {errors.slug && (
             <span id="slug-error" className="text-red-500 text-sm">
@@ -269,6 +270,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               placeholder="ex: bitnami/redis"
               name="image"
               aria-describedby="image-error"
+              aria-invalid={!!errors.image}
             />
             <CommandList
               className={cn({

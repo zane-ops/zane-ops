@@ -104,6 +104,7 @@ function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
             type="text"
             defaultValue={actionData?.userData?.slug}
             aria-describedby="slug-error"
+            aria-invalid={!!errors.slug}
           />
           {errors.slug && (
             <span id="slug-error" className="text-red-500 text-sm">
@@ -121,6 +122,7 @@ function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
             placeholder="Ex: A self hosted PaaS"
             defaultValue={actionData?.userData?.description}
             aria-describedby="description-error"
+            aria-invalid={!!errors.description}
           />
           {errors.description && (
             <span id="description-error" className="text-red-500 text-sm">
