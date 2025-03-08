@@ -776,7 +776,6 @@ def get_workflows_and_activities():
             swarm_activities.delete_created_configs,
             monitor_activities.save_deployment_status,
             monitor_activities.run_deployment_monitor_healthcheck,
-            cleanup_activites.cleanup_simple_logs,
             cleanup_activites.cleanup_service_metrics,
             system_cleanup_activities.cleanup_images,
             system_cleanup_activities.cleanup_containers,

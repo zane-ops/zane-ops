@@ -2,6 +2,8 @@ import datetime
 from typing import Any, Dict, Literal, Optional
 from dataclasses import dataclass
 
+from zane_api.utils import iso_to_ns
+
 
 class RuntimeLogLevel:
     ERROR = "ERROR"
@@ -28,6 +30,26 @@ class RuntimeLogDto:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         return cls(**data)
+
+    def to_dict(self):
+        return {
+            "service_id": self.service_id,
+            "deployment_id": self.deployment_id,
+            "time": (
+                int(self.time.timestamp() * 10**9)
+                if isinstance(self.time, datetime.datetime)
+                else iso_to_ns(self.time)
+            ),  # multiply to nanoseconds
+            "created_at": (
+                self.created_at.isoformat()
+                if isinstance(self.created_at, datetime.datetime)
+                else self.created_at
+            ),
+            "content_text": self.content_text,
+            "content": self.content,
+            "level": self.level,
+            "source": self.source,
+        }
 
     def to_es_dict(self):
         return {

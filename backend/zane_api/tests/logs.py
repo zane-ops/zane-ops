@@ -8,15 +8,18 @@ from rest_framework import status
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
-from temporalio.testing import WorkflowEnvironment
 import base64
 from temporalio.common import RetryPolicy
-
+import os
+from ..utils import jprint
 from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import DockerDeployment, DockerRegistryService, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
-from search.constants import ELASTICSEARCH_BYTE_LIMIT
+
+import requests
+
+# from search.constants import ELASTICSEARCH_BYTE_LIMIT
 import urllib.request
 
 
@@ -31,7 +34,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:C 30 Jun 2024 03:17:14.369 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-07-01T03:17:14Z",
+                "time": (datetime.datetime.now() - timedelta(seconds=1)).isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -44,7 +47,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:C 30 Jun 2024 03:17:14.369 * Redis version=7.2.5, bits=64, commit=00000000, modified=0, pid=1, just started",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": datetime.datetime.now().isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -57,7 +60,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:C 30 Jun 2024 03:17:14.369 * Configuration loaded",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": datetime.datetime.now().isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -70,7 +73,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:M 30 Jun 2024 03:17:14.369 * monotonic clock: POSIX clock_gettime",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": datetime.datetime.now().isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -83,7 +86,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:M 30 Jun 2024 03:17:14.371 * Running mode=standalone, port=6379.",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": datetime.datetime.now().isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -96,7 +99,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:M 30 Jun 2024 03:17:14.375 * Server initialized",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": datetime.datetime.now().isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -109,7 +112,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
                 "log": "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
+                "time": datetime.datetime.now().isoformat(),
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -131,10 +134,9 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
 
         self.assertEqual(
             len(simple_logs),
-            self.search_client.count(index_name=self.ELASTICSEARCH_LOGS_INDEX),
+            self.search_client.count(),
         )
         data = self.search_client.search(
-            index_name=self.ELASTICSEARCH_LOGS_INDEX,
             query={"deployment_id": deployment.hash},
         )
         log = data["results"][0]
@@ -142,108 +144,73 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
         self.assertEqual(RuntimeLogLevel.INFO, log["level"])
         self.assertIsNotNone(log["time"])
         self.assertEqual(
-            simple_logs[0]["log"],
+            simple_logs[-1]["log"],
             log["content"],
         )
         self.assertIsNotNone(log["service_id"])
 
-    def test_cut_large_logs_into_chunks(self):
-        p, service = self.create_and_deploy_redis_docker_service()
 
-        deployment: DockerDeployment = service.deployments.first()
-
-        maximum_utf8_bytes = (
-            ELASTICSEARCH_BYTE_LIMIT // 4
-        )  # utf-8 characters take 4 bytes
-        simple_logs = [
-            {
-                "log": ("😘" * maximum_utf8_bytes * 2)
-                + "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
-                "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": "2024-06-30T03:17:14Z",
-                "tag": json.dumps(
-                    {
-                        "deployment_id": deployment.hash,
-                        "service_id": service.id,
-                    }
-                ),
-                "source": "stdout",
-            },
-        ]
-
-        response = self.client.post(
-            reverse("zane_api:logs.ingest"),
-            data=simple_logs,
-            headers={
-                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
-            },
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        self.assertEqual(
-            3,
-            self.search_client.count(index_name=self.ELASTICSEARCH_LOGS_INDEX),
-        )
-        data = self.search_client.search(
-            index_name=self.ELASTICSEARCH_LOGS_INDEX,
-            query={"deployment_id": deployment.hash},
-        )
-        log = data["results"][0]
-        self.assertNotEqual(
-            simple_logs[0]["log"],
-            log["content"],
-        )
+now = datetime.datetime.now()
 
 
 class RuntimeLogViewTests(AuthAPITestCase):
+    """
+    NOTE for Loki :
+    only very recent logs are prioritized when ingesting then searching for logs.
+    i.e If you insert new logs that are very old, even if your search params
+        include the oldest timestamp for the logs you just inserted, it will
+        take up to 30s for them to show up in the search results.
+
+    That's why we only insert very recent logs here.
+    """
+
     sample_log_contents = [
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=11)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:43 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 42, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=10)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:42 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 39, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=9)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:39 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=8)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:37 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 34, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=7)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:34 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 32, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=6)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:32 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 29, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=5)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:29 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 27, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=4)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 24, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=3)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=2)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            (now - timedelta(seconds=1)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            datetime.datetime(2024, 6, 30, 21, 52, 22, tzinfo=datetime.timezone.utc),
+            (now).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0?00] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
     ]
@@ -258,7 +225,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -290,6 +257,17 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(simple_logs), len(response.json()["results"]))
+        elements = response.json()["results"]
+
+        # Check that logs are sorted in reverse order of time
+        self.assertEqual(
+            sorted(
+                elements,
+                key=lambda log: log["timestamp"],
+                reverse=True,
+            ),
+            elements,
+        )
 
     def test_paginate(self):
         p, service = self.create_and_deploy_redis_docker_service()
@@ -301,7 +279,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -347,7 +325,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -356,7 +334,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 ),
                 "source": "stdout" if i % 2 == 0 else "stderr",
             }
-            for i, (time, content) in enumerate(self.sample_log_contents)
+            for i, (time, content) in enumerate(self.sample_log_contents[:10])
         ]
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
@@ -398,13 +376,19 @@ class RuntimeLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         second_page = response.json()
         self.assertEqual(5, len(second_page["results"]))
+
         # Check that no item from first page appears in second page
-        first_page_contents = {item["id"] for item in first_page["results"]}
-        second_page_contents = {item["id"] for item in second_page["results"]}
+        first_page_contents = {
+            (item["id"], item["time"]) for item in first_page["results"]
+        }
+        second_page_contents = {
+            (item["id"], item["time"]) for item in second_page["results"]
+        }
+
+        # Since we know there are only 10 logs, there shouldn't be a next page
+        self.assertIsNone(second_page["next"])
+
         self.assertEqual(0, len(first_page_contents.intersection(second_page_contents)))
-        # Since we know there is 11 logs, there should still be a next page
-        next_cursor = second_page["next"]
-        self.assertIsNotNone(second_page["next"])
 
     def test_paginate_get_previous_page(self):
         p, service = self.create_and_deploy_redis_docker_service()
@@ -416,7 +400,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -472,7 +456,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         previous_cursor = second_page["previous"]
         self.assertEqual(5, len(second_page["results"]))
         self.assertIsNotNone(second_page["previous"])
-        # the second page still has a next page because we know there are 11 logs
+        # the second page still has a next page because we know there are 12 logs
         # and we only fetched 10 in the first two pages
         self.assertIsNotNone(second_page["next"])
 
@@ -490,6 +474,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         previous_page = response.json()
+        self.assertEqual(len(first_page["results"]), len(previous_page["results"]))
         self.assertEqual(first_page["results"], previous_page["results"])
 
     def test_complex_filter(self):
@@ -502,7 +487,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -522,12 +507,9 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        time_after = datetime.datetime(
-            2024, 6, 30, 21, 52, 37, tzinfo=datetime.timezone.utc
-        )
-        time_before = datetime.datetime(
-            2024, 6, 30, 21, 52, 43, tzinfo=datetime.timezone.utc
-        )
+        time_after = now - timedelta(seconds=10)
+
+        time_before = now - timedelta(seconds=8)
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_logs",
@@ -537,8 +519,9 @@ class RuntimeLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            QUERY_STRING=f"level=ERROR&time_after={time_after.strftime('%Y-%m-%dT%H:%M:%SZ')}&time_before={time_before.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+            QUERY_STRING=f"level=ERROR&time_after={time_after.isoformat()}&time_before={time_before.isoformat()}",
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, len(response.json()["results"]))
 
@@ -552,7 +535,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -572,7 +555,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        url_encoded_query = urllib.request.pathname2url('* +0?00] "POST /')
+        url_encoded_query = urllib.request.pathname2url('* +0?00] "post /')
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_logs",
@@ -597,7 +580,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "log": content,
                 "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
                 "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                "time": time.isoformat(),
+                "time": time,
                 "tag": json.dumps(
                     {
                         "deployment_id": deployment.hash,
@@ -617,6 +600,11 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+        # get all deleted stream that are for processing
+        response = requests.get(self.search_client.base_url + "/loki/api/v1/delete")
+        response.raise_for_status()
+        deleted_streams = response.json()
+
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
@@ -629,95 +617,10 @@ class RuntimeLogViewTests(AuthAPITestCase):
         ).afirst()
         self.assertIsNone(deleted_service)
 
-        logs_for_service = self.search_client.search(
-            index_name=self.ELASTICSEARCH_LOGS_INDEX,
-            query={"service_id": service.id},
-        )
-        self.assertEqual(0, logs_for_service["total"])
-
-
-class RuntimeLogScheduleTests(AuthAPITestCase):
-    async def test_delete_logs_older_than_30_days(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
-            p, service = await self.acreate_and_deploy_redis_docker_service()
-            deployment: DockerDeployment = await service.deployments.afirst()
-
-            now = timezone.now()
-            sample_logs = [
-                (
-                    now - timedelta(days=31),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-                (
-                    now - timedelta(days=15),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-                (
-                    now - timedelta(days=10),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-                (
-                    now - timedelta(days=7),
-                    '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
-                ),
-            ]
-
-            # Insert logs
-            logs = [
-                {
-                    "log": content,
-                    "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-                    "container_name": "/srv-prj_ssbvBaqpbD7-srv_dkr_LeeCqAUZJNnJ-dpl_dkr_KRbXo2FJput.1.zm0uncmx8w4wvnokdl6qxt55e",
-                    "time": time.isoformat(),
-                    "tag": json.dumps(
-                        {
-                            "deployment_id": deployment.hash,
-                            "service_id": service.id,
-                        }
-                    ),
-                    "source": "stdout",
-                }
-                for time, content in sample_logs
-            ]
-            response = await self.async_client.post(
-                reverse("zane_api:logs.ingest"),
-                data=logs,
-                headers={
-                    "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
-                },
-            )
-            self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        async with self.workflowEnvironment(
-            task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE
-        ) as env:  # type: WorkflowEnvironment
-            result = await env.client.execute_workflow(
-                workflow=CleanupAppLogsWorkflow.run,
-                id="cleanup-app-logs",
-                retry_policy=RetryPolicy(
-                    maximum_attempts=1,
-                ),
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
-            )
-
-            self.assertEqual(2, result.deleted_count)
-            no_of_logs_older_than_a_month = self.search_client.count(
-                index_name=self.ELASTICSEARCH_LOGS_INDEX,
-                query={
-                    "time_before": (now - timedelta(days=30)).isoformat(),
-                    "source": [RuntimeLogSource.SERVICE],
-                },
-            )
-            self.assertEqual(0, no_of_logs_older_than_a_month)
-            no_of_logs_younger_than_a_month = self.search_client.count(
-                index_name=self.ELASTICSEARCH_LOGS_INDEX,
-                query={
-                    "time_after": (now - timedelta(days=30)).isoformat(),
-                    "source": [RuntimeLogSource.SERVICE],
-                },
-            )
-            self.assertEqual(2, no_of_logs_younger_than_a_month)
+        # if the logs haven been sent for processing, there should be one new stream in the delete queue
+        response = requests.get(self.search_client.base_url + "/loki/api/v1/delete")
+        new_deleted_streams = response.json()
+        self.assertGreater(len(new_deleted_streams), len(deleted_streams))
 
 
 class HttpLogViewTests(AuthAPITestCase):
@@ -1488,10 +1391,9 @@ class DeploymentSystemLogViewTests(AuthAPITestCase):
 
         first_deployment: DockerDeployment = await service.deployments.afirst()
         system_logs_total = self.search_client.count(
-            index_name=self.ELASTICSEARCH_LOGS_INDEX,
             query={
                 "source": [RuntimeLogSource.SYSTEM],
                 "deployment_id": first_deployment.hash,
             },
         )
-        self.assertNotEqual(0, system_logs_total)
+        self.assertGreater(system_logs_total, 0)

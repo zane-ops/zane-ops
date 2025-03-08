@@ -684,7 +684,7 @@ export const deploymentQueries = {
     project_slug: string;
     service_slug: string;
     deployment_hash: string;
-    filters?: Omit<DeploymentLogFitlers, "isMaximized">;
+    filters?: Omit<DeploymentLogFilters, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
   }) =>
@@ -804,7 +804,7 @@ export const deploymentQueries = {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
         }
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
+        return 1_000; // 1 second
       },
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
@@ -1154,8 +1154,6 @@ export type HttpLog = Awaited<
     >
   >
 >["results"][number];
-
-export type DeploymentLogFitlers = z.infer<typeof deploymentLogSearchSchema>;
 
 export const resourceQueries = {
   search: (query?: string) =>

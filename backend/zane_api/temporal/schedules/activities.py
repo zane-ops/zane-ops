@@ -27,8 +27,7 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
-    from django.utils import timezone
-    from search.client import SearchClient
+    from search.loki_client import LokiSearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 
 docker_client: docker.DockerClient | None = None
@@ -56,11 +55,10 @@ async def deployment_log(
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
 
-    search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
+    search_client = LokiSearchClient(host=settings.LOKI_HOST)
     # This is the max number of characters that we show in color on the frontend
     MAX_COLORED_CHARS = 1000
     search_client.insert(
-        index_name=settings.ELASTICSEARCH_LOGS_INDEX,
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
             level=RuntimeLogLevel.INFO,
@@ -232,31 +230,37 @@ class MonitorDockerDeploymentActivities:
                             )
                             deployment_status_reason = str(e)
 
-                print(
-                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
-                )
-                await deployment_log(
-                    deployment=details.deployment,
-                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
-                    f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
-                )
                 status_color = (
                     Colors.GREEN
                     if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
                     else Colors.RED
                 )
 
-                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
-                    status_flag = "✅"
-                elif deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
-                    status_flag = "❌"
-                else:
-                    status_flag = "🏁"
-                await deployment_log(
-                    deployment=details.deployment,
-                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
-                    f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
+                print(
+                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
                 )
+
+                unhealthy = (
+                    deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+                )
+
+                if unhealthy:
+                    if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                        status_flag = "❌"
+                    else:
+                        status_flag = "🏁"
+
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                        f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                    )
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
+                    )
+
                 return deployment_status, deployment_status_reason
 
     @activity.defn
@@ -423,21 +427,6 @@ class DockerDeploymentStatsActivities:
 
 
 class CleanupActivities:
-    @activity.defn
-    async def cleanup_simple_logs(self) -> CleanupResult:
-        search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
-        now = timezone.now()
-        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        deleted_count = search_client.delete(
-            index_name=settings.ELASTICSEARCH_LOGS_INDEX,
-            query={
-                "time_before": (
-                    today - timedelta(days=14)
-                ).isoformat(),  # only keep logs for 2 weeks
-            },
-        )
-        return CleanupResult(deleted_count=deleted_count)
-
     @activity.defn
     async def cleanup_service_metrics(self) -> CleanupResult:
         today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)

@@ -10,6 +10,7 @@ class RuntimeLogSerializer(serializers.Serializer):
     service_id = serializers.CharField(allow_null=True)
     deployment_id = serializers.CharField(allow_null=True)
     time = serializers.DateTimeField()
+    timestamp = serializers.IntegerField()
     content = serializers.JSONField(allow_null=True)
     content_text = serializers.CharField(allow_null=True, allow_blank=True)
     level = serializers.ChoiceField(choices=[("ERROR", "Error"), ("INFO", "Info")])
@@ -22,7 +23,6 @@ class RuntimeLogSerializer(serializers.Serializer):
 
 
 class RuntimeLogsSearchSerializer(serializers.Serializer):
-    total = serializers.IntegerField()
     previous = serializers.CharField(default=None, allow_null=True)
     next = serializers.CharField(default=None, allow_null=True)
     results = serializers.ListSerializer(child=RuntimeLogSerializer())

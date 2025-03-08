@@ -2403,13 +2403,13 @@ export interface components {
       deployment_id: string | null;
       /** Format: date-time */
       time: string;
+      timestamp: number;
       content: unknown;
       content_text: string | null;
       level: components["schemas"]["LevelEnum"];
       source: components["schemas"]["SourceEnum"];
     };
     RuntimeLogsSearch: {
-      total: number;
       previous: string | null;
       next: string | null;
       results: components["schemas"]["RuntimeLog"][];

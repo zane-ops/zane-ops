@@ -1,0 +1,428 @@
+x-backend-vars: &env-vars
+  ENVIRONMENT: PRODUCTION
+  REDIS_URL: redis://zane.valkey:6379/0
+  DB_HOST: zane.pgbouncer
+  DB_PORT: 5432
+  DB_NAME: zane
+  DB_USER: ${ZANE_DB_USER:-zane}
+  DB_PASSWORD: ${ZANE_DB_PASSWORD}
+  ROOT_DOMAIN: ${ROOT_DOMAIN}
+  ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+  ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+  TEMPORALIO_SERVER_URL: zane.temporal:7233
+  __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
+  LOKI_HOST: http://zane.search:3100
+  GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+
+services:
+  proxy:
+    image: ghcr.io/zane-ops/proxy:${IMAGE_VERSION}
+    command: caddy run --resume
+    logging:
+      driver: "fluentd"
+      options:
+        mode: "non-blocking"
+        fluentd-address: "unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock"
+        fluentd-async: "true"
+        fluentd-max-retries: 10
+        fluentd-sub-second-precision: "true"
+        tag: '{"service_id":"zane.proxy"}'
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+        zane.role: "proxy"
+    ports:
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      CADDY_ADMIN: 0.0.0.0:2019
+    networks:
+      zane:
+        aliases:
+          - zane.proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+  app:
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:80/api/ping"]
+      interval: 30s
+      timeout: 1m30s
+      start_period: 30s
+      retries: 3
+    networks:
+      zane:
+        aliases:
+          - zane.api
+          - zane.api.zaneops.internal
+          - zane.frontend
+          - zane.front.zaneops.internal
+    environment:
+      <<: *env-vars
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+      - temporal-server
+      - loki
+  temporal-server:
+    entrypoint: ["/etc/temporal/entrypoint.sh"]
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${ZANE_DB_USER:-zane}
+      - POSTGRES_PWD=${ZANE_DB_PASSWORD}
+      - POSTGRES_SEEDS=zane.db
+      - SERVICES=history,matching,frontend,worker
+      - BIND_ON_IP=0.0.0.0
+    image: temporalio/auto-setup:1.24.2
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+        zane.role: "temporal"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "bash", "-c", "temporal operator cluster health --address $$(hostname -i):7233"]
+      interval: 30s
+      timeout: 3m
+      start_period: 15s
+      retries: 3
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=${ZANE_DB_USER:-zane}
+      - POSTGRES_PWD=${ZANE_DB_PASSWORD}
+      - POSTGRES_SEEDS=zane.db
+      - SKIP_SCHEMA_SETUP=false
+      - SKIP_DB_SETUP=false
+      - SERVICES=history,matching,frontend,worker
+      - TEMPORAL_HOME=/etc/temporal
+      - TEMPORAL_ADDRESS=zane.temporal:7233
+      - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
+    entrypoint: ["/etc/temporal/setup.sh"]
+    deploy:
+      mode: replicated-job
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+    networks:
+      - zane
+  temporal-main-worker:
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+      - temporal-server
+      - loki
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    networks:
+      - zane
+  temporal-schedule-worker:
+    image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
+    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - valkey
+      - proxy
+      - temporal-server
+      - loki
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
+      TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    networks:
+      - zane
+  valkey:
+    image: valkey/valkey:7.2.5-alpine
+    volumes:
+      - redis-data:/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+    networks:
+      zane:
+        aliases:
+          - zane.valkey
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      retries: 10
+      timeout: 2s
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${ZANE_DB_USER:-zane}
+      POSTGRES_PASSWORD: ${ZANE_DB_PASSWORD}
+      POSTGRES_DB: zane
+    networks:
+      zane:
+        aliases:
+          - zane.db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 10s
+  pgbouncer:  
+    image: edoburu/pgbouncer:v1.23.1-p3
+    environment:
+      <<: *env-vars
+      DB_HOST: zane.db
+      POOL_MODE: transaction
+      MAX_DB_CONNECTIONS: 100
+      DEFAULT_POOL_SIZE: 50
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      - db  
+    networks:
+      zane:
+        aliases:
+          - zane.pgbouncer
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', 'localhost']
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 10s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+  fluentd:
+    image: fluentd:v1.16.2-1.1
+    volumes:
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent-v2.conf:/fluentd/etc/fluent.conf:ro"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/:/var/fluentd/:rw"
+    networks:
+      zane:
+        aliases:
+          - zane.fluentd
+    environment:
+      API_HOST: zane.api.zaneops.internal:80
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 1
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 200M
+  loki:
+    image: grafana/loki:3.4
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
+    networks:
+      zane:
+        aliases:
+          - zane.search
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 1
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+      healthcheck:
+        test: wget --quiet --tries=1 --output-document=- http://localhost:3100/ready | grep -q -w ready || exit 1
+        start_period: 20s
+        interval: 10s
+        timeout: 1s
+        retries: 12  # try for 2 minutes
+volumes:
+  loki-data:
+    labels:
+      zane.stack: "true"
+  db-data:
+    labels:
+      zane.stack: "true"
+  redis-data:
+    labels:
+      zane.stack: "true"
+  caddy-data:
+    labels:
+      zane.stack: "true"
+  caddy-config:
+    labels:
+      zane.stack: "true"
+networks:
+  zane:
+    external: true

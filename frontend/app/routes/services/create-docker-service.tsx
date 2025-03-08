@@ -8,7 +8,7 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useNavigation } from "react-router";
+import { Form, Link, useFetcher, useNavigation } from "react-router";
 import { useDebounce } from "use-debounce";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -397,10 +397,10 @@ function StepServiceCreated({
   actionData,
   onSuccess
 }: StepServiceCreatedProps) {
-  const navigation = useNavigation();
+  // const navigation = useNavigation();
+  const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(actionData?.errors);
-  const isPending =
-    navigation.state === "loading" || navigation.state === "submitting";
+  const isPending = fetcher.state !== "idle";
 
   if (actionData?.deploymentHash) {
     onSuccess(actionData.deploymentHash);
@@ -415,7 +415,7 @@ function StepServiceCreated({
         </Alert>
       )}
 
-      <Form
+      <fetcher.Form
         method="post"
         className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
       >
@@ -455,7 +455,7 @@ function StepServiceCreated({
             </Link>
           </Button>
         </div>
-      </Form>
+      </fetcher.Form>
     </div>
   );
 }

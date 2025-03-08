@@ -28,7 +28,7 @@ class MonitorDockerDeploymentWorkflow:
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
-        print(f"Running activity `monitor_close_faulty_db_connections()`")
+        print("Running activity `monitor_close_faulty_db_connections()`")
         await workflow.execute_activity_method(
             MonitorDockerDeploymentActivities.monitor_close_faulty_db_connections,
             retry_policy=retry_policy,
@@ -115,12 +115,6 @@ class CleanupAppLogsWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
         result = await workflow.execute_activity_method(
-            CleanupActivities.cleanup_simple_logs,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
-        )
-
-        await workflow.execute_activity_method(
             CleanupActivities.cleanup_service_metrics,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,

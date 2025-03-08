@@ -27,7 +27,7 @@ from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from search.client import SearchClient
+from search.loki_client import LokiSearchClient
 
 from ..models import (
     Project,
@@ -280,14 +280,11 @@ class APITestCase(TestCase):
         self.client = CustomAPIClient(parent=self)
         self.async_client = AsyncCustomAPIClient(parent=self)  # type: ignore
         self.fake_docker_client = FakeDockerClient()
-        self.search_client = SearchClient(host=settings.ELASTICSEARCH_HOST)
-        self.ELASTICSEARCH_LOGS_INDEX = (
-            f"{settings.ELASTICSEARCH_LOGS_INDEX}{random_word()}"
-        )
+        self.search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        self.LOKI_APP_NAME = f"testing-{random_word()}"
         settings_ctx = override_settings(
-            ELASTICSEARCH_LOGS_INDEX=self.ELASTICSEARCH_LOGS_INDEX
+            LOKI_APP_NAME=self.LOKI_APP_NAME,
         )
-        self.search_client.create_log_index_if_not_exists(self.ELASTICSEARCH_LOGS_INDEX)
         settings_ctx.__enter__()
 
         # these functions are always patched
@@ -305,9 +302,7 @@ class APITestCase(TestCase):
 
         self.addCleanup(patch.stopall)
         self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
-        self.addCleanup(
-            lambda: self.search_client.delete_index(self.ELASTICSEARCH_LOGS_INDEX)
-        )
+        self.addCleanup(lambda: self.search_client.delete())
 
     def tearDown(self):
         cache.clear()

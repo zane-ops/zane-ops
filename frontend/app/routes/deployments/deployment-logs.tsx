@@ -32,7 +32,7 @@ import {
 } from "~/lib/constants";
 import {
   type DeploymentLog,
-  type DeploymentLogFitlers,
+  type DeploymentLogFilters,
   LOG_LEVELS,
   LOG_SOURCES,
   deploymentLogSearchSchema,
@@ -59,7 +59,7 @@ export async function clientLoader({
     source: search.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: search.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
     query: search.query ?? ""
-  } satisfies DeploymentLogFitlers;
+  } satisfies DeploymentLogFilters;
 
   const logs = await queryClient.ensureInfiniteQueryData(
     deploymentQueries.logs({
@@ -89,7 +89,7 @@ export default function DeploymentLogsPage({
     source: search.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: search.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
     query: search.query ?? ""
-  } satisfies DeploymentLogFitlers;
+  } satisfies DeploymentLogFilters;
 
   const isEmptySearchParams =
     !search.time_after &&

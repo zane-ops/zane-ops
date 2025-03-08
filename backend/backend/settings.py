@@ -282,7 +282,7 @@ REST_FRAMEWORK = {
         "anon": "5/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
-        "log_collect": "30/minute",
+        "log_collect": "60/minute",
     },
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
     "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
@@ -389,12 +389,8 @@ if BACKEND_COMPONENT == "API":
 IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")
 COMMIT_SHA = os.environ.get("COMMIT_SHA", None)
 
-# elastic search config
-ELASTICSEARCH_HOST = os.environ.get("ELASTICSEARCH_HOST", "http://127.0.0.1:9200")
-ELASTICSEARCH_LOGS_INDEX = "logs"
 
-if BACKEND_COMPONENT == "API" and not TESTING:
-    from search.client import SearchClient
+LOKI_HOST = os.environ.get("LOKI_HOST", "http://127.0.0.1:3100")
+LOKI_APP_NAME = "zaneops"
 
-    search_client = SearchClient(host=ELASTICSEARCH_HOST)
-    search_client.create_log_index_if_not_exists(index_name=ELASTICSEARCH_LOGS_INDEX)
+CI = os.environ.get("CI", "false")
