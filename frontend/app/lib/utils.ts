@@ -23,12 +23,12 @@ type ClientErrorDetail = {
   attr: string | null;
 };
 
-export type ErrorResponseFromAPI =
+type Input =
   | { type: "validation_error"; errors: ValidationErrorDetail[] }
   | { type: "client_error"; errors: ClientErrorDetail[] }
   | { type: "server_error"; errors: ClientErrorDetail[] };
 
-export function getFormErrorsFromResponseData<T extends ErrorResponseFromAPI>(
+export function getFormErrorsFromResponseData<T extends Input>(
   data: T | undefined
 ): MergeUnions<
   T extends { type: "validation_error"; errors: ValidationErrorDetail[] }
