@@ -77,9 +77,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
       <Header user={loaderData} />
-      <main
-        className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
-      >
+      <main className="grow container p-6">
         <Outlet />
       </main>
       <Footer />
@@ -99,19 +97,14 @@ function Header({ user }: HeaderProps) {
       {!import.meta.env.PROD && (
         <div
           className={cn(
-            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-100",
-            "w-full"
+            "py-0.5 bg-red-500 text-white text-center fixed top-10 -left-10 -rotate-[30deg] z-100",
+            "w-72"
           )}
         >
           <p className="">⚠️ YOU ARE IN DEV ⚠️</p>
         </div>
       )}
-      <header
-        className={cn(
-          "flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-60",
-          !import.meta.env.PROD && "top-7"
-        )}
-      >
+      <header className="flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-60">
         <Link to="/">
           <Logo className="w-10 flex-none h-10 mr-8" />
         </Link>
