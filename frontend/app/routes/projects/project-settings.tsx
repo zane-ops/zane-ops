@@ -218,6 +218,7 @@ function ProjectDetailsForm({
           placeholder="project slug"
           defaultValue={project_slug}
           aria-labelledby="slug-error"
+          aria-invalid={!!errors.slug}
         />
 
         {errors.slug && (
