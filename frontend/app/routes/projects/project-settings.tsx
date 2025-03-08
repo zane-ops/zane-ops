@@ -6,18 +6,33 @@ import {
   LoaderIcon,
   Trash2Icon
 } from "lucide-react";
+import * as React from "react";
 import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
+import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { projectQueries, resourceQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  type ErrorResponseFromAPI,
+  cn,
+  getFormErrorsFromResponseData
+} from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/project-settings";
+import type { Route } from "./+types/project-settings";
 
 export default function ProjectSettingsPage({
   params,
@@ -56,7 +71,7 @@ export default function ProjectSettingsPage({
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-red-400">Danger Zone</h2>
-            <ProjectDangerZoneForm />
+            <ProjectDangerZoneForm project_slug={params.projectSlug} />
           </div>
         </section>
       </div>
@@ -76,6 +91,22 @@ export async function clientAction({
       return updateProject(params.projectSlug, formData);
     }
     case "archive_project": {
+      if (
+        formData.get("project_slug")?.toString().trim() !== params.projectSlug
+      ) {
+        return {
+          errors: {
+            type: "validation_error",
+            errors: [
+              {
+                attr: "project_slug",
+                code: "invalid",
+                detail: "The project slug does not match"
+              }
+            ]
+          } satisfies ErrorResponseFromAPI
+        };
+      }
       return archiveProject(params.projectSlug);
     }
     default: {
@@ -145,7 +176,7 @@ async function archiveProject(project_slug: string) {
       query.queryKey[0] === projectQueries.list().queryKey[0]
   });
 
-  toast.success("Project archived successfully!", { closeButton: true });
+  toast.success("Project deleted successfully!", { closeButton: true });
   throw redirect(`/`);
 }
 
@@ -229,49 +260,134 @@ function ProjectDetailsForm({
   );
 }
 
-function ProjectDangerZoneForm() {
+function ProjectDangerZoneForm({ project_slug }: { project_slug: string }) {
   const fetcher = useFetcher<typeof clientAction>();
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   return (
     <fetcher.Form method="post" className="flex flex-col gap-2 items-start">
       <h3 className="text-lg text-red-400">Archive this project</h3>
-      <p className="text-red-300">
-        Archiving this project will also archive all its services and delete all
-        the deployments related to the services, This cannot be undone.
-      </p>
 
-      {errors.non_field_errors && (
-        <Alert variant="destructive">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errors.non_field_errors}</AlertDescription>
-        </Alert>
-      )}
-
-      <SubmitButton
-        variant="destructive"
-        className={cn(
-          "inline-flex gap-1 items-center",
-          isPending ? "bg-red-400" : "bg-red-500"
-        )}
-        value="archive_project"
-        name="intent"
-        isPending={isPending}
-      >
-        {isPending ? (
-          <>
-            <LoaderIcon className="animate-spin flex-none" size={15} />
-            <span>Archiving...</span>
-          </>
-        ) : (
-          <>
-            <Trash2Icon size={15} className="flex-none" />
-            <span>Archive project</span>
-          </>
-        )}
-      </SubmitButton>
+      <DeleteConfirmationFormDialog project_slug={project_slug} />
     </fetcher.Form>
+  );
+}
+
+function DeleteConfirmationFormDialog({
+  project_slug
+}: { project_slug: string }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof clientAction>();
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
+  const [data, setData] = React.useState(fetcher.data);
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      formRef.current?.reset();
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          setData(undefined);
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button
+          variant="destructive"
+          type="button"
+          className={cn("inline-flex gap-1 items-center")}
+        >
+          <Trash2Icon size={15} className="flex-none" />
+          <span>Delete project</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="gap-0">
+        <DialogHeader className="pb-4">
+          <DialogTitle>Delete this project ?</DialogTitle>
+
+          <Alert variant="warning">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Deleting this project will also delete all its services and delete
+              all the deployments related to the services, This action is
+              irreversible.
+            </AlertDescription>
+          </Alert>
+
+          <DialogDescription>
+            Please type <strong>{project_slug}</strong> to confirm :
+          </DialogDescription>
+        </DialogHeader>
+
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
+
+        <fetcher.Form
+          className="flex flex-col w-full mb-5 gap-1"
+          method="post"
+          id="delete-form"
+          ref={formRef}
+        >
+          <FieldSet name="project_slug" errors={errors.project_slug}>
+            <FieldSetInput />
+          </FieldSet>
+        </fetcher.Form>
+
+        <DialogFooter className="-mx-6 px-6 pt-4">
+          <div className="flex items-center gap-4 w-full">
+            <SubmitButton
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+              value="archive_project"
+              name="intent"
+              form="delete-form"
+              isPending={isPending}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Delete</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsOpen(false);
+                setData(undefined);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
