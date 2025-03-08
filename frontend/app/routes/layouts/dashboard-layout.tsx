@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleUser,
+  CogIcon,
   CommandIcon,
   GitCommitVertical,
   HeartHandshake,
@@ -12,6 +13,7 @@ import {
   Menu,
   Search,
   Send,
+  SettingsIcon,
   TagIcon
 } from "lucide-react";
 import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
@@ -93,6 +95,7 @@ type HeaderProps = {
 
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -149,6 +152,13 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
+              <MenubarContentItem
+                icon={SettingsIcon}
+                text="Settings"
+                onClick={() => {
+                  navigate("/settings");
+                }}
+              />
               <button
                 className="w-full"
                 onClick={(e) => {
