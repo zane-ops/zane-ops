@@ -176,14 +176,7 @@ async function archiveProject(project_slug: string) {
       query.queryKey[0] === projectQueries.list().queryKey[0]
   });
 
-  toast.success("Success", {
-    closeButton: true,
-    description: (
-      <span>
-        Project `<strong>{project_slug}</strong>` has been successfully deleted.
-      </span>
-    )
-  });
+  toast.success("Project deleted successfully!", { closeButton: true });
   throw redirect(`/`);
 }
 
@@ -272,6 +265,8 @@ function ProjectDangerZoneForm({ project_slug }: { project_slug: string }) {
 
   return (
     <fetcher.Form method="post" className="flex flex-col gap-2 items-start">
+      <h3 className="text-lg text-red-400">Archive this project</h3>
+
       <DeleteConfirmationFormDialog project_slug={project_slug} />
     </fetcher.Form>
   );
@@ -315,14 +310,14 @@ function DeleteConfirmationFormDialog({
           className={cn("inline-flex gap-1 items-center")}
         >
           <Trash2Icon size={15} className="flex-none" />
-          <span>Delete this project</span>
+          <span>Delete project</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="gap-0">
         <DialogHeader className="pb-4">
           <DialogTitle>Delete this project ?</DialogTitle>
 
-          <Alert variant="warning" className="my-5">
+          <Alert variant="warning">
             <AlertCircleIcon className="h-4 w-4" />
             <AlertTitle>Warning</AlertTitle>
             <AlertDescription>
