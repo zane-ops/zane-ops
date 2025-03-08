@@ -384,7 +384,7 @@ services:
     networks:
       zane:
         aliases:
-          - zane.search
+          - zane.loki
     deploy:
       replicas: 1
       restart_policy:
