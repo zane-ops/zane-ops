@@ -7,7 +7,6 @@ from typing import List, Optional
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from django.conf import settings
     from ..models import DockerDeployment
 
 from ..dtos import (

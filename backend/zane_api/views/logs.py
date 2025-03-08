@@ -65,7 +65,7 @@ class LogIngestAPIView(APIView):
                                         data=content
                                     )
                                     if log_serializer.is_valid():
-                                        log_content = log_serializer.data  # type: ignore
+                                        log_content: dict = log_serializer.data  # type: ignore
                                         upstream: str = log_content.get(
                                             "zane_deployment_upstream"
                                         )  # type: ignore
@@ -154,7 +154,6 @@ class LogIngestAPIView(APIView):
             start_time = datetime.now()
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
             search_client.bulk_insert(simple_logs)
-
             HttpLog.objects.bulk_create(http_logs)
             end_time = datetime.now()
 
@@ -165,7 +164,9 @@ class LogIngestAPIView(APIView):
                 }
             )
             print("====== LOGS INGEST ======")
-            print(f"Took {end_time - start_time}")
+            print(
+                f"Took {(end_time - start_time).microseconds / 1000}{Colors.GREY}ms{Colors.ENDC}"
+            )
             print(
                 f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}"
             )
