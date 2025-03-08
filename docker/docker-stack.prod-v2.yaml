@@ -13,7 +13,7 @@ x-backend-vars: &env-vars
   ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
-  LOKI_HOST: http://zane.search:3100
+  LOKI_HOST: http://zane.loki:3100
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
 
 services:
