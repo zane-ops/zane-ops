@@ -768,6 +768,7 @@ function EditVariableForm({
           name="key"
           className="font-mono"
           aria-labelledby={`${idPrefix}-name-error`}
+          aria-invalid={!!errors.new_value?.key}
         />
         {errors.new_value?.key && (
           <span id={`${idPrefix}-name-error`} className="text-red-500 text-sm">
@@ -788,6 +789,7 @@ function EditVariableForm({
           name="value"
           className="font-mono"
           aria-labelledby={`${idPrefix}-value-error`}
+          aria-invalid={!!errors.new_value?.value}
         />
         {errors.new_value?.value && (
           <span id={`${idPrefix}-value-error`} className="text-red-500 text-sm">
@@ -897,6 +899,7 @@ function NewEnvVariableForm() {
           name="key"
           autoFocus
           aria-labelledby="env-name-error"
+          aria-invalid={!!errors.new_value?.key}
           defaultValue={fetcher.formData?.get("key")?.toString()}
         />
         {errors.new_value?.key && (
@@ -914,6 +917,7 @@ function NewEnvVariableForm() {
           name="value"
           id="variable-value"
           aria-labelledby="variable-value-error"
+          aria-invalid={!!errors.new_value?.value}
           className="font-mono"
           defaultValue={fetcher.formData?.get("value")?.toString()}
         />

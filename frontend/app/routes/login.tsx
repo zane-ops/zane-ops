@@ -110,6 +110,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
                 defaultValue={actionData?.userData?.username}
                 type="text"
                 aria-describedby="username-error"
+                aria-invalid={!!errors.username}
               />
               {errors.username && (
                 <span id="username-error" className="text-red-500 text-sm">
@@ -125,6 +126,8 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
                 name="password"
                 id="password"
                 defaultValue={actionData?.userData?.password}
+                aria-invalid={!!errors.password}
+                aria-describedby="password-error"
               />
               {errors.password && (
                 <span id="password-error" className="text-red-500 text-sm">
