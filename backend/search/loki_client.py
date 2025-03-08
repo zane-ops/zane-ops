@@ -4,14 +4,13 @@ import datetime
 import requests
 from datetime import timedelta
 from typing import Sequence
-from zane_api.utils import Colors
+from zane_api.utils import Colors, jprint
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
 from .dtos import RuntimeLogDto
 from django.conf import settings
 from uuid import uuid4
 import re
 from rest_framework import status
-import os
 
 
 class LokiSearchClient:
@@ -19,7 +18,7 @@ class LokiSearchClient:
         # host should include the protocol and port, e.g., "http://localhost:3100"
         self.base_url = host.rstrip("/")
 
-    def bulk_insert(self, docs: Sequence[RuntimeLogDto | dict]):
+    def bulk_insert(self, docs: Sequence[RuntimeLogDto]):
         """
         Push multiple log entries to Loki.
         Each document must follow the structure of RuntimeLogDto or its dict representation.
@@ -29,7 +28,7 @@ class LokiSearchClient:
         streams = {}
         for doc in docs:
             # Convert RuntimeLogDto to dict if needed
-            log_dict = doc.to_dict() if isinstance(doc, RuntimeLogDto) else doc
+            log_dict = doc.to_dict()
             log_dict["id"] = str(uuid4())
 
             # Define labels for Loki from key fields.
@@ -49,17 +48,19 @@ class LokiSearchClient:
             streams[label_key]["values"].append([ts, value])
 
         payload = {"streams": list(streams.values())}
-        response = requests.post(f"{self.base_url}/loki/api/v1/push", json=payload)
-        if response.status_code not in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT):
-            raise Exception(f"Bulk insert failed: {response.text}")
+        jprint(payload)
+        response = requests.post(
+            f"{self.base_url}/loki/api/v1/push",
+            json=payload,
+            stream=False,
+        )
+        response.raise_for_status()
 
-    def insert(self, document: dict | RuntimeLogDto):
+    def insert(self, document: RuntimeLogDto):
         """
         Insert a single log entry to Loki.
         """
-        log_dict = (
-            document.to_dict() if isinstance(document, RuntimeLogDto) else document
-        )
+        log_dict = document.to_dict()
         log_dict["id"] = str(uuid4())
 
         labels = {
@@ -73,9 +74,12 @@ class LokiSearchClient:
         payload = {
             "streams": [{"stream": labels, "values": [[ts, json.dumps(log_dict)]]}]
         }
-        response = requests.post(f"{self.base_url}/loki/api/v1/push", json=payload)
-        if response.status_code not in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT):
-            raise Exception(f"Insert failed: {response.text}")
+        response = requests.post(
+            f"{self.base_url}/loki/api/v1/push",
+            json=payload,
+            stream=False,
+        )
+        response.raise_for_status()
 
     def search(self, query: dict | None = None):
         print("\n====== LOGS SEARCH (Loki) ======")
@@ -91,18 +95,17 @@ class LokiSearchClient:
             "query": query_string,
             "limit": page_size + 1,
             "start": start_ns,
+            "end": end_ns,
             "direction": "backward",
         }
 
-        if end_ns is not None:
-            params["end"] = end_ns
-
-        # start_req = time.time()
+        print(f"params={Colors.GREY}{params}{Colors.ENDC}")
         response = requests.get(
-            f"{self.base_url}/loki/api/v1/query_range", params=params
+            f"{self.base_url}/loki/api/v1/query_range",
+            params=params,
+            stream=False,
         )
-        if response.status_code != status.HTTP_200_OK:
-            raise Exception(f"Search failed: {response.text}")
+        response.raise_for_status()
 
         summary = (
             response.json()
@@ -152,7 +155,6 @@ class LokiSearchClient:
                 "query": query_string,
                 "limit": 1,
                 "start": first_timestamp + 1,
-                # "end": int(time.time() * 1e9),
                 "direction": "forward",
             }
 
@@ -287,8 +289,9 @@ class LokiSearchClient:
             base_selector = " ".join([base_selector, f"| time <= {dt}"])
 
         # Default time range: start=29 days ago, end=now.
-        start_ns = 0
-        end_ns = None
+        now = datetime.datetime.now()
+        start_ns = int((now - timedelta(days=29)).timestamp() * 10**9)
+        end_ns = int(now.timestamp() * 10**9)
 
         # Default order.
         order = "desc"

@@ -154,49 +154,59 @@ now = datetime.datetime.now()
 
 
 class RuntimeLogViewTests(AuthAPITestCase):
+    """
+    NOTE for Loki :
+    only very recent logs are prioritized when ingesting then searching for logs.
+    i.e If you insert new logs that are very old, even if your search params
+        include the oldest timestamp for the logs you just inserted, it will
+        take up to 30s for them to show up in the search results.
+
+    That's why we only insert very recent logs here.
+    """
+
     sample_log_contents = [
         (
-            (now - timedelta(days=11)).isoformat(),
+            (now - timedelta(seconds=11)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:43 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=10)).isoformat(),
+            (now - timedelta(seconds=10)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:42 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=9)).isoformat(),
+            (now - timedelta(seconds=9)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:39 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=8)).isoformat(),
+            (now - timedelta(seconds=8)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:37 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=7)).isoformat(),
+            (now - timedelta(seconds=7)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:34 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=6)).isoformat(),
+            (now - timedelta(seconds=6)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:32 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=5)).isoformat(),
+            (now - timedelta(seconds=5)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:29 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=4)).isoformat(),
+            (now - timedelta(seconds=4)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:27 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=3)).isoformat(),
+            (now - timedelta(seconds=3)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:24 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=2)).isoformat(),
+            (now - timedelta(seconds=2)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 +0000] "GET / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
-            (now - timedelta(days=1)).isoformat(),
+            (now - timedelta(seconds=1)).isoformat(),
             '10.0.8.103 - - [30/Jun/2024:21:52:22 * +0000] "POST / HTTP/1.1" 200 12127 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0" "10.0.0.2"',
         ),
         (
@@ -497,9 +507,9 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        time_after = now - timedelta(days=10)
+        time_after = now - timedelta(seconds=10)
 
-        time_before = now - timedelta(days=8)
+        time_before = now - timedelta(seconds=8)
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_logs",
@@ -509,7 +519,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                     "deployment_hash": deployment.hash,
                 },
             ),
-            QUERY_STRING=f"time_after={time_after.isoformat()}&time_before={time_before.isoformat()}",
+            QUERY_STRING=f"level=ERROR&time_after={time_after.isoformat()}&time_before={time_before.isoformat()}",
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
