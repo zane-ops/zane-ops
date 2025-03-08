@@ -1,4 +1,4 @@
-.PHONY: all clean test setup help stop deploy create-user delete-resources
+.PHONY: all clean test setup help stop deploy create-user delete-resources setup-v2
 
 SHELL := /bin/bash
 current_dir = $(shell pwd)
@@ -70,7 +70,7 @@ setup: ### Launch initial setup before installing zaneops
 	@echo "Step 5️⃣ Done ✅"
 	@echo "Setup finished 🏁"
 
-dangerous-setup-v2: ### Launch initial setup before installing zaneops (v2 - please do)
+setup-v2: ### Launch initial setup before installing zaneops (v2 - please do not test)
 	@echo -e "====== \x1b[94m⚒️  INITIAL SETUP OF ZANEOPS ⚒️\x1b[0m ======"
 	@echo "Step 1️⃣ : Verifying docker swarm status..."
 	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \

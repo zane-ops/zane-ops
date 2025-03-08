@@ -350,7 +350,7 @@ services:
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent-v2.conf:/fluentd/etc/fluent.conf:ro"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent.conf:/fluentd/etc/fluent.conf:ro"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/:/var/fluentd/:rw"
     networks:
       zane:
@@ -401,12 +401,12 @@ services:
         limits:
           cpus: "1"
           memory: 1G
-      healthcheck:
-        test: wget --quiet --tries=1 --output-document=- http://localhost:3100/ready | grep -q -w ready || exit 1
-        start_period: 20s
-        interval: 10s
-        timeout: 1s
-        retries: 12  # try for 2 minutes
+    healthcheck:
+      test: wget --quiet --tries=1 --output-document=- http://localhost:3100/ready | grep -q -w ready || exit 1
+      start_period: 20s
+      interval: 10s
+      timeout: 1s
+      retries: 12  # try for 2 minutes
 volumes:
   loki-data:
     labels:
