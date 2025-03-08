@@ -804,7 +804,7 @@ export const deploymentQueries = {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
         }
-        return 1_000; // 1 second
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
