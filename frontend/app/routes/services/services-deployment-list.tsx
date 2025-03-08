@@ -247,7 +247,7 @@ export default function DeploymentListPage({
                   Change or clear the filters to view deployments.
                 </h3>
                 <Button asChild variant="outline">
-                  <Link to="./" replace>
+                  <Link to="./" replace prefetch="intent">
                     Clear filters
                   </Link>
                 </Button>

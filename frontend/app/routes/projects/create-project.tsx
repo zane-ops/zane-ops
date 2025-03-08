@@ -32,7 +32,9 @@ export default function CreateProjectPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to="/" prefetch="intent">
+                Projects
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

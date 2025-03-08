@@ -121,13 +121,17 @@ export default function ServiceDetailsLayout({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to="/" prefetch="intent">
+                Projects
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${project_slug}/`}>{project_slug}</Link>
+              <Link to={`/project/${project_slug}/`} prefetch="intent">
+                {project_slug}
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
 

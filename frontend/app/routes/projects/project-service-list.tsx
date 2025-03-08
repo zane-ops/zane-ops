@@ -52,7 +52,9 @@ export default function ProjectServiceListPage({
                   Your search for`{query}` did not return any results.
                 </h3>
                 <Button asChild variant="outline">
-                  <Link to="./">Clear filters</Link>
+                  <Link to="./" prefetch="intent">
+                    Clear filters
+                  </Link>
                 </Button>
               </div>
             ) : (
@@ -66,7 +68,9 @@ export default function ProjectServiceListPage({
                   </h2>
                 </div>
                 <Button asChild>
-                  <Link to={`create-service`}>Create a new service</Link>
+                  <Link to="./create-service" prefetch="intent">
+                    Create a new service
+                  </Link>
                 </Button>
               </>
             )}

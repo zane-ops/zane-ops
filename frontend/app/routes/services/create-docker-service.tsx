@@ -56,13 +56,15 @@ export default function CreateServicePage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to="/" prefetch="intent">
+                Projects
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${params.projectSlug}`}>
+              <Link to={`/project/${params.projectSlug}`} prefetch="intent">
                 {params.projectSlug}
               </Link>
             </BreadcrumbLink>
@@ -71,7 +73,10 @@ export default function CreateServicePage({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${params.projectSlug}/create-service`}>
+              <Link
+                to={`/project/${params.projectSlug}/create-service`}
+                prefetch="intent"
+              >
                 Create service
               </Link>
             </BreadcrumbLink>
