@@ -287,9 +287,9 @@ class LokiSearchClient:
             dt = int(dt.timestamp() * 1e9)
             base_selector = " ".join([base_selector, f"| time <= {dt}"])
 
-        # Default time range: start=29 days ago, end=now.
+        # Default time range: start=14 days ago, end=now.
         now = datetime.datetime.now()
-        start_ns = int((now - timedelta(days=29)).timestamp() * 10**9)
+        start_ns = int((now - timedelta(days=14)).timestamp() * 10**9)
         end_ns = int(now.timestamp() * 10**9)
 
         # Default order.
