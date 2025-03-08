@@ -8420,6 +8420,8 @@ components:
         time:
           type: string
           format: date-time
+        timestamp:
+          type: integer
         content:
           nullable: true
         content_text:
@@ -8438,11 +8440,10 @@ components:
       - service_id
       - source
       - time
+      - timestamp
     RuntimeLogsSearch:
       type: object
       properties:
-        total:
-          type: integer
         previous:
           type: string
           nullable: true
@@ -8461,7 +8462,6 @@ components:
       - previous
       - query_time_ms
       - results
-      - total
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
