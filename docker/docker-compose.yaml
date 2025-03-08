@@ -204,7 +204,7 @@ services:
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
-      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
+      - "./fluentd/fluent-v2.conf:/fluentd/etc/fluent.conf"
       - "$HOME/.fluentd/:/var/fluentd/"
     networks:
       zane:

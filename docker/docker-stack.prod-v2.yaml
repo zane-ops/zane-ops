@@ -106,7 +106,7 @@ services:
       - valkey
       - proxy
       - temporal-server
-      - elasticsearch
+      - loki
   temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
@@ -197,7 +197,7 @@ services:
       - valkey
       - proxy
       - temporal-server
-      - elasticsearch
+      - loki
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -231,7 +231,7 @@ services:
       - valkey
       - proxy
       - temporal-server
-      - elasticsearch
+      - loki
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -350,7 +350,7 @@ services:
   fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent.conf:/fluentd/etc/fluent.conf:ro"
+      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent-v2.conf:/fluentd/etc/fluent.conf:ro"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/:/var/fluentd/:rw"
     networks:
       zane:

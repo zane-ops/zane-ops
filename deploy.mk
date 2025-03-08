@@ -104,7 +104,7 @@ dangerous-setup-v2: ### Launch initial setup before installing zaneops (v2 - ple
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-v2.yaml > ./docker-stack.prod.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent-v2.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/loki/config.yaml > ./loki-config.yaml
 	@chmod -R a+x ./temporalio/*.sh
 	@echo "Step 3️⃣ Done ✅"
