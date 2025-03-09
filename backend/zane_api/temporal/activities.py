@@ -1798,7 +1798,10 @@ class DockerSwarmActivities:
             )
 
             task_list = swarm_service.tasks(
-                filters={"label": f"deployment_hash={docker_deployment.hash}"}
+                filters={
+                    "label": f"deployment_hash={docker_deployment.hash}",
+                    "desired-state": "running",
+                }
             )
             if len(task_list) > 0:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
@@ -1808,19 +1811,19 @@ class DockerSwarmActivities:
                     )
                 )
 
-                starting_status = DockerDeployment.DeploymentStatus.STARTING
-                # We set the status to restarting, because we get more than one task for this service when we restart it
-                if len(task_list) > 1:
-                    starting_status = DockerDeployment.DeploymentStatus.RESTARTING
+                # starting_status = DockerDeployment.DeploymentStatus.STARTING
+                # # We set the status to restarting, because we get more than one task for this service when we restart it
+                # if len(task_list) > 1:
+                #     starting_status = DockerDeployment.DeploymentStatus.RESTARTING
 
                 state_matrix = {
-                    DockerSwarmTaskState.NEW: starting_status,
-                    DockerSwarmTaskState.PENDING: starting_status,
-                    DockerSwarmTaskState.ASSIGNED: starting_status,
-                    DockerSwarmTaskState.ACCEPTED: starting_status,
-                    DockerSwarmTaskState.READY: starting_status,
-                    DockerSwarmTaskState.PREPARING: starting_status,
-                    DockerSwarmTaskState.STARTING: starting_status,
+                    DockerSwarmTaskState.NEW: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.READY: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
                     DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
                     DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
                     DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
@@ -1833,8 +1836,17 @@ class DockerSwarmActivities:
                 exited_without_error = 0
                 deployment_status = state_matrix[most_recent_swarm_task.state]
 
-                if deployment_status == starting_status:
-                    docker_deployment.status = starting_status
+                all_tasks = swarm_service.tasks(
+                    filters={
+                        "label": f"deployment_hash={docker_deployment.hash}",
+                    }
+                )
+                if deployment_status == DockerDeployment.DeploymentStatus.STARTING:
+                    # We set the status to restarting, because we get more than one task for this service when we restart it
+                    if len(all_tasks) > 1:
+                        deployment_status = DockerDeployment.DeploymentStatus.RESTARTING
+
+                    docker_deployment.status = deployment_status
                     await docker_deployment.asave()
 
                 deployment_status_reason = (
