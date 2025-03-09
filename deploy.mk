@@ -112,12 +112,12 @@ stop: ### Take down zaneops and scale down all services created in zaneops
 delete-resources: ### Delete all resources created by zaneops
 	@echo -e "====== \x1b[91mDELETING ZaneOps and all its created resources...\x1b[0m ======"
 	docker stack rm zane
-	@echo "Removing zane-ops volumes..."
 	@echo "Waiting for all containers related to services to be removed..."
 	@while [ -n "$$(docker ps -a | grep "zane_" | awk '{print $$1}')" ]; do \
 		sleep 2; \
 	done
-	docker volume rm $$(docker volume ls --filter "label=zane.stack=true" -q)
+	@echo "Removing zane-ops volumes..."
+	docker volume rm $$(docker volume ls --filter "label=zane.stack=true" -q) || true
 	@echo "Removing all services created by zane-ops..."
 	docker service rm $$(docker service ls --filter "label=zane-managed=true" -q) || true
 	@echo "Waiting for all containers related to services to be removed..."
