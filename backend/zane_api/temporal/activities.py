@@ -203,6 +203,7 @@ async def deployment_log(
         | DeploymentCreateConfigsResult
     ),
     message: str,
+    error=False,
 ):
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
@@ -226,7 +227,7 @@ async def deployment_log(
     search_client.insert(
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
-            level=RuntimeLogLevel.INFO,
+            level=RuntimeLogLevel.INFO if not error else RuntimeLogLevel.ERROR,
             content=excerpt(message, MAX_COLORED_CHARS),
             content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
             time=current_time,
@@ -1931,12 +1932,14 @@ class DockerSwarmActivities:
                         f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                        error=status_color == Colors.RED,
                     )
                     await deployment_log(
                         deployment,
                         f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with status {status_color}{deployment_status}{Colors.ENDC}",
+                        error=status_color == Colors.RED,
                     )
                     return deployment_status, deployment_status_reason
 
@@ -1945,12 +1948,14 @@ class DockerSwarmActivities:
                 f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                error=True,
             )
             await deployment_log(
                 deployment,
                 f"Healthcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| FAILED, Retrying in {Colors.ORANGE}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+                error=True,
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 

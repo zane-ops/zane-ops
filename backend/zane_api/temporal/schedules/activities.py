@@ -48,10 +48,7 @@ def get_swarm_service_name_for_deployment(
     return f"srv-{project_id}-{service_id}-{deployment_hash}"
 
 
-async def deployment_log(
-    deployment: SimpleDeploymentDetails,
-    message: str,
-):
+async def deployment_log(deployment: SimpleDeploymentDetails, message: str, error=True):
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
 
@@ -61,7 +58,7 @@ async def deployment_log(
     search_client.insert(
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
-            level=RuntimeLogLevel.INFO,
+            level=RuntimeLogLevel.ERROR if error else RuntimeLogLevel.INFO,
             content=excerpt(message, MAX_COLORED_CHARS),
             content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
             time=current_time,
