@@ -149,12 +149,12 @@ class MonitorDockerDeploymentActivities:
                     DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
                     DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
                     DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.UNHEALTHY,
                     DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.UNHEALTHY,
                     DockerSwarmTaskState.REJECTED: DockerDeployment.DeploymentStatus.UNHEALTHY,
                     DockerSwarmTaskState.ORPHANED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.UNHEALTHY,
                 }
 
                 exited_without_error = 0
@@ -284,7 +284,10 @@ class MonitorDockerDeploymentActivities:
                 non_retryable=True,
             )
         else:
-            if deployment.status != DockerDeployment.DeploymentStatus.SLEEPING:
+            if (
+                deployment.status != DockerDeployment.DeploymentStatus.SLEEPING
+                and deployment.is_current_production
+            ):
                 deployment.status_reason = healthcheck_result.reason
                 deployment.status = healthcheck_result.status
                 await deployment.asave()
