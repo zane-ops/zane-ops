@@ -44,6 +44,7 @@ setup: ### Launch initial setup before installing zaneops
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/loki/config.yaml > ./loki-config.yaml
 	@chmod -R a+x ./temporalio/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
@@ -111,12 +112,12 @@ stop: ### Take down zaneops and scale down all services created in zaneops
 delete-resources: ### Delete all resources created by zaneops
 	@echo -e "====== \x1b[91mDELETING ZaneOps and all its created resources...\x1b[0m ======"
 	docker stack rm zane
-	@echo "Removing zane-ops volumes..."
 	@echo "Waiting for all containers related to services to be removed..."
 	@while [ -n "$$(docker ps -a | grep "zane_" | awk '{print $$1}')" ]; do \
 		sleep 2; \
 	done
-	docker volume rm $$(docker volume ls --filter "label=zane.stack=true" -q)
+	@echo "Removing zane-ops volumes..."
+	docker volume rm $$(docker volume ls --filter "label=zane.stack=true" -q) || true
 	@echo "Removing all services created by zane-ops..."
 	docker service rm $$(docker service ls --filter "label=zane-managed=true" -q) || true
 	@echo "Waiting for all containers related to services to be removed..."
