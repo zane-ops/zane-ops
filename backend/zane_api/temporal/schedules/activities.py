@@ -149,12 +149,12 @@ class MonitorDockerDeploymentActivities:
                     DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
                     DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
                     DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
                     DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.REMOVED,
                     DockerSwarmTaskState.REJECTED: DockerDeployment.DeploymentStatus.UNHEALTHY,
                     DockerSwarmTaskState.ORPHANED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.REMOVED,
                 }
 
                 exited_without_error = 0
