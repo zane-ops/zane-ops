@@ -1,10 +1,8 @@
 name: Build and Push Latest Images
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   release: 
     types: 
       [published]
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -44,17 +42,25 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Set tags for proxy
+        id: set-tags
+        run: |
+          if [[ "${{ needs.extract-version.outputs.tag }}" == *"beta"* ]]; then
+            echo "tags=ghcr.io/zane-ops/proxy:${{ github.sha }}
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=ghcr.io/zane-ops/proxy:latest
+            ghcr.io/zane-ops/proxy:${{ github.sha }}
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}" >> $GITHUB_OUTPUT
+          fi
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
           context: ./docker/proxy
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/proxy:latest
-            ghcr.io/zane-ops/proxy:${{ github.sha }}
-            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}
+          tags: ${{ steps.set-tags.outputs.tags }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:latest
           cache-to: type=inline
           build-args: |
@@ -96,6 +102,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Set tags for app
+        id: set-tags
+        run: |
+          if [[ "${{ needs.extract-version.outputs.tag }}" == *"beta"* ]]; then
+            echo "tags=ghcr.io/zane-ops/app:${{ github.sha }}
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=ghcr.io/zane-ops/app:latest
+            ghcr.io/zane-ops/app:${{ github.sha }}
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}" >> $GITHUB_OUTPUT
+          fi
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -103,11 +121,7 @@ jobs:
           file: ./docker/app/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/zane-ops/app:latest
-            ghcr.io/zane-ops/app:${{ github.sha }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}
+          tags: ${{ steps.set-tags.outputs.tags }}
           cache-from: type=registry,ref=ghcr.io/zane-ops/app:latest
           cache-to: type=inline
           build-args: |
