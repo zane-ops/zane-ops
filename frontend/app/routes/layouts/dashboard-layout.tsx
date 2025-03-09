@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleUser,
+  CogIcon,
   CommandIcon,
   GitCommitVertical,
   HeartHandshake,
@@ -12,6 +13,7 @@ import {
   Menu,
   Search,
   Send,
+  SettingsIcon,
   TagIcon
 } from "lucide-react";
 import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
@@ -93,6 +95,7 @@ type HeaderProps = {
 
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -125,14 +128,6 @@ function Header({ user }: HeaderProps) {
           <div className="flex mx-2 w-full justify-center items-center">
             <CommandMenu />
           </div>
-
-          <a
-            href="https://github.com/zane-ops/zane-ops"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <HelpCircle className="w-16 stroke-[1.5px] opacity-70" />
-          </a>
         </div>
 
         <fetcher.Form
@@ -149,6 +144,13 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
+              <MenubarContentItem
+                icon={SettingsIcon}
+                text="Settings"
+                onClick={() => {
+                  navigate("/settings");
+                }}
+              />
               <button
                 className="w-full"
                 onClick={(e) => {
