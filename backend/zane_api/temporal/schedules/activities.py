@@ -382,6 +382,7 @@ class DockerDeploymentStatsActivities:
                                 stats.get("blkio_stats", {}).get(
                                     "io_service_bytes_recursive", []
                                 )
+                                or []
                             )
                             if io.get("op") == "read"
                         )
@@ -392,6 +393,7 @@ class DockerDeploymentStatsActivities:
                                 stats.get("blkio_stats", {}).get(
                                     "io_service_bytes_recursive", []
                                 )
+                                or []
                             )
                             if io["op"] == "write"
                         )
