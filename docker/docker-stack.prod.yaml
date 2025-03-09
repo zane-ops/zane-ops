@@ -13,7 +13,7 @@ x-backend-vars: &env-vars
   ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
-  ELASTICSEARCH_HOST: http://zane.search:9200
+  LOKI_HOST: http://zane.loki:3100
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
 
 services:
@@ -106,7 +106,7 @@ services:
       - valkey
       - proxy
       - temporal-server
-      - elasticsearch
+      - loki
   temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
@@ -197,7 +197,7 @@ services:
       - valkey
       - proxy
       - temporal-server
-      - elasticsearch
+      - loki
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -231,7 +231,7 @@ services:
       - valkey
       - proxy
       - temporal-server
-      - elasticsearch
+      - loki
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -375,20 +375,16 @@ services:
         limits:
           cpus: "0.5"
           memory: 200M
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false
-      - xpack.monitoring.collection.enabled=false
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g # Heap memory of 1GB
+  loki:
+    image: grafana/loki:3.4
     volumes:
-      - es-data:/usr/share/elasticsearch/data
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
     networks:
       zane:
         aliases:
-          - zane.search
+          - zane.loki
     deploy:
       replicas: 1
       restart_policy:
@@ -404,15 +400,15 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 1.5G
+          memory: 1G
     healthcheck:
-      test: ["CMD-SHELL", "curl -f $$(hostname -i):9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
+      test: wget --quiet --tries=1 --output-document=- http://localhost:3100/ready | grep -q -w ready || exit 1
+      start_period: 20s
+      interval: 10s
+      timeout: 1s
+      retries: 12  # try for 2 minutes
 volumes:
-  es-data:
+  loki-data:
     labels:
       zane.stack: "true"
   db-data:

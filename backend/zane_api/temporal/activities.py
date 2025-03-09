@@ -203,6 +203,7 @@ async def deployment_log(
         | DeploymentCreateConfigsResult
     ),
     message: str,
+    error=False,
 ):
     current_time = timezone.now()
     print(f"[{current_time.isoformat()}]: {message}")
@@ -226,7 +227,7 @@ async def deployment_log(
     search_client.insert(
         document=RuntimeLogDto(
             source=RuntimeLogSource.SYSTEM,
-            level=RuntimeLogLevel.INFO,
+            level=RuntimeLogLevel.INFO if not error else RuntimeLogLevel.ERROR,
             content=excerpt(message, MAX_COLORED_CHARS),
             content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
             time=current_time,
@@ -1798,7 +1799,10 @@ class DockerSwarmActivities:
             )
 
             task_list = swarm_service.tasks(
-                filters={"label": f"deployment_hash={docker_deployment.hash}"}
+                filters={
+                    "label": f"deployment_hash={docker_deployment.hash}",
+                    "desired-state": "running",
+                }
             )
             if len(task_list) > 0:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
@@ -1808,19 +1812,19 @@ class DockerSwarmActivities:
                     )
                 )
 
-                starting_status = DockerDeployment.DeploymentStatus.STARTING
-                # We set the status to restarting, because we get more than one task for this service when we restart it
-                if len(task_list) > 1:
-                    starting_status = DockerDeployment.DeploymentStatus.RESTARTING
+                # starting_status = DockerDeployment.DeploymentStatus.STARTING
+                # # We set the status to restarting, because we get more than one task for this service when we restart it
+                # if len(task_list) > 1:
+                #     starting_status = DockerDeployment.DeploymentStatus.RESTARTING
 
                 state_matrix = {
-                    DockerSwarmTaskState.NEW: starting_status,
-                    DockerSwarmTaskState.PENDING: starting_status,
-                    DockerSwarmTaskState.ASSIGNED: starting_status,
-                    DockerSwarmTaskState.ACCEPTED: starting_status,
-                    DockerSwarmTaskState.READY: starting_status,
-                    DockerSwarmTaskState.PREPARING: starting_status,
-                    DockerSwarmTaskState.STARTING: starting_status,
+                    DockerSwarmTaskState.NEW: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.READY: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
                     DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
                     DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
                     DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
@@ -1833,8 +1837,17 @@ class DockerSwarmActivities:
                 exited_without_error = 0
                 deployment_status = state_matrix[most_recent_swarm_task.state]
 
-                if deployment_status == starting_status:
-                    docker_deployment.status = starting_status
+                all_tasks = swarm_service.tasks(
+                    filters={
+                        "label": f"deployment_hash={docker_deployment.hash}",
+                    }
+                )
+                if deployment_status == DockerDeployment.DeploymentStatus.STARTING:
+                    # We set the status to restarting, because we get more than one task for this service when we restart it
+                    if len(all_tasks) > 1:
+                        deployment_status = DockerDeployment.DeploymentStatus.RESTARTING
+
+                    docker_deployment.status = deployment_status
                     await docker_deployment.asave()
 
                 deployment_status_reason = (
@@ -1919,12 +1932,14 @@ class DockerSwarmActivities:
                         f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                        error=status_color == Colors.RED,
                     )
                     await deployment_log(
                         deployment,
                         f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                         f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                         f"| finished with status {status_color}{deployment_status}{Colors.ENDC}",
+                        error=status_color == Colors.RED,
                     )
                     return deployment_status, deployment_status_reason
 
@@ -1933,12 +1948,14 @@ class DockerSwarmActivities:
                 f"Healthcheck for deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                error=True,
             )
             await deployment_log(
                 deployment,
                 f"Healthcheck for deployment deployment {Colors.ORANGE}{docker_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
                 f"| FAILED, Retrying in {Colors.ORANGE}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+                error=True,
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 

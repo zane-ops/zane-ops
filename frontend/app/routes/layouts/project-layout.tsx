@@ -226,7 +226,7 @@ export function ErrorBoundary() {
             <h1 className="text-3xl font-bold">Error 404</h1>
             <p className="text-lg">This project does not exist</p>
           </div>
-          <Link to="/">
+          <Link to="/" prefetch="intent">
             <Button>Go home</Button>
           </Link>
         </div>

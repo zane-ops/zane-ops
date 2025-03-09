@@ -29,13 +29,15 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to="/" prefetch="intent">
+                Projects
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${params.projectSlug}`}>
+              <Link to={`/project/${params.projectSlug}`} prefetch="intent">
                 {params.projectSlug}
               </Link>
             </BreadcrumbLink>
@@ -56,7 +58,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
               variant="secondary"
               className="flex gap-3  font-semibold items-center justify-center p-10"
             >
-              <Link to="docker">
+              <Link to="./docker" prefetch="intent">
                 <ContainerIcon className="flex-none" /> From Docker Image{" "}
                 <ArrowRightIcon className="flex-none" />
               </Link>
