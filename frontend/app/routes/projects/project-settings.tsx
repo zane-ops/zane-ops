@@ -323,9 +323,9 @@ function DeleteConfirmationFormDialog({
         <DialogHeader className="pb-4">
           <DialogTitle>Delete this project ?</DialogTitle>
 
-          <Alert variant="warning" className="my-5">
+          <Alert variant="danger" className="my-5">
             <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>Attention !</AlertTitle>
             <AlertDescription>
               Deleting this project will also delete all its services and delete
               all the deployments related to the services, This action is

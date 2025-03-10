@@ -101,37 +101,6 @@ export function ServiceDangerZoneForm({
           project_slug={project_slug}
         />
       </div>
-      {/* <Form
-        className="flex flex-col gap-2 items-start"
-        method="post"
-        action="../archive-service"
-      > */}
-      {/* <p className="text-red-400 ">
-          Archiving this service will permanently delete all its deployments,
-          This cannot be undone.
-        </p> */}
-
-      {/* <SubmitButton
-          variant="destructive"
-          className={cn(
-            "inline-flex gap-1 items-center",
-            isPending ? "bg-red-400" : "bg-red-500"
-          )}
-          isPending={isPending}
-        >
-          {isPending ? (
-            <>
-              <LoaderIcon className="animate-spin flex-none" size={15} />
-              <span>Archiving...</span>
-            </>
-          ) : (
-            <>
-              <Trash2Icon size={15} className="flex-none" />
-              <span>Delete service</span>
-            </>
-          )}
-        </SubmitButton> */}
-      {/* </Form> */}
     </div>
   );
 }
@@ -182,9 +151,9 @@ function DeleteConfirmationFormDialog({
         <DialogHeader className="pb-4">
           <DialogTitle>Delete this service ?</DialogTitle>
 
-          <Alert variant="warning" className="my-5">
+          <Alert variant="danger" className="my-5">
             <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>Attention !</AlertTitle>
             <AlertDescription>
               Deleting this service will permanently delete all its deployments,
               This action is irreversible.
