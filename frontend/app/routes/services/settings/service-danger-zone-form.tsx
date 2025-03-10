@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   LoaderIcon,
+  PauseIcon,
+  PlayIcon,
+  PowerIcon,
   SunriseIcon,
   SunsetIcon,
   Trash2Icon
@@ -45,27 +48,29 @@ export function ServiceDangerZoneForm({
   const navigation = useNavigation();
   const isPending = navigation.state !== "idle";
 
+  const isSleeping = currentProductionDeployment?.status == "SLEEPING";
   return (
     <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border p-4">
       {currentProductionDeployment !== undefined && (
         <>
-          {" "}
           <div className="flex md:flex-row justify-between items-center w-full">
             <div className="flex flex-col gap-1">
-              <h3 className="text-lg font-medium">Put service to sleep</h3>
+              <h3 className="text-lg font-medium">
+                {isSleeping
+                  ? "Wake up your service"
+                  : "Put your service service to sleep"}
+              </h3>
               <p>
-                Scale down your service and make it unavailable to the outside
+                {isSleeping
+                  ? "Restart your service"
+                  : "Stop your service make it unavailable to the outside."}
               </p>
             </div>
 
             <Form method="post" action="../toggle-service-state">
               <SubmitButton
                 isPending={isPending}
-                variant={
-                  currentProductionDeployment?.status == "SLEEPING"
-                    ? "default"
-                    : "warning"
-                }
+                variant={isSleeping ? "default" : "warning"}
                 className="inline-flex gap-1 items-center"
               >
                 {isPending ? (
@@ -73,14 +78,14 @@ export function ServiceDangerZoneForm({
                     <LoaderIcon className="animate-spin flex-none" size={15} />
                     <span>Submitting...</span>
                   </>
-                ) : currentProductionDeployment?.status == "SLEEPING" ? (
+                ) : isSleeping ? (
                   <>
-                    <SunriseIcon size={15} className="flex-none" />
-                    <span>Wake up service</span>
+                    <PlayIcon size={15} className="flex-none" />
+                    <span>Restart your service</span>
                   </>
                 ) : (
                   <>
-                    <SunsetIcon size={15} className="flex-none" />
+                    <PauseIcon size={15} className="flex-none" />
                     <span>Put service to sleep</span>
                   </>
                 )}
@@ -105,7 +110,7 @@ export function ServiceDangerZoneForm({
   );
 }
 
-function DeleteConfirmationFormDialog({
+function StopServiceConfirmationDialog({
   service_slug,
   project_slug
 }: { service_slug: string; project_slug: string }) {
@@ -124,6 +129,60 @@ function DeleteConfirmationFormDialog({
     if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
       formRef.current?.reset();
       setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          setData(undefined);
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button
+          variant="destructive"
+          type="button"
+          className={cn("inline-flex gap-1 items-center")}
+        >
+          <Trash2Icon size={15} className="flex-none" />
+          <span>Put service to sleep</span>
+        </Button>
+      </DialogTrigger>
+    </Dialog>
+  );
+}
+
+function DeleteConfirmationFormDialog({
+  service_slug,
+  project_slug
+}: { service_slug: string; project_slug: string }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof clientAction>();
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
+  const [data, setData] = React.useState(fetcher.data);
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (!fetcher.data.errors) {
+        formRef.current?.reset();
+        setIsOpen(false);
+      } else {
+        (
+          formRef.current?.elements.namedItem(
+            "service_slug"
+          ) as HTMLInputElement
+        )?.focus();
+      }
     }
   }, [fetcher.state, fetcher.data]);
 

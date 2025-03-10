@@ -10,7 +10,14 @@ import {
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, useFetcher, useLocation } from "react-router";
+import {
+  Link,
+  Outlet,
+  useFetcher,
+  useLocation,
+  useNavigate,
+  useParams
+} from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { ServiceChangesModal } from "~/components/service-changes-modal";
 import { StatusBadge } from "~/components/status-badge";
@@ -24,6 +31,7 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
 
+import * as React from "react";
 import {
   Popover,
   PopoverContent,
@@ -38,8 +46,9 @@ import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
+import type { clientAction } from "~/routes/services/deploy-service";
 import { formatURL, metaTitle, pluralize } from "~/utils";
-import { type Route } from "./+types/service-layout";
+import type { Route } from "./+types/service-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {
   const title = !error
@@ -283,12 +292,27 @@ type DeployServiceFormProps = {
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<typeof clientAction>();
   const isDeploying = fetcher.state !== "idle";
+  const params = useParams<Route.ComponentProps["params"]>();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (!fetcher.data.errors) {
+        navigate(
+          `/project/${params.project_slug}/services/${params.serviceSlug}`
+        );
+      }
+    }
+  }, [fetcher.data, fetcher.state, params.projectSlug, params.serviceSlug]);
 
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
-      <ServiceChangesModal service={service} />
+      <ServiceChangesModal
+        service={service}
+        project_slug={params.projectSlug!}
+      />
       <fetcher.Form
         method="post"
         action="./deploy-service"

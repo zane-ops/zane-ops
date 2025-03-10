@@ -14,7 +14,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { useFetcher } from "react-router";
+import { useFetcher, useNavigate } from "react-router";
 import {
   CommandChangeField,
   ConfigChangeItem,
@@ -50,16 +50,22 @@ import { capitalizeText, pluralize } from "~/utils";
 
 type ServiceChangeModalProps = {
   service: DockerService;
+  project_slug: string;
 };
-export function ServiceChangesModal({ service }: ServiceChangeModalProps) {
+export function ServiceChangesModal({
+  service,
+  project_slug
+}: ServiceChangeModalProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const [isOpen, setIsOpen] = React.useState(false);
   const isDeploying = fetcher.state !== "idle";
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         setIsOpen(false);
+        navigate(`/project/${project_slug}/services/${service.slug}`);
       }
     }
   }, [fetcher.data, fetcher.state]);
