@@ -128,10 +128,8 @@ class MonitorDockerDeploymentActivities:
                 }
             )
             if len(task_list) == 0:
-                return (
-                    DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    "An Unknown error occurred, did you manually scale down the service ?",
-                )
+                deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+                deployment_status_reason = "Error: The service is down, did you manually scale down the service ?"
             else:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
                     max(
@@ -237,38 +235,36 @@ class MonitorDockerDeploymentActivities:
                             )
                             deployment_status_reason = str(e)
 
-                status_color = (
-                    Colors.GREEN
-                    if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
-                    else Colors.RED
+            status_color = (
+                Colors.GREEN
+                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                else Colors.RED
+            )
+
+            print(
+                f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
+            )
+
+            unhealthy = deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+
+            if unhealthy:
+                if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                    status_flag = "❌"
+                else:
+                    status_flag = "🏁"
+
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
+                )
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
+                    f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
                 )
 
-                print(
-                    f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
-                )
-
-                unhealthy = (
-                    deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
-                )
-
-                if unhealthy:
-                    if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
-                        status_flag = "❌"
-                    else:
-                        status_flag = "🏁"
-
-                    await deployment_log(
-                        deployment=details.deployment,
-                        message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
-                        f"| finished with result : {Colors.GREY}{deployment_status_reason}{Colors.ENDC}",
-                    )
-                    await deployment_log(
-                        deployment=details.deployment,
-                        message=f"Monitoring Healthcheck for deployment {Colors.ORANGE}{details.deployment.hash}{Colors.ENDC} "
-                        f"| finished with status {status_color}{deployment_status}{Colors.ENDC} {status_flag}",
-                    )
-
-                return deployment_status, deployment_status_reason
+            return deployment_status, deployment_status_reason
 
     @activity.defn
     async def save_deployment_status(

@@ -1583,10 +1583,10 @@ class DockerSwarmActivities:
             # zane-specific-envs
             envs.extend(
                 [
-                    f"ZANE=true",
+                    "ZANE=true",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                     f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
-                    f"ZANE_DEPLOYMENT_TYPE=docker",
+                    "ZANE_DEPLOYMENT_TYPE=docker",
                     f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
                     f"ZANE_SERVICE_ID={service.id}",
                     f"ZANE_SERVICE_NAME={service.slug}",
@@ -1719,10 +1719,8 @@ class DockerSwarmActivities:
                 ),
                 restart_policy=RestartPolicy(
                     condition="any",
-                    max_attempts=5,
-                    delay=int(5e9),  # delay is in nanoseconds
                 ),
-                # this disables the default container healthcheck, instead we control the healthcheck externally
+                # this disables the default container healthcheck, since we control the healthcheck externally
                 healthcheck=DockerHealthcheckType(test=["NONE"]),
                 stop_grace_period=int(30e9),  # stop_grace_period is in nanoseconds
                 log_driver="fluentd",
