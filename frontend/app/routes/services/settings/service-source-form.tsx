@@ -96,7 +96,10 @@ export function ServiceSourceForm({
           value={serviceSourcheChange?.id}
         />
         <fieldset className="flex flex-col gap-1.5 flex-1">
-          <label htmlFor="image">Source Image</label>
+          <label htmlFor="image">
+            Source Image&nbsp;
+            <span className="text-amber-600 dark:text-yellow-500">*</span>
+          </label>
           <div className="relative">
             <Input
               id="image"
