@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   LoaderIcon,
+  PauseIcon,
+  PlayIcon,
+  PowerIcon,
   SunriseIcon,
   SunsetIcon,
   Trash2Icon
@@ -23,6 +26,7 @@ import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-service";
+import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
@@ -42,50 +46,53 @@ export function ServiceDangerZoneForm({
     (dpl) => dpl.is_current_production
   );
 
-  const navigation = useNavigation();
-  const isPending = navigation.state !== "idle";
+  const fetcher = useFetcher<typeof toggleClientAction>();
+  const isPending = fetcher.state !== "idle";
 
+  const isSleeping = currentProductionDeployment?.status == "SLEEPING";
   return (
     <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border p-4">
       {currentProductionDeployment !== undefined && (
         <>
-          {" "}
           <div className="flex md:flex-row justify-between items-center w-full">
             <div className="flex flex-col gap-1">
-              <h3 className="text-lg font-medium">Put service to sleep</h3>
+              <h3 className="text-lg font-medium">
+                {isSleeping
+                  ? "Wake up your service"
+                  : "Put your service service to sleep"}
+              </h3>
               <p>
-                Scale down your service and make it unavailable to the outside
+                {isSleeping
+                  ? "Restart your service"
+                  : "Stop your service make it unavailable to the outside."}
               </p>
             </div>
 
-            <Form method="post" action="../toggle-service-state">
-              <SubmitButton
-                isPending={isPending}
-                variant={
-                  currentProductionDeployment?.status == "SLEEPING"
-                    ? "default"
-                    : "warning"
-                }
-                className="inline-flex gap-1 items-center"
-              >
-                {isPending ? (
-                  <>
-                    <LoaderIcon className="animate-spin flex-none" size={15} />
-                    <span>Submitting...</span>
-                  </>
-                ) : currentProductionDeployment?.status == "SLEEPING" ? (
-                  <>
-                    <SunriseIcon size={15} className="flex-none" />
-                    <span>Wake up service</span>
-                  </>
-                ) : (
-                  <>
-                    <SunsetIcon size={15} className="flex-none" />
-                    <span>Put service to sleep</span>
-                  </>
-                )}
-              </SubmitButton>
-            </Form>
+            {!isSleeping ? (
+              <StopServiceConfirmationDialog />
+            ) : (
+              <fetcher.Form method="post" action="../toggle-service-state">
+                <SubmitButton
+                  isPending={isPending}
+                  className="inline-flex gap-1 items-center"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon
+                        className="animate-spin flex-none"
+                        size={15}
+                      />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlayIcon size={15} className="flex-none" />
+                      <span>Restart your service</span>
+                    </>
+                  )}
+                </SubmitButton>
+              </fetcher.Form>
+            )}
           </div>
           <hr className="w-[calc(100%_+_calc(var(--spacing)_*_8))] border-border self-center" />
         </>
@@ -101,38 +108,89 @@ export function ServiceDangerZoneForm({
           project_slug={project_slug}
         />
       </div>
-      {/* <Form
-        className="flex flex-col gap-2 items-start"
-        method="post"
-        action="../archive-service"
-      > */}
-      {/* <p className="text-red-400 ">
-          Archiving this service will permanently delete all its deployments,
-          This cannot be undone.
-        </p> */}
-
-      {/* <SubmitButton
-          variant="destructive"
-          className={cn(
-            "inline-flex gap-1 items-center",
-            isPending ? "bg-red-400" : "bg-red-500"
-          )}
-          isPending={isPending}
-        >
-          {isPending ? (
-            <>
-              <LoaderIcon className="animate-spin flex-none" size={15} />
-              <span>Archiving...</span>
-            </>
-          ) : (
-            <>
-              <Trash2Icon size={15} className="flex-none" />
-              <span>Delete service</span>
-            </>
-          )}
-        </SubmitButton> */}
-      {/* </Form> */}
     </div>
+  );
+}
+
+function StopServiceConfirmationDialog() {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof toggleClientAction>();
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      formRef.current?.reset();
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          variant="warning"
+          className="inline-flex gap-1 items-center"
+        >
+          <PauseIcon size={15} className="flex-none" />
+          <span>Put service to sleep</span>
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Put this service to sleep ?</DialogTitle>
+
+          <Alert variant="warning" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Putting your service to sleep will stop it and make it unavailable
+              to the outside.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            action="../toggle-service-state"
+            method="post"
+            className="flex items-center gap-4 w-full"
+          >
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -152,9 +210,17 @@ function DeleteConfirmationFormDialog({
     setData(fetcher.data);
 
     // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      formRef.current?.reset();
-      setIsOpen(false);
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (!fetcher.data.errors) {
+        formRef.current?.reset();
+        setIsOpen(false);
+      } else {
+        (
+          formRef.current?.elements.namedItem(
+            "service_slug"
+          ) as HTMLInputElement
+        )?.focus();
+      }
     }
   }, [fetcher.state, fetcher.data]);
 
@@ -182,9 +248,9 @@ function DeleteConfirmationFormDialog({
         <DialogHeader className="pb-4">
           <DialogTitle>Delete this service ?</DialogTitle>
 
-          <Alert variant="warning" className="my-5">
+          <Alert variant="danger" className="my-5">
             <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>Attention !</AlertTitle>
             <AlertDescription>
               Deleting this service will permanently delete all its deployments,
               This action is irreversible.

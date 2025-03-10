@@ -818,7 +818,11 @@ class SystemCleanupActivities:
 
     @activity.defn
     async def cleanup_networks(self) -> dict:
-        return self.docker_client.networks.prune()
+        return self.docker_client.networks.prune(
+            filters={
+                "label!": ["zane-managed"],
+            }
+        )
 
 
 class DockerSwarmActivities:

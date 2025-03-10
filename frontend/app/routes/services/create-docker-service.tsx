@@ -101,7 +101,6 @@ export default function CreateServicePage({
 
       {currentStep === "CREATED" && (
         <StepServiceCreated
-          actionData={actionData}
           projectSlug={params.projectSlug}
           serviceSlug={serviceSlug}
           onSuccess={(hash) => {
@@ -390,7 +389,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
 }
 
 type StepServiceCreatedProps = {
-  actionData?: Route.ComponentProps["actionData"];
   serviceSlug: string;
   projectSlug: string;
   onSuccess: (deploymentHash: string) => void;
@@ -399,16 +397,15 @@ type StepServiceCreatedProps = {
 function StepServiceCreated({
   serviceSlug,
   projectSlug,
-  actionData,
   onSuccess
 }: StepServiceCreatedProps) {
   // const navigation = useNavigation();
   const fetcher = useFetcher<typeof clientAction>();
-  const errors = getFormErrorsFromResponseData(actionData?.errors);
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
 
-  if (actionData?.deploymentHash) {
-    onSuccess(actionData.deploymentHash);
+  if (fetcher.data?.deploymentHash) {
+    onSuccess(fetcher.data.deploymentHash);
   }
   return (
     <div className="flex flex-col h-[70vh] justify-center items-center">

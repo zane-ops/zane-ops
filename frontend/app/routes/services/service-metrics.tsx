@@ -170,7 +170,8 @@ export default function ServiceMetricsPage({
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
-                              minute: "2-digit"
+                              minute: "2-digit",
+                              second: "2-digit"
                             }
                           ).format(new Date(payload.bucket_epoch));
 
@@ -278,7 +279,8 @@ export default function ServiceMetricsPage({
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
-                              minute: "2-digit"
+                              minute: "2-digit",
+                              second: "2-digit"
                             }
                           ).format(new Date(payload.bucket_epoch));
                           const { value: value_str, unit } =
@@ -394,7 +396,8 @@ export default function ServiceMetricsPage({
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
-                              minute: "2-digit"
+                              minute: "2-digit",
+                              second: "2-digit"
                             }
                           ).format(new Date(item.payload.bucket_epoch));
                           const { value: value_str, unit } =
@@ -530,7 +533,8 @@ export default function ServiceMetricsPage({
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
-                              minute: "2-digit"
+                              minute: "2-digit",
+                              second: "2-digit"
                             }
                           ).format(new Date(item.payload.bucket_epoch));
                           const { value: value_str, unit } =

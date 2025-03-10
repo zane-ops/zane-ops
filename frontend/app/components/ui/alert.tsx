@@ -14,7 +14,9 @@ const alertVariants = cva(
         success: "border-teal-500 text-teal-500",
         info: "border-link text-link",
         destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive"
+          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        danger:
+          "border-none text-white [&>svg]:text-white bg-destructive dark:bg-red-800"
       }
     },
     defaultVariants: {
