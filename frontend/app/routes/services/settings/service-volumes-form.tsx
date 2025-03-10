@@ -345,13 +345,12 @@ function ServiceVolumeItem({
                 </FieldSet>
 
                 <FieldSet
+                  required
                   name="container_path"
                   className="flex flex-col gap-1.5 flex-1"
                   errors={errors.new_value?.container_path}
                 >
-                  <FieldSetLabel className="text-muted-foreground">
-                    Container path
-                  </FieldSetLabel>
+                  <FieldSetLabel>Container path</FieldSetLabel>
                   <FieldSetInput
                     placeholder="ex: /data"
                     defaultValue={container_path}
@@ -362,9 +361,7 @@ function ServiceVolumeItem({
                   errors={errors.new_value?.host_path}
                   className="flex flex-col gap-1.5 flex-1"
                 >
-                  <FieldSetLabel className="text-muted-foreground">
-                    Host path
-                  </FieldSetLabel>
+                  <FieldSetLabel>Host path</FieldSetLabel>
                   <FieldSetInput
                     placeholder="ex: /etc/localtime"
                     defaultValue={host_path ?? ""}
@@ -494,13 +491,12 @@ function NewServiceVolumeForm() {
       </FieldSet>
 
       <FieldSet
+        required
         errors={errors.new_value?.container_path}
         name="container_path"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel className="text-muted-foreground">
-          Container path
-        </FieldSetLabel>
+        <FieldSetLabel>Container path</FieldSetLabel>
         <FieldSetInput placeholder="ex: /data" />
       </FieldSet>
       <FieldSet
@@ -508,9 +504,7 @@ function NewServiceVolumeForm() {
         errors={errors.new_value?.host_path}
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel className="text-muted-foreground">
-          Host path
-        </FieldSetLabel>
+        <FieldSetLabel>Host path</FieldSetLabel>
         <FieldSetInput placeholder="ex: /etc/localtime" />
       </FieldSet>
       <FieldSet
@@ -518,7 +512,7 @@ function NewServiceVolumeForm() {
         name="name"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel className="text-muted-foreground">Name</FieldSetLabel>
+        <FieldSetLabel>Name</FieldSetLabel>
         <FieldSetInput placeholder="ex: postgresl-data" />
       </FieldSet>
 
