@@ -51,7 +51,10 @@ export function HttpLogRequestDetails({
     >
       <SheetContent
         side="right"
-        className="z-99 border-border flex flex-col gap-4 overflow-y-auto"
+        className={cn(
+          "z-99 border-border flex flex-col gap-4 overflow-y-auto",
+          import.meta.env.DEV && "[&_[data-slot=close-btn]]:top-10"
+        )}
       >
         {log && <LogRequestDetailsContent log={log} />}
       </SheetContent>
