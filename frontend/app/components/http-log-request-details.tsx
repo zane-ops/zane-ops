@@ -94,8 +94,30 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <dd className="text-sm">{log.request_id}</dd>
         </div>
 
-        <div className="grid grid-cols-2 items-center gap-x-4 w-full">
-          <dt className="text-grey  inline-flex items-center">Status code</dt>
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
+          <dt className="text-grey inline-flex items-center">
+            <span>Status code</span>
+
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() => {
+                      searchParams.set("status", log.status.toString());
+                      searchParams.delete("request_id");
+                      setSearchParams(searchParams, { replace: true });
+                    }}
+                  >
+                    <FilterIcon size={15} />
+                    <span className="sr-only">Add Filter</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add Filter</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </dt>
           <dd
             className={cn("inline-flex items-center gap-1", {
               "text-blue-600": log.status.toString().startsWith("1"),
