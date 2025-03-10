@@ -73,9 +73,7 @@ export function FieldSetErrors(
   );
 }
 
-export function FieldSetLabel(
-  props: Omit<React.ComponentProps<"label">, "htmlFor">
-) {
+export function FieldSetLabel(props: React.ComponentProps<"label">) {
   const ctx = React.use(FieldSetContext);
   if (!ctx) {
     throw new Error(
@@ -86,7 +84,7 @@ export function FieldSetLabel(
   const { id } = ctx;
   return (
     <label
-      htmlFor={id}
+      htmlFor={props.htmlFor ?? id}
       {...props}
       className={cn("dark:text-gray-400", props.className)}
     >

@@ -152,13 +152,12 @@ export function ServiceHealthcheckForm({
 
         <div className="flex flex-col md:grid md:grid-cols-4 md:items-start gap-2">
           <FieldSet
+            required
             errors={errors.new_value?.type}
             name="type"
             className="flex flex-col gap-1.5 flex-1"
           >
-            <label htmlFor="healthcheck_type" className="text-muted-foreground">
-              Type
-            </label>
+            <FieldSetLabel htmlFor="healthcheck_type">Type</FieldSetLabel>
             <FieldSetSelect
               name="type"
               disabled={healthcheckChange !== undefined}
@@ -192,6 +191,7 @@ export function ServiceHealthcheckForm({
           </FieldSet>
 
           <FieldSet
+            required
             name="value"
             errors={errors.new_value?.value}
             className={cn(
@@ -222,6 +222,7 @@ export function ServiceHealthcheckForm({
 
           {healthcheckType === "PATH" && (
             <FieldSet
+              required
               name="associated_port"
               errors={errors.new_value?.associated_port}
               className="flex flex-col gap-1.5 flex-1"
@@ -254,9 +255,7 @@ export function ServiceHealthcheckForm({
           name="timeout_seconds"
           className="flex flex-col gap-1.5 flex-1"
         >
-          <FieldSetLabel className="text-muted-foreground">
-            Timeout (in seconds)
-          </FieldSetLabel>
+          <FieldSetLabel>Timeout in seconds</FieldSetLabel>
           <FieldSetInput
             disabled={healthcheckChange !== undefined}
             placeholder={
@@ -280,7 +279,7 @@ export function ServiceHealthcheckForm({
           className="flex flex-col gap-1.5 flex-1"
         >
           <FieldSetLabel className="text-muted-foreground">
-            Interval (in seconds)
+            Interval in seconds
           </FieldSetLabel>
           <FieldSetInput
             placeholder={
