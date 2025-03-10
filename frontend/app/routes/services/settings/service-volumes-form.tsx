@@ -350,7 +350,10 @@ function ServiceVolumeItem({
                   errors={errors.new_value?.container_path}
                 >
                   <FieldSetLabel className="text-muted-foreground">
-                    Container path
+                    Container path&nbsp;
+                    <span className="text-amber-600 dark:text-yellow-500">
+                      *
+                    </span>
                   </FieldSetLabel>
                   <FieldSetInput
                     placeholder="ex: /data"
@@ -499,7 +502,8 @@ function NewServiceVolumeForm() {
         className="flex flex-col gap-1.5 flex-1"
       >
         <FieldSetLabel className="text-muted-foreground">
-          Container path
+          Container path&nbsp;
+          <span className="text-amber-600 dark:text-yellow-500">*</span>
         </FieldSetLabel>
         <FieldSetInput placeholder="ex: /data" />
       </FieldSet>
