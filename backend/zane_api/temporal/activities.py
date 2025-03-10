@@ -496,8 +496,6 @@ class ZaneProxyClient:
                 }
             )
 
-        thirty_seconds_in_nano_seconds = 30_000_000_000
-
         if url.redirect_to is not None:
             proxy_handlers.append(
                 {
@@ -522,6 +520,9 @@ class ZaneProxyClient:
                     "prefer": ["gzip"],
                 },
             )
+            # thirty_seconds_in_nano_seconds = 30 * 10**9
+            # one_hour_in_nano_seconds = 3_600 * 10**9
+
             proxy_handlers.append(
                 {
                     "handler": "reverse_proxy",
@@ -583,12 +584,15 @@ class ZaneProxyClient:
                         }
                     ],
                     "flush_interval": -1,
-                    "health_checks": {
-                        "passive": {"fail_duration": thirty_seconds_in_nano_seconds}
-                    },
+                    # "health_checks": {
+                    #     "passive": {
+                    #         "fail_duration": thirty_seconds_in_nano_seconds,
+                    #         "unhealthy_latency": one_hour_in_nano_seconds,
+                    #     }
+                    # },
                     "load_balancing": {
                         "retries": 3,
-                        "selection_policy": {"policy": "first"},
+                        "selection_policy": {"policy": "round_robin"},
                     },
                     "upstreams": [
                         {
