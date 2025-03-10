@@ -356,12 +356,11 @@ function ServiceURLFormItem({
                 )}
                 {!isRedirect && (
                   <FieldSet
+                    required
                     errors={errors.new_value?.associated_port}
                     className="flex-1 inline-flex flex-col gap-1"
                   >
-                    <FieldSetLabel className="text-gray-400">
-                      Forwarded port
-                    </FieldSetLabel>
+                    <FieldSetLabel>Forwarded port</FieldSetLabel>
                     <FieldSetInput
                       placeholder="ex: /"
                       name="associated_port"
@@ -371,12 +370,11 @@ function ServiceURLFormItem({
                 )}
 
                 <FieldSet
+                  required
                   errors={errors.new_value?.domain}
                   className="flex-1 inline-flex flex-col gap-1"
                 >
-                  <FieldSetLabel className="text-gray-400">
-                    Domain
-                  </FieldSetLabel>
+                  <FieldSetLabel>Domain</FieldSetLabel>
                   <FieldSetInput
                     name="domain"
                     placeholder="ex: www.mysupersaas.co"
@@ -384,12 +382,11 @@ function ServiceURLFormItem({
                   />
                 </FieldSet>
                 <FieldSet
+                  required
                   errors={errors.new_value?.base_path}
                   className="flex-1 inline-flex flex-col gap-1"
                 >
-                  <FieldSetLabel className="text-gray-400">
-                    Base path
-                  </FieldSetLabel>
+                  <FieldSetLabel>Base path</FieldSetLabel>
                   <FieldSetInput
                     placeholder="ex: /"
                     name="base_path"
@@ -407,8 +404,8 @@ function ServiceURLFormItem({
                       defaultChecked={strip_prefix}
                     />
 
-                    <FieldSetLabel className="text-gray-400 inline-flex gap-1 items-center">
-                      Strip path prefix ?
+                    <FieldSetLabel className="inline-flex gap-1 items-center">
+                      <span>Strip path prefix ?</span>
                       <TooltipProvider>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
@@ -436,7 +433,7 @@ function ServiceURLFormItem({
                       onCheckedChange={(state) => setIsRedirect(Boolean(state))}
                     />
 
-                    <FieldSetLabel className="text-gray-400 inline-flex gap-1 items-center">
+                    <FieldSetLabel className="inline-flex gap-1 items-center">
                       Is redirect ?
                     </FieldSetLabel>
                   </div>
@@ -445,12 +442,11 @@ function ServiceURLFormItem({
                 {isRedirect && (
                   <div className="flex flex-col gap-4 pl-4">
                     <FieldSet
+                      required
                       errors={errors.new_value?.redirect_to?.url}
                       className="flex-1 inline-flex flex-col gap-1"
                     >
-                      <FieldSetLabel className="text-gray-400">
-                        Redirect to url
-                      </FieldSetLabel>
+                      <FieldSetLabel>Redirect to url</FieldSetLabel>
                       <FieldSetInput
                         name="redirect_to_url"
                         placeholder="ex: https://mysupersaas.co/"
@@ -468,7 +464,7 @@ function ServiceURLFormItem({
                           defaultChecked={redirect_to?.permanent}
                         />
 
-                        <FieldSetLabel className="text-gray-400 inline-flex gap-1 items-center">
+                        <FieldSetLabel className=" inline-flex gap-1 items-center">
                           Permanent redirect
                           <TooltipProvider>
                             <Tooltip delayDuration={0}>
@@ -565,12 +561,11 @@ function NewServiceURLForm() {
       )}
       {!isRedirect && (
         <FieldSet
+          required
           errors={errors.new_value?.associated_port}
           className="flex-1 inline-flex flex-col gap-1"
         >
-          <FieldSetLabel className="text-gray-400">
-            Forwarded port
-          </FieldSetLabel>
+          <FieldSetLabel>Forwarded port</FieldSetLabel>
           <FieldSetInput
             placeholder="ex: /"
             name="associated_port"
@@ -583,9 +578,9 @@ function NewServiceURLForm() {
         errors={errors.new_value?.domain}
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <FieldSetLabel className="text-gray-400 inline-flex gap-1">
+        <FieldSetLabel className="inline-flex gap-1">
           <span>Domain</span>
-          <span className="text-card-foreground">
+          <span className="dark:text-card-foreground text-grey">
             (leave empty to generate)
           </span>
         </FieldSetLabel>
@@ -593,10 +588,11 @@ function NewServiceURLForm() {
       </FieldSet>
 
       <FieldSet
+        required
         errors={errors.new_value?.base_path}
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <FieldSetLabel className="text-gray-400">Base path</FieldSetLabel>
+        <FieldSetLabel>Base path</FieldSetLabel>
         <FieldSetInput
           name="base_path"
           placeholder="ex: /api"
@@ -611,7 +607,7 @@ function NewServiceURLForm() {
         <div className="inline-flex gap-2 items-center">
           <FieldSetCheckbox name="strip_prefix" defaultChecked />
 
-          <FieldSetLabel className="text-gray-400 inline-flex gap-1 items-center">
+          <FieldSetLabel className="inline-flex gap-1 items-center">
             Strip path prefix ?
             <TooltipProvider>
               <Tooltip delayDuration={0}>
@@ -641,7 +637,7 @@ function NewServiceURLForm() {
             onCheckedChange={(state) => setIsRedirect(Boolean(state))}
           />
 
-          <FieldSetLabel className="text-gray-400 inline-flex gap-1 items-center">
+          <FieldSetLabel className="inline-flex gap-1 items-center">
             Is redirect ?
           </FieldSetLabel>
         </div>
@@ -649,10 +645,8 @@ function NewServiceURLForm() {
 
       {isRedirect && (
         <div className="flex flex-col gap-4 pl-4">
-          <FieldSet errors={errors.new_value?.redirect_to?.url}>
-            <FieldSetLabel className="text-gray-400">
-              Redirect to url
-            </FieldSetLabel>
+          <FieldSet required errors={errors.new_value?.redirect_to?.url}>
+            <FieldSetLabel>Redirect to url</FieldSetLabel>
 
             <FieldSetInput
               name="redirect_to_url"
@@ -667,7 +661,7 @@ function NewServiceURLForm() {
             <div className="inline-flex items-center gap-2">
               <FieldSetCheckbox name="redirect_to_permanent" />
 
-              <FieldSetLabel className="text-gray-400 inline-flex gap-1 items-center">
+              <FieldSetLabel className="inline-flex gap-1 items-center">
                 Permanent redirect
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>

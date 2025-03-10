@@ -284,7 +284,10 @@ function ServicePortItem({
                       className="text-gray-400"
                       htmlFor={`forwarded-${id}`}
                     >
-                      Forwarded port
+                      Forwarded port&nbsp;
+                      <span className="text-amber-600 dark:text-yellow-500">
+                        *
+                      </span>
                     </label>
                     <Input
                       placeholder="ex: 8080"
@@ -306,7 +309,10 @@ function ServicePortItem({
                   </fieldset>
                   <fieldset className="flex-1 inline-flex flex-col gap-1">
                     <label htmlFor={`host-${id}`} className="text-gray-400">
-                      Host port
+                      Host port&nbsp;
+                      <span className="text-amber-600 dark:text-yellow-500">
+                        *
+                      </span>
                     </label>
                     <Input
                       placeholder="ex: 80"
@@ -400,17 +406,19 @@ function NewServicePortForm() {
       <input type="hidden" name="change_field" value="ports" />
       <input type="hidden" name="change_type" value="ADD" />
       <FieldSet
+        required
         errors={errors.new_value?.forwarded}
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <FieldSetLabel className="text-gray-400">Forwarded port</FieldSetLabel>
+        <FieldSetLabel>Forwarded port</FieldSetLabel>
         <FieldSetInput placeholder="ex: 8080" name="forwarded" />
       </FieldSet>
       <FieldSet
+        required
         errors={errors.new_value?.host}
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <FieldSetLabel className="text-gray-400">Host port</FieldSetLabel>
+        <FieldSetLabel>Host port</FieldSetLabel>
         <FieldSetInput placeholder="ex: 8080" name="host" />
       </FieldSet>
 

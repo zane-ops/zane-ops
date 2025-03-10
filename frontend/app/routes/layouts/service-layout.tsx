@@ -301,7 +301,7 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         navigate(
-          `/project/${params.project_slug}/services/${params.serviceSlug}`
+          `/project/${params.projectSlug}/services/${params.serviceSlug}`
         );
       }
     }

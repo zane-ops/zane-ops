@@ -1,10 +1,7 @@
 import Editor, { useMonaco } from "@monaco-editor/react";
 import {
   AlertCircleIcon,
-  ArrowRightIcon,
-  Code,
   FileSlidersIcon,
-  HardDriveIcon,
   LoaderIcon,
   PlusIcon,
   Trash2Icon,
@@ -335,13 +332,12 @@ function ServiceConfigItem({
               </FieldSet>
 
               <FieldSet
+                required
                 name="mount_path"
                 className="flex flex-col gap-1.5 flex-1"
                 errors={errors.new_value?.mount_path}
               >
-                <FieldSetLabel className="text-muted-foreground">
-                  mount path
-                </FieldSetLabel>
+                <FieldSetLabel>mount path</FieldSetLabel>
                 <FieldSetInput
                   placeholder="ex: /data"
                   defaultValue={mount_path}
@@ -362,9 +358,7 @@ function ServiceConfigItem({
                 name="name"
                 className="flex flex-col gap-1.5 flex-1"
               >
-                <FieldSetLabel className="text-muted-foreground">
-                  Name
-                </FieldSetLabel>
+                <FieldSetLabel>Name</FieldSetLabel>
                 <FieldSetInput
                   placeholder="ex: postgresl-data"
                   defaultValue={name}
@@ -572,13 +566,12 @@ function NewServiceConfigForm() {
       </FieldSet>
 
       <FieldSet
+        required
         errors={errors.new_value?.mount_path}
         name="mount_path"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel className="text-muted-foreground">
-          mount path
-        </FieldSetLabel>
+        <FieldSetLabel>mount path</FieldSetLabel>
         <FieldSetInput placeholder="ex: /data" />
       </FieldSet>
       <FieldSet
@@ -586,7 +579,7 @@ function NewServiceConfigForm() {
         name="name"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel className="text-muted-foreground">Name</FieldSetLabel>
+        <FieldSetLabel>Name</FieldSetLabel>
         <FieldSetInput placeholder="ex: postgresl-data" />
       </FieldSet>
 
@@ -595,9 +588,7 @@ function NewServiceConfigForm() {
         errors={errors.new_value?.contents}
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel className="text-muted-foreground">
-          contents
-        </FieldSetLabel>
+        <FieldSetLabel>contents</FieldSetLabel>
         <FieldSetTextarea className="sr-only" value={contents} readOnly />
 
         <div

@@ -10,12 +10,14 @@ import { cn } from "~/lib/utils";
 export type FieldSetProps = {
   errors?: string | string[];
   children: React.ReactNode;
+  required?: boolean;
 } & React.ComponentProps<"fieldset">;
 
 type FieldSetContext = {
   id: string;
   name?: string;
   errors?: string | string[];
+  required?: boolean;
 };
 
 const FieldSetContext = React.createContext<FieldSetContext | null>(null);
@@ -25,6 +27,7 @@ export function FieldSet({
   errors,
   children,
   name,
+  required,
   ...props
 }: FieldSetProps) {
   const id = React.useId();
@@ -39,7 +42,7 @@ export function FieldSet({
   );
 
   return (
-    <FieldSetContext value={{ id, errors, name }}>
+    <FieldSetContext value={{ id, errors, name, required }}>
       <fieldset className={className} {...props}>
         {children}
         {!isErrorComponentInChildren && errors && <FieldSetErrors />}
@@ -70,9 +73,7 @@ export function FieldSetErrors(
   );
 }
 
-export function FieldSetLabel(
-  props: Omit<React.ComponentProps<"label">, "htmlFor">
-) {
+export function FieldSetLabel(props: React.ComponentProps<"label">) {
   const ctx = React.use(FieldSetContext);
   if (!ctx) {
     throw new Error(
@@ -81,7 +82,18 @@ export function FieldSetLabel(
   }
 
   const { id } = ctx;
-  return <label htmlFor={id} {...props} />;
+  return (
+    <label
+      htmlFor={props.htmlFor ?? id}
+      {...props}
+      className={cn("dark:text-gray-400", props.className)}
+    >
+      {props.children}
+      {ctx.required && (
+        <span className="text-amber-600 dark:text-yellow-500">&nbsp;*</span>
+      )}
+    </label>
+  );
 }
 
 export function FieldSetInput(
