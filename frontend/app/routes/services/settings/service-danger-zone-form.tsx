@@ -26,6 +26,7 @@ import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-service";
+import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
@@ -45,8 +46,8 @@ export function ServiceDangerZoneForm({
     (dpl) => dpl.is_current_production
   );
 
-  const navigation = useNavigation();
-  const isPending = navigation.state !== "idle";
+  const fetcher = useFetcher<typeof toggleClientAction>();
+  const isPending = fetcher.state !== "idle";
 
   const isSleeping = currentProductionDeployment?.status == "SLEEPING";
   return (
@@ -67,30 +68,31 @@ export function ServiceDangerZoneForm({
               </p>
             </div>
 
-            <Form method="post" action="../toggle-service-state">
-              <SubmitButton
-                isPending={isPending}
-                variant={isSleeping ? "default" : "warning"}
-                className="inline-flex gap-1 items-center"
-              >
-                {isPending ? (
-                  <>
-                    <LoaderIcon className="animate-spin flex-none" size={15} />
-                    <span>Submitting...</span>
-                  </>
-                ) : isSleeping ? (
-                  <>
-                    <PlayIcon size={15} className="flex-none" />
-                    <span>Restart your service</span>
-                  </>
-                ) : (
-                  <>
-                    <PauseIcon size={15} className="flex-none" />
-                    <span>Put service to sleep</span>
-                  </>
-                )}
-              </SubmitButton>
-            </Form>
+            {!isSleeping ? (
+              <StopServiceConfirmationDialog />
+            ) : (
+              <fetcher.Form method="post" action="../toggle-service-state">
+                <SubmitButton
+                  isPending={isPending}
+                  className="inline-flex gap-1 items-center"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon
+                        className="animate-spin flex-none"
+                        size={15}
+                      />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlayIcon size={15} className="flex-none" />
+                      <span>Restart your service</span>
+                    </>
+                  )}
+                </SubmitButton>
+              </fetcher.Form>
+            )}
           </div>
           <hr className="w-[calc(100%_+_calc(var(--spacing)_*_8))] border-border self-center" />
         </>
@@ -110,21 +112,14 @@ export function ServiceDangerZoneForm({
   );
 }
 
-function StopServiceConfirmationDialog({
-  service_slug,
-  project_slug
-}: { service_slug: string; project_slug: string }) {
+function StopServiceConfirmationDialog() {
   const [isOpen, setIsOpen] = React.useState(false);
-  const fetcher = useFetcher<typeof clientAction>();
+  const fetcher = useFetcher<typeof toggleClientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(data?.errors);
 
   React.useEffect(() => {
-    setData(fetcher.data);
-
     // only focus on the correct input in case of error
     if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
       formRef.current?.reset();
@@ -133,25 +128,68 @@ function StopServiceConfirmationDialog({
   }, [fetcher.state, fetcher.data]);
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) {
-          setData(undefined);
-        }
-      }}
-    >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="destructive"
           type="button"
-          className={cn("inline-flex gap-1 items-center")}
+          variant="warning"
+          className="inline-flex gap-1 items-center"
         >
-          <Trash2Icon size={15} className="flex-none" />
+          <PauseIcon size={15} className="flex-none" />
           <span>Put service to sleep</span>
         </Button>
       </DialogTrigger>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Put this service to sleep ?</DialogTitle>
+
+          <Alert variant="warning" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Putting your service to sleep will stop it and make it unavailable
+              to the outside.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            action="../toggle-service-state"
+            method="post"
+            className="flex items-center gap-4 w-full"
+          >
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   );
 }

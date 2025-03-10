@@ -15,6 +15,15 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 export async function clientAction({
   params: { projectSlug: project_slug, serviceSlug: service_slug }
 }: Route.ClientActionArgs) {
+  const deploymentList = queryClient.getQueryData(
+    serviceQueries.deploymentList({ project_slug, service_slug }).queryKey
+  );
+
+  const currentProductionDeployment = deploymentList?.results.find(
+    (dpl) => dpl.is_current_production
+  );
+  const wasSleeping = currentProductionDeployment?.status == "SLEEPING";
+
   const { error } = await apiClient.PUT(
     "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/",
     {
@@ -36,7 +45,9 @@ export async function clientAction({
       description: fullErrorMessage,
       closeButton: true
     });
-    return;
+    return {
+      errors: error
+    };
   }
 
   await queryClient.invalidateQueries(
@@ -45,8 +56,11 @@ export async function clientAction({
 
   toast.success("Success", {
     closeButton: true,
-    description:
-      "Status change is queued for processing. It may take a moment to update."
+    description: !wasSleeping
+      ? "The service being put to sleep. It will take a few seconds to update."
+      : "The service being restarted. It will take a few seconds to update."
   });
-  return;
+  return {
+    success: true
+  };
 }
