@@ -162,13 +162,13 @@ def convert_value_to_bytes(
 ):
     match unit:
         case "BYTES":
-            return value
+            return int(value)
         case "KILOBYTES":
-            return value * 1024
+            return int(value * 1024)
         case "MEGABYTES":
-            return value * 1024 * 1024
+            return int(value * 1024 * 1024)
         case "GIGABYTES":
-            return value * 1024 * 1024 * 1024
+            return int(value * 1024 * 1024 * 1024)
         case _:
             raise ValueError(
                 f"Unit `{unit}` is not valid, must be one of `BYTES`, `KILOBYTES`, `MEGABYTES` or `GIGABYTES`",
