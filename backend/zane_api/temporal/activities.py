@@ -590,6 +590,17 @@ class ZaneProxyClient:
                     #         "unhealthy_latency": one_hour_in_nano_seconds,
                     #     }
                     # },
+                    # FIXME : this is to allow for retries of `POST` requests with a body
+                    #         by default only `POST` requests without a body are retried
+                    #         so we sorta need caddy to read the body so that it can
+                    #         be retried safely...
+                    #         IDK why we need this when the retry logic in caddy should retry
+                    #         if the the connection to the upstream has failed, but caddy
+                    #         somehow needs to read the body... WTF ???
+                    #         references:
+                    #           - https://github.com/caddyserver/caddy/issues/6259
+                    #            - caddy.community/t/retries-for-post-requests-with-body/23478/5
+                    "request_buffers": convert_value_to_bytes(512, "KILOBYTES"),
                     "load_balancing": {
                         "retries": 3,
                         "selection_policy": {"policy": "round_robin"},
