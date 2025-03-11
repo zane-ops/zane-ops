@@ -600,6 +600,7 @@ class ZaneProxyClient:
                     #         references:
                     #           - https://github.com/caddyserver/caddy/issues/6259
                     #            - caddy.community/t/retries-for-post-requests-with-body/23478/5
+                    #         THIS WILL NOT WORK FOR FILE UPLOAD of more than 512 Ko
                     "request_buffers": convert_value_to_bytes(512, "KILOBYTES"),
                     "load_balancing": {
                         "retries": 3,
