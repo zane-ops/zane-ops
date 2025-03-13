@@ -193,7 +193,7 @@ class CheckUserExistenceView(APIView):
         description="Returns whether a single user already exists in the system.",
     )
     def get(self, request) -> Response:
-        exists = User.objects.count() == 1
+        exists = User.objects.exists()
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
 
