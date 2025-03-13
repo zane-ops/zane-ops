@@ -182,3 +182,62 @@ class CSRFViewTests(APITestCase):
         self.assertIsNotNone(
             response.cookies.get("csrftoken"),
         )
+
+
+class UserExistenceAndCreationTests(APITestCase):
+    def test_check_user_existence_no_user(self):
+        response = self.client.get(reverse("zane_api:auth.check_user_existence"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get("exists"), False)
+
+    def test_check_user_existence_with_user(self):
+        User.objects.create_user(username="mocherif", password="mocherif")
+        response = self.client.get(reverse("zane_api:auth.check_user_existence"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get("exists"), True)
+
+    def test_create_user_success(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={"username": "mohai", "password": "mohai123"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertTrue(User.objects.filter(username="mohai").exists())
+        self.assertIsNotNone(response.cookies.get("sessionid"))
+
+    def test_create_user_already_exists(self):
+        User.objects.create_user(username="mohai", password="mohai123")
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={"username": "fred", "password": "fred123"},
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_create_user_bad_request(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"), data={}
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_user_minimum_password_length(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={"username": "mohai", "password": "123"},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_user_minimum_username_length(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={"username": "", "password": "validpassword123"},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_user_should_authenticate_user(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={"username": "mocherif", "password": "validpassword123"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.get(reverse("zane_api:auth.me"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)

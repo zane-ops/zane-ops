@@ -213,4 +213,14 @@ urlpatterns = [
         views.WebhookDeployServiceAPIView.as_view(),
         name="services.docker.webhook_deploy",
     ),
+    re_path(
+        r"^auth/check-user-existence/?$",
+        views.CheckUserExistenceView.as_view(),
+        name="auth.check_user_existence",
+    ),
+    re_path(
+        r"^auth/create-initial-user/?$",
+        views.CreateUserView.as_view(),
+        name="auth.create_initial_user",
+    ),
 ]

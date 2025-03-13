@@ -1,10 +1,11 @@
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
 from django.shortcuts import redirect
+from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -21,6 +22,14 @@ from rest_framework.views import APIView
 
 from .base import EMPTY_RESPONSE
 from .. import serializers
+from .serializers import (
+    UserCreationRequestSerializer,
+    UserCreatedResponseSerializer,
+    UserExistenceResponseSerializer,
+)
+
+
+User = get_user_model()
 
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
@@ -168,3 +177,48 @@ class CSRFCookieView(APIView):
 
         if response.is_valid():
             return Response(response.data)
+
+
+class CheckUserExistenceView(APIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = UserExistenceResponseSerializer
+
+    @extend_schema(
+        summary="Check if a user exists",
+        description="Returns whether a single user already exists in the system.",
+    )
+    def get(self, request: Request) -> Response:
+        exists = User.objects.exists()
+        serializer = UserExistenceResponseSerializer({"exists": exists})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CreateUserView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        request=UserCreationRequestSerializer,
+        responses={201: UserCreatedResponseSerializer},
+        summary="Create a user",
+        description="Creates a new user if no user exists.",
+    )
+    def post(self, request: Request) -> Response:
+        if User.objects.exists():
+            raise exceptions.PermissionDenied("A user already exists.")
+
+        serializer = UserCreationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = User.objects.create_superuser(
+            username=serializer.validated_data["username"],
+            password=serializer.validated_data["password"],
+        )
+
+        login(request, user)
+        serializer = UserCreatedResponseSerializer(
+            {"detail": "User created and logged in successfully."}
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
