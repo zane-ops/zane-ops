@@ -32,7 +32,7 @@ import { deploymentQueries, metrisSearch, serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import {
   convertValueToBytes,
-  format_storage_value,
+  formatStorageValue,
   timeAgoFormatter
 } from "~/utils";
 import type { Route } from "./+types/deployment-metrics";
@@ -254,7 +254,7 @@ export default function DeploymentMetricsPage({
                       )
                     ]}
                     tickFormatter={(value) => {
-                      const { value: value_str, unit } = format_storage_value(
+                      const { value: value_str, unit } = formatStorageValue(
                         Number(value)
                       );
                       // `\u00A0` is a `non breaking space` aka `&nbsp;` TIL !
@@ -291,8 +291,9 @@ export default function DeploymentMetricsPage({
                               minute: "2-digit"
                             }
                           ).format(new Date(payload.bucket_epoch));
-                          const { value: value_str, unit } =
-                            format_storage_value(Number(value));
+                          const { value: value_str, unit } = formatStorageValue(
+                            Number(value)
+                          );
 
                           return (
                             <div className="flex items-start text-sm text-muted-foreground flex-col">
@@ -370,7 +371,7 @@ export default function DeploymentMetricsPage({
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
-                      const { value: value_str, unit } = format_storage_value(
+                      const { value: value_str, unit } = formatStorageValue(
                         Number(value)
                       );
                       // `\u00A0` is a `non breaking space` aka `&nbsp;` TIL !
@@ -407,8 +408,9 @@ export default function DeploymentMetricsPage({
                               minute: "2-digit"
                             }
                           ).format(new Date(item.payload.bucket_epoch));
-                          const { value: value_str, unit } =
-                            format_storage_value(Number(value));
+                          const { value: value_str, unit } = formatStorageValue(
+                            Number(value)
+                          );
 
                           return (
                             <div className="flex items-start text-sm text-muted-foreground flex-col w-full">
@@ -506,7 +508,7 @@ export default function DeploymentMetricsPage({
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
-                      const { value: value_str, unit } = format_storage_value(
+                      const { value: value_str, unit } = formatStorageValue(
                         Number(value)
                       );
                       // `\u00A0` is a `non breaking space` aka `&nbsp;` TIL !
@@ -543,8 +545,9 @@ export default function DeploymentMetricsPage({
                               minute: "2-digit"
                             }
                           ).format(new Date(item.payload.bucket_epoch));
-                          const { value: value_str, unit } =
-                            format_storage_value(Number(value));
+                          const { value: value_str, unit } = formatStorageValue(
+                            Number(value)
+                          );
 
                           return (
                             <div className="flex items-start text-sm text-muted-foreground flex-col w-full">

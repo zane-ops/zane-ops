@@ -157,7 +157,7 @@ export function ServiceResourceLimits({
             </div>
             <Slider
               step={0.5}
-              min={0}
+              min={0.1}
               aria-hidden="true"
               value={[cpuLimit ?? resourceLimitsQuery.data?.no_of_cpus ?? 0]}
               disabled={resouceLimitsChange !== undefined}
@@ -169,6 +169,10 @@ export function ServiceResourceLimits({
               }}
               max={resourceLimitsQuery.data?.no_of_cpus}
             />
+            <div className="flex items-center justify-between text-gray-400">
+              <span>0.1</span>
+              <span>{resourceLimitsQuery.data?.no_of_cpus}</span>
+            </div>
           </FieldSet>
           <FieldSet
             name="memory"
@@ -195,6 +199,7 @@ export function ServiceResourceLimits({
                 }}
               />
             </div>
+
             <Slider
               step={100}
               min={0}
@@ -209,6 +214,10 @@ export function ServiceResourceLimits({
               }}
               max={max_memory_in_mb}
             />
+            <div className="flex items-center justify-between text-gray-400">
+              <span>0</span>
+              <span>{max_memory_in_mb}</span>
+            </div>
           </FieldSet>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
