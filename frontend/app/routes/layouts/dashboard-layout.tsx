@@ -56,7 +56,15 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const [userQuery, userExistQuery] = await Promise.all([
+    queryClient.ensureQueryData(userQueries.authedUser),
+    queryClient.ensureQueryData(userQueries.checkUserExistence)
+  ]);
+
+  if (!userExistQuery.data?.exists) {
+    throw redirect("/initial-registration");
+  }
+
   const user = userQuery.data?.user;
 
   if (!user) {

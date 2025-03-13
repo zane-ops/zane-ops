@@ -3,10 +3,7 @@ import { apiClient } from "~/api/client";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
-
-import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { useEffect } from "react";
 import { Logo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
@@ -18,7 +15,15 @@ import type { Route } from "./+types/login";
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
+  const [userQuery, userExistQuery] = await Promise.all([
+    queryClient.ensureQueryData(userQueries.authedUser),
+    queryClient.ensureQueryData(userQueries.checkUserExistence)
+  ]);
+
+  if (!userExistQuery.data?.exists) {
+    throw redirect("/initial-registration");
+  }
+
   const searchParams = new URL(request.url).searchParams;
 
   const user = userQuery.data?.user;
@@ -59,28 +64,15 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }
-
     throw redirect(redirectTo);
   }
 }
 
 export default function LoginPage({ actionData }: Route.ComponentProps) {
   const navigation = useNavigation();
-  const navigate = useNavigate();
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
   const errors = getFormErrorsFromResponseData(actionData?.errors);
-
-  const { data: userExists, isSuccess } = useQuery(
-    userQueries.checkUserExistence
-  );
-
-  useEffect(() => {
-    if (isSuccess && !userExists) {
-      navigate("/initial-registration");
-    }
-  }, [isSuccess, userExists, navigate, navigation.state]);
-
   return (
     <>
       <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">

@@ -3,10 +3,7 @@ import { apiClient } from "~/api/client";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
-
-import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { useEffect } from "react";
 import { Logo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
@@ -20,18 +17,12 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
-  const searchParams = new URL(request.url).searchParams;
+  const userExistQuery = await queryClient.ensureQueryData(
+    userQueries.checkUserExistence
+  );
 
-  const user = userQuery.data?.user;
-  if (user) {
-    const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
-    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-      redirectTo = redirect_to;
-    }
-
-    throw redirect(redirectTo);
+  if (userExistQuery.data?.exists) {
+    throw redirect("/login");
   }
   return;
 }
@@ -72,19 +63,9 @@ export default function InitialRegistration({
   actionData
 }: Route.ComponentProps) {
   const navigation = useNavigation();
-  const navigate = useNavigate();
+
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
-
-  const { data: userExists, isSuccess } = useQuery(
-    userQueries.checkUserExistence
-  );
-
-  useEffect(() => {
-    if (isSuccess && userExists) {
-      navigate("/login");
-    }
-  }, [isSuccess, userExists, navigate]);
 
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
