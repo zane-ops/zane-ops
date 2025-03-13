@@ -20,9 +20,13 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-
 from .base import EMPTY_RESPONSE
 from .. import serializers
+from .serializers import (
+    UserCreationRequestSerializer,
+    UserCreatedResponseSerializer,
+    UserExistenceResponseSerializer,
+)
 
 
 User = get_user_model()
@@ -175,63 +179,46 @@ class CSRFCookieView(APIView):
             return Response(response.data)
 
 
-class UserExistenceResponseSerializer(serializers.Serializer):
-    exists = serializers.BooleanField()
-
-
-class UserCreationSerializer(serializers.Serializer):
-    username = serializers.CharField(min_length=1, max_length=255)
-    password = serializers.CharField(min_length=6, write_only=True)
-
-
 class CheckUserExistenceView(APIView):
     permission_classes = [permissions.AllowAny]
+    serializer_class = UserExistenceResponseSerializer
 
     @extend_schema(
-        responses={200: UserExistenceResponseSerializer},
         summary="Check if a user exists",
         description="Returns whether a single user already exists in the system.",
     )
-    def get(self, request) -> Response:
+    def get(self, request: Request) -> Response:
         exists = User.objects.exists()
-        return Response({"exists": exists}, status=status.HTTP_200_OK)
+        serializer = UserExistenceResponseSerializer({"exists": exists})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CreateUserView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
-        request=UserCreationSerializer,
-        responses={201: None, 400: None},
+        request=UserCreationRequestSerializer,
+        responses={201: UserCreatedResponseSerializer},
         summary="Create a user",
         description="Creates a new user if no user exists.",
     )
-    def post(self, request) -> Response:
+    def post(self, request: Request) -> Response:
         if User.objects.exists():
             raise exceptions.PermissionDenied("A user already exists.")
 
-        serializer = UserCreationSerializer(data=request.data)
+        serializer = UserCreationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        User.objects.create(
-            username=serializer.validated_data["username"],
-            password=make_password(serializer.validated_data["password"]),
-        )
-
-        authenticated_user = authenticate(
+        user = User.objects.create_superuser(
             username=serializer.validated_data["username"],
             password=serializer.validated_data["password"],
         )
 
-        if authenticated_user:
-
-            login(request, authenticated_user)
-            return Response(
-                {"detail": "User created and logged in successfully."},
-                status=status.HTTP_201_CREATED,
-            )
-        else:
-            return Response(
-                {"error": "User created, but authentication failed."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        login(request, user)
+        serializer = UserCreatedResponseSerializer(
+            {"detail": "User created and logged in successfully."}
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+        )

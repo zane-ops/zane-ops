@@ -1414,3 +1414,21 @@ class ServiceMetricsQuery(serializers.Serializer):
         required=False,
         default="LAST_HOUR",
     )
+
+
+# ==========================================
+#              User Creation               #
+# ==========================================
+
+
+class UserExistenceResponseSerializer(serializers.Serializer):
+    exists = serializers.BooleanField()
+
+
+class UserCreationRequestSerializer(serializers.Serializer):
+    username = serializers.CharField(min_length=1, max_length=255)
+    password = serializers.CharField(min_length=6)
+
+
+class UserCreatedResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
