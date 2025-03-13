@@ -4,7 +4,7 @@ import {
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
-  type skipToken,
+  type skipToken
 } from "@tanstack/react-query";
 import { data } from "react-router";
 import { preprocess, z } from "zod";
@@ -15,7 +15,7 @@ import {
   DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
   DEPLOYMENT_STATUSES,
-  METRICS_TIME_RANGES,
+  METRICS_TIME_RANGES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
@@ -33,7 +33,7 @@ export const userQueries = {
         return THIRTY_MINUTES;
       }
       return false;
-    },
+    }
   }),
 
   checkUserExistence: queryOptions({
@@ -41,8 +41,8 @@ export const userQueries = {
     queryFn: ({ signal }) => {
       return apiClient.GET("/api/auth/check-user-existence/", { signal });
     },
-    select: (data) => data.data?.exists ?? false,
-  }),
+    select: (data) => data.data?.exists ?? false
+  })
 };
 
 export const dockerHubQueries = {
@@ -53,14 +53,14 @@ export const dockerHubQueries = {
         return apiClient.GET("/api/docker/image-search/", {
           params: {
             query: {
-              q: query.trim(),
-            },
+              q: query.trim()
+            }
           },
-          signal,
+          signal
         });
       },
-      enabled: query.trim().length > 0,
-    }),
+      enabled: query.trim().length > 0
+    })
 };
 
 export const projectSearchSchema = zfd.formData({
@@ -70,7 +70,7 @@ export const projectSearchSchema = zfd.formData({
   sort_by: zfd
     .repeatable(z.array(z.enum(["slug", "-slug", "updated_at", "-updated_at"])))
     .optional()
-    .catch(undefined),
+    .catch(undefined)
 });
 
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
@@ -83,10 +83,10 @@ export const projectQueries = {
         const { data } = await apiClient.GET("/api/projects/", {
           params: {
             query: {
-              ...filters,
-            },
+              ...filters
+            }
           },
-          signal,
+          signal
         });
         return data;
       },
@@ -96,7 +96,7 @@ export const projectQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   single: (slug: string) =>
     queryOptions({
@@ -105,10 +105,10 @@ export const projectQueries = {
         const { data } = await apiClient.GET("/api/projects/{slug}/", {
           params: {
             path: {
-              slug,
-            },
+              slug
+            }
           },
-          signal,
+          signal
         });
         if (!data) {
           throw notFound(
@@ -117,14 +117,14 @@ export const projectQueries = {
         }
         return data;
       },
-      placeholderData: keepPreviousData,
+      placeholderData: keepPreviousData
     }),
   serviceList: (slug: string, filters: ProjectServiceListSearch = {}) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(slug).queryKey,
         "SERVICE-LIST",
-        filters,
+        filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -132,13 +132,13 @@ export const projectQueries = {
           {
             params: {
               query: {
-                ...filters,
+                ...filters
               },
               path: {
-                slug,
-              },
+                slug
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -152,12 +152,12 @@ export const projectQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
-    }),
+      }
+    })
 };
 
 export const projectServiceListSearchSchema = z.object({
-  query: z.string().optional().catch(""),
+  query: z.string().optional().catch("")
 });
 export type ProjectServiceListSearch = z.infer<
   typeof projectServiceListSearchSchema
@@ -173,7 +173,7 @@ export const serviceDeploymentListFilters = zfd.formData({
       .catch(DEPLOYMENT_STATUSES as Writeable<typeof DEPLOYMENT_STATUSES>)
   ),
   queued_at_before: z.coerce.date().optional().catch(undefined),
-  queued_at_after: z.coerce.date().optional().catch(undefined),
+  queued_at_after: z.coerce.date().optional().catch(undefined)
 });
 
 export type ServiceDeploymentListFilters = z.infer<
@@ -194,7 +194,7 @@ export const metrisSearch = z.object({
     .enum(METRICS_TIME_RANGES)
     .optional()
     .default("LAST_HOUR")
-    .catch("LAST_HOUR"),
+    .catch("LAST_HOUR")
 });
 
 export type MetricsFilters = z.TypeOf<typeof metrisSearch>;
@@ -203,7 +203,7 @@ export const serviceQueries = {
   single: ({
     project_slug,
     service_slug,
-    type = "docker",
+    type = "docker"
   }: {
     project_slug: string;
     service_slug: string;
@@ -214,7 +214,7 @@ export const serviceQueries = {
         ...projectQueries.single(project_slug).queryKey,
         "SERVICE_DETAILS",
         type,
-        service_slug,
+        service_slug
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -223,10 +223,10 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
-              },
+                service_slug
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -242,13 +242,13 @@ export const serviceQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   deploymentList: ({
     project_slug,
     service_slug,
     type = "docker",
-    filters = {},
+    filters = {}
   }: {
     project_slug: string;
     service_slug: string;
@@ -259,7 +259,7 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({ project_slug, service_slug, type }).queryKey,
         "DEPLOYMENT_LIST",
-        filters,
+        filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -268,15 +268,15 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                service_slug
               },
               query: {
                 ...filters,
                 queued_at_after: filters.queued_at_after?.toISOString(),
-                queued_at_before: filters.queued_at_before?.toISOString(),
-              },
+                queued_at_before: filters.queued_at_before?.toISOString()
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -290,14 +290,14 @@ export const serviceQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   httpLogs: ({
     project_slug,
     service_slug,
     autoRefetchEnabled = true,
     filters = {},
-    queryClient,
+    queryClient
   }: {
     project_slug: string;
     service_slug: string;
@@ -309,10 +309,10 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug,
+          service_slug
         }).queryKey,
         "HTTP_LOGS",
-        filters,
+        filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
@@ -347,17 +347,17 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                service_slug
               },
               query: {
                 ...filters,
                 cursor,
                 per_page: DEFAULT_LOGS_PER_PAGE,
                 time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString(),
-              },
+                time_after: filters.time_after?.toISOString()
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -365,7 +365,7 @@ export const serviceQueries = {
           next: null,
           previous: null,
           results: [],
-          cursor: null,
+          cursor: null
         };
 
         if (data) {
@@ -379,7 +379,7 @@ export const serviceQueries = {
             results: data.results,
             next,
             previous,
-            cursor: existingData?.cursor,
+            cursor: existingData?.cursor
           };
         }
 
@@ -393,17 +393,17 @@ export const serviceQueries = {
               params: {
                 path: {
                   project_slug,
-                  service_slug,
+                  service_slug
                 },
                 query: {
                   ...filters,
                   per_page: DEFAULT_LOGS_PER_PAGE,
                   cursor: apiData.next,
                   time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString(),
-                },
+                  time_after: filters.time_after?.toISOString()
+                }
               },
-              signal,
+              signal
             }
           );
           if (nextPage?.previous) {
@@ -425,12 +425,12 @@ export const serviceQueries = {
       getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
-      staleTime: Number.POSITIVE_INFINITY,
+      staleTime: Number.POSITIVE_INFINITY
     }),
   metrics: ({
     project_slug,
     service_slug,
-    filters,
+    filters
   }: {
     project_slug: string;
     service_slug: string;
@@ -440,10 +440,10 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug,
+          service_slug
         }).queryKey,
         "METRICS",
-        filters,
+        filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -452,13 +452,13 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                service_slug
               },
               query: {
-                ...filters,
-              },
+                ...filters
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -472,12 +472,12 @@ export const serviceQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   singleHttpLog: ({
     project_slug,
     service_slug,
-    request_uuid,
+    request_uuid
   }: {
     project_slug: string;
     service_slug: string;
@@ -487,10 +487,10 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug,
+          service_slug
         }).queryKey,
         "HTTP_LOGS",
-        request_uuid,
+        request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -500,20 +500,20 @@ export const serviceQueries = {
               path: {
                 project_slug,
                 service_slug,
-                request_uuid,
-              },
+                request_uuid
+              }
             },
-            signal,
+            signal
           }
         );
         return data;
-      },
+      }
     }),
   filterHttpLogFields: ({
     project_slug,
     service_slug,
     field,
-    value,
+    value
   }: {
     project_slug: string;
     service_slug: string;
@@ -527,11 +527,11 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug,
+          service_slug
         }).queryKey,
         "HTTP_LOG_FIELDS",
         field,
-        value,
+        value
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -541,18 +541,18 @@ export const serviceQueries = {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                service_slug
               },
               query: {
                 field,
-                value,
-              },
-            },
+                value
+              }
+            }
           }
         );
         return data ?? [];
-      },
-    }),
+      }
+    })
 };
 
 export const LOG_LEVELS = ["INFO", "ERROR"] as const;
@@ -564,7 +564,7 @@ export const REQUEST_METHODS = [
   "OPTIONS",
   "PATCH",
   "POST",
-  "PUT",
+  "PUT"
 ] as const;
 
 export const deploymentLogSearchSchema = zfd.formData({
@@ -587,7 +587,7 @@ export const deploymentLogSearchSchema = zfd.formData({
   isMaximized: preprocess(
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)
-  ),
+  )
 });
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
@@ -637,7 +637,7 @@ export const httpLogSearchSchema = zfd.formData({
       )
     )
     .optional()
-    .catch(undefined),
+    .catch(undefined)
 });
 
 export type HTTPLogFilters = z.infer<typeof httpLogSearchSchema>;
@@ -646,7 +646,7 @@ export const deploymentQueries = {
   single: ({
     project_slug,
     service_slug,
-    deployment_hash,
+    deployment_hash
   }: {
     project_slug: string;
     service_slug: string;
@@ -658,7 +658,7 @@ export const deploymentQueries = {
         "SERVICE_DETAILS",
         service_slug,
         "DEPLOYMENTS",
-        deployment_hash,
+        deployment_hash
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -668,10 +668,10 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
-              },
+                deployment_hash
+              }
             },
-            signal,
+            signal
           }
         );
         if (!data) {
@@ -684,7 +684,7 @@ export const deploymentQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   logs: ({
     project_slug,
@@ -692,7 +692,7 @@ export const deploymentQueries = {
     deployment_hash,
     autoRefetchEnabled = true,
     filters = {},
-    queryClient,
+    queryClient
   }: {
     project_slug: string;
     service_slug: string;
@@ -706,10 +706,10 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
-          deployment_hash,
+          deployment_hash
         }).queryKey,
         "RUNTIME_LOGS",
-        filters,
+        filters
       ],
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
@@ -745,17 +745,17 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
+                deployment_hash
               },
               query: {
                 ...filters,
                 per_page: DEFAULT_LOGS_PER_PAGE,
                 cursor,
                 time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString(),
-              },
+                time_after: filters.time_after?.toISOString()
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -763,7 +763,7 @@ export const deploymentQueries = {
           next: null,
           previous: null,
           results: [],
-          cursor: null,
+          cursor: null
         };
 
         if (data) {
@@ -771,7 +771,7 @@ export const deploymentQueries = {
             results: data.results,
             next: data?.next ?? null,
             previous: data?.previous ?? null,
-            cursor: existingData?.cursor,
+            cursor: existingData?.cursor
           };
         }
 
@@ -786,17 +786,17 @@ export const deploymentQueries = {
                 path: {
                   project_slug,
                   service_slug,
-                  deployment_hash,
+                  deployment_hash
                 },
                 query: {
                   ...filters,
                   per_page: DEFAULT_LOGS_PER_PAGE,
                   cursor: apiData.next,
                   time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString(),
-                },
+                  time_after: filters.time_after?.toISOString()
+                }
               },
-              signal,
+              signal
             }
           );
           if (nextPage?.previous) {
@@ -820,13 +820,13 @@ export const deploymentQueries = {
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData,
-      staleTime: Number.POSITIVE_INFINITY,
+      staleTime: Number.POSITIVE_INFINITY
     }),
   metrics: ({
     project_slug,
     service_slug,
     deployment_hash,
-    filters,
+    filters
   }: {
     project_slug: string;
     deployment_hash: string;
@@ -838,10 +838,10 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
-          deployment_hash,
+          deployment_hash
         }).queryKey,
         "METRICS",
-        filters,
+        filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -851,13 +851,13 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
+                deployment_hash
               },
               query: {
-                ...filters,
-              },
+                ...filters
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -871,7 +871,7 @@ export const deploymentQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      },
+      }
     }),
   httpLogs: ({
     project_slug,
@@ -879,7 +879,7 @@ export const deploymentQueries = {
     deployment_hash,
     autoRefetchEnabled = true,
     filters = {},
-    queryClient,
+    queryClient
   }: {
     project_slug: string;
     service_slug: string;
@@ -893,10 +893,10 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
-          deployment_hash,
+          deployment_hash
         }).queryKey,
         "HTTP_LOGS",
-        filters,
+        filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
@@ -932,17 +932,17 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
+                deployment_hash
               },
               query: {
                 ...filters,
                 cursor,
                 per_page: DEFAULT_LOGS_PER_PAGE,
                 time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString(),
-              },
+                time_after: filters.time_after?.toISOString()
+              }
             },
-            signal,
+            signal
           }
         );
 
@@ -950,7 +950,7 @@ export const deploymentQueries = {
           next: null,
           previous: null,
           results: [],
-          cursor: null,
+          cursor: null
         };
 
         if (data) {
@@ -964,7 +964,7 @@ export const deploymentQueries = {
             results: data.results,
             next,
             previous,
-            cursor: existingData?.cursor,
+            cursor: existingData?.cursor
           };
         }
 
@@ -979,17 +979,17 @@ export const deploymentQueries = {
                 path: {
                   project_slug,
                   service_slug,
-                  deployment_hash,
+                  deployment_hash
                 },
                 query: {
                   ...filters,
                   per_page: DEFAULT_LOGS_PER_PAGE,
                   cursor: apiData.next,
                   time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString(),
-                },
+                  time_after: filters.time_after?.toISOString()
+                }
               },
-              signal,
+              signal
             }
           );
           if (nextPage?.previous) {
@@ -1011,13 +1011,13 @@ export const deploymentQueries = {
       getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
-      staleTime: Number.POSITIVE_INFINITY,
+      staleTime: Number.POSITIVE_INFINITY
     }),
   singleHttpLog: ({
     project_slug,
     service_slug,
     deployment_hash,
-    request_uuid,
+    request_uuid
   }: {
     project_slug: string;
     service_slug: string;
@@ -1029,10 +1029,10 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
-          deployment_hash,
+          deployment_hash
         }).queryKey,
         "HTTP_LOGS",
-        request_uuid,
+        request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -1043,21 +1043,21 @@ export const deploymentQueries = {
                 project_slug,
                 service_slug,
                 deployment_hash,
-                request_uuid,
-              },
+                request_uuid
+              }
             },
-            signal,
+            signal
           }
         );
         return data;
-      },
+      }
     }),
   filterHttpLogFields: ({
     project_slug,
     service_slug,
     deployment_hash,
     field,
-    value,
+    value
   }: {
     project_slug: string;
     service_slug: string;
@@ -1073,11 +1073,11 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
-          deployment_hash,
+          deployment_hash
         }).queryKey,
         "HTTP_LOG_FIELDS",
         field,
-        value,
+        value
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -1088,18 +1088,18 @@ export const deploymentQueries = {
               path: {
                 project_slug,
                 service_slug,
-                deployment_hash,
+                deployment_hash
               },
               query: {
                 field,
-                value,
-              },
-            },
+                value
+              }
+            }
           }
         );
         return data ?? [];
-      },
-    }),
+      }
+    })
 };
 
 export const serverQueries = {
@@ -1109,7 +1109,7 @@ export const serverQueries = {
       const { data } = await apiClient.GET("/api/settings/");
       return data;
     },
-    staleTime: Number.MAX_SAFE_INTEGER,
+    staleTime: Number.MAX_SAFE_INTEGER
   }),
   resourceLimits: queryOptions({
     queryKey: ["SERVICE_RESOURCE_LIMITS"],
@@ -1118,8 +1118,8 @@ export const serverQueries = {
       if (!data) throw new Error("Unknown error with the API");
       return data;
     },
-    staleTime: Number.MAX_SAFE_INTEGER,
-  }),
+    staleTime: Number.MAX_SAFE_INTEGER
+  })
 };
 
 type DeploymentLogQueryData = Pick<
@@ -1176,12 +1176,12 @@ export const resourceQueries = {
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {
-              query: (query ?? "").trim(),
-            },
+              query: (query ?? "").trim()
+            }
           },
-          signal,
+          signal
         });
       },
-      enabled: (query ?? "").trim().length > 0,
-    }),
+      enabled: (query ?? "").trim().length > 0
+    })
 };

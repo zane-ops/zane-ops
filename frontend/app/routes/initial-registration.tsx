@@ -4,7 +4,9 @@ import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 
+import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, LoaderIcon } from "lucide-react";
+import { useEffect } from "react";
 import { Logo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { userQueries } from "~/lib/queries";
@@ -12,8 +14,6 @@ import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/login";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 export const meta: Route.MetaFunction = () => [
   metaTitle("Initial Registration")
