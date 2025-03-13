@@ -231,7 +231,7 @@ export function metaTitle(title: string) {
   return { title: `${title} | ZaneOps` } as const;
 }
 
-export function format_storage_value(value: number) {
+export function formatStorageValue(value: number) {
   const kb = 1024;
   const mb = 1024 * kb;
   const gb = 1024 * mb;
