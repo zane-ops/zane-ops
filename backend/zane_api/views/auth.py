@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from django.utils import timezone
@@ -19,8 +19,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db import models
-import uuid
+
 
 from .base import EMPTY_RESPONSE
 from .. import serializers
