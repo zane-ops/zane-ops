@@ -318,7 +318,10 @@ class DockerDeploymentStatsActivities:
                 return None
 
             task_list = swarm_service.tasks(
-                filters={"label": f"deployment_hash={details.hash}"}
+                filters={
+                    "label": f"deployment_hash={details.hash}",
+                    "desired-state": "running",
+                }
             )
             if len(task_list) == 0:
                 return None
