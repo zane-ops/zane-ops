@@ -15,7 +15,9 @@ import type { Route } from "./+types/login";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-export const meta: Route.MetaFunction = () => [metaTitle("Login")];
+export const meta: Route.MetaFunction = () => [
+  metaTitle("Initial Registration")
+];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const userQuery = await queryClient.ensureQueryData(userQueries.authedUser);
@@ -42,18 +44,20 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     username: formData.get("username")!.toString(),
     password: formData.get("password")!.toString()
   };
-  const { error: errors, data } = await apiClient.POST("/api/auth/login/", {
-    body: credentials
-  });
+  const { error: errors, data } = await apiClient.POST(
+    "/api/auth/create-initial-user/",
+    {
+      body: credentials
+    }
+  );
   if (errors) {
     return {
       errors,
       userData: credentials
     };
   }
-  if (data?.success) {
+  if (data.detail) {
     queryClient.removeQueries(userQueries.authedUser);
-
     const redirect_to = searchParams.get("redirect_to");
     let redirectTo = "/";
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
@@ -64,22 +68,25 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
 }
 
-export default function LoginPage({ actionData }: Route.ComponentProps) {
+export default function InitialRegistration({
+  actionData
+}: Route.ComponentProps) {
   const navigation = useNavigation();
   const navigate = useNavigate();
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
-  const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   const { data: userExists, isSuccess } = useQuery(
     userQueries.checkUserExistence
   );
 
   useEffect(() => {
-    if (isSuccess && !userExists) {
-      navigate("/initial-registration");
+    if (isSuccess && userExists) {
+      navigate("/login");
     }
-  }, [isSuccess, userExists, navigate, navigation.state]);
+  }, [isSuccess, userExists, navigate]);
+
+  const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   return (
     <>
@@ -101,7 +108,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
           <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
-            Log in
+            Create a user
           </h1>
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
@@ -155,11 +162,11 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
             >
               {isPending ? (
                 <>
-                  <span>Submitting...</span>
+                  <span>Creating...</span>
                   <LoaderIcon className="animate-spin" size={15} />
                 </>
               ) : (
-                "Submit"
+                "Create"
               )}
             </SubmitButton>
           </div>
