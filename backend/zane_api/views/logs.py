@@ -1,5 +1,4 @@
 import json
-import traceback
 from urllib.parse import urlparse
 
 from drf_spectacular.utils import extend_schema

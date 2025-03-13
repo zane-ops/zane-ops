@@ -6,20 +6,15 @@ import uuid
 from django.urls import reverse
 from rest_framework import status
 from datetime import timedelta
-from django.utils import timezone
 from django.conf import settings
 import base64
-from temporalio.common import RetryPolicy
-import os
 from ..utils import jprint
-from ..temporal.schedules.workflows import CleanupAppLogsWorkflow
 from .base import AuthAPITestCase
 from ..models import DockerDeployment, DockerRegistryService, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
 
 import requests
 
-# from search.constants import ELASTICSEARCH_BYTE_LIMIT
 import urllib.request
 
 

@@ -1,15 +1,16 @@
-import { Form, redirect, useNavigate, useNavigation } from "react-router";
-import { apiClient } from "~/api/client";
-import { SubmitButton } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import { AlertCircle, LoaderIcon } from "lucide-react";
+import { Form, redirect, useNavigation } from "react-router";
+import { toast } from "sonner";
+import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { SubmitButton } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
+import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
 export const meta: Route.MetaFunction = () => [
@@ -29,7 +30,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const searchParams = new URL(request.url).searchParams;
 
   const credentials = {
     username: formData.get("username")!.toString(),
@@ -47,16 +47,16 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       userData: credentials
     };
   }
-  if (data.detail) {
-    queryClient.removeQueries(userQueries.authedUser);
-    const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
-    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-      redirectTo = redirect_to;
-    }
 
-    throw redirect(redirectTo);
-  }
+  queryClient.removeQueries(userQueries.checkUserExistence);
+  queryClient.removeQueries(userQueries.authedUser);
+
+  toast.success("Success", {
+    description: data.detail,
+    closeButton: true
+  });
+
+  throw redirect("/");
 }
 
 export default function InitialRegistration({

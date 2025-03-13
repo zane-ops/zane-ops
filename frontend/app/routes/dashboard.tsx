@@ -32,11 +32,7 @@ import {
 } from "~/components/ui/table";
 
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
-import {
-  projectQueries,
-  projectSearchSchema,
-  userQueries
-} from "~/lib/queries";
+import { projectQueries, projectSearchSchema } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formattedDate, pluralize } from "~/utils";
