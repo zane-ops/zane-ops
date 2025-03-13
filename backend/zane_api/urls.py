@@ -216,9 +216,11 @@ urlpatterns = [
     re_path(
         r"^auth/check-user-existence/?$",
         views.CheckUserExistenceView.as_view(),
-        name="check-user-existence",
+        name="auth.check_user_existence",
     ),
     re_path(
-        r"^auth/create-user/?$", views.CreateUserView.as_view(), name="create-user"
+        r"^auth/create-initial-user/?$",
+        views.CreateUserView.as_view(),
+        name="auth.create_initial_user",
     ),
 ]
