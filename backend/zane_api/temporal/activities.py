@@ -422,7 +422,7 @@ class ZaneProxyClient:
         )
 
     @classmethod
-    def _get_request_for_service(
+    def _get_request_for_service_url(
         cls,
         url: URLDto,
         current_deployment: DockerDeploymentDetails,
@@ -474,8 +474,9 @@ class ZaneProxyClient:
                 "handler": "headers",
                 "response": {
                     "add": {
-                        "server": ["zaneops"],
                         "x-zane-request-id": ["{http.request.uuid}"],
+                        "x-zane-dpl-hash": [current_deployment.hash],
+                        "x-zane-dpl-slot": [current_deployment.slot.lower()],
                     },
                 },
                 "request": {
@@ -511,8 +512,7 @@ class ZaneProxyClient:
                 }
             )
         else:
-            blue_upstream = f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
-            green_upstream = f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
+            # Gzip encoding
             proxy_handlers.append(
                 {
                     "handler": "encode",
@@ -520,98 +520,19 @@ class ZaneProxyClient:
                     "prefer": ["gzip"],
                 },
             )
-            # thirty_seconds_in_nano_seconds = 30 * 10**9
-            # one_hour_in_nano_seconds = 3_600 * 10**9
 
             proxy_handlers.append(
                 {
                     "handler": "reverse_proxy",
-                    "handle_response": [
-                        {
-                            "routes": [
-                                {
-                                    "handle": [
-                                        {
-                                            "handler": "headers",
-                                            "response": {
-                                                "set": {
-                                                    "x-zane-dpl-hash": [
-                                                        blue_hash or ""
-                                                    ],
-                                                    "x-zane-dpl-slot": ["blue"],
-                                                }
-                                            },
-                                        }
-                                    ],
-                                    "match": [
-                                        {
-                                            "expression": {
-                                                "expr": f'{{http.reverse_proxy.upstream.hostport}} == "{blue_upstream}"',
-                                                "name": "blue",
-                                            }
-                                        }
-                                    ],
-                                },
-                                {
-                                    "handle": [
-                                        {
-                                            "handler": "headers",
-                                            "response": {
-                                                "set": {
-                                                    "x-zane-dpl-slot": ["green"],
-                                                    "x-zane-dpl-hash": [
-                                                        green_hash or ""
-                                                    ],
-                                                }
-                                            },
-                                        }
-                                    ],
-                                    "match": [
-                                        {
-                                            "expression": {
-                                                "expr": f'{{http.reverse_proxy.upstream.hostport}} == "{green_upstream}"',
-                                                "name": "green",
-                                            }
-                                        }
-                                    ],
-                                },
-                                {
-                                    "handle": [
-                                        {"handler": "copy_response"},
-                                    ]
-                                },
-                            ]
-                        }
-                    ],
                     "flush_interval": -1,
-                    # "health_checks": {
-                    #     "passive": {
-                    #         "fail_duration": thirty_seconds_in_nano_seconds,
-                    #         "unhealthy_latency": one_hour_in_nano_seconds,
-                    #     }
-                    # },
-                    # FIXME : this is to allow for retries of `POST` requests with a body
-                    #         by default only `POST` requests without a body are retried
-                    #         so we sorta need caddy to read the body so that it can
-                    #         be retried safely...
-                    #         IDK why we need this when the retry logic in caddy should retry
-                    #         if the the connection to the upstream has failed, but caddy
-                    #         somehow needs to read the body... WTF ???
-                    #         references:
-                    #           - https://github.com/caddyserver/caddy/issues/6259
-                    #            - caddy.community/t/retries-for-post-requests-with-body/23478/5
-                    #         THIS WILL NOT WORK FOR FILE UPLOAD of more than 512 Ko
-                    "request_buffers": convert_value_to_bytes(512, "KILOBYTES"),
                     "load_balancing": {
-                        "retries": 3,
-                        "selection_policy": {"policy": "round_robin"},
+                        "retries": 2,
                     },
                     "upstreams": [
                         {
-                            "dial": f"{service.network_alias}.blue.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
-                        },
-                        {
-                            "dial": f"{service.network_alias}.green.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
+                            "dial": (
+                                f"{service.network_alias}.{current_deployment.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
+                            )
                         },
                     ],
                 }
@@ -684,7 +605,7 @@ class ZaneProxyClient:
                 if route["@id"]
                 != cls._get_id_for_service_url(current_deployment.service.id, url)
             ]
-            new_url = cls._get_request_for_service(
+            new_url = cls._get_request_for_service_url(
                 url, current_deployment, previous_deployment
             )
             routes.append(new_url)
