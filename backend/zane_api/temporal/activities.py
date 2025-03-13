@@ -1837,7 +1837,7 @@ class DockerSwarmActivities:
                                     full_url,
                                     timeout=min(healthcheck_time_left, 5),
                                 )
-                                if response.status_code == status.HTTP_200_OK:
+                                if status.is_success(response.status_code):
                                     deployment_status = (
                                         DockerDeployment.DeploymentStatus.HEALTHY
                                     )
