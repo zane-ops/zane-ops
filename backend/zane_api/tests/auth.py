@@ -182,3 +182,64 @@ class CSRFViewTests(APITestCase):
         self.assertIsNotNone(
             response.cookies.get("csrftoken"),
         )
+
+
+class UserExistenceAndCreationTests(APITestCase):
+    def test_check_user_existence_no_user(self):
+        response = self.client.get(reverse("check_user_existence"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get("exists"), False)
+
+    def test_check_user_existence_with_user(self):
+        User.objects.create_user(username="mocherif", password="mocherif")
+        response = self.client.get(reverse("check_user_existence"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(response.json().get("exists"), True)
+
+    def test_create_user_success(self):
+        response = self.client.post(
+            reverse("create_user"),
+            data={"username": "mohai", "password": "mohai123"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertTrue(User.objects.filter(username="mohai").exists())
+        self.assertIsNotNone(response.cookies.get("sessionid"))
+
+    def test_create_user_already_exists(self):
+        User.objects.create_user(username="mohai", password="mohai123")
+        response = self.client.post(
+            reverse("create_user"),
+            data={"username": "fred", "password": "fred123"},
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(response.json().get("detail"), "A user already exists.")
+
+    def test_create_user_authentication_failure(self):
+        with self.settings(AUTHENTICATION_BACKENDS=[]):
+            response = self.client.post(
+                reverse("create_user"),
+                data={"username": "mohamedcherif", "password": "mohamedcherif"},
+            )
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+            self.assertEqual(
+                response.json().get("error"), "User created, but authentication failed."
+            )
+
+    def test_create_user_bad_request(self):
+        response = self.client.post(reverse("create_user"), data={})
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_user_minimum_password_length(self):
+        response = self.client.post(
+            reverse("create_user"), data={"username": "mohai", "password": "123"}
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIn("password", response.json())
+
+    def test_create_user_minimum_username_length(self):
+        response = self.client.post(
+            reverse("create_user"),
+            data={"username": "", "password": "validpassword123"},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIn("username", response.json())

@@ -192,7 +192,7 @@ class CheckUserExistenceView(APIView):
         summary="Check if a user exists",
         description="Returns whether a single user already exists in the system.",
     )
-    def get(self, request):
+    def get(self, request) -> Response:
         exists = User.objects.count() == 1
         return Response({"exists": exists}, status=status.HTTP_200_OK)
 
@@ -206,11 +206,9 @@ class CreateUserView(APIView):
         summary="Create a user",
         description="Creates a new user if no user exists.",
     )
-    def post(self, request):
+    def post(self, request) -> Response:
         if User.objects.exists():
-            return Response(
-                {"detail": "A user already exists."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            raise exceptions.PermissionDenied("A user already exists.")
 
         serializer = UserCreationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -220,6 +218,20 @@ class CreateUserView(APIView):
             password=make_password(serializer.validated_data["password"]),
         )
 
-        return Response(
-            {"detail": "User created successfully."}, status=status.HTTP_201_CREATED
+        authenticated_user = authenticate(
+            username=serializer.validated_data["username"],
+            password=serializer.validated_data["password"],
         )
+
+        if authenticated_user:
+
+            login(request, authenticated_user)
+            return Response(
+                {"detail": "User created and logged in successfully."},
+                status=status.HTTP_201_CREATED,
+            )
+        else:
+            return Response(
+                {"error": "User created, but authentication failed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
