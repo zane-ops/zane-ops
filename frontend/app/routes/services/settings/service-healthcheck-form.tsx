@@ -1,6 +1,7 @@
 import {
   AlertCircleIcon,
   CheckIcon,
+  ExternalLinkIcon,
   LoaderIcon,
   Trash2Icon,
   Undo2Icon
@@ -147,7 +148,14 @@ export function ServiceHealthcheckForm({
         <p className="text-gray-400">
           ZaneOps uses this to verify if your app is running correctly for new
           deployments and ensures the deployment is successful before switching.
-          This value will also be used to continously monitor your app.
+          This value will also be used to continously monitor your app.&nbsp;
+          <a
+            className="underline text-link inline-flex gap-1 items-center"
+            target="_blank"
+            href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#health-checks"
+          >
+            documentation <ExternalLinkIcon size={12} />
+          </a>
         </p>
 
         <div className="flex flex-col md:grid md:grid-cols-4 md:items-start gap-2">
