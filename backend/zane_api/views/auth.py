@@ -1,10 +1,11 @@
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -18,9 +19,14 @@ from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import models
+import uuid
 
 from .base import EMPTY_RESPONSE
 from .. import serializers
+
+
+User = get_user_model()
 
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
@@ -168,3 +174,53 @@ class CSRFCookieView(APIView):
 
         if response.is_valid():
             return Response(response.data)
+
+
+class UserExistenceResponseSerializer(serializers.Serializer):
+    exists = serializers.BooleanField()
+
+
+class UserCreationSerializer(serializers.Serializer):
+    username = serializers.CharField(min_length=1, max_length=255)
+    password = serializers.CharField(min_length=6, write_only=True)
+
+
+class CheckUserExistenceView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        responses={200: UserExistenceResponseSerializer},
+        summary="Check if a user exists",
+        description="Returns whether a single user already exists in the system.",
+    )
+    def get(self, request):
+        exists = User.objects.count() == 1
+        return Response({"exists": exists}, status=status.HTTP_200_OK)
+
+
+class CreateUserView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        request=UserCreationSerializer,
+        responses={201: None, 400: None},
+        summary="Create a user",
+        description="Creates a new user if no user exists.",
+    )
+    def post(self, request):
+        if User.objects.exists():
+            return Response(
+                {"detail": "A user already exists."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = UserCreationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        User.objects.create(
+            username=serializer.validated_data["username"],
+            password=make_password(serializer.validated_data["password"]),
+        )
+
+        return Response(
+            {"detail": "User created successfully."}, status=status.HTTP_201_CREATED
+        )
