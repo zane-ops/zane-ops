@@ -247,7 +247,7 @@ class DockerRegistryService(BaseService):
     )
 
     environment: models.ForeignKey["Environment"] = models.ForeignKey(
-        to="Environment", null=False, on_delete=models.CASCADE
+        to="Environment", on_delete=models.CASCADE
     )
 
     def __str__(self):
