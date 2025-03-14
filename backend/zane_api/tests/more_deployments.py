@@ -1292,12 +1292,12 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         self.assertEqual(1, updated_service.configs.count())
 
         updated_config: Config = updated_service.configs.get(id=config_to_update.id)
@@ -1307,7 +1307,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_url_changes(
         self,
     ):
-        p, service = self.create_and_deploy_caddy_docker_service()
+        p, service = self.create_caddy_docker_service()
         url_to_delete, url_to_update = URL.objects.bulk_create(
             [
                 URL(base_path="/unused", domain="old-domain.com", associated_port=8080),
@@ -1504,12 +1504,12 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.ports.count())
 
         new_port = updated_service.ports.filter(host=9000).first()
@@ -1554,12 +1554,12 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         new_deployment: DockerDeployment = updated_service.deployments.first()
         self.assertIsNotNone(new_deployment)
         self.assertEqual(1, new_deployment.urls.count())
