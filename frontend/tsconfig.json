@@ -10,7 +10,7 @@
     "types": ["node", "vite/client"],
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node", // Changed to node for better compatibility
     "jsx": "react-jsx",
     "rootDirs": [".", "./.react-router/types"],
     "baseUrl": ".",
@@ -23,6 +23,10 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "noErrorTruncation": true
+    "noErrorTruncation": true,
+    "isolatedModules": true, // Required for module: "ESNext" or "ES2020"
+    "noFallthroughCasesInSwitch": true, // stricter switch case checking
+    "useDefineForClassFields": true, //  Modernize class fields
+    "forceConsistentCasingInFileNames": true, // enforces consistent file casing
   }
 }
