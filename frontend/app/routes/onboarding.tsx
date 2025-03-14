@@ -10,7 +10,6 @@ import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Welcome to ZaneOps")];
