@@ -1,4 +1,7 @@
 import os
+import logging
+
+from typing import Dict, List, Any, Optional
 
 from django.contrib.auth.models import User
 from django.db.models import TextChoices
@@ -7,10 +10,23 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
-from rest_framework.serializers import *  # type: ignore
+from rest_framework.serializers import (
+    ModelSerializer,
+    CharField,
+    ChoiceField,
+    URLField,
+    BooleanField,
+    IntegerField,
+    FloatField,
+    ListField,
+    DictField,
+)
 
 from . import models
 from .validators import validate_url_path, validate_url_domain
+
+# Get the logger for this module
+logger = logging.getLogger(__name__)
 
 
 class ErrorCode409Enum(TextChoices):
@@ -20,7 +36,7 @@ class ErrorCode409Enum(TextChoices):
 class Error409Serializer(serializers.Serializer):
     code = serializers.ChoiceField(choices=ErrorCode409Enum.choices)
     detail = serializers.CharField()
-    attr = serializers.CharField(allow_null=True)
+    attr = serializers.CharField(allow_null=True, required=False)
 
 
 class ErrorResponse409Serializer(serializers.Serializer):
@@ -31,7 +47,7 @@ class ErrorResponse409Serializer(serializers.Serializer):
 class URLPathField(CharField):
     default_validators = [validate_url_path]
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: str) -> str:
         data = super().to_internal_value(data).strip()
         return os.path.normpath(data)
 
@@ -51,8 +67,8 @@ class UserSerializer(ModelSerializer):
 
 
 class ProjectSerializer(ModelSerializer):
-    healthy_services = serializers.IntegerField(read_only=True)
-    total_services = serializers.IntegerField(read_only=True)
+    healthy_services = IntegerField(read_only=True)
+    total_services = IntegerField(read_only=True)
 
     class Meta:
         model = models.Project
@@ -99,12 +115,12 @@ class ConfigSerializer(ModelSerializer):
 
 
 class URLRedirectModelSerializer(serializers.Serializer):
-    url = serializers.URLField()
-    permanent = serializers.BooleanField(default=False)
+    url = URLField()
+    permanent = BooleanField(default=False)
 
 
 class URLModelSerializer(ModelSerializer):
-    redirect_to = URLRedirectModelSerializer(allow_null=True)
+    redirect_to = URLRedirectModelSerializer(allow_null=True, required=False)
 
     class Meta:
         model = models.URL
@@ -129,7 +145,7 @@ class PortConfigurationSerializer(ModelSerializer):
         model = models.PortConfiguration
         fields = ["id", "host", "forwarded"]
 
-    def to_representation(self, instance: models.PortConfiguration):
+    def to_representation(self, instance: models.PortConfiguration) -> Dict[str, Any]:
         ret = super().to_representation(instance)
         # in the database `host` is stored as null for HTTP hosts, but the user should only
         # see it as `80`
@@ -165,8 +181,8 @@ class DockerDeploymentChangeSerializer(ModelSerializer):
 
 
 class DockerCredentialSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)
+    username = CharField(required=True)
+    password = CharField(required=True)
 
 
 class MemoryLimitSerializer(serializers.Serializer):
@@ -176,19 +192,19 @@ class MemoryLimitSerializer(serializers.Serializer):
         ("MEGABYTES", _("megabytes")),
         ("GIGABYTES", _("gigabytes")),
     )
-    value = serializers.IntegerField(min_value=0, required=True)
-    unit = serializers.ChoiceField(choices=MEMORY_UNITS, required=True)
+    value = IntegerField(min_value=0, required=True)
+    unit = ChoiceField(choices=MEMORY_UNITS, required=True)
 
 
 class ResourceLimitsSerializer(serializers.Serializer):
-    cpus = serializers.FloatField(required=True, allow_null=True)
-    memory = MemoryLimitSerializer(required=True, allow_null=True)
+    cpus = FloatField(required=True, allow_null=True)
+    memory = MemoryLimitSerializer(required=True)
 
 
 class SystemEnvVariablesSerializer(serializers.Serializer):
-    key = serializers.CharField(allow_null=False)
-    value = serializers.CharField(allow_null=False)
-    comment = serializers.CharField(allow_null=False)
+    key = CharField(allow_null=False)
+    value = CharField(allow_null=False)
+    comment = CharField(allow_null=False)
 
 
 class DockerServiceSerializer(ModelSerializer):
@@ -198,14 +214,12 @@ class DockerServiceSerializer(ModelSerializer):
     ports = PortConfigurationSerializer(read_only=True, many=True)
     env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
     healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
-    network_aliases = serializers.ListField(
-        child=serializers.CharField(), read_only=True
-    )
+    network_aliases = ListField(child=CharField(), read_only=True)
     unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
-    credentials = DockerCredentialSerializer(allow_null=True)
-    resource_limits = ResourceLimitsSerializer(allow_null=True)
-    system_env_variables = SystemEnvVariablesSerializer(
-        allow_null=False, many=True, default=[]
+    credentials = DockerCredentialSerializer(allow_null=True, required=False)
+    resource_limits = ResourceLimitsSerializer(allow_null=True, required=False)
+    system_env_variables = ListField(
+        child=SystemEnvVariablesSerializer(), allow_empty=True, default=[]
     )
 
     class Meta:
@@ -235,7 +249,7 @@ class DockerServiceSerializer(ModelSerializer):
 
 
 class DeploymentDockerSerializer(DockerServiceSerializer):
-    image = serializers.CharField(allow_null=False)
+    image = CharField(allow_null=False)
 
 
 class DockerServiceDeploymentURLSerializer(ModelSerializer):
@@ -245,16 +259,14 @@ class DockerServiceDeploymentURLSerializer(ModelSerializer):
 
 
 class DockerServiceDeploymentSerializer(ModelSerializer):
-    network_aliases = serializers.ListField(
-        child=serializers.CharField(), read_only=True
-    )
+    network_aliases = ListField(child=CharField(), read_only=True)
     service_snapshot = DeploymentDockerSerializer()
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
     changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
     urls = DockerServiceDeploymentURLSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
-    def get_redeploy_hash(self, obj: models.DockerDeployment):
+    def get_redeploy_hash(self, obj: models.DockerDeployment) -> Optional[str]:
         return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
@@ -279,11 +291,11 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
 
 
 class HttpLogSerializer(ModelSerializer):
-    request_headers = serializers.DictField(
-        child=serializers.ListField(child=serializers.CharField())
+    request_headers = DictField(
+        child=ListField(child=CharField())
     )
-    response_headers = serializers.DictField(
-        child=serializers.ListField(child=serializers.CharField())
+    response_headers = DictField(
+        child=ListField(child=CharField())
     )
 
     class Meta:
