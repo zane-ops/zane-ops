@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
@@ -12,12 +13,23 @@ from temporalio.client import (
     ScheduleSpec,
     ScheduleUpdateInput,
     ScheduleUpdate,
-    ScheduleAlreadyRunningError,
 )
 from temporalio.service import RPCError
 
+# Get the logger for this module
+logger = logging.getLogger(__name__)
 
-async def update_schedule_simple(input: ScheduleUpdateInput):
+
+async def update_schedule_simple(input: ScheduleUpdateInput) -> ScheduleUpdate:
+    """
+    Updates the schedule with a simple cron expression.
+
+    Args:
+        input: ScheduleUpdateInput containing the existing schedule.
+
+    Returns:
+        ScheduleUpdate object with the updated schedule.
+    """
     schedule = input.description.schedule
 
     # Update the schedule
@@ -32,7 +44,10 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
     return ScheduleUpdate(schedule=new_schedule)
 
 
-async def create_system_cleanup_schedule():
+async def create_system_cleanup_schedule() -> None:
+    """
+    Creates or updates a schedule for system cleanup using Temporal.
+    """
     client = await get_temporalio_client()
 
     schedule_id = "hourly-system-cleanup"
@@ -49,24 +64,47 @@ async def create_system_cleanup_schedule():
 
     try:
         await handle.update(update_schedule_simple, rpc_timeout=timedelta(seconds=5))
+        logger.info(f"Successfully updated system cleanup schedule: {schedule_id}")
     except RPCError:
         # probably because the schedule doesn't exist
+        logger.warning(
+            f"System cleanup schedule {schedule_id} does not exist. Attempting to create it."
+        )
         try:
             await client.create_schedule(
                 schedule_id,
                 schedule,
                 rpc_timeout=timedelta(seconds=5),
             )
-        except ScheduleAlreadyRunningError:
-            # because the schedule already exists and is running, we can ignore it
-            pass
-    except ScheduleAlreadyRunningError:
-        # because the schedule already exists  and is running, we can ignore it
-        pass
+            logger.info(f"Successfully created system cleanup schedule: {schedule_id}")
+        except Exception as e:
+            logger.exception(
+                f"Failed to create system cleanup schedule {schedule_id}: {e}"
+            )
+    except Exception as e:
+        logger.exception(
+            f"Failed to update system cleanup schedule {schedule_id}: {e}"
+        )
 
 
 class Command(BaseCommand):
     help = "Create system cleanup schedule"
 
-    def handle(self, *args, **options):
-        asyncio.run(create_system_cleanup_schedule())
+    def handle(self, *args, **options) -> None:
+        """
+        Handles the command execution by running the asynchronous schedule creation function.
+        """
+        try:
+            asyncio.run(create_system_cleanup_schedule())
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Successfully created/updated system cleanup schedule."
+                )
+            )
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(
+                    f"Failed to create/update system cleanup schedule: {e}"
+                )
+            )
+            logger.error(f"Failed to create/update system cleanup schedule: {e}")
