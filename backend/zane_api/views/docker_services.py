@@ -1069,7 +1069,7 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         deployment_hash = self.kwargs["deployment_hash"]
-        env_slug = self.kwargs["env_slug"]
+        env_slug = self.kwargs.get("env_slug")
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
