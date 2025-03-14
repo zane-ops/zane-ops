@@ -101,3 +101,4 @@ class Command(BaseCommand):
                 self.style.ERROR(f"Failed to create/update log cleanup schedule: {e}")
             )
             logger.error(f"Failed to create/update log cleanup schedule: {e}")
+ 
