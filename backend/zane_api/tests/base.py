@@ -1224,7 +1224,11 @@ class FakeDockerClient:
             key, value = label.split("=")
             labels[key] = value
 
-        return [net for net in self.network_map.values() if net.labels == labels]
+        return [
+            net
+            for net in self.network_map.values()
+            if labels.items() <= net.labels.items()
+        ]
 
     def network_remove(self, name: str):
         network = self.network_map.pop(name)

@@ -2,7 +2,8 @@ from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Project, Environment
+from ..models import Project, DockerDeployment
+from ..temporal.activities import get_env_network_resource_name
 
 
 class EnvironmentTests(AuthAPITestCase):
@@ -48,3 +49,15 @@ class EnvironmentTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         self.assertEqual(0, len(self.fake_docker_client.get_project_networks(project)))
+
+    async def test_deploy_service_to_production_env_by_default(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        deployment: DockerDeployment = await service.deployments.afirst()  # type: ignore
+        service = self.fake_docker_client.get_deployment_service(deployment=deployment)
+        service_networks = {net["Target"]: net["Aliases"] for net in service.networks}  # type: ignore
+
+        production_env = await p.aproduction_env
+        self.assertTrue(
+            get_env_network_resource_name(production_env.id, p.id) in service_networks
+        )

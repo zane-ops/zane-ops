@@ -28,6 +28,7 @@ with workflow.unsafe.imports_passed_through():
         HealthCheck,
         URL,
         DockerDeploymentChange,
+        Environment,
     )
     from docker.models.networks import Network
     from docker.models.services import Service
@@ -786,7 +787,7 @@ class DockerSwarmActivities:
             ),
             scope="swarm",
             driver="overlay",
-            labels=get_resource_labels(project.id),
+            labels=get_resource_labels(project.id, is_production="True"),
             attachable=True,
         )
         return network.id  # type:ignore
@@ -1540,6 +1541,7 @@ class DockerSwarmActivities:
             envs.extend(
                 [
                     "ZANE=true",
+                    # "ZANE_ENVIRONMENT=true",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                     f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
                     "ZANE_DEPLOYMENT_TYPE=docker",
@@ -1642,6 +1644,9 @@ class DockerSwarmActivities:
                 deployment,
                 f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
+            production_env = await Environment.objects.aget(
+                name="production", project_id=service.project_id
+            )
             self.docker_client.services.create(
                 image=service.image,
                 command=service.command,
@@ -1661,8 +1666,10 @@ class DockerSwarmActivities:
                 ),
                 networks=[
                     NetworkAttachmentConfig(
-                        target=get_network_resource_name(service.project_id),
-                        aliases=[alias for alias in service.network_aliases],
+                        target=get_env_network_resource_name(
+                            production_env.id, service.project_id
+                        ),
+                        aliases=service.network_aliases,
                     ),
                     NetworkAttachmentConfig(
                         target="zane",
