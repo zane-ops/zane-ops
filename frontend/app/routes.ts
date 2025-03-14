@@ -3,7 +3,7 @@ import {
   index,
   layout,
   prefix,
-  route,
+  route
 } from "@react-router/dev/routes";
 
 export default [
@@ -39,7 +39,7 @@ export default [
     ...prefix("project/:projectSlug", [
       route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-service-list.tsx"),
-        route("settings", "./routes/projects/project-settings.tsx"),
+        route("settings", "./routes/projects/project-settings.tsx")
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(
@@ -56,7 +56,7 @@ export default [
           ),
           route("settings", "./routes/services/settings/services-settings.tsx"),
           route("http-logs", "./routes/services/service-http-logs.tsx"),
-          route("metrics", "./routes/services/service-metrics.tsx"),
+          route("metrics", "./routes/services/service-metrics.tsx")
         ]),
 
         route(
@@ -71,10 +71,10 @@ export default [
               "redeploy",
               "./routes/deployments/redeploy-old-deployment.tsx"
             ),
-            route("cancel", "./routes/deployments/cancel-deployment.tsx"),
+            route("cancel", "./routes/deployments/cancel-deployment.tsx")
           ]
-        ),
-      ]),
-    ]),
-  ]),
+        )
+      ])
+    ])
+  ])
 ] satisfies RouteConfig;
