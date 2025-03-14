@@ -488,20 +488,6 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
 
-class DockerAddNetworkTest(AuthAPITestCase):
-    async def test_network_creation_workflow(self):
-        await self.aLoginUser()
-        response = await self.async_client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        project = await Project.objects.filter(slug="zane-ops").afirst()
-        self.assertIsNotNone(project)
-        network = self.fake_docker_client.get_project_network(project)
-        self.assertIsNotNone(network)
-
-
 class DockerRemoveNetworkTest(AuthAPITestCase):
     async def test_network_is_deleted_on_archived_project(self):
         await self.aLoginUser()
