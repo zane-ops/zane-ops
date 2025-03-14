@@ -44,19 +44,29 @@ export function meta() {
 }
 
 const ONE_HOUR = 1000 * 60 * 60;
-export const queryClient = new QueryClient({
+
+// Create a single query client instance
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       placeholderData: keepPreviousData,
-      gcTime: ONE_HOUR,
-      retry(failureCount, error) {
-        // error responses are valid responses that react router can handle, so we don't want to retry them
-        return !(error instanceof Response) && failureCount < 3;
-      }
-    }
-  }
+      staleTime: ONE_HOUR / 2, // Consider data stale after 30 minutes
+      cacheTime: ONE_HOUR, // Keep in cache for one hour
+      retry: (failureCount, error) => {
+        // Only retry for network errors, not for HTTP error responses
+        return (
+          !(error instanceof Response && error.status >= 400 && error.status < 600) &&
+          failureCount < 3
+        );
+      },
+    },
+    mutations: {
+      retry: false, // Avoid retrying mutations automatically
+    },
+  },
 });
+
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -94,10 +104,10 @@ export function HydrateFallback() {
 }
 
 export function ErrorBoundary() {
+  const error = useRouteError();
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
-  const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "Oops!" : "Error";
@@ -105,10 +115,15 @@ export function ErrorBoundary() {
       error.status === 404
         ? error.data ?? "Looks like you're lost 😛"
         : error.statusText || details;
-  } else if (error && error instanceof Error) {
+  } else if (error instanceof Error) {
     details = error.message;
     stack = error.stack;
   }
+
+  // Log the error to the console for server-side debugging.
+  React.useEffect(() => {
+    console.error("Unhandled Error:", error);
+  }, [error]);
 
   return (
     <div className="flex flex-col gap-5 h-screen items-center justify-center px-5">
