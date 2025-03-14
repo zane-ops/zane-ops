@@ -17,6 +17,7 @@ from ..models import (
     URL,
     DockerDeploymentChange,
     Config,
+    ArchivedEnvironment,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -307,9 +308,32 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         archived_project: ArchivedProject = ArchivedProject.objects.filter(
             slug="gh-clone"
         ).first()
+
         self.assertIsNotNone(archived_project)
         self.assertNotEquals("", archived_project.original_id)
         self.assertEqual("Github clone", archived_project.description)
+
+    def test_archive_project_should_include_archived_envs(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "gh-clone"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        archived_project: ArchivedProject = ArchivedProject.objects.filter(
+            slug="gh-clone"
+        ).first()
+        archived_envs = ArchivedEnvironment.objects.filter(
+            project=archived_project
+        ).all()
+
+        self.assertIsNotNone(archived_project)
+        self.assertGreater(len(archived_envs), 0)
 
     def test_non_existent(self):
         self.loginUser()

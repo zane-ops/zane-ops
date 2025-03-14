@@ -1017,6 +1017,9 @@ class Environment(TimestampedModel):
     )
     immutable = models.BooleanField(default=False)
 
+    def __str__(self):
+        return f"Environment(project={self.project.slug}, name={self.name})"
+
     @property
     def is_production(self):
         return self.name == "production"  # production is a reserved name
