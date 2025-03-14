@@ -26,6 +26,11 @@ current = {
             "associated_port": 80,
         }
     ],
+    "environment": {
+        "id": "project_env_hTqKUiBf6A27HXw",
+        "is_preview": False,
+        "name": "production",
+    },
     "volumes": [],
     "deploy_token": "wSbSbaCvt28jaYswwIAy",
     "ports": [],
@@ -93,6 +98,11 @@ target = {
     "healthcheck": None,
     "project_id": "prj_v6nBYFktpca",
     "credentials": None,
+    "environment": {
+        "id": "project_env_hTqKUiBf6A27HXw",
+        "is_preview": False,
+        "name": "production",
+    },
     "healthcheck": {
         "id": "htc_MtmB4YDWF3m",
         "type": "PATH",
