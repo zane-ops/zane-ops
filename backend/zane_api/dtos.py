@@ -1,6 +1,10 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Union, ClassVar
+import logging
+
+# Get the logger for this module
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -12,7 +16,8 @@ class VolumeDto:
     id: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "VolumeDto":
+        """Creates a VolumeDto from a dictionary."""
         return cls(**data)
 
 
@@ -26,7 +31,8 @@ class ConfigDto:
     id: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "ConfigDto":
+        """Creates a ConfigDto from a dictionary."""
         return cls(**data)
 
 
@@ -46,7 +52,8 @@ class URLDto:
     redirect_to: Optional[URLRedirectToDto] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "URLDto":
+        """Creates a URLDto from a dictionary."""
         return cls(**data)
 
 
@@ -57,7 +64,8 @@ class EnvVariableDto:
     id: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "EnvVariableDto":
+        """Creates an EnvVariableDto from a dictionary."""
         return cls(**data)
 
 
@@ -68,7 +76,8 @@ class PortConfigurationDto:
     id: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "PortConfigurationDto":
+        """Creates a PortConfigurationDto from a dictionary."""
         return cls(**data)
 
 
@@ -82,7 +91,8 @@ class HealthCheckDto:
     id: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "HealthCheckDto":
+        """Creates a HealthCheckDto from a dictionary."""
         return cls(**data)
 
 
@@ -92,11 +102,13 @@ class DockerCredentialsDto:
     password: str
 
     @classmethod
-    def from_dict(cls, data: Dict[str, str]):
+    def from_dict(cls, data: Dict[str, str]) -> "DockerCredentialsDto":
+        """Creates a DockerCredentialsDto from a dictionary."""
         return cls(**data)
 
-    def to_dict(self):
-        return dict(username=self.username, password=self.password)
+    def to_dict(self) -> Dict[str, str]:
+        """Converts the DockerCredentialsDto to a dictionary."""
+        return {"username": self.username, "password": self.password}
 
 
 @dataclass
@@ -111,26 +123,23 @@ class ResourceLimitsDto:
     memory: Optional[MemoryLimitDto] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, float | dict]):
+    def from_dict(cls, data: Dict[str, Union[float, Dict[str, Any]]]) -> "ResourceLimitsDto":
+        """Creates a ResourceLimitsDto from a dictionary."""
         memory_dict = data.get("memory")
-        memory = MemoryLimitDto(**memory_dict) if memory_dict is not None else None  # type: ignore
+        memory = MemoryLimitDto(**memory_dict) if memory_dict else None
         return cls(
-            cpus=data.get("cpus"),  # type: ignore
+            cpus=data.get("cpus"),
             memory=memory,
         )
 
-    def to_dict(self):
-        return dict(
-            cpu=self.cpus,
-            memory=(
-                dict(
-                    unit=self.memory.unit,
-                    value=self.memory.value,
-                )
-                if self.memory is not None
-                else None
-            ),
+    def to_dict(self) -> Dict[str, Any]:
+        """Converts the ResourceLimitsDto to a dictionary."""
+        memory_dict = (
+            {"unit": self.memory.unit, "value": self.memory.value}
+            if self.memory
+            else None
         )
+        return {"cpus": self.cpus, "memory": memory_dict}
 
 
 @dataclass
@@ -153,118 +162,114 @@ class DockerServiceSnapshot:
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
-        return list(
-            filter(
-                lambda p: p.host is None or p.host in [80, 443],
-                self.ports,
-            )
-        )
+        """Returns a list of HTTP ports."""
+        return [
+            p for p in self.ports if p.host is None or p.host in [80, 443]
+        ]
 
     @property
     def urls_with_associated_ports(self) -> List[URLDto]:
-        return list(
-            filter(
-                lambda u: u.associated_port is not None,
-                self.urls,
-            )
-        )
+        """Returns a list of URLs with associated ports."""
+        return [u for u in self.urls if u.associated_port is not None]
 
     @property
     def non_read_only_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.mode != "READ_ONLY", self.volumes))
+        """Returns a list of volumes that are not read-only."""
+        return [v for v in self.volumes if v.mode != "READ_ONLY"]
 
     @property
     def host_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.host_path is not None, self.volumes))
+        """Returns a list of volumes with host paths."""
+        return [v for v in self.volumes if v.host_path is not None]
 
     @property
     def docker_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.host_path is None, self.volumes))
+        """Returns a list of volumes without host paths (Docker volumes)."""
+        return [v for v in self.volumes if v.host_path is None]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
-        volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
-        configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
-        urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
-        ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
-        env_variables = [
-            EnvVariableDto.from_dict(item) for item in data.get("env_variables", [])
-        ]
-        healthcheck = (
-            HealthCheckDto.from_dict(data["healthcheck"])
-            if data.get("healthcheck") is not None
-            else None
-        )
-        credentials = (
-            DockerCredentialsDto.from_dict(data["credentials"])
-            if data.get("credentials") is not None
-            else None
-        )
-        resource_limits = (
-            ResourceLimitsDto.from_dict(data["resource_limits"])
-            if data.get("resource_limits") is not None
-            else None
-        )
+        """Creates a DockerServiceSnapshot from a dictionary."""
+        try:
+            volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
+            configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
+            urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
+            ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
+            env_variables = [
+                EnvVariableDto.from_dict(item) for item in data.get("env_variables", [])
+            ]
+            healthcheck = (
+                HealthCheckDto.from_dict(data["healthcheck"])
+                if data.get("healthcheck")
+                else None
+            )
+            credentials = (
+                DockerCredentialsDto.from_dict(data["credentials"])
+                if data.get("credentials")
+                else None
+            )
+            resource_limits = (
+                ResourceLimitsDto.from_dict(data["resource_limits"])
+                if data.get("resource_limits")
+                else None
+            )
 
-        return cls(
-            image=data["image"],
-            urls=urls,
-            volumes=volumes,
-            configs=configs,
-            command=data.get("command"),
-            ports=ports,
-            env_variables=env_variables,
-            healthcheck=healthcheck,
-            credentials=credentials,
-            resource_limits=resource_limits,
-            id=data["id"],
-            project_id=data["project_id"],
-            network_aliases=data["network_aliases"],
-            slug=data["slug"],
-            network_alias=data["network_alias"],
-        )
+            return cls(
+                image=data["image"],
+                urls=urls,
+                volumes=volumes,
+                configs=configs,
+                command=data.get("command"),
+                ports=ports,
+                env_variables=env_variables,
+                healthcheck=healthcheck,
+                credentials=credentials,
+                resource_limits=resource_limits,
+                id=data["id"],
+                project_id=data["project_id"],
+                network_aliases=data["network_aliases"],
+                slug=data["slug"],
+                network_alias=data["network_alias"],
+            )
+        except KeyError as e:
+            logger.error(f"Missing key in data: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error creating DockerServiceSnapshot from dict: {e}")
+            raise
 
     def has_duplicate_volumes(self) -> bool:
-        # Create dictionaries to keep track of seen host_paths and container_paths
-        host_path_counts = defaultdict(int)
-        container_path_counts = defaultdict(int)
+        """Checks if there are duplicate volumes based on host_path or container_path."""
+        host_path_counts: Dict[str, int] = defaultdict(int)
+        container_path_counts: Dict[str, int] = defaultdict(int)
 
-        # Iterate through the volumes and count occurrences of host_path and container_path
         for volume in self.volumes:
-            if volume.host_path is not None:
+            if volume.host_path:
                 host_path_counts[volume.host_path] += 1
-            if volume.container_path is not None:
+            if volume.container_path:
                 container_path_counts[volume.container_path] += 1
 
-        # Check if any host_path or container_path appears more than once
         has_duplicate_host_path = any(count > 1 for count in host_path_counts.values())
-        has_duplicate_container_path = any(
-            count > 1 for count in container_path_counts.values()
-        )
+        has_duplicate_container_path = any(count > 1 for count in container_path_counts.values())
 
-        # Return True if there are duplicates in either host_path or container_path
         return has_duplicate_host_path or has_duplicate_container_path
 
     def has_duplicate_configs(self) -> bool:
-        # Create dictionaries to keep track of seen host_paths and container_paths
-        mount_path_counts = defaultdict(int)
+        """Checks if there are duplicate configs based on mount_path."""
+        mount_path_counts: Dict[str, int] = defaultdict(int)
 
-        # Iterate through the volumes and count occurrences of host_path and container_path
         for config in self.configs:
-            if config.mount_path is not None:
+            if config.mount_path:
                 mount_path_counts[config.mount_path] += 1
 
-        # Check if any host_path or container_path appears more than once
-        has_duplicate_mount_paths = any(
-            count > 1 for count in mount_path_counts.values()
-        )
+        has_duplicate_mount_paths = any(count > 1 for count in mount_path_counts.values())
 
-        # Return True if there are duplicates in either host_path or container_path
         return has_duplicate_mount_paths
 
     @property
     def duplicate_envs(self) -> List[str]:
-        env_values = defaultdict(int)
+        """Returns a list of duplicate environment variable keys."""
+        env_values: Dict[str, int] = defaultdict(int)
 
         for env in self.env_variables:
             env_values[env.key] += 1
@@ -281,19 +286,20 @@ class DeploymentChangeDto:
     new_value: Optional[Any] = None
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: Dict[str, Any]) -> "DeploymentChangeDto":
+        """Creates a DeploymentChangeDto from a dictionary."""
         return cls(**data)
 
 
 class RuntimeLogLevel:
-    ERROR = "ERROR"
-    INFO = "INFO"
+    ERROR: ClassVar[str] = "ERROR"
+    INFO: ClassVar[str] = "INFO"
 
 
 class RuntimeLogSource:
-    SYSTEM = "SYSTEM"
-    PROXY = "PROXY"
-    SERVICE = "SERVICE"
+    SYSTEM: ClassVar[str] = "SYSTEM"
+    PROXY: ClassVar[str] = "PROXY"
+    SERVICE: ClassVar[str] = "SERVICE"
 
 
 @dataclass
@@ -309,5 +315,6 @@ class RuntimeLogDto:
     content_text: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "RuntimeLogDto":
+        """Creates a RuntimeLogDto from a dictionary."""
         return cls(**data)
