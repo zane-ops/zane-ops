@@ -78,14 +78,14 @@ export default function InitialRegistration({
           <h1 className="md:text-3xl text-4xl font-semibold">
             Welcome to ZaneOps
           </h1>
-          <p className="text-sm">
+          <p className="text-sm text-grey">
             Your all-in-one platform for deploying your apps with ✨ zen ✨.
           </p>
         </div>
 
         <Form
           method="POST"
-          className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
+          className="p-7 my-2 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
