@@ -23,9 +23,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     userQueries.checkUserExistence
   );
 
-  // if (userExistQuery.data?.exists) {
-  //   throw redirect("/login");
-  // }
+  if (userExistQuery.data?.exists) {
+    throw redirect("/login");
+  }
   return;
 }
 
@@ -124,6 +124,7 @@ export default function InitialRegistration({
           ref={formRef}
           className="p-7 my-2 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
+          <p className="my-2 text-lg text-grey">Let's setup your first user</p>
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
               <Alert variant="destructive">
