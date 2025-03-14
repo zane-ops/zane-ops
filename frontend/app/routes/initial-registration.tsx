@@ -71,16 +71,15 @@ export default function InitialRegistration({
 
   return (
     <>
-      <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
-        <Logo className="md:hidden" />
-        <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
-          <img
-            className="md:w-[180px]  md:fit h-[110px] w-[110px]"
-            src={whiteLogo}
-            alt="logo"
-          />
-          <p className="text-white px-5 ">
-            your all-in-one platform for deploying your apps with ✨ zen ✨.
+      <main className="h-[100vh] flex md:flex-col flex-col  justify-center items-center">
+        <Logo />
+
+        <div className="flex flex-col items-center">
+          <h1 className="md:text-3xl text-4xl font-semibold">
+            Welcome to ZaneOps
+          </h1>
+          <p className="text-sm">
+            Your all-in-one platform for deploying your apps with ✨ zen ✨.
           </p>
         </div>
 
@@ -88,9 +87,6 @@ export default function InitialRegistration({
           method="POST"
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
-          <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
-            Create a user
-          </h1>
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
               <Alert variant="destructive">
@@ -147,7 +143,7 @@ export default function InitialRegistration({
                   <LoaderIcon className="animate-spin" size={15} />
                 </>
               ) : (
-                "Create"
+                "Create your first user"
               )}
             </SubmitButton>
           </div>
