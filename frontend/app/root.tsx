@@ -13,7 +13,6 @@ import {
   Scripts,
   ScrollRestoration,
   isRouteErrorResponse,
-  redirect,
   useRouteError
 } from "react-router";
 import { Loader } from "~/components/loader";
@@ -23,7 +22,6 @@ import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
-import { userQueries } from "./lib/queries";
 
 export function links() {
   return [
