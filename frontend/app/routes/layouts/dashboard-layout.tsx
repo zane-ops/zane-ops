@@ -61,8 +61,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
 
-  console.log({ exist: userExistQuery.data });
-
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
   }
