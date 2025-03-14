@@ -247,7 +247,7 @@ class DockerRegistryService(BaseService):
     )
 
     environment: models.ForeignKey["Environment"] = models.ForeignKey(
-        to="Environment", on_delete=models.CASCADE
+        to="Environment", on_delete=models.CASCADE, related_name="services"
     )
 
     def __str__(self):
@@ -1011,6 +1011,7 @@ class HttpLog(Log):
 
 class Environment(TimestampedModel):
     ID_PREFIX = "project_env_"
+    services: Manager[DockerRegistryService]
     id = ShortUUIDField(
         length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
     )
