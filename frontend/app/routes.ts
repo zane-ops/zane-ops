@@ -6,7 +6,7 @@ import {
   route
 } from "@react-router/dev/routes";
 
-export default [
+const routeConfig: RouteConfig = [
   route("login", "./routes/login.tsx"),
   route("logout", "./routes/logout.tsx"),
   route("onboarding", "./routes/onboarding.tsx"),
@@ -77,4 +77,6 @@ export default [
       ])
     ])
   ])
-] satisfies RouteConfig;
+];
+
+export default routeConfig;
