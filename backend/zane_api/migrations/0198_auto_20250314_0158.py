@@ -20,7 +20,7 @@ def remove_all_environments(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("zane_api", "0198_alter_environment_project"),
+        ("zane_api", "0197_environment"),
     ]
 
     operations = [

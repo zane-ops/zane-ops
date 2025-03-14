@@ -43,6 +43,10 @@ class Project(TimestampedModel):
     description = models.TextField(blank=True, null=True)
 
     @property
+    def production_env(self):
+        return self.environments.get(name="production")
+
+    @property
     def create_task_id(self):
         return f"create-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
 
@@ -998,6 +1002,11 @@ class HttpLog(Log):
 
 
 class Environment(TimestampedModel):
+    ID_PREFIX = "project_env_"
+    id = ShortUUIDField(
+        length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
+    )
+
     name = models.SlugField(max_length=255)
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="environments"
@@ -1009,6 +1018,7 @@ class Environment(TimestampedModel):
         return self.name == "production"  # production is a reserved name
 
     class Meta:
+        indexes = [models.Index(fields=["name"])]
         unique_together = ["name", "project"]
         constraints = [
             models.UniqueConstraint(
