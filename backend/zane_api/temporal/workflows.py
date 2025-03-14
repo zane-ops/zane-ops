@@ -25,6 +25,7 @@ with workflow.unsafe.imports_passed_through():
         ProjectDetails,
         ArchivedProjectDetails,
         DockerDeploymentDetails,
+        EnvironmentDetails,
     )
     from django.conf import settings
     from .schedules import (
@@ -715,7 +716,42 @@ class SystemCleanupWorkflow:
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
-            pass
+
+
+@workflow.defn(name="create-env-network")
+class CreateEnvNetworkWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, environment: EnvironmentDetails):
+        print(f"Running workflow CreateEnvNetworkWorkflow(payload={environment})")
+        return await workflow.execute_activity_method(
+            DockerSwarmActivities.create_environment_network,
+            arg=environment,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+
+@workflow.defn(name="archive-env")
+class ArchiveEnvWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, environment: EnvironmentDetails):
+        print(f"Running workflow CreateEnvNetworkWorkflow(payload={environment})")
+        return await workflow.execute_activity_method(
+            DockerSwarmActivities.delete_environment_network,
+            arg=environment,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
 
 
 def get_workflows_and_activities():
@@ -736,11 +772,15 @@ def get_workflows_and_activities():
             CleanupAppLogsWorkflow,
             SystemCleanupWorkflow,
             GetDockerDeploymentStatsWorkflow,
+            CreateEnvNetworkWorkflow,
+            ArchiveEnvWorkflow,
         ],
         activities=[
             metrics_activities.get_deployment_stats,
             metrics_activities.save_deployment_stats,
             swarm_activities.toggle_cancelling_status,
+            swarm_activities.create_environment_network,
+            swarm_activities.delete_environment_network,
             swarm_activities.save_cancelled_deployment,
             swarm_activities.create_deployment_stats_schedule,
             monitor_activities.monitor_close_faulty_db_connections,

@@ -37,6 +37,7 @@ from .serializers import (
     DockerServiceCardSerializer,
     GitServiceCardSerializer,
     ServiceListParamSerializer,
+    CreateEnvironmentRequestSerializer,
 )
 from ..models import (
     Project,
@@ -50,11 +51,13 @@ from ..models import (
     DockerDeploymentChange,
     GitDeployment,
     Config,
+    Environment,
 )
 from ..serializers import (
     ProjectSerializer,
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
+    EnvironmentSerializer,
 )
 from ..temporal import (
     CreateProjectResourcesWorkflow,
@@ -62,6 +65,9 @@ from ..temporal import (
     start_workflow,
     RemoveProjectResourcesWorkflow,
     ArchivedProjectDetails,
+    EnvironmentDetails,
+    CreateEnvNetworkWorkflow,
+    ArchiveEnvWorkflow,
 )
 
 
@@ -298,8 +304,122 @@ class ProjectDetailsView(APIView):
 
 
 class ProjectCreateEnviromentView(APIView):
+    serializer_class = EnvironmentSerializer
+
+    @extend_schema(
+        request=CreateEnvironmentRequestSerializer,
+        responses={201: EnvironmentSerializer},
+        operation_id="createNewEnvironment",
+        summary="Create new environment",
+        description="Create empty environment with no services in it",
+    )
+    @transaction.atomic()
     def post(self, request: Request, slug: str) -> Response:
-        return Response()
+        try:
+            project = Project.objects.get(slug=slug.lower())
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+
+        form = CreateEnvironmentRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        name = form.data["name"].lower()  # type: ignore
+        try:
+            env = project.environments.create(name=name)
+        except IntegrityError:
+            raise ResourceConflict(
+                f"An environment with the name `{name}` already exists"
+            )
+        else:
+            serializer = EnvironmentSerializer(env)
+            transaction.on_commit(
+                lambda: start_workflow(
+                    CreateEnvNetworkWorkflow.run,
+                    EnvironmentDetails(id=env.id, project_id=project.id, name=env.name),
+                    id=f"create-env-{project.id}-{env.id}",
+                )
+            )
+            return Response(status=status.HTTP_201_CREATED, data=serializer.data)
+
+
+class ProjectEnvironmentDetailsView(APIView):
+    serializer_class = EnvironmentSerializer
+
+    @extend_schema(
+        request=CreateEnvironmentRequestSerializer,
+        operation_id="updateEnvironment",
+        summary="Update an environment",
+    )
+    def patch(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+        if environment.name == "production":
+            raise exceptions.PermissionDenied(
+                "Cannot rename the production environment."
+            )
+
+        form = CreateEnvironmentRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        name = form.data["name"].lower()  # type: ignore
+
+        environment.name = name
+        environment.save()
+        serializer = EnvironmentSerializer(environment)
+        return Response(data=serializer.data)
+
+    @extend_schema(
+        responses={204: None},
+        operation_id="archiveEnvironment",
+        summary="Archive environment",
+        description="Archive environment with the services inside of it",
+    )
+    @transaction.atomic()
+    def delete(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+
+        if environment.name == "production":
+            raise exceptions.PermissionDenied(
+                "Cannot delete the production environment"
+            )
+
+        details = EnvironmentDetails(
+            id=environment.id, project_id=project.id, name=environment.name
+        )
+        transaction.on_commit(
+            lambda: start_workflow(
+                ArchiveEnvWorkflow.run,
+                details,
+                id=f"create-env-{project.id}-{details.id}",
+            )
+        )
+
+        environment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectServiceListView(APIView):

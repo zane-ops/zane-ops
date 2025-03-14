@@ -50,13 +50,21 @@ class UserSerializer(ModelSerializer):
         fields = ["username", "first_name", "last_name"]
 
 
+class EnvironmentSerializer(ModelSerializer):
+    class Meta:
+        model = models.Environment
+        fields = ["id", "is_preview", "name"]
+
+
 class ProjectSerializer(ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
+    environments = EnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Project
         fields = [
+            "environments",
             "description",
             "id",
             "slug",

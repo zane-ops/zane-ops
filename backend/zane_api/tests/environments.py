@@ -63,6 +63,190 @@ class EnvironmentTests(AuthAPITestCase):
         )
 
 
+class EnvironmentViewTests(AuthAPITestCase):
+    def test_create_empty_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        staging_env = project.environments.filter(name="staging").first()
+        self.assertIsNotNone(staging_env)
+
+    def test_create_already_existing_env_should_cause_conflict_error(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "production"},
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    async def test_create_new_environment_should_also_create_network(self):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = await Project.objects.aget(slug="zane-ops")
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        staging_env = await project.environments.aget(name="staging")
+
+        network = self.fake_docker_client.get_env_network(staging_env)
+        self.assertIsNotNone(network)
+
+    def test_archive_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging"},
+        )
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "staging"},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        staging_env = project.environments.filter(name="staging").first()
+        self.assertIsNone(staging_env)
+
+    def test_rename_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging-oops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env = project.environments.get(name="staging-oops")
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "staging-oops"},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        staging_env.refresh_from_db()
+        self.assertEqual("staging", staging_env.name)
+
+    def test_cannot_rename_production_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        production_env = project.environments.filter(name="production").first()
+        self.assertIsNotNone(production_env)
+
+    def test_cannot_archive_production_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        production_env = project.environments.filter(name="production").first()
+        self.assertIsNotNone(production_env)
+
+    async def test_archiving_environment_also_delete_network(self):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = await Project.objects.aget(slug="zane-ops")
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging"},
+        )
+        staging_env = await project.environments.aget(name="staging")
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "staging"},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        network = self.fake_docker_client.get_env_network(staging_env)
+        self.assertIsNone(network)
+
+
 class ServiceEnvironmentViewTests(AuthAPITestCase):
     def test_create_service_should_put_service_in_production_by_default(self):
         p, service = self.create_and_deploy_redis_docker_service()

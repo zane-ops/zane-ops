@@ -72,6 +72,7 @@ from ..dtos import (
 from .shared import (
     DeploymentCreateConfigsResult,
     ProjectDetails,
+    EnvironmentDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
     SimpleDeploymentDetails,
@@ -791,6 +792,30 @@ class DockerSwarmActivities:
             attachable=True,
         )
         return network.id  # type:ignore
+
+    @activity.defn
+    async def create_environment_network(self, payload: EnvironmentDetails) -> str:
+        network = self.docker_client.networks.create(
+            name=get_env_network_resource_name(
+                payload.id, project_id=payload.project_id
+            ),
+            scope="swarm",
+            driver="overlay",
+            labels=get_resource_labels(payload.project_id),
+            attachable=True,
+        )
+        return network.id  # type:ignore
+
+    @activity.defn
+    async def delete_environment_network(self, payload: EnvironmentDetails):
+        try:
+            network = self.docker_client.networks.get(
+                get_env_network_resource_name(payload.id, project_id=payload.project_id)
+            )
+        except docker.errors.NotFound:
+            pass  # network has probably been already delete
+        else:
+            network.remove()
 
     @activity.defn
     async def get_archived_project_services(

@@ -1264,7 +1264,7 @@ class FakeDockerClient:
 
     def get_env_network(self, env: Environment):
         return self.network_map.get(
-            get_env_network_resource_name(env.id, env.project.id)  # type: ignore
+            get_env_network_resource_name(env.id, env.project_id)  # type: ignore
         )
 
     def get_networks(self):
