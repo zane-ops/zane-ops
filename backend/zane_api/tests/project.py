@@ -616,8 +616,12 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         self.assertEqual(1, len(response.json()))
 
     def test_create_service_without_being_deployed_yet(self):
-        owner = self.loginUser()
-        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        project = Project.objects.aget(slug="zaneops")
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(

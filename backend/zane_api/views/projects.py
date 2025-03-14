@@ -297,6 +297,11 @@ class ProjectDetailsView(APIView):
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
 
+class ProjectCreateEnviromentView(APIView):
+    def post(self, request: Request, slug: str) -> Response:
+        return Response()
+
+
 class ProjectServiceListView(APIView):
 
     @extend_schema(
