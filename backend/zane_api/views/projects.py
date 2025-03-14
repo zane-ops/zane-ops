@@ -315,7 +315,7 @@ class ProjectServiceListView(APIView):
         summary="Get service list",
         description="Get all services in a project",
     )
-    def get(self, request: Request, slug: str):
+    def get(self, request: Request, slug: str, env_slug: str | None = None):
         try:
             project = Project.objects.get(slug=slug.lower())
         except Project.DoesNotExist:
