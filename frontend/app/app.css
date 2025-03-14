@@ -102,7 +102,7 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--color-border, currentColor); /* Use --color-border variable */
   }
 }
 
@@ -139,8 +139,11 @@
   }
 
   :root {
-    color: var(--color-card-foreground);
+    color: hsl(var(--color-card-foreground)); /* Use HSL and var() */
     font-family: 'Geist';
+    text-rendering: optimizeLegibility; /* Improve text rendering */
+    -webkit-font-smoothing: antialiased; /* Enable font smoothing for macOS */
+    -moz-osx-font-smoothing: grayscale; /* Improve font rendering for Firefox on macOS */
   }
 }
 
@@ -190,7 +193,7 @@
     --ansi-bright-magenta: #b200b2;
     --ansi-bright-cyan: #00a6b2;
     --ansi-bright-white: #bfbfbf;
-    background-color: hsl(164 62% 99%);
+    background-color: hsl(var(--background)); /* Use HSL and var() */
 
     --chart-1: hsl(220 70% 50%);
     --chart-2: hsl(173 58% 39%);
@@ -241,7 +244,7 @@
       --ansi-bright-magenta: #bb00bb;
       --ansi-bright-cyan: #00bbbb;
       --ansi-bright-white: #bbbbbb;
-      background-color: hsl(226 19% 13%);
+      background-color: hsl(var(--background)); /* Use HSL and var() */
 
       --chart-1: hsl(220 70% 50%);
       --chart-2: hsl(160 60% 45%);
@@ -253,7 +256,7 @@
 }
 
 *::selection {
-  color: var(--color-card-foreground);
+  color: hsl(var(--color-card-foreground)); /* Use HSL and var() */
   background-color: rgba(96, 165, 250, 50%)
 }
 
@@ -265,13 +268,15 @@
   stroke-dasharray: 1400;
   stroke-dashoffset: 1400;
   animation: drawLoaderSVG 2.5s linear infinite;
+  transition: stroke 0.3s ease; /* Smooth transition for color changes */
 }
+
 @keyframes drawLoaderSVG {
   0% {
-    stroke-dashoffset: 1400; 
+    stroke-dashoffset: 1400;
   }
   50% {
-    stroke-dashoffset: 0; 
+    stroke-dashoffset: 0;
   }
   100% {
     stroke-dashoffset: -1400;
