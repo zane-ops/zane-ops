@@ -744,6 +744,7 @@ class FakeDockerClient:
         name: str
         id: str
         parent: "FakeDockerClient"
+        labels: dict
 
         def remove(self):
             self.parent.network_remove(self.name)
@@ -1021,6 +1022,7 @@ class FakeDockerClient:
 
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
+        self.networks.list = self.docker_network_list
 
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
         self.config_map = {}  # type: dict[str, FakeDockerClient.FakeConfig]
@@ -1201,8 +1203,10 @@ class FakeDockerClient:
             if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
 
-    def docker_create_network(self, name: str, **kwargs):
-        created_network = FakeDockerClient.FakeNetwork(name=name, id=name, parent=self)
+    def docker_create_network(self, name: str, labels: dict, **kwargs):
+        created_network = FakeDockerClient.FakeNetwork(
+            name=name, id=name, parent=self, labels=labels
+        )
         self.network_map[name] = created_network
         return created_network
 
@@ -1213,24 +1217,33 @@ class FakeDockerClient:
             raise docker.errors.NotFound("network not found")
         return network
 
+    def docker_network_list(self, filters: dict):
+        label_in_filters: list[str] = filters.get("label", [])
+        labels = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+
+        return [net for net in self.network_map.values() if net.labels == labels]
+
     def network_remove(self, name: str):
         network = self.network_map.pop(name)
         if network is None:
             raise docker.errors.NotFound("network not found")
 
-    def get_network(self, p: Project):
+    def get_project_network(self, p: Project):
         return self.network_map.get(get_network_resource_name(p.id))
+
+    def get_project_networks(self, p: Project):
+        return [
+            net
+            for net in self.network_map.values()
+            if net.labels.get("zane-project") == p.id
+        ]
 
     def get_env_network(self, env: Environment):
         return self.network_map.get(
             get_env_network_resource_name(env.id, env.project.id)  # type: ignore
-        )
-
-    def create_network(self, p: Project):
-        return self.docker_create_network(
-            get_network_resource_name(p.id),
-            scope="swarm",
-            driver="overlay",
         )
 
     def get_networks(self):

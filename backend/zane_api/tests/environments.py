@@ -33,3 +33,18 @@ class EnvironmentTests(AuthAPITestCase):
         )
         network = self.fake_docker_client.get_env_network(production_env)  # type: ignore
         self.assertIsNotNone(network)
+
+    async def test_archive_project_removes_all_project_environments_networks(self):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        project = await Project.objects.aget(slug="zane-ops")
+
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(0, len(self.fake_docker_client.get_project_networks(project)))

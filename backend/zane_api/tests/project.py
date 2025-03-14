@@ -474,15 +474,18 @@ class DockerAddNetworkTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         project = await Project.objects.filter(slug="zane-ops").afirst()
         self.assertIsNotNone(project)
-        network = self.fake_docker_client.get_network(project)
+        network = self.fake_docker_client.get_project_network(project)
         self.assertIsNotNone(network)
 
 
 class DockerRemoveNetworkTest(AuthAPITestCase):
     async def test_network_is_deleted_on_archived_project(self):
-        owner = await self.aLoginUser()
-        project = await Project.objects.acreate(slug="zane-ops", owner=owner)
-        self.fake_docker_client.create_network(project)
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        project = await Project.objects.aget(slug="zane-ops")
 
         response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
@@ -492,7 +495,7 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
             original_id=project.id
         ).afirst()
         self.assertIsNotNone(archived_project)
-        self.assertIsNone(self.fake_docker_client.get_network(project))
+        self.assertIsNone(self.fake_docker_client.get_project_network(project))
         self.assertEqual(0, len(self.fake_docker_client.get_networks()))
 
 

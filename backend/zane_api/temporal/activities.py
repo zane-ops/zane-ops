@@ -928,10 +928,19 @@ class DockerSwarmActivities:
         )
 
     @activity.defn
-    async def remove_project_network(self, project_details: ArchivedProjectDetails):
+    async def remove_project_network(
+        self, project_details: ArchivedProjectDetails
+    ) -> List[str]:
         try:
-            network_associated_to_project: Network = self.docker_client.networks.get(
-                get_network_resource_name(project_id=project_details.original_id)
+            networks_associated_to_project = self.docker_client.networks.list(
+                filters={
+                    "label": [
+                        f"{key}={value}"
+                        for key, value in get_resource_labels(
+                            project_id=project_details.original_id
+                        ).items()
+                    ]
+                }
             )
         except docker.errors.NotFound:
             raise ApplicationError(
@@ -940,7 +949,10 @@ class DockerSwarmActivities:
                 non_retryable=True,
             )
 
-        network_associated_to_project.remove()
+        deleted_networks: List[str] = [net.name for net in networks_associated_to_project]  # type: ignore
+        for network in networks_associated_to_project:
+            network.remove()
+        return deleted_networks
 
     @activity.defn
     async def prepare_deployment(self, deployment: DockerDeploymentDetails):
