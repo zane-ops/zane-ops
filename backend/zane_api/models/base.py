@@ -28,6 +28,7 @@ class TimestampedModel(models.Model):
 
 
 class Project(TimestampedModel):
+    environments: Manager["Environment"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -994,3 +995,25 @@ class HttpLog(Log):
             models.Index(fields=["request_query"]),
         ]
         ordering = ("-time",)
+
+
+class Environment(TimestampedModel):
+    name = models.SlugField(max_length=255)
+    project = models.ForeignKey(
+        to=Project, on_delete=models.CASCADE, related_name="environments"
+    )
+    immutable = models.BooleanField(default=False)
+
+    @property
+    def is_production(self):
+        return self.name == "production"  # production is a reserved name
+
+    class Meta:
+        unique_together = ["name", "project"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project"],
+                condition=models.Q(name="production"),
+                name="unique_production_per_project",
+            )
+        ]
