@@ -9,6 +9,20 @@ export interface paths {
     /** List archived projects */
     get: operations["getArchivedProjectList"];
   };
+  "/api/auth/check-user-existence/": {
+    /**
+     * Check if a user exists
+     * @description Returns whether a single user already exists in the system.
+     */
+    get: operations["auth_check_user_existence_retrieve"];
+  };
+  "/api/auth/create-initial-user/": {
+    /**
+     * Create a user
+     * @description Creates a new user if no user exists.
+     */
+    post: operations["auth_create_initial_user_create"];
+  };
   "/api/auth/login/": {
     /**
      * Login
@@ -238,6 +252,65 @@ export interface components {
       /** Format: date-time */
       archived_at: string;
       description: string | null;
+    };
+    AuthCheckUserExistenceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"];
+    AuthCreateInitialUserCreateErrorResponse400: components["schemas"]["AuthCreateInitialUserCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    AuthCreateInitialUserCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    AuthCreateInitialUserCreatePasswordErrorComponent: {
+      /**
+       * @description * `password` - password
+       * @enum {string}
+       */
+      attr: "password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    AuthCreateInitialUserCreateUsernameErrorComponent: {
+      /**
+       * @description * `username` - username
+       * @enum {string}
+       */
+      attr: "username";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    AuthCreateInitialUserCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["AuthCreateInitialUserCreateError"][];
     };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
@@ -2649,6 +2722,16 @@ export interface components {
       first_name: string;
       last_name: string;
     };
+    UserCreatedResponse: {
+      detail: string;
+    };
+    UserCreationRequestRequest: {
+      username: string;
+      password: string;
+    };
+    UserExistenceResponse: {
+      exists: boolean;
+    };
     /**
      * @description * `validation_error` - Validation Error
      * @enum {string}
@@ -2802,6 +2885,69 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Check if a user exists
+   * @description Returns whether a single user already exists in the system.
+   */
+  auth_check_user_existence_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserExistenceResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["AuthCheckUserExistenceRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create a user
+   * @description Creates a new user if no user exists.
+   */
+  auth_create_initial_user_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserCreationRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["UserCreationRequestRequest"];
+        "multipart/form-data": components["schemas"]["UserCreationRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["UserCreatedResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["AuthCreateInitialUserCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

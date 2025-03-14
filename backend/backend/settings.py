@@ -283,6 +283,7 @@ REST_FRAMEWORK = {
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
         "log_collect": "30/minute",
+        "initial_registration": "30/minute",
     },
     "DEFAULT_RENDERER_CLASSES": REST_FRAMEWORK_DEFAULT_RENDERER_CLASSES,
     "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",

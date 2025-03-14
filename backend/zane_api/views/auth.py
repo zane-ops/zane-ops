@@ -5,7 +5,6 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import QueryDict
 from django.shortcuts import redirect
-from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -19,6 +18,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import ScopedRateThrottle
 
 from .base import EMPTY_RESPONSE
 from .. import serializers
@@ -182,6 +182,8 @@ class CSRFCookieView(APIView):
 class CheckUserExistenceView(APIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = UserExistenceResponseSerializer
+    throttle_scope = "initial_registration"
+    throttle_classes = [ScopedRateThrottle]
 
     @extend_schema(
         summary="Check if a user exists",
@@ -195,6 +197,8 @@ class CheckUserExistenceView(APIView):
 
 class CreateUserView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "initial_registration"
+    throttle_classes = [ScopedRateThrottle]
 
     @extend_schema(
         request=UserCreationRequestSerializer,

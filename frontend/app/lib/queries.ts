@@ -33,6 +33,13 @@ export const userQueries = {
       }
       return false;
     }
+  }),
+
+  checkUserExistence: queryOptions({
+    queryKey: ["CHECK_USER_EXISTENCE"] as const,
+    queryFn: ({ signal }) => {
+      return apiClient.GET("/api/auth/check-user-existence/", { signal });
+    }
   })
 };
 
@@ -195,7 +202,11 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     type = "docker"
-  }: { project_slug: string; service_slug: string; type?: "docker" | "git" }) =>
+  }: {
+    project_slug: string;
+    service_slug: string;
+    type?: "docker" | "git";
+  }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,

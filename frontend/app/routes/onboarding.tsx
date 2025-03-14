@@ -1,5 +1,6 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import { Form, redirect, useNavigation } from "react-router";
+import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Logo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -9,92 +10,80 @@ import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
-export const meta: Route.MetaFunction = () => [metaTitle("Login")];
+export const meta: Route.MetaFunction = () => [metaTitle("Welcome to ZaneOps")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery] = await Promise.all([
-    queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence)
-  ]);
+  const userExistQuery = await queryClient.ensureQueryData(
+    userQueries.checkUserExistence
+  );
 
-  if (!userExistQuery.data?.exists) {
-    throw redirect("/onboarding");
-  }
-
-  const searchParams = new URL(request.url).searchParams;
-
-  const user = userQuery.data?.user;
-  if (user) {
-    const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
-    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-      redirectTo = redirect_to;
-    }
-
-    throw redirect(redirectTo);
+  if (userExistQuery.data?.exists) {
+    throw redirect("/login");
   }
   return;
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const searchParams = new URL(request.url).searchParams;
 
   const credentials = {
     username: formData.get("username")!.toString(),
     password: formData.get("password")!.toString()
   };
-  const { error: errors, data } = await apiClient.POST("/api/auth/login/", {
-    body: credentials
-  });
+  const { error: errors, data } = await apiClient.POST(
+    "/api/auth/create-initial-user/",
+    {
+      body: credentials
+    }
+  );
   if (errors) {
     return {
       errors,
       userData: credentials
     };
   }
-  if (data?.success) {
-    queryClient.removeQueries(userQueries.authedUser);
 
-    const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
-    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-      redirectTo = redirect_to;
-    }
-    throw redirect(redirectTo);
-  }
+  queryClient.removeQueries(userQueries.checkUserExistence);
+  queryClient.removeQueries(userQueries.authedUser);
+
+  toast.success("Success", {
+    description: data.detail,
+    closeButton: true
+  });
+
+  throw redirect("/");
 }
 
-export default function LoginPage({ actionData }: Route.ComponentProps) {
+export default function InitialRegistration({
+  actionData
+}: Route.ComponentProps) {
   const navigation = useNavigation();
+
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
+
   const errors = getFormErrorsFromResponseData(actionData?.errors);
+
   return (
     <>
-      <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
-        <Logo className="md:hidden" />
-        <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
-          <img
-            className="md:w-[180px]  md:fit h-[110px] w-[110px]"
-            src={whiteLogo}
-            alt="logo"
-          />
-          <p className="text-white px-5 ">
-            your all-in-one platform for deploying your apps with ✨ zen ✨.
+      <main className="h-[100vh] flex md:flex-col flex-col  justify-center items-center">
+        <Logo />
+
+        <div className="flex flex-col items-center">
+          <h1 className="md:text-3xl text-4xl font-semibold">
+            Welcome to ZaneOps
+          </h1>
+          <p className="text-sm text-grey">
+            Your all-in-one platform for deploying your apps with ✨ zen ✨.
           </p>
         </div>
 
         <Form
           method="POST"
-          className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
+          className="p-7 my-2 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
-          <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
-            Log in
-          </h1>
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
               <Alert variant="destructive">
@@ -147,11 +136,11 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
             >
               {isPending ? (
                 <>
-                  <span>Submitting...</span>
+                  <span>Creating...</span>
                   <LoaderIcon className="animate-spin" size={15} />
                 </>
               ) : (
-                "Submit"
+                "Create your first user"
               )}
             </SubmitButton>
           </div>

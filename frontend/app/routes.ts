@@ -9,6 +9,7 @@ import {
 export default [
   route("login", "./routes/login.tsx"),
   route("logout", "./routes/logout.tsx"),
+  route("onboarding", "./routes/onboarding.tsx"),
 
   route(
     "project/:projectSlug/services/:serviceSlug/deploy-service",

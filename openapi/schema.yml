@@ -132,6 +132,134 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedArchivedProjectList'
           description: ''
+  /api/auth/check-user-existence/:
+    get:
+      operationId: auth_check_user_existence_retrieve
+      description: Returns whether a single user already exists in the system.
+      summary: Check if a user exists
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthCheckUserExistenceRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserExistenceResponse'
+          description: ''
+  /api/auth/create-initial-user/:
+    post:
+      operationId: auth_create_initial_user_create
+      description: Creates a new user if no user exists.
+      summary: Create a user
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreationRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreationRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreationRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthCreateInitialUserCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreatedResponse'
+          description: ''
   /api/auth/login/:
     post:
       operationId: login
@@ -3853,6 +3981,130 @@ components:
       - description
       - id
       - slug
+    AuthCheckUserExistenceRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    AuthCreateInitialUserCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/AuthCreateInitialUserCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/AuthCreateInitialUserCreateUsernameErrorComponent'
+      - $ref: '#/components/schemas/AuthCreateInitialUserCreatePasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/AuthCreateInitialUserCreateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/AuthCreateInitialUserCreateUsernameErrorComponent'
+          password: '#/components/schemas/AuthCreateInitialUserCreatePasswordErrorComponent'
+    AuthCreateInitialUserCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/AuthCreateInitialUserCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/AuthCreateInitialUserCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    AuthCreateInitialUserCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AuthCreateInitialUserCreatePasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AuthCreateInitialUserCreateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AuthCreateInitialUserCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthCreateInitialUserCreateError'
+      required:
+      - errors
+      - type
     AuthedSuccessResponse:
       type: object
       properties:
@@ -8989,6 +9241,33 @@ components:
       - first_name
       - last_name
       - username
+    UserCreatedResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    UserCreationRequestRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 255
+        password:
+          type: string
+          minLength: 6
+      required:
+      - password
+      - username
+    UserExistenceResponse:
+      type: object
+      properties:
+        exists:
+          type: boolean
+      required:
+      - exists
     ValidationErrorEnum:
       enum:
       - validation_error
