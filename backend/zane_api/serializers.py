@@ -215,6 +215,7 @@ class DockerServiceSerializer(ModelSerializer):
     system_env_variables = SystemEnvVariablesSerializer(
         allow_null=False, many=True, default=[]
     )
+    environment = EnvironmentSerializer(read_only=True)
 
     class Meta:
         model = models.DockerRegistryService
@@ -227,7 +228,7 @@ class DockerServiceSerializer(ModelSerializer):
             "command",
             "healthcheck",
             "project_id",
-            "environment_id",
+            "environment",
             "credentials",
             "urls",
             "volumes",

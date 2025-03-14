@@ -1689,7 +1689,7 @@ class DockerSwarmActivities:
                 networks=[
                     NetworkAttachmentConfig(
                         target=get_env_network_resource_name(
-                            service.environment_id, service.project_id
+                            service.environment.id, service.project_id
                         ),
                         aliases=service.network_aliases,
                     ),

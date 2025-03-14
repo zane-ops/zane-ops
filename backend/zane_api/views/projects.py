@@ -375,8 +375,13 @@ class ProjectEnvironmentDetailsView(APIView):
         form.is_valid(raise_exception=True)
         name = form.data["name"].lower()  # type: ignore
 
-        environment.name = name
-        environment.save()
+        try:
+            environment.name = name
+            environment.save()
+        except IntegrityError:
+            raise ResourceConflict(
+                f"An environment with the name `{name}` already exists in this project"
+            )
         serializer = EnvironmentSerializer(environment)
         return Response(data=serializer.data)
 

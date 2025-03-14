@@ -79,6 +79,7 @@ from ..serializers import (
     DockerEnvVariableSerializer,
     ErrorResponse409Serializer,
     HttpLogSerializer,
+    EnvironmentSerializer,
 )
 from ..temporal import (
     start_workflow,
@@ -590,8 +591,8 @@ class RedeployDockerServiceAPIView(APIView):
         latest_deployment: DockerDeployment = service.latest_production_deployment  # type: ignore
 
         changes = compute_docker_changes_from_snapshots(
-            dict(**latest_deployment.service_snapshot, environment_id=environment.id),  # type: ignore
-            dict(**deployment.service_snapshot, environment_id=environment.id),  # type: ignore
+            dict(**latest_deployment.service_snapshot, environment=EnvironmentSerializer(environment).data),  # type: ignore
+            dict(**deployment.service_snapshot, environment=EnvironmentSerializer(environment).data),  # type: ignore
         )
 
         for change in changes:

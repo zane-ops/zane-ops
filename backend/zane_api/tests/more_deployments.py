@@ -12,7 +12,6 @@ from ..models import (
     URL,
     PortConfiguration,
     DeploymentURL,
-    DockerEnvVariable,
 )
 from ..serializers import ConfigSerializer
 from ..utils import jprint
@@ -42,8 +41,12 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertEqual(20, len(service.deploy_token))
 
     def test_generate_deploy_token_for_service_on_creation(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "kiss-cam"},
+        )
+        p = Project.objects.get(slug="kiss-cam")
 
         create_service_payload = {
             "slug": "cache-db",
@@ -175,8 +178,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
 
     def test_add_config_change(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -218,8 +225,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(config, change.new_value)
 
     def test_add_config_change_generate_random_name_if_not_provided(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -259,8 +270,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(change.new_value.get("name"))
 
     def test_add_config_item_change_reference_previous_value(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -304,8 +319,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(ConfigSerializer(config).data, change.old_value)
 
     def test_validate_config_item_change_reference_non_existent_does_not_work(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -340,8 +359,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertIsNone(change)
 
     def test_validate_config_change_conflict_mount_path_with_other_config(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -387,8 +410,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertIsNone(change)
 
     def test_validate_config_change_conflict_mount_path_with_volume(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -433,8 +460,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertIsNone(change)
 
     def test_validate_config_change_invalid_path(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -474,8 +505,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertIsNone(change)
 
     def test_validate_config_do_not_prevent_updating_contents(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -522,9 +557,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(change)
 
     def test_validate_port_require_host_port(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.PORTS,
@@ -544,9 +577,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_port_disable_exposing_port_to_http(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.PORTS,
@@ -566,9 +597,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_add_url_changes_do_not_require_exposed_port(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.URLS,
@@ -589,9 +618,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_add_url_changes_without_domain_generates_a_default_domain(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.URLS,
@@ -612,9 +639,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_url_changes_require_associated_port_in_request_body(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.URLS,
@@ -636,9 +661,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
     def test_validate_url_changes_prevent_passing_associated_port_in_request_body_if_redirect_to(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
             "field": DockerDeploymentChange.ChangeField.URLS,
@@ -687,8 +710,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_add_env_string_change(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -738,8 +765,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
 
     def test_validate_env_string_change_refuse_invalid_value(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -773,8 +804,14 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(0, changes.count())
 
     def test_validate_env_string_change_prevent_double_env_values_with_changes(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(
+            slug="zaneops",
+        )
 
         create_service_payload = {
             "slug": "app",
@@ -818,8 +855,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
     def test_validate_env_string_change_prevent_double_env_values_with_service_envs(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -855,8 +896,12 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_validate_env_string_empty_string_does_nothing(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        p = Project.objects.get(slug="zaneops")
 
         create_service_payload = {
             "slug": "app",
@@ -892,9 +937,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
     def test_validate_url_can_update_subdomain_if_wildcard_exists_and_is_attached_to_same_service(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
         new_url = URL.objects.create(domain="*.gh.fredkiss.dev", associated_port=80)
         service.urls.add(new_url)
 
@@ -910,7 +953,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
             data=changes_payload,
         )
@@ -920,14 +963,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
     def test_validate_url_can_use_wildcard_subdomain_if_wildcard_exists_and_is_attached_to_another_service_on_another_path(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        _ = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
         new_url = URL.objects.create(domain="*.gh.fredkiss.dev", associated_port=80)
-        redis = DockerRegistryService.objects.create(
-            slug="cache-db", image="redis", project=p
-        )
-        redis.urls.add(new_url)
+        service.urls.add(new_url)
 
         changes_payload = {
             "field": "urls",
@@ -941,7 +979,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
             data=changes_payload,
         )
@@ -951,9 +989,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
     def test_validate_url_cannot_add_subdomain_even_if_wildcard_exists_and_is_attached_to_same_service(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
         new_url = URL.objects.create(domain="*.gh.fredkiss.dev", associated_port=80)
         service.urls.add(new_url)
 
@@ -968,7 +1004,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
             data=changes_payload,
         )
@@ -1163,9 +1199,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_config_changes(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
         config_to_delete = Config.objects.create(
             mount_path="/etc/caddy/hello.caddy",
             contents=':8080 respond "here lies my life"',
@@ -1204,12 +1238,12 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         self.assertEqual(1, updated_service.configs.count())
 
         new_config = updated_service.configs.filter(
@@ -1223,9 +1257,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_updating_config_content_increments_version(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
         config_to_update = Config.objects.create(
             mount_path="/etc/caddy/Caddyfile",
             contents=':8080 respond "here lies my life"',
@@ -1275,9 +1307,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_url_changes(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
         url_to_delete, url_to_update = URL.objects.bulk_create(
             [
                 URL(base_path="/unused", domain="old-domain.com", associated_port=8080),
@@ -1335,12 +1365,12 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.urls.count())
 
         new_url = updated_service.urls.filter(domain="web-server.fred.kiss").first()
@@ -1356,9 +1386,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(False, updated_url.strip_prefix)
 
     def test_apply_urls_changes_create_as_many_deployment_urls_as_there_ports(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
 
         DockerDeploymentChange.objects.bulk_create(
             [
@@ -1409,7 +1437,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
@@ -1426,9 +1454,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_port_changes(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_and_deploy_caddy_docker_service()
         port_to_delete, port_to_update = PortConfiguration.objects.bulk_create(
             [
                 PortConfiguration(host=1010, forwarded=1010),
@@ -1499,9 +1525,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_changes_creates_a_deployment_with_url_if_service_has_url_provided(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
 
         DockerDeploymentChange.objects.bulk_create(
             [

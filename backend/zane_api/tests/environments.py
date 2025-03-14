@@ -178,6 +178,33 @@ class EnvironmentViewTests(AuthAPITestCase):
         staging_env.refresh_from_db()
         self.assertEqual("staging", staging_env.name)
 
+    def test_rename_environment_conflict_with_other_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        project = Project.objects.get(slug="zane-ops")
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "staging"},
+            ),
+            data={"name": "production"},
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
     def test_cannot_rename_production_environment(self):
         self.loginUser()
         response = self.client.post(
