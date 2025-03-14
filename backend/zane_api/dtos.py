@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Mapping
 
 
 @dataclass
@@ -183,7 +183,7 @@ class DockerServiceSnapshot:
         return list(filter(lambda v: v.host_path is None, self.volumes))
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
+    def from_dict(cls, data: Mapping[str, Any]) -> "DockerServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
         configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]

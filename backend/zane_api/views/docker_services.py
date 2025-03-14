@@ -560,6 +560,7 @@ class RedeployDockerServiceAPIView(APIView):
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = project.production_env
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -580,16 +581,17 @@ class RedeployDockerServiceAPIView(APIView):
             )
 
         try:
-            deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
+            deployment = service.deployments.get(hash=deployment_hash)
         except DockerDeployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        latest_deployment = service.latest_production_deployment
+        latest_deployment: DockerDeployment = service.latest_production_deployment  # type: ignore
 
         changes = compute_docker_changes_from_snapshots(
-            latest_deployment.service_snapshot, deployment.service_snapshot  # type: ignore
+            dict(**latest_deployment.service_snapshot, environment_id=environment.id),  # type: ignore
+            dict(**deployment.service_snapshot, environment_id=environment.id),  # type: ignore
         )
 
         for change in changes:
