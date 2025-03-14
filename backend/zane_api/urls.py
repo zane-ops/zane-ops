@@ -36,7 +36,7 @@ urlpatterns = [
         name="projects.create_enviroment",
     ),
     re_path(
-        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/?$",
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/environment-details/(?P<env_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ProjectEnvironmentDetailsView.as_view(),
         name="projects.environment.details",
     ),
