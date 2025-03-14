@@ -621,7 +621,7 @@ class ProjectResourcesViewTests(AuthAPITestCase):
             reverse("zane_api:projects.list"),
             data={"slug": "zaneops"},
         )
-        project = Project.objects.aget(slug="zaneops")
+        project = Project.objects.get(slug="zaneops")
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(
