@@ -47,6 +47,10 @@ class Project(TimestampedModel):
         return self.environments.get(name="production")
 
     @property
+    async def aproduction_env(self):
+        return await self.environments.aget(name="production")
+
+    @property
     def create_task_id(self):
         return f"create-{self.id}-{datetime_to_timestamp_string(self.created_at)}"
 

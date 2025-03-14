@@ -779,8 +779,11 @@ class DockerSwarmActivities:
                 f"Project with id=`{payload.id}` does not exist.", non_retryable=True
             )
 
+        production_env = await project.aproduction_env
         network = self.docker_client.networks.create(
-            name=get_network_resource_name(project.id),
+            name=get_env_network_resource_name(
+                production_env.id, project_id=project.id
+            ),
             scope="swarm",
             driver="overlay",
             labels=get_resource_labels(project.id),
