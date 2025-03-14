@@ -754,9 +754,7 @@ class AuthAPITestCase(APITestCase):
         service.refresh_from_db()
         return project, service
 
-    def create_caddy_docker_service(
-        self,
-    ):
+    def create_caddy_docker_service(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
