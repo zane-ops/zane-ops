@@ -1644,9 +1644,6 @@ class DockerSwarmActivities:
                 deployment,
                 f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            production_env = await Environment.objects.aget(
-                name="production", project_id=service.project_id
-            )
             self.docker_client.services.create(
                 image=service.image,
                 command=service.command,
@@ -1667,7 +1664,7 @@ class DockerSwarmActivities:
                 networks=[
                     NetworkAttachmentConfig(
                         target=get_env_network_resource_name(
-                            production_env.id, service.project_id
+                            service.environment_id, service.project_id
                         ),
                         aliases=service.network_aliases,
                     ),

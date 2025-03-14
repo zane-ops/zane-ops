@@ -140,6 +140,7 @@ class DockerServiceSnapshot:
     id: str
     slug: str
     network_alias: str
+    environment_id: str
     command: Optional[str] = None
     network_aliases: List[str] = field(default_factory=list)
     healthcheck: Optional[HealthCheckDto] = None
@@ -219,6 +220,7 @@ class DockerServiceSnapshot:
             resource_limits=resource_limits,
             id=data["id"],
             project_id=data["project_id"],
+            environment_id=data["environment_id"],
             network_aliases=data["network_aliases"],
             slug=data["slug"],
             network_alias=data["network_alias"],

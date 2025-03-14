@@ -21,8 +21,12 @@ from ..models import (
 class DockerServiceCreateViewTest(AuthAPITestCase):
 
     def test_create_simple_service(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "cache-db",
@@ -43,8 +47,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(created_service)
 
     def test_create_service_with_custom_registry(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "main-app",
@@ -69,8 +77,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertTrue(self.fake_docker_client.is_logged_in)
 
     def test_create_service_with_empty_credentials_do_not_save_the_credentials(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "main-app",
@@ -98,8 +110,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNone(change.new_value.get("credentials"))
 
     def test_create_service_slug_is_created_if_not_specified(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "image": "redis:alpine",
@@ -115,8 +131,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(created_service.slug)
 
     def test_create_service_slug_is_lowercased(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zane-ops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "Zane-Ops-fronT",
@@ -134,8 +154,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(created_service)
 
     def test_create_service_slug_accept_underscores(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zane-ops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "hello_nginx",
@@ -157,8 +181,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_create_service_set_network_alias(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "valkey",
@@ -178,8 +206,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNotNone(created_service.network_alias)
 
     def test_create_service_bad_request(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         response = self.client.post(
             reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
@@ -215,10 +247,16 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNone(created_service)
 
     def test_create_service_conflict_with_slug(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
-        DockerRegistryService.objects.create(slug="cache-db", image="redis", project=p)
+        DockerRegistryService.objects.create(
+            slug="cache-db", image="redis", project=p, environment=p.production_env
+        )
 
         create_service_payload = {
             "slug": "cache-db",
@@ -235,8 +273,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     def test_create_service_with_custom_registry_does_not_create_service_if_bad_image_credentials(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "main-app",
@@ -262,9 +304,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
         self,
     ):
-        owner = self.loginUser()
-
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "main-app",
@@ -288,8 +333,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNone(created_service)
 
     def test_create_service_credentials_do_not_correspond_to_image(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "gh-clone"},
+        )
+        p = Project.objects.get(slug="gh-clone")
 
         create_service_payload = {
             "slug": "main-app",
@@ -313,8 +362,12 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         self.assertIsNone(created_service)
 
     def test_create_service_with_service_if_nonexistent_dockerhub_image(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         create_service_payload = {
             "slug": "main-app",
@@ -520,10 +573,16 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
 class DockerGetServiceViewTest(AuthAPITestCase):
     def test_get_service_succesful(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
-        service = DockerRegistryService.objects.create(slug="cache-db", project=p)
+        service = DockerRegistryService.objects.create(
+            slug="cache-db", project=p, environment=p.production_env
+        )
 
         response = self.client.get(
             reverse(
@@ -548,9 +607,13 @@ class DockerGetServiceViewTest(AuthAPITestCase):
     def test_get_service_not_in_the_correct_project(self):
         owner = self.loginUser()
         p1 = Project.objects.create(slug="kiss-cam", owner=owner)
+        p1.environments.create(name="production")
         p2 = Project.objects.create(slug="camly", owner=owner)
+        p2.environments.create(name="production")
 
-        service = DockerRegistryService.objects.create(slug="cache-db", project=p1)
+        service = DockerRegistryService.objects.create(
+            slug="cache-db", project=p1, environment=p1.production_env
+        )
 
         response = self.client.get(
             reverse(
@@ -563,11 +626,15 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
 class DockerServiceUpdateViewTest(AuthAPITestCase):
     def test_sucessfully_update_service_slug(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
         previous_service = DockerRegistryService.objects.create(
-            slug="cache-db", project=p
+            slug="cache-db", project=p, environment=p.production_env
         )
 
         response = self.client.patch(
@@ -588,9 +655,15 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         self.assertNotEquals(previous_service.updated_at, updated_service.updated_at)
 
     def test_update_service_bad_request(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
-        service = DockerRegistryService.objects.create(slug="cache-db", project=p)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+        service = DockerRegistryService.objects.create(
+            slug="cache-db", project=p, environment=p.production_env
+        )
 
         response = self.client.patch(
             reverse(
@@ -616,12 +689,20 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_already_existing_slug(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="sandbox", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
         DockerRegistryService.objects.bulk_create(
             [
-                DockerRegistryService(slug="gh-clone", project=p),
-                DockerRegistryService(slug="zane-ops", project=p),
+                DockerRegistryService(
+                    slug="gh-clone", project=p, environment=p.production_env
+                ),
+                DockerRegistryService(
+                    slug="zane-ops", project=p, environment=p.production_env
+                ),
             ]
         )
 
@@ -635,13 +716,20 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
     def test_can_rename_to_self(self):
-        owner = self.loginUser()
-        owner = self.loginUser()
-        p = Project.objects.create(slug="sandbox", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
         DockerRegistryService.objects.bulk_create(
             [
-                DockerRegistryService(slug="gh-clone", project=p),
-                DockerRegistryService(slug="zane-ops", project=p),
+                DockerRegistryService(
+                    slug="gh-clone", project=p, environment=p.production_env
+                ),
+                DockerRegistryService(
+                    slug="zane-ops", project=p, environment=p.production_env
+                ),
             ]
         )
 

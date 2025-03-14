@@ -474,11 +474,21 @@ class AuthAPITestCase(APITestCase):
         with_healthcheck: bool = False,
         other_changes: list[DockerDeploymentChange] | None = None,
     ):
-        owner = self.loginUser()
-        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(
-            slug="redis", project=project, deploy_token=generate_random_chars(20)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
         )
+        project = Project.objects.get(slug="zaneops")
+
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        service = DockerRegistryService.objects.get(slug="redis")
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:

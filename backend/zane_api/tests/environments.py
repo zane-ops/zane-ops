@@ -2,7 +2,7 @@ from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Project, DockerDeployment
+from ..models import Project, DockerDeployment, DockerRegistryService
 from ..temporal.activities import get_env_network_resource_name
 
 
@@ -61,3 +61,10 @@ class EnvironmentTests(AuthAPITestCase):
         self.assertTrue(
             get_env_network_resource_name(production_env.id, p.id) in service_networks
         )
+
+
+class ServiceEnvironmentViewTests(AuthAPITestCase):
+    def test_create_service_should_put_service_in_production_by_default(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+        self.assertIsNotNone(service.environment)
+        self.assertEqual(service.environment, p.production_env)

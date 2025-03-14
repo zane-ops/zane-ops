@@ -219,6 +219,7 @@ class DockerServiceSerializer(ModelSerializer):
             "command",
             "healthcheck",
             "project_id",
+            "environment_id",
             "credentials",
             "urls",
             "volumes",

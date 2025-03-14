@@ -66,6 +66,7 @@ from ..models import (
     DockerDeploymentChange,
     HttpLog,
     DeploymentURL,
+    Environment,
 )
 from ..serializers import (
     ConfigSerializer,
@@ -110,9 +111,13 @@ class CreateDockerServiceAPIView(APIView):
         description="Create a service from a docker image.",
     )
     @transaction.atomic()
-    def post(self, request: Request, project_slug: str):
+    def post(self, request: Request, project_slug: str, env_slug: str | None = None):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
+            # if env_slug is None:
+            environment = project.production_env
+            # else:
+            #   environment = Environment.objects.get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 f"A project with the slug `{project_slug}` does not exist"
@@ -132,6 +137,7 @@ class CreateDockerServiceAPIView(APIView):
                         slug=service_slug,
                         project=project,
                         deploy_token=generate_random_chars(20),
+                        environment=environment,
                     )
 
                     service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
@@ -188,7 +194,13 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
         summary="Request config changes",
         description="Request a change to the configuration of a service.",
     )
-    def put(self, request: Request, project_slug: str, service_slug: str):
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
@@ -318,7 +330,13 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
         summary="Request env changes",
         description="Request a change to the environments variables of a service.",
     )
-    def put(self, request: Request, project_slug: str, service_slug: str):
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
@@ -379,7 +397,12 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
         description="Cancel a config change that was requested.",
     )
     def delete(
-        self, request: Request, project_slug: str, service_slug: str, change_id: str
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        change_id: str,
+        env_slug: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -442,7 +465,13 @@ class DeployDockerServiceAPIView(APIView):
         summary="Deploy a docker service",
         description="Apply all pending changes for the service and trigger a new deployment.",
     )
-    def put(self, request: Request, project_slug: str, service_slug: str):
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
@@ -527,6 +556,7 @@ class RedeployDockerServiceAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
+        env_slug: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -618,6 +648,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
+        env_slug: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -684,7 +715,13 @@ class DockerServiceDetailsAPIView(APIView):
         operation_id="updateService",
         summary="Update a service",
     )
-    def patch(self, request: Request, project_slug: str, service_slug: str) -> Response:
+    def patch(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ) -> Response:
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
@@ -725,7 +762,13 @@ class DockerServiceDetailsAPIView(APIView):
         summary="Get single service",
         description="See all the details of a service.",
     )
-    def get(self, request: Request, project_slug: str, service_slug: str):
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
         except Project.DoesNotExist:
@@ -775,6 +818,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
     def get_queryset(self) -> QuerySet[DockerDeployment]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
+        env_slug = self.kwargs.get("env_slug")
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -807,6 +851,7 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
+        env_slug = self.kwargs.get("env_slug")
         deployment_hash = self.kwargs["deployment_hash"]
 
         try:
@@ -852,6 +897,7 @@ class DockerServiceDeploymentLogsAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
+        env_slug: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -897,6 +943,7 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
+        env_slug: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -955,6 +1002,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
+        env_slug: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -1018,6 +1066,7 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         deployment_hash = self.kwargs["deployment_hash"]
+        env_slug = self.kwargs["env_slug"]
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -1067,6 +1116,7 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
+        env_slug = self.kwargs.get("service_slug")
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -1100,6 +1150,7 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
         service_slug = self.kwargs["service_slug"]
         deployment_hash = self.kwargs["deployment_hash"]
         request_uuid = self.kwargs["request_uuid"]
+        env_slug = self.kwargs.get("env_slug")
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -1147,6 +1198,7 @@ class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         request_uuid = self.kwargs["request_uuid"]
+        env_slug = self.kwargs.get("env_slug")
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -1184,7 +1236,13 @@ class ArchiveDockerServiceAPIView(APIView):
         description="Archive a service created from a docker image.",
     )
     @transaction.atomic()
-    def delete(self, request: Request, project_slug: str, service_slug: str):
+    def delete(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ):
         project = (
             Project.objects.filter(
                 slug=project_slug.lower(), owner=request.user
@@ -1295,7 +1353,13 @@ class ToggleDockerServiceAPIView(APIView):
         description="Stops a running docker service and restart it if it was stopped.",
     )
     @transaction.atomic()
-    def put(self, request: Request, project_slug: str, service_slug: str):
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str | None = None,
+    ):
         project: Project | None = (
             Project.objects.filter(
                 slug=project_slug.lower(), owner=request.user
