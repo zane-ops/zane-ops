@@ -37,9 +37,11 @@ from ..models import (
     Volume,
     Config,
     URL,
+    Environment,
 )
 from ..temporal import (
     get_network_resource_name,
+    get_env_network_resource_name,
     DockerImageResultFromRegistry,
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
@@ -1218,6 +1220,11 @@ class FakeDockerClient:
 
     def get_network(self, p: Project):
         return self.network_map.get(get_network_resource_name(p.id))
+
+    def get_env_network(self, env: Environment):
+        return self.network_map.get(
+            get_env_network_resource_name(env.id, env.project.id)  # type: ignore
+        )
 
     def create_network(self, p: Project):
         return self.docker_create_network(

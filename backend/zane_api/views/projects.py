@@ -160,6 +160,8 @@ class ProjectsListAPIView(ListCreateAPIView):
                     owner=request.user,
                     description=data.get("description"),  # type: ignore
                 )
+                # Create default production environment
+                new_project.environments.create(name="production")
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"
