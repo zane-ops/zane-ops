@@ -1,6 +1,12 @@
-:80 {
+{
 	log
-	header X-Robots-Tag "noindex"
+}
+
+:80 {
+	header {
+		X-Robots-Tag "noindex"
+		-Server
+	}
 
 	handle /api/* {
 		reverse_proxy unix//run/gunicorn/gunicorn.sock
