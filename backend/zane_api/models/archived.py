@@ -58,10 +58,8 @@ class ArchivedProject(TimestampArchivedModel):
                 description=project.description,
             )
 
-        for env in project.environments.all():
-            archived_version.environments.create(
-                original_id=env.id, name=env.name, immutable=env.immutable
-            )
+        for env in project.environments.filter(is_preview=False):
+            archived_version.environments.create(original_id=env.id, name=env.name)
         return archived_version
 
     def __str__(self):
@@ -75,7 +73,6 @@ class ArchivedProject(TimestampArchivedModel):
 class ArchivedEnvironment(TimestampArchivedModel):
     original_id = models.CharField(max_length=255)
     name = models.SlugField(max_length=255, blank=True)
-    immutable = models.BooleanField(default=False)
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="environments"
     )
