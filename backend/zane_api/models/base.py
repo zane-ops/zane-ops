@@ -1022,7 +1022,7 @@ class Environment(TimestampedModel):
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="environments"
     )
-    immutable = models.BooleanField(default=False)
+    is_preview = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name})"
