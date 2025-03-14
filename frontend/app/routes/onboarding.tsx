@@ -13,9 +13,7 @@ import { metaTitle } from "~/utils";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
-export const meta: Route.MetaFunction = () => [
-  metaTitle("Initial Registration")
-];
+export const meta: Route.MetaFunction = () => [metaTitle("Welcome to ZaneOps")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const userExistQuery = await queryClient.ensureQueryData(
