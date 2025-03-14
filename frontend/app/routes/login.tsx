@@ -21,7 +21,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
-    throw redirect("/initial-registration");
+    throw redirect("/onboarding");
   }
 
   const searchParams = new URL(request.url).searchParams;

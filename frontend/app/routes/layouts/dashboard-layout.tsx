@@ -64,7 +64,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   console.log({ exist: userExistQuery.data });
 
   if (!userExistQuery.data?.exists) {
-    throw redirect("/initial-registration");
+    throw redirect("/onboarding");
   }
 
   const user = userQuery.data?.user;
