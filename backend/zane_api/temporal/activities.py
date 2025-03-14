@@ -10,6 +10,7 @@ from temporalio.service import RPCError
 
 
 from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
+import platform
 
 with workflow.unsafe.imports_passed_through():
     from .schedules import (
@@ -1527,7 +1528,7 @@ class DockerSwarmActivities:
         except docker.errors.ImageNotFound as e:
             await deployment_log(
                 deployment,
-                f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}this image does not exists or may require credentials to pull ❌{Colors.ENDC}",
+                f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}this image either does not exists for this platform (linux/{platform.machine()}) or may require credentials to pull ❌{Colors.ENDC}",
             )
             return False
         except docker.errors.APIError as e:
