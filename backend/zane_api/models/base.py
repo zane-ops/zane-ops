@@ -44,11 +44,11 @@ class Project(TimestampedModel):
 
     @property
     def production_env(self):
-        return self.environments.get(name="production")
+        return self.environments.get(name=Environment.PRODUCTION_ENV)
 
     @property
     async def aproduction_env(self):
-        return await self.environments.aget(name="production")
+        return await self.environments.aget(name=Environment.PRODUCTION_ENV)
 
     @property
     def create_task_id(self):
@@ -1012,6 +1012,7 @@ class HttpLog(Log):
 
 class Environment(TimestampedModel):
     ID_PREFIX = "project_env_"
+    PRODUCTION_ENV = "production"
     services: Manager[DockerRegistryService]
     id = ShortUUIDField(
         length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
