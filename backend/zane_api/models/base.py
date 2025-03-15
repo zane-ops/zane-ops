@@ -160,10 +160,6 @@ class BaseService(TimestampedModel):
 
     class Meta:
         abstract = True
-        unique_together = (
-            "slug",
-            "project",
-        )
 
     def delete_resources(self):
         self.ports.filter().delete()
@@ -254,6 +250,9 @@ class DockerRegistryService(BaseService):
 
     def __str__(self):
         return f"DockerRegistryService({self.slug})"
+
+    class Meta:
+        unique_together = ("slug", "project", "environment")
 
     @property
     def unprefixed_id(self):
