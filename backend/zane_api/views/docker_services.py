@@ -521,7 +521,7 @@ class DeployDockerServiceAPIView(APIView):
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
-            .select_related("project", "healthcheck")
+            .select_related("project", "healthcheck", "environment")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "changes", "configs"
             )
@@ -614,7 +614,7 @@ class RedeployDockerServiceAPIView(APIView):
             DockerRegistryService.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
-            .select_related("project", "healthcheck")
+            .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
 
