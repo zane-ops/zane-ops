@@ -704,6 +704,7 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
+    environment_id: str
     HASH_PREFIX = "dpl_dkr_"
     urls = Manager["DeploymentURL"]
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
@@ -783,14 +784,12 @@ class DockerDeployment(BaseDeployment):
     def network_aliases(self):
         aliases = []
         if self.service is not None and len(self.service.network_aliases) > 0:
-            aliases = self.service.network_aliases + [
-                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}",
-            ]
+            aliases = self.service.network_aliases + [self.network_alias]
         return aliases
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}.{self.service.environment.name}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"{self.service.network_alias}-{self.service.environment_id.replace(Environment.ID_PREFIX, '')}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
 
     class Meta:
         ordering = ("-queued_at",)
