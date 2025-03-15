@@ -117,29 +117,23 @@ export const projectQueries = {
       },
       placeholderData: keepPreviousData
     }),
-  serviceList: (
-    slug: string,
-    environment = "production",
-    filters: ProjectServiceListSearch = {}
-  ) =>
+  serviceList: (slug: string, filters: ProjectServiceListSearch = {}) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(slug).queryKey,
-        environment,
         "SERVICE-LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{slug}/{env_slug}/service-list/",
+          "/api/projects/{slug}/service-list/",
           {
             params: {
               query: {
                 ...filters
               },
               path: {
-                slug,
-                env_slug: environment
+                slug
               }
             },
             signal

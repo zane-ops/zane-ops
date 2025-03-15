@@ -213,13 +213,6 @@ export interface paths {
     /** Update a project */
     patch: operations["updateProject"];
   };
-  "/api/projects/{slug}/{env_slug}/service-list/": {
-    /**
-     * Get service list
-     * @description Get all services in a project
-     */
-    get: operations["projects_service_list_list_2"];
-  };
   "/api/projects/{slug}/create-environment/": {
     /**
      * Create new environment
@@ -4592,48 +4585,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["UpdateProjectErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Get service list
-   * @description Get all services in a project
-   */
-  projects_service_list_list_2: {
-    parameters: {
-      query?: {
-        query?: string;
-      };
-      path: {
-        env_slug: string;
-        slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ServiceCardResponse"][];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceListListErrorResponse400"];
         };
       };
       401: {
