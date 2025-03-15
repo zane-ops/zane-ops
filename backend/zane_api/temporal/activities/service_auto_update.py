@@ -29,7 +29,7 @@ def is_image_updated(current_image: str, desired_image: str) -> bool:
         raise RuntimeError(f"Error comparing images: {e}")
 
 
-def update_service(service, desired_image: str, desired_envs: list):
+def update_service(service, desired_image: str):
     try:
         service_spec = service.attrs["Spec"]
         task_template = service_spec["TaskTemplate"]
@@ -37,7 +37,6 @@ def update_service(service, desired_image: str, desired_envs: list):
 
         service.update(
             image=desired_image,
-            env=desired_envs,
             labels=service_spec.get("Labels"),
             networks=task_template.get("Networks"),
             mounts=container_spec.get("Mounts"),
@@ -51,10 +50,29 @@ def update_service(service, desired_image: str, desired_envs: list):
         raise RuntimeError(f"Error updating service '{service.name}': {e}")
 
 
+def update_image_version(new_version: str, env_file_path: str = "/app/.env"):
+    lines = []
+    with open(env_file_path, "r") as file:
+        for line in file:
+            if line.startswith("IMAGE_VERSION="):
+                lines.append(f"IMAGE_VERSION={new_version}\n")
+            else:
+                lines.append(line)
+
+    with open(env_file_path, "w") as file:
+        file.writelines(lines)
+
+    print(f"Updated IMAGE_VERSION to {new_version}")
+
+
+def restart_service(service_name: str):
+    service = get_service(service_name)
+    service.update(force_update=True)
+    print(f"Service {service_name} restarted to pick up new .env changes.")
+
+
 @activity.defn
-async def update_docker_service(
-    service_name: str, desired_image: str, desired_envs: list
-):
+async def update_docker_service(service_name: str, desired_image: str):
     service = get_service(service_name)
     current_image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"]
 
@@ -62,7 +80,11 @@ async def update_docker_service(
         activity.logger.info(
             f"Updating service '{service_name}' to new image '{desired_image}'..."
         )
-        update_service(service, desired_image, desired_envs)
-        activity.logger.info(f"Service '{service_name}' updated successfully.")
+        update_service(service, desired_image)
+        update_image_version(desired_image)
+        restart_service(service_name)
+        activity.logger.info(
+            f"Service '{service_name}' updated and restarted successfully."
+        )
     else:
         activity.logger.info(f"Service '{service_name}' is already up-to-date.")

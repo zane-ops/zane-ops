@@ -749,7 +749,6 @@ class AutoUpdateDockerServiceWorkflow:
                 update_docker_service,
                 service,
                 desired_image,
-                [],
                 start_to_close_timeout=timedelta(minutes=10),
                 retry_policy=retry_policy,
             )

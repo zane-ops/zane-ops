@@ -1,5 +1,6 @@
 x-backend-vars: &env-vars
   ENVIRONMENT: PRODUCTION
+  IMAGE_VERSION: ${IMAGE_VERSION}
   REDIS_URL: redis://zane.valkey:6379/0
   DB_HOST: zane.pgbouncer
   DB_PORT: 5432
@@ -52,6 +53,7 @@ services:
     volumes:
       - caddy-data:/data
       - caddy-config:/config
+      - env-data:/app/.env
     environment:
       CADDY_ADMIN: 0.0.0.0:2019
     networks:
@@ -101,6 +103,7 @@ services:
       <<: *env-vars
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - env-data:/app/.env
     depends_on:
       - db
       - valkey
@@ -192,6 +195,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - env-data:/app/.env
     depends_on:
       - db
       - valkey
@@ -226,6 +230,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - env-data:/app/.env
     depends_on:
       - db
       - valkey
@@ -421,6 +426,10 @@ volumes:
     labels:
       zane.stack: "true"
   caddy-config:
+    labels:
+      zane.stack: "true"
+  env-data:                     
+    driver: local
     labels:
       zane.stack: "true"
 networks:
