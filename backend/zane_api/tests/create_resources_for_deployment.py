@@ -15,7 +15,7 @@ from ..models import (
     URL,
 )
 
-from ..temporal import ZaneProxyClient
+from ..temporal.activities import ZaneProxyClient
 
 from ..utils import convert_value_to_bytes
 

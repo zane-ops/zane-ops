@@ -21,7 +21,7 @@ from ..models import (
     DockerEnvVariable,
 )
 from ..serializers import DockerServiceSerializer
-from ..temporal import (
+from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     ZaneProxyClient,
 )

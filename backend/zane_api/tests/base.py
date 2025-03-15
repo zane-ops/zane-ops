@@ -38,14 +38,15 @@ from ..models import (
     Config,
     URL,
 )
-from ..temporal import (
+from ..temporal.activities import (
     get_network_resource_name,
     DockerImageResultFromRegistry,
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
 )
-from ..temporal import (
-    get_workflows_and_activities,
+from ..temporal import get_workflows_and_activities
+
+from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
