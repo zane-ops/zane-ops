@@ -274,6 +274,36 @@ class EnvironmentViewTests(AuthAPITestCase):
         self.assertIsNone(network)
 
 
+class ProjectEnvironmentViewTests(AuthAPITestCase):
+    def test_filter_services_by_env(self):
+        self.loginUser()
+        self.create_caddy_docker_service()
+        p, service = self.create_redis_docker_service()
+
+        staging_env = p.environments.create(name="staging")
+        service.environment = staging_env
+        service.save()
+
+        response = self.client.get(
+            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug}),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        production_services = response.json()
+        self.assertEqual(1, len(production_services))
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": p.slug, "env_slug": "staging"},
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        staging_services = response.json()
+        self.assertEqual(1, len(staging_services))
+
+        self.assertNotEqual(production_services, staging_services)
+
+
 class ServiceEnvironmentViewTests(AuthAPITestCase):
     def test_create_service_should_put_service_in_production_by_default(self):
         p, service = self.create_and_deploy_redis_docker_service()

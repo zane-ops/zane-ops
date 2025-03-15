@@ -448,13 +448,23 @@ class ProjectServiceListView(APIView):
     def get(self, request: Request, slug: str, env_slug: str | None = None):
         try:
             project = Project.objects.get(slug=slug.lower())
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
             )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         # Prefetch related fields and use annotate to count volumes
-        filters = Q(project=project)
+        filters = Q(project=project) & Q(environment=environment)
         query = request.query_params.get("query", "")
         if query:
             filters = filters & Q(slug__icontains=query)

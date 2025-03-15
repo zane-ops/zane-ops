@@ -754,7 +754,7 @@ class AuthAPITestCase(APITestCase):
         service.refresh_from_db()
         return project, service
 
-    def create_caddy_docker_service(self):
+    def create_caddy_docker_service(self, slug="caddy"):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -773,10 +773,10 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = DockerRegistryService.objects.get(slug=slug)
         return project, service
 
-    def create_redis_docker_service(self):
+    def create_redis_docker_service(self, slug="redis"):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -795,7 +795,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="redis")
+        service = DockerRegistryService.objects.get(slug=slug)
         return project, service
 
     async def acreate_redis_docker_service(self):
