@@ -1185,7 +1185,7 @@ class DockerSwarmActivities:
                 Q(service_id=deployment.service.id)
                 & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
             )
-            .select_related("service")
+            .select_related("service", "service__environment")
             .order_by("queued_at")
             .afirst()
         )
