@@ -4,7 +4,15 @@ with workflow.unsafe.imports_passed_through():
     import docker
     from docker.errors import APIError, NotFound
 
-docker_client = docker.from_env()
+
+docker_client: docker.DockerClient | None = None
+
+
+def get_docker_client():
+    global docker_client
+    if docker_client is None:
+        docker_client = docker.from_env()
+    return docker_client
 
 
 # ==================================================
