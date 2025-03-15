@@ -43,7 +43,7 @@ with workflow.unsafe.imports_passed_through():
         reset_deploy_semaphore,
     )
     from ..utils import jprint
-    from .service_auto_update_activity import update_docker_service
+    from .activities.service_auto_update import update_docker_service
 
 
 @workflow.defn(name="create-project-resources-workflow")
