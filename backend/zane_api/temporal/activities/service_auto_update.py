@@ -1,6 +1,10 @@
 import docker
 from docker.errors import APIError, NotFound
-from temporalio import activity
+from temporalio import activity, workflow
+
+with workflow.unsafe.imports_passed_through():
+    import docker
+    from docker.errors import APIError, NotFound
 
 docker_client = docker.from_env()
 
