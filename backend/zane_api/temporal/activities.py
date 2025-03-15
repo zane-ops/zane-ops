@@ -1121,14 +1121,11 @@ class DockerSwarmActivities:
             .afirst()
         )
 
-        if (
-            latest_production_deployment is not None
-            and latest_production_deployment.service_snapshot is not None
-        ):
+        if latest_production_deployment is not None:
             if (
-                latest_production_deployment.service_snapshot.get("environment") is None
-            ):  # type: None
-                latest_production_deployment.service_snapshot["environment"] = (
+                latest_production_deployment.service_snapshot.get("environment") is None  # type: ignore
+            ):
+                latest_production_deployment.service_snapshot["environment"] = (  # type: ignore
                     deployment.service.environment.to_dict()
                 )
             return SimpleDeploymentDetails(
@@ -1136,7 +1133,6 @@ class DockerSwarmActivities:
                 service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
-                # url=latest_production_deployment.url,
                 urls=[url.domain async for url in latest_production_deployment.urls.all()],  # type: ignore
                 service_snapshot=DockerServiceSnapshot.from_dict(
                     latest_production_deployment.service_snapshot  # type: ignore
