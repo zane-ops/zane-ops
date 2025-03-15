@@ -536,7 +536,7 @@ class ZaneProxyClient:
                         "retries": 2,
                     },
                     "upstreams": [
-                        {"dial": (f"{current_deployment.network_alias}:{http_port}")},
+                        {"dial": f"{current_deployment.network_alias}:{http_port}"},
                     ],
                 }
             )
