@@ -29,14 +29,20 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import { type Route } from "./+types/project-layout";
+import type { Route } from "./+types/project-layout";
 
 export function meta({ error }: Route.MetaArgs) {
   const title = !error
@@ -53,25 +59,24 @@ export async function clientLoader({
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
 
-  const queryString = searchParams.get("query") ?? "";
+  const selectedEnvironment = searchParams.get("env")?.toString();
+  let currentEnvironment = "production";
 
-  let project = queryClient.getQueryData(
-    projectQueries.single(params.projectSlug).queryKey
+  const project = await queryClient.ensureQueryData(
+    projectQueries.single(params.projectSlug)
   );
 
-  if (!project) {
-    // fetch the data on first load to prevent showing the loading fallback
-    [project] = await Promise.all([
-      queryClient.ensureQueryData(projectQueries.single(params.projectSlug)),
-      queryClient.ensureQueryData(
-        projectQueries.serviceList(params.projectSlug, {
-          query: queryString
-        })
-      )
-    ]);
+  if (
+    selectedEnvironment &&
+    project.environments.find((env) => env.name == selectedEnvironment)
+  ) {
+    currentEnvironment = selectedEnvironment;
   }
 
-  return { project };
+  await queryClient.ensureQueryData(
+    projectQueries.serviceList(params.projectSlug, currentEnvironment)
+  );
+  return { project, currentEnvironment };
 }
 
 const TABS = {
@@ -93,7 +98,7 @@ export default function ProjectDetail({
   const query = searchParams.get("query") ?? "";
 
   const projectServiceListQuery = useQuery(
-    projectQueries.serviceList(slug, {
+    projectQueries.serviceList(slug, loaderData.currentEnvironment, {
       query
     })
   );
@@ -136,6 +141,36 @@ export default function ProjectDetail({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>{slug}</BreadcrumbPage>
+          </BreadcrumbItem>
+
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <Select
+              name="environment"
+              onValueChange={(value) => {
+                searchParams.set("env", value);
+                setSearchParams(searchParams, { replace: true });
+              }}
+              value={loaderData.currentEnvironment}
+            >
+              <SelectTrigger
+                id="healthcheck_type"
+                className={cn(
+                  "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
+                  "data-disabled:opacity-100 data-disabled:border-transparent",
+                  "text-muted-foreground"
+                )}
+              >
+                <SelectValue placeholder="Select an environment" />
+              </SelectTrigger>
+              <SelectContent>
+                {project.environments.map((env) => (
+                  <SelectItem key={env.id} value={env.name}>
+                    {env.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
