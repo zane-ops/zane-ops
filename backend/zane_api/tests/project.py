@@ -18,6 +18,7 @@ from ..models import (
     DockerDeploymentChange,
     Config,
     ArchivedEnvironment,
+    HealthCheck,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -380,6 +381,16 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                     },
                 ),
                 DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "echo 1",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                ),
+                DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.CONFIGS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
@@ -420,7 +431,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={"host": 8080, "forwarded": 80},
                 ),
-            ]
+            ],
         )
 
         first_deployment: DockerDeployment = await service.deployments.afirst()
@@ -476,6 +487,10 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         deleted_urls = URL.objects.filter(domain="gitea.zane.local", base_path="/")
         self.assertEqual(0, await deleted_urls.acount())
         self.assertEqual(2, await archived_service.urls.acount())
+
+        # healthcheck are cleaned up
+        deleted_healthcheck = await HealthCheck.objects.filter().afirst()
+        self.assertIsNone(deleted_healthcheck)
 
         # --- Docker Resources ---
         # service is removed
