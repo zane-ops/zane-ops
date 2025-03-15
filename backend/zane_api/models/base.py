@@ -671,7 +671,7 @@ class Config(TimestampedModel):
 class DeploymentURL(models.Model):
     domain = models.URLField()
     port = models.PositiveIntegerField(default=80)
-    deployment = models.ForeignKey(
+    deployment: models.ForeignKey["DockerDeployment"] = models.ForeignKey(
         to="DockerDeployment",
         on_delete=models.CASCADE,
         related_name="urls",
@@ -705,6 +705,7 @@ class BaseDeployment(models.Model):
 
 class DockerDeployment(BaseDeployment):
     HASH_PREFIX = "dpl_dkr_"
+    urls = Manager["DeploymentURL"]
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
 
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
@@ -789,7 +790,7 @@ class DockerDeployment(BaseDeployment):
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"{self.service.network_alias}.{self.slot.lower()}.{self.service.environment.name}.{settings.ZANE_INTERNAL_DOMAIN}"
 
     class Meta:
         ordering = ("-queued_at",)
@@ -1026,6 +1027,14 @@ class Environment(TimestampedModel):
 
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name})"
+
+    @property
+    def workflow_id(self) -> str:
+        return f"create-env-{self.project_id}-{self.id}"
+
+    @property
+    def archive_workflow_id(self) -> str:
+        return f"archive-env-{self.project_id}-{self.id}"
 
     @property
     def is_production(self):

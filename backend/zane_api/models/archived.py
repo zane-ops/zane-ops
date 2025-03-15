@@ -185,6 +185,7 @@ class ArchivedDockerService(ArchivedBaseService):
     deployments = models.JSONField(
         null=False, default=list
     )  # type: list[dict[str, str]]
+    environment_id = models.CharField(null=True)
 
     @property
     def workflow_id(self):
@@ -202,6 +203,7 @@ class ArchivedDockerService(ArchivedBaseService):
             original_id=service.id,
             credentials=service.credentials,
             resource_limits=service.resource_limits,
+            environment_id=service.environment_id,
             healthcheck=(
                 dict(
                     type=service.healthcheck.type,
