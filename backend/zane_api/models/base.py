@@ -790,7 +790,7 @@ class DockerDeployment(BaseDeployment):
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}.{self.slot.lower()}.{self.service.environment.name}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"{self.service.network_alias}.{self.service.environment.name}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
 
     class Meta:
         ordering = ("-queued_at",)
