@@ -5,7 +5,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import serializers
-from ..temporal import search_images_docker_hub, check_if_port_is_available_on_host
+from ..temporal.activities import (
+    search_images_docker_hub,
+    check_if_port_is_available_on_host,
+)
 
 
 class DockerImageSerializer(serializers.Serializer):

@@ -10,3 +10,4 @@ from .status import *
 from .deployments import *
 from .search import *
 from .metrics import *
+from .auto_update_docker_services import *

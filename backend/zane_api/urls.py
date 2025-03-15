@@ -223,4 +223,9 @@ urlpatterns = [
         views.CreateUserView.as_view(),
         name="auth.create_initial_user",
     ),
+    re_path(
+        r"^trigger-update/?$",
+        views.TriggerUpdateView.as_view(),
+        name="app.trigger_update",
+    ),
 ]
