@@ -34,7 +34,7 @@ async def update_docker_service(payload: UpdateDetails):
             f"Updating service '{payload.service_name}' to new image '{new_image}'..."
         )
         service.update(
-            image=payload.desired_version,
+            image=new_image,
         )
         print(f"Service '{payload.service_name}' updated and restarted successfully.")
     else:
