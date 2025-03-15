@@ -776,6 +776,28 @@ class AuthAPITestCase(APITestCase):
         service = DockerRegistryService.objects.get(slug="caddy")
         return project, service
 
+    def create_redis_docker_service(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = Project.objects.get(slug="zaneops")
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug="caddy")
+        return project, service
+
 
 class FakeDockerClient:
     @dataclass
