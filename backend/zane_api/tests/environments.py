@@ -4,6 +4,7 @@ from rest_framework import status
 
 from ..models import Project, DockerDeployment, DockerRegistryService
 from ..temporal.activities import get_env_network_resource_name
+from ..utils import jprint
 
 
 class EnvironmentTests(AuthAPITestCase):
@@ -309,3 +310,58 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_redis_docker_service()
         self.assertIsNotNone(service.environment)
         self.assertEqual(service.environment, p.production_env)
+
+    def test_create_service_in_environment(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        p = Project.objects.get(slug="zane-ops")
+        p.environments.create(name="staging")
+
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "staging"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service = DockerRegistryService.objects.get(slug="redis")
+        self.assertEqual("staging", service.environment.name)
+
+    def test_get_service_in_environment(self):
+        p, service = self.create_and_deploy_redis_docker_service()
+
+        staging_env = p.environments.create(name="staging")
+        service.environment = staging_env
+        service.save()
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "env_slug": "production",
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.docker.details",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "env_slug": staging_env.name,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)

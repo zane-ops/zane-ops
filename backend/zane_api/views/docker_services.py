@@ -115,13 +115,19 @@ class CreateDockerServiceAPIView(APIView):
     def post(self, request: Request, project_slug: str, env_slug: str | None = None):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
-            # if env_slug is None:
-            environment = project.production_env
-            # else:
-            #   environment = Environment.objects.get()
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
         else:
             form = DockerServiceCreateRequestSerializer(data=request.data)
@@ -204,9 +210,19 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
 
         service = (
@@ -660,9 +676,19 @@ class CancelDockerServiceDeploymentAPIView(APIView):
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
 
         service = (
@@ -732,16 +758,26 @@ class DockerServiceDetailsAPIView(APIView):
     ) -> Response:
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         service = (
             DockerRegistryService.objects.filter(
-                Q(slug=service_slug) & Q(project=project)
+                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
-            .select_related("project", "healthcheck")
+            .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables")
         ).first()
 
@@ -779,14 +815,24 @@ class DockerServiceDetailsAPIView(APIView):
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         service = (
             DockerRegistryService.objects.filter(
-                Q(slug=service_slug) & Q(project=project)
+                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
             .prefetch_related("volumes", "ports", "urls", "env_variables")
