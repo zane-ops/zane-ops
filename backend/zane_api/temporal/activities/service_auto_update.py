@@ -1,5 +1,3 @@
-import docker
-from docker.errors import APIError, NotFound
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
