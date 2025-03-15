@@ -7,6 +7,7 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError, ActivityError
 
+
 from .shared import (
     DeploymentCreateConfigsResult,
     DeploymentHealthcheckResult,
@@ -15,6 +16,7 @@ from .shared import (
     DeployDockerServiceWorkflowResult,
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
+    UpdateDetails,
 )
 from ..dtos import ConfigDto, VolumeDto
 
@@ -43,7 +45,10 @@ with workflow.unsafe.imports_passed_through():
         reset_deploy_semaphore,
     )
     from ..utils import jprint
-    from .activities.service_auto_update import update_docker_service
+    from .activities.service_auto_update import (
+        update_docker_service,
+        update_image_version_in_env_file,
+    )
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -720,20 +725,12 @@ class SystemCleanupWorkflow:
             pass
 
 
-UPDATE_ORDER = [
-    "zane_proxy",
-    "zane_app",
-    "zane_temporal-schedule-worker",
-    "zane_temporal-main-worker",
-]
-
-
 @workflow.defn(name="auto-update-docker-service-workflow")
 class AutoUpdateDockerServiceWorkflow:
     @workflow.run
-    async def run(self, desired_image: str):
+    async def run(self, desired_version: str):
         print(
-            f"\nRunning workflow `AutoUpdateDockerServiceWorkflow` with {desired_image=}"
+            f"\nRunning workflow `AutoUpdateDockerServiceWorkflow` with {desired_version=}"
         )
 
         retry_policy = RetryPolicy(
@@ -741,18 +738,35 @@ class AutoUpdateDockerServiceWorkflow:
             maximum_interval=timedelta(seconds=30),
         )
 
-        for service in UPDATE_ORDER:
+        services_to_update = [
+            ("zane_proxy", "ghcr.io/zane-ops/proxy"),
+            ("zane_app", "ghcr.io/zane-ops/app"),
+            ("zane_temporal-schedule-worker", "ghcr.io/zane-ops/app"),
+            ("zane_temporal-main-worker", "ghcr.io/zane-ops/app"),
+        ]
+
+        for service, image in services_to_update:
             print(
-                f"Running activity `update_docker_service({service=}, {desired_image=})`"
+                f"Running activity `update_docker_service({service=}, {desired_version=})`"
             )
             await workflow.execute_activity_method(
                 update_docker_service,
-                service,
-                desired_image,
-                start_to_close_timeout=timedelta(minutes=10),
+                UpdateDetails(
+                    service_name=service,
+                    desired_version=desired_version,
+                    service_image=image,
+                ),
+                start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
             )
             print(f"Service `{service}` updated successfully.")
+
+        await workflow.execute_activity(
+            update_image_version_in_env_file,
+            desired_version,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=retry_policy,
+        )
 
 
 def get_workflows_and_activities():
@@ -824,5 +838,6 @@ def get_workflows_and_activities():
             release_deploy_semaphore,
             reset_deploy_semaphore,
             update_docker_service,
+            update_image_version_in_env_file,
         ],
     )

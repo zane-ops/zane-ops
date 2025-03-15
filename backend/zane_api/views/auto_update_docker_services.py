@@ -5,7 +5,10 @@ from rest_framework.throttling import ScopedRateThrottle
 from django.conf import settings
 from temporalio.client import Client
 from drf_spectacular.utils import extend_schema
-from ..temporal.workflows import AutoUpdateDockerServiceWorkflow
+from ..temporal import AutoUpdateDockerServiceWorkflow, start_workflow
+from rest_framework.request import Request
+from django.db import transaction
+import requests
 
 from .serializers import (
     AutoUpdateRequestSerializer,
@@ -13,44 +16,52 @@ from .serializers import (
 )
 
 
-class TriggerAutoUpdateView(APIView):
+def check_image_exists(desired_image: str) -> bool:
+    response = requests.get("https://cdn.zaneops.dev/api/releases")
+    if response.status_code == status.HTTP_200_OK:
+        data = response.json()
+        available_tags = [item["tag"] for item in data]
+        return desired_image in available_tags
+    else:
+        print(f"Failed to fetch data. Status code: {response.status_code}")
+        return False
+
+
+class TriggerUpdateView(APIView):
     """
-    API endpoint to trigger the Docker auto-update workflow.
+    API endpoint to trigger the update workflow of ZaneOps
     """
 
-    permission_classes = [permissions.IsAuthenticated]
-    throttle_scope = "auto_update"
-    throttle_classes = [ScopedRateThrottle]
+    serializer_class = AutoUpdateResponseSerializer
 
     @extend_schema(
         request=AutoUpdateRequestSerializer,
-        responses={202: AutoUpdateResponseSerializer},
         summary="Trigger Auto-Update",
         description="Triggers the Docker auto-update workflow using Temporal.",
     )
-    def post(self, request) -> Response:
+    @transaction.atomic()
+    def post(self, request: Request) -> Response:
         serializer = AutoUpdateRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        desired_image = serializer.validated_data["desired_image"]
+        desired_version = serializer.validated_data["desired_version"]
 
-        try:
+        if check_image_exists(desired_version):
 
-            client = Client.connect(settings.TEMPORALIO_SERVER_URL)
-
-            client.start_workflow(
-                AutoUpdateDockerServiceWorkflow.run,
-                desired_image,
-                id=f"auto-update-{desired_image}",
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+            transaction.on_commit(
+                lambda: start_workflow(
+                    AutoUpdateDockerServiceWorkflow.run,
+                    desired_version,
+                    id=f"auto-update-{desired_version}",
+                )
             )
 
             response_serializer = AutoUpdateResponseSerializer(
-                {
-                    "message": f"Auto-update workflow for image '{desired_image}' started."
-                }
+                {"message": f"Auto-update workflow for  '{desired_version}' started."}
             )
-            return Response(response_serializer.data, status=status.HTTP_202_ACCEPTED)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
 
-        except Exception as e:
-            raise exceptions.APIException(f"Failed to trigger auto-update: {e}")
+        else:
+            raise exceptions.NotFound(
+                f"The provided version `{desired_version}` is not a valid ZaneOps version"
+            )

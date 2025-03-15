@@ -224,8 +224,8 @@ urlpatterns = [
         name="auth.create_initial_user",
     ),
     re_path(
-        r"^docker/trigger-auto-update/?$",
-        views.TriggerAutoUpdateView.as_view(),
-        name="docker.trigger_auto_update",
+        r"^trigger-update/?$",
+        views.TriggerUpdateView.as_view(),
+        name="app.trigger_update",
     ),
 ]
