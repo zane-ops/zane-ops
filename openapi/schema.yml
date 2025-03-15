@@ -4186,12 +4186,12 @@ components:
     AutoUpdateRequestRequest:
       type: object
       properties:
-        desired_image:
+        desired_version:
           type: string
           minLength: 1
           maxLength: 255
       required:
-      - desired_image
+      - desired_version
     AutoUpdateResponse:
       type: object
       properties:
@@ -8971,14 +8971,14 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    TriggerUpdateCreateDesiredImageErrorComponent:
+    TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - desired_image
+          - desired_version
           type: string
-          description: '* `desired_image` - desired_image'
+          description: '* `desired_version` - desired_version'
         code:
           enum:
           - blank
@@ -9006,12 +9006,12 @@ components:
     TriggerUpdateCreateError:
       oneOf:
       - $ref: '#/components/schemas/TriggerUpdateCreateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/TriggerUpdateCreateDesiredImageErrorComponent'
+      - $ref: '#/components/schemas/TriggerUpdateCreateDesiredVersionErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/TriggerUpdateCreateNonFieldErrorsErrorComponent'
-          desired_image: '#/components/schemas/TriggerUpdateCreateDesiredImageErrorComponent'
+          desired_version: '#/components/schemas/TriggerUpdateCreateDesiredVersionErrorComponent'
     TriggerUpdateCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/TriggerUpdateCreateValidationError'
