@@ -49,7 +49,7 @@ class EnvironmentTests(AuthAPITestCase):
         )
         project = await Project.objects.aget(slug="zane-ops")
 
-        response = self.client.post(
+        response = await self.async_client.post(
             reverse(
                 "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
             ),
