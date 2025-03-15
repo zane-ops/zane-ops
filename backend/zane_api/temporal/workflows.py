@@ -18,6 +18,7 @@ from .shared import (
 )
 from ..dtos import ConfigDto, VolumeDto
 
+
 with workflow.unsafe.imports_passed_through():
     from ..models import DockerDeployment
     from .activities import DockerSwarmActivities, SystemCleanupActivities
@@ -42,6 +43,7 @@ with workflow.unsafe.imports_passed_through():
         reset_deploy_semaphore,
     )
     from ..utils import jprint
+    from .service_auto_update_activity import update_docker_service
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -718,6 +720,42 @@ class SystemCleanupWorkflow:
             pass
 
 
+UPDATE_ORDER = [
+    "zane_proxy",
+    "zane_app",
+    "zane_temporal-schedule-worker",
+    "zane_temporal-main-worker",
+]
+
+
+@workflow.defn(name="auto-update-docker-service-workflow")
+class AutoUpdateDockerServiceWorkflow:
+    @workflow.run
+    async def run(self, desired_image: str):
+        print(
+            f"\nRunning workflow `AutoUpdateDockerServiceWorkflow` with {desired_image=}"
+        )
+
+        retry_policy = RetryPolicy(
+            maximum_attempts=5,
+            maximum_interval=timedelta(seconds=30),
+        )
+
+        for service in UPDATE_ORDER:
+            print(
+                f"Running activity `update_docker_service({service=}, {desired_image=})`"
+            )
+            await workflow.execute_activity_method(
+                update_docker_service,
+                service,
+                desired_image,
+                [],
+                start_to_close_timeout=timedelta(minutes=10),
+                retry_policy=retry_policy,
+            )
+            print(f"Service `{service}` updated successfully.")
+
+
 def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
@@ -736,6 +774,7 @@ def get_workflows_and_activities():
             CleanupAppLogsWorkflow,
             SystemCleanupWorkflow,
             GetDockerDeploymentStatsWorkflow,
+            AutoUpdateDockerServiceWorkflow,
         ],
         activities=[
             metrics_activities.get_deployment_stats,
@@ -785,5 +824,6 @@ def get_workflows_and_activities():
             lock_deploy_semaphore,
             release_deploy_semaphore,
             reset_deploy_semaphore,
+            update_docker_service,
         ],
     )
