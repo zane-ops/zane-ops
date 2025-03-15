@@ -590,9 +590,14 @@ class RedeployDockerServiceAPIView(APIView):
 
         latest_deployment: DockerDeployment = service.latest_production_deployment  # type: ignore
 
+        if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
+            latest_deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
+        if deployment.service_snapshot.get("environment") is None:  # type: ignore
+            deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
+
         changes = compute_docker_changes_from_snapshots(
-            dict(**latest_deployment.service_snapshot, environment=EnvironmentSerializer(environment).data),  # type: ignore
-            dict(**deployment.service_snapshot, environment=EnvironmentSerializer(environment).data),  # type: ignore
+            latest_deployment.service_snapshot,  # type: ignore
+            deployment.service_snapshot,  # type: ignore
         )
 
         for change in changes:

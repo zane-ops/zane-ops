@@ -393,7 +393,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             field=DockerDeploymentChange.ChangeField.SOURCE,
-            service__slug="app",
+            service__slug=service.slug,
         ).first()
         self.assertIsNone(changes.new_value.get("credentials"))
 
@@ -464,7 +464,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             field=DockerDeploymentChange.ChangeField.SOURCE,
-            service__slug="app",
+            service__slug=service.slug,
         ).first()
         self.assertIsNone(changes.new_value.get("credentials"))
 
@@ -934,7 +934,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
 
         service = DockerRegistryService.objects.create(
-            slug="app", project=p, image="caddy:2.8-alpine"
+            slug="app",
+            project=p,
+            image="caddy:2.8-alpine",
+            environment=p.production_env,
         )
 
         changes_payload = {
@@ -1428,28 +1431,14 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(1, updated_service.applied_changes.count())
 
     def test_deploy_service_with_commit_message(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "image": "caddy:2.8-alpine",
-                    },
-                    service=service,
-                ),
-            ]
-        )
+        p, service = self.create_caddy_docker_service()
 
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
             data={"commit_message": "Initial deployment"},
@@ -1459,9 +1448,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("Initial deployment", new_deployment.get("commit_message"))
 
     def test_apply_resource_limits(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
 
         resource_limits = {
             "cpus": 1.5,
@@ -1469,14 +1456,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         }
         DockerDeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "image": "caddy:2.8-alpine",
-                    },
-                    service=service,
-                ),
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
@@ -1491,7 +1470,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
@@ -1500,26 +1479,14 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(resource_limits, service.resource_limits)
 
     def test_deploy_service_with_blank_commit_message_uses_default_message(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
-            ]
-        )
+        p, service = self.create_caddy_docker_service()
 
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
             data={"commit_message": ""},
@@ -1529,26 +1496,14 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("update service", new_deployment.get("commit_message"))
 
     def test_deploy_service_without_commit_message_create_default_message(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
-            ]
-        )
+        p, service = self.create_caddy_docker_service()
 
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
@@ -1559,9 +1514,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
     def test_apply_volume_changes(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
         volume_to_delete, volume_to_update = Volume.objects.bulk_create(
             [
                 Volume(
@@ -1617,12 +1570,12 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.volumes.count())
 
         new_volume = updated_service.volumes.filter(container_path="/data").first()
@@ -1638,12 +1591,8 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("/config", updated_volume.container_path)
         self.assertEqual("caddy config", updated_volume.name)
 
-    def test_apply_env_changes(
-        self,
-    ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+    def test_apply_env_changes(self):
+        p, service = self.create_caddy_docker_service()
         env_to_delete, env_to_update = DockerEnvVariable.objects.bulk_create(
             [
                 DockerEnvVariable(
@@ -1657,12 +1606,6 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
         DockerDeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
                     type=DockerDeploymentChange.ChangeType.ADD,
@@ -1696,12 +1639,12 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="app")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.env_variables.count())
 
         new_env = updated_service.env_variables.filter(key="DJANGO_SECRET_KEY").first()
@@ -1715,17 +1658,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual("production", updated_env.value)
 
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
         DockerDeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
                 DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
                     type=DockerDeploymentChange.ChangeType.UPDATE,
@@ -1752,19 +1687,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(updated_service.healthcheck)
 
     def test_apply_healthcheck_changes_updates_healthcheck_if_exists(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
         service.healthcheck = HealthCheck.objects.create(type="COMMAND", value="/")
         service.save()
         DockerDeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
                 DockerDeploymentChange(
                     field="healthcheck",
                     type=DockerDeploymentChange.ChangeType.UPDATE,
@@ -1798,36 +1725,19 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
     def test_apply_changes_creates_a_deployment(
         self,
     ):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(
-            slug="basic-web-server", project=p
-        )
-        DockerDeploymentChange.objects.bulk_create(
-            [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
-                    new_value={
-                        "image": "caddy:2.8-alpine",
-                        "credentials": {"username": "fredkiss3", "password": "s3cret"},
-                    },
-                    service=service,
-                ),
-            ]
-        )
+        p, service = self.create_caddy_docker_service()
 
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "basic-web-server",
+                    "service_slug": service.slug,
                 },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug="basic-web-server")
+        updated_service = DockerRegistryService.objects.get(slug=service.slug)
         new_deployment: DockerDeployment = updated_service.deployments.first()
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.service_snapshot)
@@ -3040,11 +2950,7 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
         self.assertTrue(monitor_schedule.is_running)
 
     async def test_cannot_stop_service_if_not_deployed_yet(self):
-        owner = await self.aLoginUser()
-        project = await Project.objects.acreate(slug="zaneops", owner=owner)
-        service = await DockerRegistryService.objects.acreate(
-            slug="app", project=project
-        )
+        project, service = self.acreate_redis_docker_service()
 
         response = await self.async_client.put(
             reverse(
