@@ -2,7 +2,12 @@ from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Project, DockerDeployment, DockerRegistryService
+from ..models import (
+    Project,
+    DockerDeployment,
+    DockerRegistryService,
+    ArchivedDockerService,
+)
 from ..temporal.activities import get_env_network_resource_name
 from ..utils import jprint
 
@@ -273,6 +278,61 @@ class EnvironmentViewTests(AuthAPITestCase):
 
         network = self.fake_docker_client.get_env_network(staging_env)
         self.assertIsNone(network)
+
+    async def test_archiving_environment_also_archive_its_services(self):
+        p, service = await self.acreate_redis_docker_service()
+
+        response = await self.async_client.post(
+            reverse("zane_api:projects.create_enviroment", kwargs={"slug": p.slug}),
+            data={"name": "staging"},
+        )
+
+        staging_env = await p.environments.aget(name="staging")
+        service.environment = staging_env
+        await service.asave()
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "service_slug": service.slug,
+                    "env_slug": staging_env.name,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        first_deployment: DockerDeployment = await service.deployments.select_related("service").afirst()  # type: ignore
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": p.slug, "env_slug": staging_env.name},
+            ),
+        )
+
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_service: DockerRegistryService = await DockerRegistryService.objects.filter(slug=service.slug).afirst()  # type: ignore
+        self.assertIsNone(deleted_service)
+
+        archived_service: ArchivedDockerService = (
+            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()  # type: ignore
+        )
+        self.assertIsNotNone(archived_service)
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            first_deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+        deployments = [
+            deployment
+            async for deployment in DockerDeployment.objects.filter(
+                service__slug=service.slug
+            ).all()
+        ]
+        self.assertEqual(0, len(deployments))
 
 
 class ProjectEnvironmentViewTests(AuthAPITestCase):

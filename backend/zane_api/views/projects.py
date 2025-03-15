@@ -52,6 +52,7 @@ from ..models import (
     GitDeployment,
     Config,
     Environment,
+    HealthCheck,
 )
 from ..serializers import (
     ProjectSerializer,
@@ -288,6 +289,9 @@ class ProjectDetailsView(APIView):
         URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
         docker_service_list.delete()
 
         transaction.on_commit(
@@ -327,18 +331,21 @@ class ProjectCreateEnviromentView(APIView):
 
         name = form.data["name"].lower()  # type: ignore
         try:
-            env = project.environments.create(name=name)
+            environment = project.environments.create(name=name)
         except IntegrityError:
             raise ResourceConflict(
                 f"An environment with the name `{name}` already exists"
             )
         else:
-            serializer = EnvironmentSerializer(env)
+            workflow_id = environment.workflow_id
+            serializer = EnvironmentSerializer(environment)
             transaction.on_commit(
                 lambda: start_workflow(
                     CreateEnvNetworkWorkflow.run,
-                    EnvironmentDetails(id=env.id, project_id=project.id, name=env.name),
-                    id=f"create-env-{project.id}-{env.id}",
+                    EnvironmentDetails(
+                        id=environment.id, project_id=project.id, name=environment.name
+                    ),
+                    id=workflow_id,
                 )
             )
             return Response(status=status.HTTP_201_CREATED, data=serializer.data)
@@ -412,14 +419,43 @@ class ProjectEnvironmentDetailsView(APIView):
                 "Cannot delete the production environment"
             )
 
+        archived_version = ArchivedProject.get_or_create_from_project(project)
+
+        docker_service_list = (
+            DockerRegistryService.objects.filter(
+                Q(project=project) & Q(environment=environment)
+            )
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
+        )
+        id_list = []
+        for service in docker_service_list:
+            ArchivedDockerService.create_from_service(service, archived_version)
+            id_list.append(service.id)
+
+        PortConfiguration.objects.filter(
+            Q(dockerregistryservice__id__in=id_list)
+        ).delete()
+        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
+        docker_service_list.delete()
+
         details = EnvironmentDetails(
             id=environment.id, project_id=project.id, name=environment.name
         )
+        workflow_id = environment.archive_workflow_id
         transaction.on_commit(
             lambda: start_workflow(
                 ArchiveEnvWorkflow.run,
                 details,
-                id=f"create-env-{project.id}-{details.id}",
+                id=workflow_id,
             )
         )
 

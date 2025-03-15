@@ -867,6 +867,44 @@ class DockerSwarmActivities:
         return archived_services
 
     @activity.defn
+    async def get_archived_env_services(
+        self, environment: EnvironmentDetails
+    ) -> List[ArchivedServiceDetails]:
+        archived_docker_services = (
+            ArchivedDockerService.objects.filter(environment_id=environment.id)
+            .select_related("project")
+            .prefetch_related("volumes", "urls", "configs")
+        )
+
+        archived_services: List[ArchivedServiceDetails] = []
+        async for service in archived_docker_services:
+            archived_services.append(
+                ArchivedServiceDetails(
+                    original_id=service.original_id,
+                    urls=[
+                        URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            strip_prefix=url.strip_prefix,
+                            id=url.original_id,
+                        )
+                        for url in service.urls.all()
+                    ],
+                    project_id=service.project.original_id,
+                    deployments=[
+                        SimpleDeploymentDetails(
+                            hash=dpl.get("hash"),  # type: ignore
+                            urls=dpl.get("urls") or [],  # type: ignore
+                            project_id=service.project.original_id,
+                            service_id=service.original_id,
+                        )
+                        for dpl in service.deployments
+                    ],
+                )
+            )
+        return archived_services
+
+    @activity.defn
     async def cleanup_docker_service_resources(
         self, service_details: ArchivedServiceDetails
     ):

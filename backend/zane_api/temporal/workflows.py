@@ -746,6 +746,39 @@ class ArchiveEnvWorkflow:
     @workflow.run
     async def run(self, environment: EnvironmentDetails):
         print(f"Running workflow CreateEnvNetworkWorkflow(payload={environment})")
+        services = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_archived_env_services,
+            environment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=self.retry_policy,
+        )
+
+        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.unexpose_docker_service_from_http,
+                    service,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=self.retry_policy,
+                )
+                for service in services
+            ]
+        )
+
+        print(f"Running activities `cleanup_docker_service_resources({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.cleanup_docker_service_resources,
+                    service,
+                    start_to_close_timeout=timedelta(seconds=60),
+                    retry_policy=self.retry_policy,
+                )
+                for service in services
+            ]
+        )
+
         return await workflow.execute_activity_method(
             DockerSwarmActivities.delete_environment_network,
             arg=environment,
@@ -780,6 +813,7 @@ def get_workflows_and_activities():
             metrics_activities.save_deployment_stats,
             swarm_activities.toggle_cancelling_status,
             swarm_activities.create_environment_network,
+            swarm_activities.get_archived_env_services,
             swarm_activities.delete_environment_network,
             swarm_activities.save_cancelled_deployment,
             swarm_activities.create_deployment_stats_schedule,
