@@ -37,9 +37,11 @@ from ..models import (
     Volume,
     Config,
     URL,
+    Environment,
 )
 from ..temporal import (
     get_network_resource_name,
+    get_env_network_resource_name,
     DockerImageResultFromRegistry,
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
@@ -472,11 +474,21 @@ class AuthAPITestCase(APITestCase):
         with_healthcheck: bool = False,
         other_changes: list[DockerDeploymentChange] | None = None,
     ):
-        owner = self.loginUser()
-        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(
-            slug="redis", project=project, deploy_token=generate_random_chars(20)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
         )
+        project = Project.objects.get(slug="zaneops")
+
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        service = DockerRegistryService.objects.get(slug="redis")
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -670,9 +682,16 @@ class AuthAPITestCase(APITestCase):
         with_healthcheck: bool = False,
         other_changes: list[DockerDeploymentChange] | None = None,
     ):
-        owner = self.loginUser()
-        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
 
+        project = Project.objects.get(slug="zaneops")
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(
             reverse(
@@ -735,6 +754,72 @@ class AuthAPITestCase(APITestCase):
         service.refresh_from_db()
         return project, service
 
+    def create_caddy_docker_service(self, slug="caddy"):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = Project.objects.get(slug="zaneops")
+        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug=slug)
+        return project, service
+
+    def create_redis_docker_service(self, slug="redis"):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = Project.objects.get(slug="zaneops")
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = DockerRegistryService.objects.get(slug=slug)
+        return project, service
+
+    async def acreate_redis_docker_service(self):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = await Project.objects.aget(slug="zaneops")
+        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = await DockerRegistryService.objects.aget(slug="redis")
+        return project, service
+
 
 class FakeDockerClient:
     @dataclass
@@ -742,6 +827,7 @@ class FakeDockerClient:
         name: str
         id: str
         parent: "FakeDockerClient"
+        labels: dict
 
         def remove(self):
             self.parent.network_remove(self.name)
@@ -1019,6 +1105,7 @@ class FakeDockerClient:
 
         self.networks.create = self.docker_create_network
         self.networks.get = self.docker_get_network
+        self.networks.list = self.docker_network_list
 
         self.volume_map = {}  # type: dict[str, FakeDockerClient.FakeVolume]
         self.config_map = {}  # type: dict[str, FakeDockerClient.FakeConfig]
@@ -1199,8 +1286,10 @@ class FakeDockerClient:
             if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")
 
-    def docker_create_network(self, name: str, **kwargs):
-        created_network = FakeDockerClient.FakeNetwork(name=name, id=name, parent=self)
+    def docker_create_network(self, name: str, labels: dict, **kwargs):
+        created_network = FakeDockerClient.FakeNetwork(
+            name=name, id=name, parent=self, labels=labels
+        )
         self.network_map[name] = created_network
         return created_network
 
@@ -1211,19 +1300,37 @@ class FakeDockerClient:
             raise docker.errors.NotFound("network not found")
         return network
 
+    def docker_network_list(self, filters: dict):
+        label_in_filters: list[str] = filters.get("label", [])
+        labels = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+
+        return [
+            net
+            for net in self.network_map.values()
+            if labels.items() <= net.labels.items()
+        ]
+
     def network_remove(self, name: str):
         network = self.network_map.pop(name)
         if network is None:
             raise docker.errors.NotFound("network not found")
 
-    def get_network(self, p: Project):
+    def get_project_network(self, p: Project):
         return self.network_map.get(get_network_resource_name(p.id))
 
-    def create_network(self, p: Project):
-        return self.docker_create_network(
-            get_network_resource_name(p.id),
-            scope="swarm",
-            driver="overlay",
+    def get_project_networks(self, p: Project):
+        return [
+            net
+            for net in self.network_map.values()
+            if net.labels.get("zane-project") == p.id
+        ]
+
+    def get_env_network(self, env: Environment):
+        return self.network_map.get(
+            get_env_network_resource_name(env.id, env.project_id)  # type: ignore
         )
 
     def get_networks(self):

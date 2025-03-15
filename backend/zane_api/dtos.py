@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Mapping
 
 
 @dataclass
@@ -134,12 +134,27 @@ class ResourceLimitsDto:
 
 
 @dataclass
+class EnvironmentDto:
+    id: str
+    is_preview: bool
+    name: str
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, str | bool]):
+        return cls(**data)  # type: ignore
+
+    def to_dict(self):
+        return dict(id=self.id, is_preview=self.is_preview, name=self.name)
+
+
+@dataclass
 class DockerServiceSnapshot:
     image: str
     project_id: str
     id: str
     slug: str
     network_alias: str
+    environment: EnvironmentDto
     command: Optional[str] = None
     network_aliases: List[str] = field(default_factory=list)
     healthcheck: Optional[HealthCheckDto] = None
@@ -182,7 +197,7 @@ class DockerServiceSnapshot:
         return list(filter(lambda v: v.host_path is None, self.volumes))
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DockerServiceSnapshot":
+    def from_dict(cls, data: Mapping[str, Any]) -> "DockerServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
         configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
@@ -205,6 +220,7 @@ class DockerServiceSnapshot:
             if data.get("resource_limits") is not None
             else None
         )
+        environment = EnvironmentDto.from_dict(data["environment"])
 
         return cls(
             image=data["image"],
@@ -216,6 +232,7 @@ class DockerServiceSnapshot:
             env_variables=env_variables,
             healthcheck=healthcheck,
             credentials=credentials,
+            environment=environment,
             resource_limits=resource_limits,
             id=data["id"],
             project_id=data["project_id"],

@@ -37,6 +37,7 @@ from .serializers import (
     DockerServiceCardSerializer,
     GitServiceCardSerializer,
     ServiceListParamSerializer,
+    CreateEnvironmentRequestSerializer,
 )
 from ..models import (
     Project,
@@ -50,11 +51,14 @@ from ..models import (
     DockerDeploymentChange,
     GitDeployment,
     Config,
+    Environment,
+    HealthCheck,
 )
 from ..serializers import (
     ProjectSerializer,
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
+    EnvironmentSerializer,
 )
 from ..temporal import (
     CreateProjectResourcesWorkflow,
@@ -62,6 +66,9 @@ from ..temporal import (
     start_workflow,
     RemoveProjectResourcesWorkflow,
     ArchivedProjectDetails,
+    EnvironmentDetails,
+    CreateEnvNetworkWorkflow,
+    ArchiveEnvWorkflow,
 )
 
 
@@ -160,6 +167,8 @@ class ProjectsListAPIView(ListCreateAPIView):
                     owner=request.user,
                     description=data.get("description"),  # type: ignore
                 )
+                # Create default production environment
+                new_project.environments.create(name="production")
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"
@@ -280,6 +289,9 @@ class ProjectDetailsView(APIView):
         URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
         docker_service_list.delete()
 
         transaction.on_commit(
@@ -293,6 +305,162 @@ class ProjectDetailsView(APIView):
         )
         project.delete()
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+
+
+class ProjectCreateEnviromentView(APIView):
+    serializer_class = EnvironmentSerializer
+
+    @extend_schema(
+        request=CreateEnvironmentRequestSerializer,
+        responses={201: EnvironmentSerializer},
+        operation_id="createNewEnvironment",
+        summary="Create new environment",
+        description="Create empty environment with no services in it",
+    )
+    @transaction.atomic()
+    def post(self, request: Request, slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+
+        form = CreateEnvironmentRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        name = form.data["name"].lower()  # type: ignore
+        try:
+            environment = project.environments.create(name=name)
+        except IntegrityError:
+            raise ResourceConflict(
+                f"An environment with the name `{name}` already exists"
+            )
+        else:
+            workflow_id = environment.workflow_id
+            serializer = EnvironmentSerializer(environment)
+            transaction.on_commit(
+                lambda: start_workflow(
+                    CreateEnvNetworkWorkflow.run,
+                    EnvironmentDetails(
+                        id=environment.id, project_id=project.id, name=environment.name
+                    ),
+                    id=workflow_id,
+                )
+            )
+            return Response(status=status.HTTP_201_CREATED, data=serializer.data)
+
+
+class ProjectEnvironmentDetailsView(APIView):
+    serializer_class = EnvironmentSerializer
+
+    @extend_schema(
+        request=CreateEnvironmentRequestSerializer,
+        operation_id="updateEnvironment",
+        summary="Update an environment",
+    )
+    def patch(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+        if environment.name == "production":
+            raise exceptions.PermissionDenied(
+                "Cannot rename the production environment."
+            )
+
+        form = CreateEnvironmentRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        name = form.data["name"].lower()  # type: ignore
+
+        try:
+            environment.name = name
+            environment.save()
+        except IntegrityError:
+            raise ResourceConflict(
+                f"An environment with the name `{name}` already exists in this project"
+            )
+        serializer = EnvironmentSerializer(environment)
+        return Response(data=serializer.data)
+
+    @extend_schema(
+        responses={204: None},
+        operation_id="archiveEnvironment",
+        summary="Archive environment",
+        description="Archive environment with the services inside of it",
+    )
+    @transaction.atomic()
+    def delete(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+
+        if environment.name == "production":
+            raise exceptions.PermissionDenied(
+                "Cannot delete the production environment"
+            )
+
+        archived_version = ArchivedProject.get_or_create_from_project(project)
+
+        docker_service_list = (
+            DockerRegistryService.objects.filter(
+                Q(project=project) & Q(environment=environment)
+            )
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
+        )
+        id_list = []
+        for service in docker_service_list:
+            ArchivedDockerService.create_from_service(service, archived_version)
+            id_list.append(service.id)
+
+        PortConfiguration.objects.filter(
+            Q(dockerregistryservice__id__in=id_list)
+        ).delete()
+        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
+        docker_service_list.delete()
+
+        details = EnvironmentDetails(
+            id=environment.id, project_id=project.id, name=environment.name
+        )
+        workflow_id = environment.archive_workflow_id
+        transaction.on_commit(
+            lambda: start_workflow(
+                ArchiveEnvWorkflow.run,
+                details,
+                id=workflow_id,
+            )
+        )
+
+        environment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectServiceListView(APIView):
@@ -313,16 +481,26 @@ class ProjectServiceListView(APIView):
         summary="Get service list",
         description="Get all services in a project",
     )
-    def get(self, request: Request, slug: str):
+    def get(self, request: Request, slug: str, env_slug: str | None = None):
         try:
             project = Project.objects.get(slug=slug.lower())
+            if env_slug is None:
+                environment = project.production_env
+            else:
+                environment = Environment.objects.get(
+                    name=env_slug.lower(), project=project
+                )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
             )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         # Prefetch related fields and use annotate to count volumes
-        filters = Q(project=project)
+        filters = Q(project=project) & Q(environment=environment)
         query = request.query_params.get("query", "")
         if query:
             filters = filters & Q(slug__icontains=query)

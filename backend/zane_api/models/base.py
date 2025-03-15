@@ -28,6 +28,7 @@ class TimestampedModel(models.Model):
 
 
 class Project(TimestampedModel):
+    environments: Manager["Environment"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -40,6 +41,14 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
+
+    @property
+    def production_env(self):
+        return self.environments.get(name=Environment.PRODUCTION_ENV)
+
+    @property
+    async def aproduction_env(self):
+        return await self.environments.aget(name=Environment.PRODUCTION_ENV)
 
     @property
     def create_task_id(self):
@@ -151,10 +160,6 @@ class BaseService(TimestampedModel):
 
     class Meta:
         abstract = True
-        unique_together = (
-            "slug",
-            "project",
-        )
 
     def delete_resources(self):
         self.ports.filter().delete()
@@ -237,8 +242,17 @@ class DockerRegistryService(BaseService):
         null=True,
     )
 
+    environment: models.ForeignKey["Environment"] = models.ForeignKey(
+        to="Environment",
+        on_delete=models.CASCADE,
+        related_name="services",
+    )
+
     def __str__(self):
         return f"DockerRegistryService({self.slug})"
+
+    class Meta:
+        unique_together = ("slug", "project", "environment")
 
     @property
     def unprefixed_id(self):
@@ -657,7 +671,7 @@ class Config(TimestampedModel):
 class DeploymentURL(models.Model):
     domain = models.URLField()
     port = models.PositiveIntegerField(default=80)
-    deployment = models.ForeignKey(
+    deployment: models.ForeignKey["DockerDeployment"] = models.ForeignKey(
         to="DockerDeployment",
         on_delete=models.CASCADE,
         related_name="urls",
@@ -690,7 +704,9 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
+    environment_id: str
     HASH_PREFIX = "dpl_dkr_"
+    urls = Manager["DeploymentURL"]
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
 
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
@@ -768,14 +784,12 @@ class DockerDeployment(BaseDeployment):
     def network_aliases(self):
         aliases = []
         if self.service is not None and len(self.service.network_aliases) > 0:
-            aliases = self.service.network_aliases + [
-                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}",
-            ]
+            aliases = self.service.network_aliases + [self.network_alias]
         return aliases
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"{self.service.network_alias}-{self.service.environment_id.replace(Environment.ID_PREFIX, '')}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
 
     class Meta:
         ordering = ("-queued_at",)
@@ -994,3 +1008,44 @@ class HttpLog(Log):
             models.Index(fields=["request_query"]),
         ]
         ordering = ("-time",)
+
+
+class Environment(TimestampedModel):
+    ID_PREFIX = "project_env_"
+    PRODUCTION_ENV = "production"
+    services: Manager[DockerRegistryService]
+    id = ShortUUIDField(
+        length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
+    )
+
+    name = models.SlugField(max_length=255)
+    project = models.ForeignKey(
+        to=Project, on_delete=models.CASCADE, related_name="environments"
+    )
+    is_preview = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Environment(project={self.project.slug}, name={self.name})"
+
+    @property
+    def workflow_id(self) -> str:
+        return f"create-env-{self.project_id}-{self.id}"
+
+    @property
+    def archive_workflow_id(self) -> str:
+        return f"archive-env-{self.project_id}-{self.id}"
+
+    @property
+    def is_production(self):
+        return self.name == "production"  # production is a reserved name
+
+    class Meta:
+        indexes = [models.Index(fields=["name"])]
+        unique_together = ["name", "project"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project"],
+                condition=models.Q(name="production"),
+                name="unique_production_per_project",
+            )
+        ]

@@ -3680,6 +3680,269 @@ paths:
           description: ''
         '200':
           description: No response body
+  /api/projects/{slug}/create-environment/:
+    post:
+      operationId: createNewEnvironment
+      description: Create empty environment with no services in it
+      summary: Create new environment
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNewEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+          description: ''
+  /api/projects/{slug}/environment-details/{env_slug}/:
+    patch:
+      operationId: updateEnvironment
+      summary: Update an environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+          description: ''
+    delete:
+      operationId: archiveEnvironment
+      description: Archive environment with the services inside of it
+      summary: Archive environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{slug}/service-list/:
     get:
       operationId: projects_service_list_list
@@ -3946,6 +4209,13 @@ paths:
 components:
   schemas:
     ArchiveDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ArchiveEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -4501,6 +4771,97 @@ components:
       required:
       - errors
       - type
+    CreateEnvironmentRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+    CreateNewEnvironmentError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateNewEnvironmentNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateNewEnvironmentNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateNewEnvironmentNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/CreateNewEnvironmentNameErrorComponent'
+    CreateNewEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateNewEnvironmentValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateNewEnvironmentValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateNewEnvironmentNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateNewEnvironmentNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateNewEnvironmentValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateNewEnvironmentError'
+      required:
+      - errors
+      - type
     CreateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -4731,6 +5092,10 @@ components:
         project_id:
           type: string
           readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
         credentials:
           allOf:
           - $ref: '#/components/schemas/DockerCredential'
@@ -4794,6 +5159,7 @@ components:
       - credentials
       - deploy_token
       - env_variables
+      - environment
       - healthcheck
       - id
       - image
@@ -5038,6 +5404,10 @@ components:
         project_id:
           type: string
           readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
         credentials:
           allOf:
           - $ref: '#/components/schemas/DockerCredential'
@@ -5101,6 +5471,7 @@ components:
       - credentials
       - deploy_token
       - env_variables
+      - environment
       - healthcheck
       - id
       - image
@@ -5361,6 +5732,38 @@ components:
           type: string
       required:
       - new_value
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        is_preview:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - is_preview
+      - name
+    EnvironmentRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        is_preview:
+          type: boolean
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
     Error401:
       type: object
       properties:
@@ -6243,6 +6646,14 @@ components:
       required:
       - errors
       - type
+    PatchedCreateEnvironmentRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedDockerServiceRequest:
       type: object
       properties:
@@ -6376,6 +6787,11 @@ components:
     Project:
       type: object
       properties:
+        environments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Environment'
+          readOnly: true
         description:
           type: string
           nullable: true
@@ -6403,6 +6819,7 @@ components:
       required:
       - created_at
       - description
+      - environments
       - healthy_services
       - id
       - slug
@@ -9032,6 +9449,87 @@ components:
         * `KILOBYTES` - kilobytes
         * `MEGABYTES` - megabytes
         * `GIGABYTES` - gigabytes
+    UpdateEnvironmentError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateEnvironmentNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateEnvironmentNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateEnvironmentNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/UpdateEnvironmentNameErrorComponent'
+    UpdateEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateEnvironmentValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateEnvironmentValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateEnvironmentNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateEnvironmentNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateEnvironmentValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateEnvironmentError'
+      required:
+      - errors
+      - type
     UpdateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -9257,7 +9755,7 @@ components:
           maxLength: 255
         password:
           type: string
-          minLength: 6
+          minLength: 8
       required:
       - password
       - username

@@ -150,6 +150,13 @@ class SimpleDeploymentDetails:
 
 
 @dataclass
+class EnvironmentDetails:
+    id: str
+    name: str
+    project_id: str
+
+
+@dataclass
 class ArchivedServiceDetails:
     original_id: str
     project_id: str
