@@ -1301,7 +1301,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": p.slug, "service_slug": "app"},
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
             data=changes_payload,
         )
@@ -1444,9 +1444,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
 class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
     def test_cancel_simple_changes(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
 
         changes = DockerDeploymentChange.objects.bulk_create(
             [
@@ -1470,7 +1468,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                     "change_id": changes[0].id,
                 },
             ),
@@ -1482,16 +1480,14 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         self.assertEqual(1, change_count)
 
     def test_cannot_cancel_nonexistent_changes(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
 
         response = self.client.delete(
             reverse(
                 "zane_api:services.docker.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
-                    "service_slug": "app",
+                    "service_slug": service.slug,
                     "change_id": "val_123",
                 },
             ),
@@ -1499,9 +1495,9 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_cannot_cancel_a_change_that_sets_image_null(self):
-        owner = self.loginUser()
-        p = Project.objects.create(slug="zaneops", owner=owner)
-        service = DockerRegistryService.objects.create(slug="app", project=p)
+        p, service = self.create_caddy_docker_service()
+
+        # caddy already has a service
         change = DockerDeploymentChange.objects.create(
             field=DockerDeploymentChange.ChangeField.SOURCE,
             type=DockerDeploymentChange.ChangeType.UPDATE,
