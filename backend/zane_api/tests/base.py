@@ -795,7 +795,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = DockerRegistryService.objects.get(slug="redis")
         return project, service
 
 
