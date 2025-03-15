@@ -49,6 +49,14 @@ class EnvironmentTests(AuthAPITestCase):
         )
         project = await Project.objects.aget(slug="zane-ops")
 
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )

@@ -19,6 +19,7 @@ from ..models import (
     Config,
     ArchivedEnvironment,
     HealthCheck,
+    Environment,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -335,6 +336,11 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
         self.assertIsNotNone(archived_project)
         self.assertGreater(len(archived_envs), 0)
+
+        deleted_environment_count = Environment.objects.filter(
+            project__slug="gh-clone"
+        ).count()
+        self.assertEqual(0, deleted_environment_count)
 
     def test_non_existent(self):
         self.loginUser()
