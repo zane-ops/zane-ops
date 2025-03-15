@@ -293,7 +293,7 @@ class APITestCase(TestCase):
             "zane_api.temporal.activities.asyncio.sleep", new_callable=AsyncMock
         ).start()
         patch(
-            "zane_api.temporal.activities.get_docker_client",
+            "zane_api.temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
         patch(

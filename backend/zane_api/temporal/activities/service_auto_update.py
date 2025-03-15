@@ -28,6 +28,7 @@ def get_docker_client():
 
 
 def get_service(service_name: str):
+    docker_client = get_docker_client()
     try:
         return docker_client.services.get(service_name)
     except NotFound:
@@ -37,6 +38,7 @@ def get_service(service_name: str):
 
 
 def is_image_updated(current_image: str, desired_image: str) -> bool:
+    docker_client = get_docker_client()
     try:
         current_digest = docker_client.images.get_registry_data(current_image).id
         desired_digest = docker_client.images.get_registry_data(desired_image).id
