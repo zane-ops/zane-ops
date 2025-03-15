@@ -5,10 +5,16 @@ from temporalio import activity
 docker_client = docker.from_env()
 
 
-# *****************************************
-#  Note : get_service and is_image update
-#  are helper functions
-# *****************************************
+# ==================================================
+#    Docker Service Auto-Update 🐭
+#
+# - `get_service`: Retrieves a Docker service with error handling.
+# - `is_image_updated`: Checks if the service image needs updating.
+# - `update_service`: Updates the service, preserving configurations.
+# - `update_image_version`: Syncs the .env file with the new IMAGE_VERSION.
+# - `restart_service`: Restarts the service to apply .env changes.
+# - `update_docker_service`: Main activity managing the update flow with logging.
+# ==================================================
 
 
 def get_service(service_name: str):
