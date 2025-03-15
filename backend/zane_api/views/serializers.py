@@ -1440,7 +1440,7 @@ class UserCreatedResponseSerializer(serializers.Serializer):
 
 
 class AutoUpdateRequestSerializer(serializers.Serializer):
-    desired_image = serializers.CharField(required=True, max_length=255)
+    desired_version = serializers.CharField(required=True, max_length=255)
 
 
 class AutoUpdateResponseSerializer(serializers.Serializer):
