@@ -354,7 +354,7 @@ class ProjectEnvironmentViewTests(AuthAPITestCase):
         service.save()
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug}),
+            reverse("zane_api:projects.service_list_with_env", kwargs={"slug": p.slug}),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         production_services = response.json()
@@ -362,7 +362,7 @@ class ProjectEnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:projects.service_list",
+                "zane_api:projects.service_list_with_env",
                 kwargs={"slug": p.slug, "env_slug": "staging"},
             ),
         )

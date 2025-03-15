@@ -41,9 +41,14 @@ urlpatterns = [
         name="projects.environment.details",
     ),
     re_path(
-        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})(?:/(?P<env_slug>{DJANGO_SLUG_REGEX}))?/service-list/?$",
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/service-list/?$",
         views.ProjectServiceListView.as_view(),
         name="projects.service_list",
+    ),
+    re_path(
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-list/?$",
+        views.ProjectServiceListView.as_view(),
+        name="projects.service_list_with_env",
     ),
     re_path(
         r"^docker/image-search/?$",

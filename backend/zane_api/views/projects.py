@@ -481,15 +481,17 @@ class ProjectServiceListView(APIView):
         summary="Get service list",
         description="Get all services in a project",
     )
-    def get(self, request: Request, slug: str, env_slug: str | None = None):
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
         try:
             project = Project.objects.get(slug=slug.lower())
-            if env_slug is None:
-                environment = project.production_env
-            else:
-                environment = Environment.objects.get(
-                    name=env_slug.lower(), project=project
-                )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
