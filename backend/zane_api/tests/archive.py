@@ -59,16 +59,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(0, len(deployments))
 
     async def test_archive_non_deployed_service_deletes_the_service(self):
-        owner = await self.aLoginUser()
-        project = await Project.objects.acreate(slug="zaneops", owner=owner)
-        service = await DockerRegistryService.objects.acreate(
-            slug="app", project=project
-        )
-
+        p, service = await self.acreate_redis_docker_service()
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={"project_slug": p.slug, "service_slug": service.slug},
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
