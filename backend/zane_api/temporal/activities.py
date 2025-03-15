@@ -1121,7 +1121,16 @@ class DockerSwarmActivities:
             .afirst()
         )
 
-        if latest_production_deployment:
+        if (
+            latest_production_deployment is not None
+            and latest_production_deployment.service_snapshot is not None
+        ):
+            if (
+                latest_production_deployment.service_snapshot.get("environment") is None
+            ):  # type: None
+                latest_production_deployment.service_snapshot["environment"] = (
+                    deployment.service.environment.to_dict()
+                )
             return SimpleDeploymentDetails(
                 hash=latest_production_deployment.hash,
                 service_id=latest_production_deployment.service_id,  # type: ignore
