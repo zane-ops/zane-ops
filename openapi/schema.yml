@@ -3771,6 +3771,102 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
+  /api/projects/{slug}/clone-environment/{env_slug}/:
+    post:
+      operationId: cloneEnvironment
+      description: Create new environment from another
+      summary: Clone environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloneEnvironmentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CloneEnvironmentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CloneEnvironmentRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloneEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentWithServices'
+          description: ''
   /api/projects/{slug}/create-environment/:
     post:
       operationId: createNewEnvironment
@@ -4656,6 +4752,124 @@ components:
       - client_error
       type: string
       description: '* `client_error` - Client Error'
+    CloneEnvironmentDeployServicesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deploy_services
+          type: string
+          description: '* `deploy_services` - deploy_services'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CloneEnvironmentError:
+      oneOf:
+      - $ref: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+      - $ref: '#/components/schemas/CloneEnvironmentNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
+          deploy_services: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+          name: '#/components/schemas/CloneEnvironmentNameErrorComponent'
+    CloneEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CloneEnvironmentValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CloneEnvironmentValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CloneEnvironmentNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CloneEnvironmentNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CloneEnvironmentRequestRequest:
+      type: object
+      properties:
+        deploy_services:
+          type: boolean
+          default: false
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+    CloneEnvironmentValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloneEnvironmentError'
+      required:
+      - errors
+      - type
     Config:
       type: object
       properties:
@@ -5940,6 +6154,28 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
+    EnvironmentWithServices:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        is_preview:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerService'
+          readOnly: true
+      required:
+      - id
+      - is_preview
+      - name
+      - services
     Error401:
       type: object
       properties:
@@ -7711,7 +7947,6 @@ components:
           - max_length
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
-          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -7719,7 +7954,6 @@ components:
             * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
         detail:
           type: string
       required:
