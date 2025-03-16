@@ -115,7 +115,15 @@ class CloneEnviromentAPIView(APIView):
                 f"An environment with the name `{name}` already exists"
             )
         else:
-            for service in current_environment.services.all():
+            for service in (
+                current_environment.services.select_related(
+                    "healthcheck", "project", "environment"
+                )
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+                .all()
+            ):
                 service.clone(environment=new_environment)
 
             workflow_id = new_environment.workflow_id

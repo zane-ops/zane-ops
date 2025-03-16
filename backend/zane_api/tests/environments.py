@@ -9,6 +9,7 @@ from ..models import (
     ArchivedDockerService,
     Environment,
     DockerDeploymentChange,
+    Volume,
 )
 from ..temporal.activities import get_env_network_resource_name
 from ..utils import jprint
@@ -395,6 +396,81 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertEqual(service.credentials, cloned_service.credentials)
         self.assertEqual(service.command, cloned_service.command)
         self.assertIsNotNone(cloned_service.deploy_token)
+
+    def test_clone_environment_with_service_healthcheck(self):
+        p, service = self.create_and_deploy_caddy_docker_service(with_healthcheck=True)
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env = p.environments.get(name="staging")
+
+        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        self.assertIsNotNone(cloned_service.healthcheck)
+        self.assertEqual(service.healthcheck.type, cloned_service.healthcheck.type)  # type: ignore
+        self.assertEqual(service.healthcheck.value, cloned_service.healthcheck.value)  # type: ignore
+        self.assertEqual(service.healthcheck.timeout_seconds, cloned_service.healthcheck.timeout_seconds)  # type: ignore
+        self.assertEqual(service.healthcheck.interval_seconds, cloned_service.healthcheck.interval_seconds)  # type: ignore
+        self.assertEqual(service.healthcheck.associated_port, cloned_service.healthcheck.associated_port)  # type: ignore
+
+    def test_clone_environment_with_service_volumes(self):
+        p, service = self.create_and_deploy_caddy_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    new_value={
+                        "container_path": "/data",
+                        "name": "docker-volume",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DockerDeploymentChange(
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                    new_value={
+                        "container_path": "/var/run/docker.sock",
+                        "host_path": "/var/run/docker.sock",
+                        "mode": Volume.VolumeMode.READ_ONLY,
+                        "name": "host-volume",
+                    },
+                ),
+            ]
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env = p.environments.get(name="staging")
+
+        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        self.assertEqual(2, cloned_service.volumes.count())
+
+        docker_volume = cloned_service.volumes.filter(container_path="/data").first()
+        self.assertIsNotNone(docker_volume)
+
+        host_volume = cloned_service.volumes.filter(
+            container_path="/var/run/docker.sock"
+        ).first()
+        self.assertIsNotNone(host_volume)
 
 
 class ProjectEnvironmentViewTests(AuthAPITestCase):

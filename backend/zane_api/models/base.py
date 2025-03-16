@@ -455,12 +455,12 @@ class DockerRegistryService(BaseService):
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.volumes.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
-                        config = self.volumes.get(id=change.item_id)
-                        config.host_path = change.new_value.get("host_path")
-                        config.container_path = change.new_value.get("container_path")
-                        config.mode = change.new_value.get("mode")
-                        config.name = change.new_value.get("name", config.name)
-                        config.save()
+                        volume = self.volumes.get(id=change.item_id)
+                        volume.host_path = change.new_value.get("host_path")
+                        volume.container_path = change.new_value.get("container_path")
+                        volume.mode = change.new_value.get("mode")
+                        volume.name = change.new_value.get("name", volume.name)
+                        volume.save()
                 case DockerDeploymentChange.ChangeField.CONFIGS:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
                         fake = Faker()
@@ -548,6 +548,9 @@ class DockerRegistryService(BaseService):
         self.refresh_from_db()
 
     def clone(self, environment: "Environment"):
+        # fake = Faker()
+        # Faker.seed(time.monotonic())
+
         service = DockerRegistryService.objects.create(
             slug=self.slug,
             environment=environment,
@@ -558,6 +561,25 @@ class DockerRegistryService(BaseService):
             credentials=self.credentials,
             deploy_token=generate_random_chars(20),
         )
+
+        if self.healthcheck is not None:
+            service.healthcheck = HealthCheck.objects.create(
+                type=self.healthcheck.type,
+                value=self.healthcheck.value,
+                timeout_seconds=self.healthcheck.timeout_seconds,
+                interval_seconds=self.healthcheck.interval_seconds,
+                associated_port=self.healthcheck.associated_port,
+            )
+            service.save()
+
+        for volume in self.volumes.all():
+            new_volume = Volume.objects.create(
+                container_path=volume.container_path,
+                host_path=volume.host_path,
+                mode=volume.mode,
+                name=volume.name,
+            )
+            service.volumes.add(new_volume)
         return service
 
     def add_change(self, change: "DockerDeploymentChange"):
