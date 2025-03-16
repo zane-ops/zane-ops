@@ -548,38 +548,13 @@ class DockerRegistryService(BaseService):
         self.refresh_from_db()
 
     def clone(self, environment: "Environment"):
-        # fake = Faker()
-        # Faker.seed(time.monotonic())
-
         service = DockerRegistryService.objects.create(
             slug=self.slug,
             environment=environment,
             project=self.project,
             network_alias=self.network_alias,
-            image=self.image,
-            command=self.command,
-            credentials=self.credentials,
             deploy_token=generate_random_chars(20),
         )
-
-        if self.healthcheck is not None:
-            service.healthcheck = HealthCheck.objects.create(
-                type=self.healthcheck.type,
-                value=self.healthcheck.value,
-                timeout_seconds=self.healthcheck.timeout_seconds,
-                interval_seconds=self.healthcheck.interval_seconds,
-                associated_port=self.healthcheck.associated_port,
-            )
-            service.save()
-
-        for volume in self.volumes.all():
-            new_volume = Volume.objects.create(
-                container_path=volume.container_path,
-                host_path=volume.host_path,
-                mode=volume.mode,
-                name=volume.name,
-            )
-            service.volumes.add(new_volume)
         return service
 
     def add_change(self, change: "DockerDeploymentChange"):

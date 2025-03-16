@@ -741,7 +741,7 @@ class AuthAPITestCase(APITestCase):
                     field=DockerDeploymentChange.ChangeField.URLS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
-                        "domain": URL.generate_default_domain(service),
+                        "domain": "caddy-web-server.fkiss.me",
                         "associated_port": 80,
                         "base_path": "/",
                         "strip_prefix": True,
