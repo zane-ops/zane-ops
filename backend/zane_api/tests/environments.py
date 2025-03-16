@@ -346,6 +346,33 @@ class EnvironmentViewTests(AuthAPITestCase):
         ]
         self.assertEqual(0, len(deployments))
 
+    def test_archive_environment_with_non_deployed_service_deletes_the_service(self):
+        p, service = self.create_redis_docker_service()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": p.slug, "env_slug": "staging"},
+            ),
+        )
+
+        archived_service: ArchivedDockerService = ArchivedDockerService.objects.filter(
+            environment_id=staging_env.id
+        ).first()  # type: ignore
+        self.assertIsNone(archived_service)
+
 
 class CloneEnvironmentViewTests(AuthAPITestCase):
     def test_clone_environment_with_simple_service(self):

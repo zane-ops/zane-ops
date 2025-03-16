@@ -103,7 +103,7 @@ class CloneEnviromentAPIView(APIView):
     def post(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug.lower())
-            current_environment = Environment.objects.get(name=env_slug.lower())
+            current_environment = project.environments.get(name=env_slug.lower())
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
@@ -123,7 +123,7 @@ class CloneEnviromentAPIView(APIView):
             new_environment = project.environments.create(name=name)
         except IntegrityError:
             raise ResourceConflict(
-                f"An environment with the name `{name}` already exists"
+                f"An environment with the name `{name}` already exists in this project"
             )
         else:
             workflows_to_run: List[Tuple[Callable, Any, str]] = [
@@ -291,8 +291,9 @@ class EnvironmentDetailsAPIView(APIView):
         )
         id_list = []
         for service in docker_service_list:
-            ArchivedDockerService.create_from_service(service, archived_version)
-            id_list.append(service.id)
+            if service.deployments.count() > 0:
+                ArchivedDockerService.create_from_service(service, archived_version)
+                id_list.append(service.id)
 
         PortConfiguration.objects.filter(
             Q(dockerregistryservice__id__in=id_list)
