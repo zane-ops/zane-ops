@@ -7,6 +7,8 @@ from ..models import (
     DockerDeployment,
     DockerRegistryService,
     ArchivedDockerService,
+    Environment,
+    DockerDeploymentChange,
 )
 from ..temporal.activities import get_env_network_resource_name
 from ..utils import jprint
@@ -51,7 +53,7 @@ class EnvironmentTests(AuthAPITestCase):
 
         response = await self.async_client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging"},
         )
@@ -89,7 +91,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         project = Project.objects.get(slug="zane-ops")
         response = self.client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging"},
         )
@@ -108,7 +110,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         project = Project.objects.get(slug="zane-ops")
         response = self.client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "production"},
         )
@@ -125,7 +127,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         project = await Project.objects.aget(slug="zane-ops")
         response = await self.async_client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging"},
         )
@@ -147,7 +149,7 @@ class EnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging"},
         )
@@ -174,7 +176,7 @@ class EnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging-oops"},
         )
@@ -204,7 +206,7 @@ class EnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging"},
         )
@@ -270,7 +272,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         project = await Project.objects.aget(slug="zane-ops")
         response = await self.async_client.post(
             reverse(
-                "zane_api:projects.create_enviroment", kwargs={"slug": project.slug}
+                "zane_api:projects.environment.create", kwargs={"slug": project.slug}
             ),
             data={"name": "staging"},
         )
@@ -291,7 +293,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         p, service = await self.acreate_redis_docker_service()
 
         response = await self.async_client.post(
-            reverse("zane_api:projects.create_enviroment", kwargs={"slug": p.slug}),
+            reverse("zane_api:projects.environment.create", kwargs={"slug": p.slug}),
             data={"name": "staging"},
         )
 
@@ -341,6 +343,57 @@ class EnvironmentViewTests(AuthAPITestCase):
             ).all()
         ]
         self.assertEqual(0, len(deployments))
+
+
+class CloneEnvironmentViewTests(AuthAPITestCase):
+    def test_clone_environment_with_simple_service(self):
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.SOURCE,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "image": "valkey/valkey:7.2-alpine",
+                        "credentials": {
+                            "username": "username",
+                            "password": "password",
+                        },
+                    },
+                ),
+                DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.COMMAND,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value="redis-cli",
+                ),
+            ]
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        services_in_staging = DockerRegistryService.objects.filter(
+            environment=staging_env
+        )
+        self.assertEqual(1, services_in_staging.count())
+
+        cloned_service: DockerRegistryService = services_in_staging.first()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        self.assertEqual(service.slug, cloned_service.slug)
+        self.assertEqual(service.network_alias, cloned_service.network_alias)
+        self.assertEqual(service.image, cloned_service.image)
+        self.assertEqual(service.credentials, cloned_service.credentials)
+        self.assertEqual(service.command, cloned_service.command)
 
 
 class ProjectEnvironmentViewTests(AuthAPITestCase):

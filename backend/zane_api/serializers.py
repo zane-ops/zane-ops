@@ -316,3 +316,16 @@ class HttpLogSerializer(ModelSerializer):
             "response_headers",
             "request_user_agent",
         ]
+
+
+class EnvironmentWithServicesSerializer(ModelSerializer):
+    services = DockerServiceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Environment
+        fields = [
+            "id",
+            "is_preview",
+            "name",
+            "services",
+        ]

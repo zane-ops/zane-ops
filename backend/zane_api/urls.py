@@ -32,12 +32,17 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/create-environment/?$",
-        views.ProjectCreateEnviromentView.as_view(),
-        name="projects.create_enviroment",
+        views.CreateEnviromentAPIView.as_view(),
+        name="projects.environment.create",
+    ),
+    re_path(
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/clone-environment/(?P<env_slug>{DJANGO_SLUG_REGEX})/?$",
+        views.CloneEnviromentAPIView.as_view(),
+        name="projects.environment.clone",
     ),
     re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/environment-details/(?P<env_slug>{DJANGO_SLUG_REGEX})/?$",
-        views.ProjectEnvironmentDetailsView.as_view(),
+        views.EnvironmentDetailsAPIView.as_view(),
         name="projects.environment.details",
     ),
     re_path(

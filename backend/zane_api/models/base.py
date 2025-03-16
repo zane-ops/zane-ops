@@ -142,7 +142,7 @@ class BaseService(TimestampedModel):
     healthcheck = models.ForeignKey(
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
-    network_alias = models.CharField(max_length=300, null=True, unique=True)
+    network_alias = models.CharField(max_length=300, null=True)
     resource_limits = models.JSONField(
         max_length=255,
         null=True,
@@ -252,7 +252,16 @@ class DockerRegistryService(BaseService):
         return f"DockerRegistryService({self.slug})"
 
     class Meta:
-        unique_together = ("slug", "project", "environment")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug", "project", "environment"],
+                name="unique_slug_per_env_and_project",
+            ),
+            models.UniqueConstraint(
+                fields=["network_alias", "project", "environment"],
+                name="unique_network_alias_per_env_and_project",
+            ),
+        ]
 
     @property
     def unprefixed_id(self):
@@ -532,6 +541,17 @@ class DockerRegistryService(BaseService):
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
         self.refresh_from_db()
+
+    def clone(self, environment: "Environment"):
+        service = DockerRegistryService.objects.create(
+            slug=self.slug,
+            environment=environment,
+            project=self.project,
+            network_alias=self.network_alias,
+            image=self.image,
+            credentials=self.credentials,
+        )
+        return service
 
     def add_change(self, change: "DockerDeploymentChange"):
         change.service = self

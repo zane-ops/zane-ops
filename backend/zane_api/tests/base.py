@@ -531,6 +531,7 @@ class AuthAPITestCase(APITestCase):
                 },
             ),
         )
+        service.refresh_from_db()
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return project, service
 
