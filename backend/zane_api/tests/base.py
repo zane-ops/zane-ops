@@ -39,15 +39,16 @@ from ..models import (
     URL,
     Environment,
 )
-from ..temporal import (
+from ..temporal.activities import (
     get_network_resource_name,
     get_env_network_resource_name,
     DockerImageResultFromRegistry,
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
 )
-from ..temporal import (
-    get_workflows_and_activities,
+from ..temporal import get_workflows_and_activities
+
+from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
@@ -294,9 +295,15 @@ class APITestCase(TestCase):
             "zane_api.temporal.activities.asyncio.sleep", new_callable=AsyncMock
         ).start()
         patch(
-            "zane_api.temporal.activities.get_docker_client",
+            "zane_api.temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+
+        patch(
+            "zane_api.temporal.activities.service_auto_update.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+
         patch(
             "zane_api.temporal.schedules.activities.get_docker_client",
             return_value=self.fake_docker_client,
@@ -408,17 +415,20 @@ class AuthAPITestCase(APITestCase):
                 self.workflow_schedules.remove(schedule_handle)
 
         patch_temporal_create_schedule = patch(
-            "zane_api.temporal.activities.create_schedule", side_effect=create_schedule
+            "zane_api.temporal.activities.main_activities.create_schedule",
+            side_effect=create_schedule,
         )
         patch_temporal_pause_schedule = patch(
-            "zane_api.temporal.activities.pause_schedule", side_effect=pause_schedule
+            "zane_api.temporal.activities.main_activities.pause_schedule",
+            side_effect=pause_schedule,
         )
         patch_temporal_unpause_schedule = patch(
-            "zane_api.temporal.activities.unpause_schedule",
+            "zane_api.temporal.activities.main_activities.unpause_schedule",
             side_effect=unpause_schedule,
         )
         patch_temporal_delete_schedule = patch(
-            "zane_api.temporal.activities.delete_schedule", side_effect=delete_schedule
+            "zane_api.temporal.activities.main_activities.delete_schedule",
+            side_effect=delete_schedule,
         )
         patch_temporal_create_schedule.start()
         patch_temporal_pause_schedule.start()

@@ -199,3 +199,10 @@ class CancelDeploymentSignalInput:
 @dataclass
 class CleanupResult:
     deleted_count: int
+
+
+@dataclass
+class UpdateDetails:
+    desired_version: str
+    service_name: str
+    service_image: str

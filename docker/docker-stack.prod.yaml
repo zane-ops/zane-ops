@@ -52,6 +52,7 @@ services:
     volumes:
       - caddy-data:/data
       - caddy-config:/config
+      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     environment:
       CADDY_ADMIN: 0.0.0.0:2019
     networks:
@@ -101,6 +102,7 @@ services:
       <<: *env-vars
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
       - valkey
@@ -192,6 +194,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
       - valkey
@@ -226,6 +229,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
       - valkey

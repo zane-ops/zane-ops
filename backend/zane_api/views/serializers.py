@@ -39,7 +39,7 @@ from ..models import (
     DeploymentURL,
     DockerDeploymentChange,
 )
-from ..temporal import (
+from ..temporal.activities import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
     get_server_resource_limits,
@@ -1432,6 +1432,19 @@ class UserCreationRequestSerializer(serializers.Serializer):
 
 class UserCreatedResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
+
+
+# ==========================================
+#       AUTO UPDATE DOCKER SERVICES        #
+# ==========================================
+
+
+class AutoUpdateRequestSerializer(serializers.Serializer):
+    desired_version = serializers.CharField(required=True, max_length=255)
+
+
+class AutoUpdateResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
 
 
 # ==========================================

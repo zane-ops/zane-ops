@@ -8,14 +8,13 @@ from temporalio.common import RetryPolicy
 from temporalio.testing import WorkflowEnvironment
 from asgiref.sync import sync_to_async
 from ..serializers import DockerServiceSerializer, URLModelSerializer
+from ..temporal.activities import get_swarm_service_name_for_deployment, ZaneProxyClient
 from ..temporal import (
-    get_swarm_service_name_for_deployment,
     DockerDeploymentDetails,
     DockerDeploymentStep,
     DeployDockerServiceWorkflow,
     DeployDockerServiceWorkflowResult,
     CancelDeploymentSignalInput,
-    ZaneProxyClient,
 )
 from ..models import (
     DockerDeployment,

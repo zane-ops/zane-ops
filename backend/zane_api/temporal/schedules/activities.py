@@ -1,5 +1,4 @@
 from datetime import timedelta
-import requests
 from rest_framework import status
 from temporalio import workflow, activity
 from temporalio.exceptions import ApplicationError
@@ -14,6 +13,7 @@ from ..shared import (
 )
 
 with workflow.unsafe.imports_passed_through():
+    import requests
     from django.conf import settings
     from django.utils import timezone
     import docker

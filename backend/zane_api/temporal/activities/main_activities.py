@@ -9,11 +9,11 @@ from temporalio.exceptions import ApplicationError
 from temporalio.service import RPCError
 
 
-from .main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 import platform
+from ..main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 
 with workflow.unsafe.imports_passed_through():
-    from .schedules import (
+    from ..schedules import (
         MonitorDockerDeploymentWorkflow,
         GetDockerDeploymentStatsWorkflow,
     )
@@ -21,7 +21,7 @@ with workflow.unsafe.imports_passed_through():
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     import docker
     import docker.errors
-    from ..models import (
+    from ...models import (
         Project,
         ArchivedProject,
         ArchivedDockerService,
@@ -29,9 +29,7 @@ with workflow.unsafe.imports_passed_through():
         HealthCheck,
         URL,
         DockerDeploymentChange,
-        Environment,
     )
-    from docker.models.networks import Network
     from docker.models.services import Service
     from urllib3.exceptions import HTTPError
     from requests import RequestException
@@ -49,7 +47,7 @@ with workflow.unsafe.imports_passed_through():
     from django.utils import timezone
     from time import monotonic
     from django.db.models import Q, Case, When, Value, F
-    from ..utils import (
+    from ...utils import (
         strip_slash_if_exists,
         find_item_in_list,
         format_seconds,
@@ -61,16 +59,16 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         excerpt,
     )
-    from .semaphore import AsyncSemaphore
+    from ..semaphore import AsyncSemaphore
 
-from ..dtos import (
+from ...dtos import (
     ConfigDto,
     DockerServiceSnapshot,
     URLDto,
     HealthCheckDto,
     VolumeDto,
 )
-from .shared import (
+from ..shared import (
     DeploymentCreateConfigsResult,
     ProjectDetails,
     EnvironmentDetails,
@@ -1564,7 +1562,7 @@ class DockerSwarmActivities:
                     else None
                 ),
             )
-        except docker.errors.ImageNotFound as e:
+        except docker.errors.ImageNotFound:
             await deployment_log(
                 deployment,
                 f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}this image either does not exists for this platform (linux/{platform.machine()}) or may require credentials to pull ❌{Colors.ENDC}",
