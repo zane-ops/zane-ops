@@ -394,6 +394,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertEqual(service.image, cloned_service.image)
         self.assertEqual(service.credentials, cloned_service.credentials)
         self.assertEqual(service.command, cloned_service.command)
+        self.assertIsNotNone(cloned_service.deploy_token)
 
 
 class ProjectEnvironmentViewTests(AuthAPITestCase):

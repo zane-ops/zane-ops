@@ -295,6 +295,11 @@ class DockerRegistryService(BaseService):
                 "comment": "Is the service deployed on zaneops?",
             },
             {
+                "key": "ZANE_ENVIRONMENT",
+                "value": f"{self.environment.name}",
+                "comment": "The current environment where the service is deployed",
+            },
+            {
                 "key": "ZANE_PRIVATE_DOMAIN",
                 "value": f"{self.network_alias}.{settings.ZANE_INTERNAL_DOMAIN}",
                 "comment": "The domain used to reach this service on the same project",
@@ -549,7 +554,9 @@ class DockerRegistryService(BaseService):
             project=self.project,
             network_alias=self.network_alias,
             image=self.image,
+            command=self.command,
             credentials=self.credentials,
+            deploy_token=generate_random_chars(20),
         )
         return service
 
