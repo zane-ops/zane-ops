@@ -12,10 +12,7 @@ from ..models import (
     Volume,
     URL,
 )
-from ..temporal.activities import (
-    get_env_network_resource_name,
-    get_swarm_service_name_for_deployment,
-)
+from ..temporal.activities import get_env_network_resource_name
 from ..utils import jprint
 
 
