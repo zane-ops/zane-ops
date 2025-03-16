@@ -1,3 +1,4 @@
+from typing import Any, Awaitable, Callable, List, Tuple
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from drf_spectacular.utils import (
@@ -25,6 +26,8 @@ from ..models import (
     Config,
     Environment,
     DockerDeploymentChange,
+    DockerDeployment,
+    DeploymentURL,
 )
 from ..serializers import (
     EnvironmentSerializer,
@@ -36,6 +39,8 @@ from ..temporal import (
     EnvironmentDetails,
     CreateEnvNetworkWorkflow,
     ArchiveEnvWorkflow,
+    DeployDockerServiceWorkflow,
+    DockerDeploymentDetails,
 )
 from .helpers import compute_docker_changes_from_snapshots
 
@@ -121,7 +126,19 @@ class CloneEnviromentAPIView(APIView):
                 f"An environment with the name `{name}` already exists"
             )
         else:
-            for service in (
+            workflows_to_run: List[Tuple[Callable, Any, str]] = [
+                (
+                    CreateEnvNetworkWorkflow.run,
+                    EnvironmentDetails(
+                        id=new_environment.id,
+                        project_id=project.id,
+                        name=new_environment.name,
+                    ),
+                    new_environment.workflow_id,
+                )
+            ]
+
+            all_services = (
                 current_environment.services.select_related(
                     "healthcheck", "project", "environment"
                 )
@@ -129,7 +146,9 @@ class CloneEnviromentAPIView(APIView):
                     "volumes", "ports", "urls", "env_variables", "changes"
                 )
                 .all()
-            ):
+            )
+
+            for service in all_services:
                 cloned_service = service.clone(environment=new_environment)
                 current = DockerServiceSerializer(cloned_service).data
                 target = DockerServiceSerializer(service).data
@@ -149,19 +168,45 @@ class CloneEnviromentAPIView(APIView):
                     change.service = cloned_service
                     change.save()
 
-            workflow_id = new_environment.workflow_id
-            serializer = EnvironmentWithServicesSerializer(new_environment)
+                if should_deploy_services:
+                    new_deployment = DockerDeployment.objects.create(
+                        service=cloned_service,
+                    )
+                    cloned_service.apply_pending_changes(new_deployment)
+
+                    ports: List[int] = (
+                        service.urls.filter(associated_port__isnull=False)
+                        .values_list("associated_port", flat=True)
+                        .distinct()
+                    )  # type: ignore
+                    for port in ports:
+                        DeploymentURL.generate_for_deployment(
+                            deployment=new_deployment,
+                            service=cloned_service,
+                            port=port,
+                        )
+
+                    new_deployment.service_snapshot = DockerServiceSerializer(cloned_service).data  # type: ignore
+                    new_deployment.save()
+                    payload = DockerDeploymentDetails.from_deployment(
+                        deployment=new_deployment
+                    )
+                    workflows_to_run.append(
+                        (DeployDockerServiceWorkflow.run, payload, payload.workflow_id)
+                    )
+
             transaction.on_commit(
-                lambda: start_workflow(
-                    CreateEnvNetworkWorkflow.run,
-                    EnvironmentDetails(
-                        id=new_environment.id,
-                        project_id=project.id,
-                        name=new_environment.name,
-                    ),
-                    id=workflow_id,
-                )
+                lambda: [
+                    start_workflow(
+                        workflow,
+                        payload,
+                        workflow_id,
+                    )
+                    for workflow, payload, workflow_id in workflows_to_run
+                ]
             )
+
+            serializer = EnvironmentWithServicesSerializer(new_environment)
             return Response(status=status.HTTP_201_CREATED, data=serializer.data)
 
 

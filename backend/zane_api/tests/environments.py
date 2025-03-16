@@ -12,7 +12,10 @@ from ..models import (
     Volume,
     URL,
 )
-from ..temporal.activities import get_env_network_resource_name
+from ..temporal.activities import (
+    get_env_network_resource_name,
+    get_swarm_service_name_for_deployment,
+)
 from ..utils import jprint
 
 
@@ -591,6 +594,76 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
             field=DockerDeploymentChange.ChangeField.PORTS
         )
         self.assertEqual(0, port_changes.count())
+
+    async def test_clone_environment_with_deploy_body_should_create_resources(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging", "deploy_services": True},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env: Environment = await p.environments.filter(name="staging").afirst()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        services_in_staging = DockerRegistryService.objects.filter(
+            environment=staging_env
+        )
+        self.assertEqual(1, await services_in_staging.acount())
+
+        cloned_service: DockerRegistryService = await services_in_staging.afirst()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        cloned_service: DockerRegistryService = await staging_env.services.afirst()  # type: ignore
+        self.assertEqual(1, await cloned_service.deployments.acount())
+
+        self.assertEqual(0, await cloned_service.unapplied_changes.acount())
+
+        cloned_deployment: DockerDeployment = await cloned_service.deployments.afirst()  # type: ignore
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            cloned_deployment
+        )
+        self.assertIsNotNone(swarm_service)
+
+    def test_clone_environment_with_service_url_with_deploy_body_should_create_deployment_url(
+        self,
+    ):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging", "deploy_services": True},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        services_in_staging = DockerRegistryService.objects.filter(
+            environment=staging_env
+        )
+        self.assertEqual(1, services_in_staging.count())
+
+        cloned_service: DockerRegistryService = services_in_staging.first()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        self.assertEqual(1, cloned_service.deployments.count())
+
+        self.assertEqual(0, cloned_service.unapplied_changes.count())
+
+        cloned_deployment: DockerDeployment = cloned_service.deployments.first()  # type: ignore
+        count: int = cloned_deployment.urls.count()  # type: ignore wtf ???
+        self.assertGreater(count, 0)
 
 
 class ProjectEnvironmentViewTests(AuthAPITestCase):
