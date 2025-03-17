@@ -159,7 +159,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
       >
         <Outlet />
-        <Dialog open={true} onOpenChange={setshowUpdateDialog}>
+        <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>ZaneOps Update Available</DialogTitle>
@@ -214,6 +214,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                 <SubmitButton
                   isPending={isPending}
                   className="flex gap-1 items-center md:w-fit w-full"
+                  onClick={() => setshowUpdateDialog(false)}
                 >
                   {isPending ? (
                     <>
