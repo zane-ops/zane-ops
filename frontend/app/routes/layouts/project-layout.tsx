@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ContainerIcon,
   LoaderIcon,
+  NetworkIcon,
   PlusIcon,
   Search,
   SettingsIcon
@@ -29,7 +30,13 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
@@ -64,7 +71,7 @@ export async function clientLoader({
     [project] = await Promise.all([
       queryClient.ensureQueryData(projectQueries.single(params.projectSlug)),
       queryClient.ensureQueryData(
-        projectQueries.serviceList(params.projectSlug, {
+        projectQueries.serviceList(params.projectSlug, params.envSlug, {
           query: queryString
         })
       )
@@ -83,7 +90,8 @@ export default function ProjectDetail({
   params,
   loaderData
 }: Route.ComponentProps) {
-  const { projectSlug: slug } = params;
+  const { projectSlug: slug, envSlug } = params;
+  const navigate = useNavigate();
 
   const { data: project } = useQuery({
     ...projectQueries.single(params.projectSlug),
@@ -93,7 +101,7 @@ export default function ProjectDetail({
   const query = searchParams.get("query") ?? "";
 
   const projectServiceListQuery = useQuery(
-    projectQueries.serviceList(slug, {
+    projectQueries.serviceList(slug, envSlug, {
       query
     })
   );
@@ -136,6 +144,41 @@ export default function ProjectDetail({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>{slug}</BreadcrumbPage>
+          </BreadcrumbItem>
+
+          <BreadcrumbSeparator />
+
+          <BreadcrumbItem>
+            <Select
+              name="environment"
+              onValueChange={(env) => {
+                navigate(
+                  `/project/${params.projectSlug}/${env}?${searchParams.toString()}`,
+                  {
+                    replace: true
+                  }
+                );
+              }}
+              value={params.envSlug}
+            >
+              <SelectTrigger
+                id="healthcheck_type"
+                className={cn(
+                  "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
+                  "data-disabled:opacity-100 data-disabled:border-transparent",
+                  "text-muted-foreground"
+                )}
+              >
+                <SelectValue placeholder="Select an environment" />
+              </SelectTrigger>
+              <SelectContent>
+                {project.environments.map((env) => (
+                  <SelectItem key={env.id} value={env.name}>
+                    {env.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -199,9 +242,15 @@ export default function ProjectDetail({
             </li>
 
             <li>
-              <NavLink to="./settings">
+              <NavLink to={`./settings`}>
                 <span>Settings</span>
                 <SettingsIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={`./environments`}>
+                <span>Environments</span>
+                <NetworkIcon size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>

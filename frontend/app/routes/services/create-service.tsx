@@ -37,8 +37,23 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${params.projectSlug}`} prefetch="intent">
+              <Link
+                to={`/project/${params.projectSlug}/production`}
+                prefetch="intent"
+              >
                 {params.projectSlug}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link
+                to={`/project/${params.projectSlug}/${params.envSlug}`}
+                prefetch="intent"
+              >
+                {params.envSlug}
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>

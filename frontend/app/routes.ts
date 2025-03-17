@@ -36,10 +36,11 @@ export default [
     index("./routes/dashboard.tsx"),
     route("create-project", "./routes/projects/create-project.tsx"),
 
-    ...prefix("project/:projectSlug", [
+    ...prefix("project/:projectSlug/:envSlug", [
       route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-service-list.tsx"),
-        route("settings", "./routes/projects/project-settings.tsx")
+        route("settings", "./routes/projects/project-settings.tsx"),
+        route("environments", "./routes/projects/project-environments.tsx")
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(

@@ -117,23 +117,34 @@ export const projectQueries = {
       },
       placeholderData: keepPreviousData
     }),
-  serviceList: (slug: string, filters: ProjectServiceListSearch = {}) =>
+  serviceList: (
+    slug: string,
+    env_slug: string,
+    filters: ProjectServiceListSearch = {}
+  ) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(slug).queryKey,
+        env_slug,
         "SERVICE-LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
+        console.log({
+          slug,
+          env_slug,
+          filters
+        });
         const { data } = await apiClient.GET(
-          "/api/projects/{slug}/service-list/",
+          "/api/projects/{slug}/{env_slug}/service-list/",
           {
             params: {
               query: {
                 ...filters
               },
               path: {
-                slug
+                slug,
+                env_slug
               }
             },
             signal
@@ -180,11 +191,11 @@ export type ServiceDeploymentListFilters = z.infer<
 
 export type DockerService = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/service-details/docker/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/"
 >;
 export type DockerDeployment = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/"
 >;
 
 export const metrisSearch = z.object({
@@ -201,27 +212,31 @@ export const serviceQueries = {
   single: ({
     project_slug,
     service_slug,
+    env_slug,
     type = "docker"
   }: {
     project_slug: string;
+    env_slug: string;
     service_slug: string;
     type?: "docker" | "git";
   }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,
+        env_slug,
         "SERVICE_DETAILS",
         type,
         service_slug
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/",
           {
             params: {
               path: {
                 project_slug,
-                service_slug
+                service_slug,
+                env_slug
               }
             },
             signal
@@ -245,28 +260,32 @@ export const serviceQueries = {
   deploymentList: ({
     project_slug,
     service_slug,
+    env_slug,
     type = "docker",
     filters = {}
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     type?: "docker" | "git";
     filters?: ServiceDeploymentListFilters;
   }) =>
     queryOptions({
       queryKey: [
-        ...serviceQueries.single({ project_slug, service_slug, type }).queryKey,
+        ...serviceQueries.single({ project_slug, service_slug, type, env_slug })
+          .queryKey,
         "DEPLOYMENT_LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/",
           {
             params: {
               path: {
                 project_slug,
-                service_slug
+                service_slug,
+                env_slug
               },
               query: {
                 ...filters,
@@ -293,12 +312,14 @@ export const serviceQueries = {
   httpLogs: ({
     project_slug,
     service_slug,
+    env_slug,
     autoRefetchEnabled = true,
     filters = {},
     queryClient
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     filters?: Omit<HTTPLogFilters, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
@@ -307,7 +328,8 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }).queryKey,
         "HTTP_LOGS",
         filters
@@ -340,12 +362,13 @@ export const serviceQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/",
           {
             params: {
               path: {
                 project_slug,
-                service_slug
+                service_slug,
+                env_slug
               },
               query: {
                 ...filters,
@@ -386,12 +409,13 @@ export const serviceQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/",
             {
               params: {
                 path: {
                   project_slug,
-                  service_slug
+                  service_slug,
+                  env_slug
                 },
                 query: {
                   ...filters,
@@ -428,29 +452,33 @@ export const serviceQueries = {
   metrics: ({
     project_slug,
     service_slug,
+    env_slug,
     filters
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     filters?: MetricsFilters;
   }) =>
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }).queryKey,
         "METRICS",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/metrics/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/",
           {
             params: {
               path: {
                 project_slug,
-                service_slug
+                service_slug,
+                env_slug
               },
               query: {
                 ...filters
@@ -475,29 +503,33 @@ export const serviceQueries = {
   singleHttpLog: ({
     project_slug,
     service_slug,
+    env_slug,
     request_uuid
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     request_uuid: string;
   }) =>
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }).queryKey,
         "HTTP_LOGS",
         request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/",
           {
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 request_uuid
               }
             },
@@ -510,14 +542,16 @@ export const serviceQueries = {
   filterHttpLogFields: ({
     project_slug,
     service_slug,
+    env_slug,
     field,
     value
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     field: RequestParams<
       "get",
-      "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/"
     >["field"];
     value: string;
   }) =>
@@ -525,7 +559,8 @@ export const serviceQueries = {
       queryKey: [
         ...serviceQueries.single({
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }).queryKey,
         "HTTP_LOG_FIELDS",
         field,
@@ -533,13 +568,14 @@ export const serviceQueries = {
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/",
           {
             signal,
             params: {
               path: {
                 project_slug,
-                service_slug
+                service_slug,
+                env_slug
               },
               query: {
                 field,
@@ -644,15 +680,18 @@ export const deploymentQueries = {
   single: ({
     project_slug,
     service_slug,
+    env_slug,
     deployment_hash
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     deployment_hash: string;
   }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,
+        env_slug,
         "SERVICE_DETAILS",
         service_slug,
         "DEPLOYMENTS",
@@ -660,12 +699,13 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/",
           {
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 deployment_hash
               }
             },
@@ -687,6 +727,7 @@ export const deploymentQueries = {
   logs: ({
     project_slug,
     service_slug,
+    env_slug,
     deployment_hash,
     autoRefetchEnabled = true,
     filters = {},
@@ -694,6 +735,7 @@ export const deploymentQueries = {
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     deployment_hash: string;
     filters?: Omit<DeploymentLogFilters, "isMaximized">;
     queryClient: QueryClient;
@@ -704,6 +746,7 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
+          env_slug,
           deployment_hash
         }).queryKey,
         "RUNTIME_LOGS",
@@ -737,12 +780,13 @@ export const deploymentQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
           {
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 deployment_hash
               },
               query: {
@@ -778,12 +822,13 @@ export const deploymentQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
             {
               params: {
                 path: {
                   project_slug,
                   service_slug,
+                  env_slug,
                   deployment_hash
                 },
                 query: {
@@ -823,12 +868,14 @@ export const deploymentQueries = {
   metrics: ({
     project_slug,
     service_slug,
+    env_slug,
     deployment_hash,
     filters
   }: {
     project_slug: string;
     deployment_hash: string;
     service_slug: string;
+    env_slug: string;
     filters?: MetricsFilters;
   }) =>
     queryOptions({
@@ -836,6 +883,7 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
+          env_slug,
           deployment_hash
         }).queryKey,
         "METRICS",
@@ -843,12 +891,13 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/",
           {
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 deployment_hash
               },
               query: {
@@ -874,6 +923,7 @@ export const deploymentQueries = {
   httpLogs: ({
     project_slug,
     service_slug,
+    env_slug,
     deployment_hash,
     autoRefetchEnabled = true,
     filters = {},
@@ -881,6 +931,7 @@ export const deploymentQueries = {
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     deployment_hash: string;
     filters?: Omit<HTTPLogFilters, "isMaximized">;
     queryClient: QueryClient;
@@ -891,6 +942,7 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
+          env_slug,
           deployment_hash
         }).queryKey,
         "HTTP_LOGS",
@@ -924,12 +976,13 @@ export const deploymentQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
           {
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 deployment_hash
               },
               query: {
@@ -971,12 +1024,13 @@ export const deploymentQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
             {
               params: {
                 path: {
                   project_slug,
                   service_slug,
+                  env_slug,
                   deployment_hash
                 },
                 query: {
@@ -1014,11 +1068,13 @@ export const deploymentQueries = {
   singleHttpLog: ({
     project_slug,
     service_slug,
+    env_slug,
     deployment_hash,
     request_uuid
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     deployment_hash: string;
     request_uuid: string;
   }) =>
@@ -1027,6 +1083,7 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
+          env_slug,
           deployment_hash
         }).queryKey,
         "HTTP_LOGS",
@@ -1034,12 +1091,13 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
           {
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 deployment_hash,
                 request_uuid
               }
@@ -1053,16 +1111,18 @@ export const deploymentQueries = {
   filterHttpLogFields: ({
     project_slug,
     service_slug,
+    env_slug,
     deployment_hash,
     field,
     value
   }: {
     project_slug: string;
     service_slug: string;
+    env_slug: string;
     deployment_hash: string;
     field: RequestParams<
       "get",
-      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
     >["field"];
     value: string;
   }) =>
@@ -1071,6 +1131,7 @@ export const deploymentQueries = {
         ...deploymentQueries.single({
           project_slug,
           service_slug,
+          env_slug,
           deployment_hash
         }).queryKey,
         "HTTP_LOG_FIELDS",
@@ -1079,13 +1140,14 @@ export const deploymentQueries = {
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
           {
             signal,
             params: {
               path: {
                 project_slug,
                 service_slug,
+                env_slug,
                 deployment_hash
               },
               query: {
@@ -1124,7 +1186,7 @@ type DeploymentLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
     >
   >,
   "next" | "previous" | "results"
@@ -1136,7 +1198,7 @@ type DeploymentHttpLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/"
     >
   >,
   "next" | "previous" | "results"

@@ -262,7 +262,7 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
                     <Link
                       className={cn("flex gap-2", "hover:underline")}
                       prefetch="viewport"
-                      to={`/project/${project.slug}`}
+                      to={`/project/${project.slug}/production`}
                     >
                       <FolderIcon size={18} />
                       {project.slug}

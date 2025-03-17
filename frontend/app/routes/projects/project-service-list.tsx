@@ -16,7 +16,7 @@ export async function clientLoader({
   const queryString = searchParams.get("query") ?? "";
 
   const serviceList = await queryClient.ensureQueryData(
-    projectQueries.serviceList(params.projectSlug, {
+    projectQueries.serviceList(params.projectSlug, params.envSlug, {
       query: queryString
     })
   );
@@ -25,14 +25,14 @@ export async function clientLoader({
 }
 
 export default function ProjectServiceListPage({
-  params: { projectSlug: project_slug },
+  params: { projectSlug: project_slug, envSlug: env_slug },
   loaderData
 }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
   const { data: serviceList } = useQuery({
-    ...projectQueries.serviceList(project_slug, {
+    ...projectQueries.serviceList(project_slug, env_slug, {
       query
     }),
     initialData: loaderData.serviceList

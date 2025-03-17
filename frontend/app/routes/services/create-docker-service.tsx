@@ -28,7 +28,7 @@ import {
   CommandList
 } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
-import { dockerHubQueries, projectQueries } from "~/lib/queries";
+import { dockerHubQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import { type Route } from "./+types/create-docker-service";
@@ -64,7 +64,10 @@ export default function CreateServicePage({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${params.projectSlug}`} prefetch="intent">
+              <Link
+                to={`/project/${params.projectSlug}/production`}
+                prefetch="intent"
+              >
                 {params.projectSlug}
               </Link>
             </BreadcrumbLink>
@@ -74,7 +77,19 @@ export default function CreateServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/create-service`}
+                to={`/project/${params.projectSlug}/${params.envSlug}`}
+                prefetch="intent"
+              >
+                {params.envSlug}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link
+                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
                 prefetch="intent"
               >
                 Create service
@@ -121,7 +136,11 @@ export default function CreateServicePage({
   );
 }
 
-async function createService(projectSlug: string, formData: FormData) {
+async function createService(
+  projectSlug: string,
+  envSlug: string,
+  formData: FormData
+) {
   const userData = {
     slug: formData.get("slug")?.toString().trim() ?? "",
     image: formData.get("image")?.toString() ?? "",
@@ -132,14 +151,15 @@ async function createService(projectSlug: string, formData: FormData) {
   };
 
   const { error: errors, data } = await apiClient.POST(
-    "/api/projects/{project_slug}/create-service/docker/",
+    "/api/projects/{project_slug}/{env_slug}/create-service/docker/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
       },
       params: {
         path: {
-          project_slug: projectSlug
+          project_slug: projectSlug,
+          env_slug: envSlug
         }
       },
       body: userData
@@ -154,10 +174,14 @@ async function createService(projectSlug: string, formData: FormData) {
   };
 }
 
-async function deployService(projectSlug: string, formData: FormData) {
+async function deployService(
+  projectSlug: string,
+  envSlug: string,
+  formData: FormData
+) {
   const serviceSlug = formData.get("service_slug")?.toString()!;
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -165,7 +189,8 @@ async function deployService(projectSlug: string, formData: FormData) {
       params: {
         path: {
           project_slug: projectSlug,
-          service_slug: serviceSlug
+          service_slug: serviceSlug,
+          env_slug: envSlug
         }
       }
     }
@@ -188,10 +213,10 @@ export async function clientAction({
   const step = formData.get("step")?.toString();
   switch (step) {
     case "create-service": {
-      return createService(params.projectSlug, formData);
+      return createService(params.projectSlug, params.envSlug, formData);
     }
     case "deploy-service": {
-      return deployService(params.projectSlug, formData);
+      return deployService(params.projectSlug, params.envSlug, formData);
     }
     default: {
       throw new Error("Unexpected step");

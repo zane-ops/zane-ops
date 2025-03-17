@@ -67,7 +67,11 @@ type EnvVariableUI = {
 };
 
 export default function ServiceEnvVariablesPage({
-  params: { projectSlug: project_slug, serviceSlug: service_slug },
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  },
   matches: {
     "2": {
       data: { service: initialData }
@@ -75,7 +79,7 @@ export default function ServiceEnvVariablesPage({
   }
 }: Route.ComponentProps) {
   const { data: service } = useQuery({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     initialData
   });
 
@@ -216,6 +220,7 @@ export async function clientAction({
       return createEnvVariable({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -223,6 +228,7 @@ export async function clientAction({
       return updateEnvVariable({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -230,6 +236,7 @@ export async function clientAction({
       return cancelEnvVariable({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -237,6 +244,7 @@ export async function clientAction({
       return deleteEnvVariable({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -244,6 +252,7 @@ export async function clientAction({
       return addDotEnvVariables({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -261,10 +270,12 @@ type EnVariableRowProps = EnvVariableUI & {
 async function createEnvVariable({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const userData = {
@@ -272,7 +283,7 @@ async function createEnvVariable({
     value: (formData.get("value") ?? "").toString()
   };
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -280,7 +291,8 @@ async function createEnvVariable({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       },
       body: {
@@ -299,7 +311,7 @@ async function createEnvVariable({
 
   if (data) {
     await queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug }),
+      ...serviceQueries.single({ project_slug, service_slug, env_slug }),
       exact: true
     });
     return { data };
@@ -309,10 +321,12 @@ async function createEnvVariable({
 async function updateEnvVariable({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const userData = {
@@ -320,7 +334,7 @@ async function updateEnvVariable({
     value: (formData.get("value") ?? "").toString()
   };
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -328,7 +342,8 @@ async function updateEnvVariable({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       },
       body: {
@@ -348,7 +363,7 @@ async function updateEnvVariable({
 
   if (data) {
     await queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug }),
+      ...serviceQueries.single({ project_slug, service_slug, env_slug }),
       exact: true
     });
     return { data };
@@ -358,15 +373,17 @@ async function updateEnvVariable({
 async function deleteEnvVariable({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const toasId = toast.loading(`Sending change request...`);
   const { error: error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -374,7 +391,8 @@ async function deleteEnvVariable({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       },
       body: {
@@ -395,7 +413,7 @@ async function deleteEnvVariable({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     exact: true
   });
   toast.success("Success", {
@@ -408,14 +426,16 @@ async function deleteEnvVariable({
 async function addDotEnvVariables({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/request-env-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -423,7 +443,8 @@ async function addDotEnvVariables({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       },
       body: {
@@ -438,7 +459,7 @@ async function addDotEnvVariables({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     exact: true
   });
   toast.success("Success", {
@@ -453,15 +474,17 @@ async function addDotEnvVariables({
 async function cancelEnvVariable({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const toasId = toast.loading(`Cancelling env variable change...`);
   const { error } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -470,6 +493,7 @@ async function cancelEnvVariable({
         path: {
           project_slug,
           service_slug,
+          env_slug,
           change_id: (formData.get("change_id") ?? "").toString()
         }
       }
@@ -486,7 +510,7 @@ async function cancelEnvVariable({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     exact: true
   });
   toast.success("Success", {
