@@ -16,19 +16,19 @@ export default [
     "./routes/services/deploy-service.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/discard-multiple-changes",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/discard-multiple-changes",
     "./routes/services/discard-multiple-changes.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/discard-change",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/discard-change",
     "./routes/services/discard-service-change.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/archive-service",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-service",
     "./routes/services/archive-service.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/toggle-service-state",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/toggle-service-state",
     "./routes/services/toggle-service-state.tsx"
   ),
 

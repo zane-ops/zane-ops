@@ -39,7 +39,11 @@ import type { Route } from "./+types/service-metrics";
 
 export async function clientLoader({
   request,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
   const filters = metrisSearch.parse({
@@ -50,6 +54,7 @@ export async function clientLoader({
     serviceQueries.metrics({
       project_slug,
       service_slug,
+      env_slug,
       filters
     })
   );
@@ -64,7 +69,11 @@ export default function ServiceMetricsPage({
       data: { limits, service }
     }
   },
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
@@ -74,6 +83,7 @@ export default function ServiceMetricsPage({
     ...serviceQueries.metrics({
       project_slug,
       service_slug,
+      env_slug,
       filters
     }),
     initialData: loaderData.metrics
