@@ -752,7 +752,7 @@ class ArchiveEnvWorkflow:
 
     @workflow.run
     async def run(self, environment: EnvironmentDetails):
-        print(f"Running workflow CreateEnvNetworkWorkflow(payload={environment})")
+        print(f"Running workflow ArchiveEnvWorkflow(payload={environment})")
         services = await workflow.execute_activity_method(
             DockerSwarmActivities.get_archived_env_services,
             environment,
