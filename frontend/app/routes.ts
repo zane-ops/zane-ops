@@ -10,6 +10,7 @@ export default [
   route("login", "./routes/login.tsx"),
   route("logout", "./routes/logout.tsx"),
   route("onboarding", "./routes/onboarding.tsx"),
+  route("trigger-update", "./routes/trigger-update.tsx"),
 
   route(
     "project/:projectSlug/services/:serviceSlug/deploy-service",
