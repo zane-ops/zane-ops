@@ -24,7 +24,11 @@ def create_default_production_env_network(apps, schema_editor):
                 name=get_env_network_resource_name(env.id, env.project_id),
                 scope="swarm",
                 driver="overlay",
-                labels={"zane-managed": "true", "zane-project": env.project_id},
+                labels={
+                    "zane-managed": "true",
+                    "zane-project": env.project_id,
+                    "is_production": "True",
+                },
                 attachable=True,
             )
 
