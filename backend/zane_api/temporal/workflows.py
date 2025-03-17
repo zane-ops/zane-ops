@@ -158,18 +158,17 @@ class DockerDeploymentStep(Enum):
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     def __init__(self):
-        self.cancellation_requested = False
+        self.cancellation_requested = None
         self.created_volumes: List[VolumeDto] = []
         self.created_configs: List[ConfigDto] = []
-        self.deployment_hash: str | None = None
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
-        if self.deployment_hash == input.deployment_hash:
-            self.cancellation_requested = True
+        self.cancellation_requested = input.deployment_hash
+        print(f"Sending signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(
@@ -180,8 +179,6 @@ class DeployDockerServiceWorkflow:
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
-
-        self.deployment_hash = deployment.hash
 
         print("Running DeployDockerServiceWorkflow with payload: ")
         jprint(deployment)  # type: ignore
@@ -218,7 +215,7 @@ class DeployDockerServiceWorkflow:
                 print(f"{workflow.time()=}, {start_time=}")
                 try:
                     await workflow.wait_condition(
-                        lambda: self.cancellation_requested,
+                        lambda: self.cancellation_requested == deployment.hash,
                         timeout=timedelta(seconds=5),
                     )
                 except TimeoutError as error:

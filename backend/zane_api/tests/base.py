@@ -367,7 +367,9 @@ class AuthAPITestCase(APITestCase):
         return user
 
     @asynccontextmanager
-    async def workflowEnvironment(self, task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE):
+    async def workflowEnvironment(
+        self, task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE, skip_time=True
+    ):
         env = await WorkflowEnvironment.start_time_skipping()
         await env.__aenter__()
         worker = Worker(
