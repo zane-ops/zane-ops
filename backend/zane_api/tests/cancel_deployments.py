@@ -1,8 +1,6 @@
 # type: ignore
 from .base import AuthAPITestCase
-import unittest
 from unittest.mock import MagicMock, call
-import os
 import asyncio
 from datetime import timedelta
 from temporalio.common import RetryPolicy
@@ -21,6 +19,7 @@ from ..models import (
     DockerDeploymentChange,
     Volume,
     URL,
+    DeploymentURL,
 )
 from ..dtos import URLDto
 from django.conf import settings
@@ -396,7 +395,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                         )(),
                     )
                 )
-                new_deployment.url = f"{p.slug}-{service.slug}-docker-{new_deployment.unprefixed_hash}.{settings.ROOT_DOMAIN}".lower()
+                new_deployment.urls.add(
+                    DeploymentURL.generate_for_deployment(new_deployment, 80, service)
+                )
                 await new_deployment.asave()
 
                 payload = await DockerDeploymentDetails.afrom_deployment(
@@ -442,7 +443,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
                 self.assertIsNone(docker_deployment)
                 response = requests.get(
-                    ZaneProxyClient.get_uri_for_deployment(new_deployment.hash)
+                    ZaneProxyClient.get_uri_for_deployment(
+                        new_deployment.hash, new_deployment.urls.first().domain
+                    )
                 )
                 self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
