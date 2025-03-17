@@ -154,7 +154,10 @@ export default function ServiceDetailsLayout({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className={cn(env_slug !== "production" && "text-link")}
+            >
               <Link
                 to={`/project/${project_slug}/${env_slug}`}
                 prefetch="intent"
