@@ -168,7 +168,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                   <Rocket size={15} />
                   New Version Ready: {latestVersion.tag}
                 </div>
-                <p className="my-2">
+                <p className="my-2 text-start">
                   Stay ahead with the latest from ZaneOps! Update now to:
                 </p>
                 <div className="flex flex-col gap-2.5">
@@ -196,7 +196,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       target="_blank"
                       className="text-link underline inline-flex gap-1 items-center"
                     >
-                      release notes
+                      release notes &nbsp;
                     </a>
                     to be aware of any breaking changes.
                   </AlertDescription>
@@ -204,7 +204,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
               </DialogDescription>
             </DialogHeader>
 
-            <DialogFooter className="flex gap-3">
+            <DialogFooter className="flex flex-wrap gap-3">
               <fetcher.Form action="/trigger-update" method="POST">
                 <input
                   type="hidden"
