@@ -6,7 +6,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import ServiceMetricsQuery, ServiceMetricsResponseSerializer
-from ..models import Project, DockerRegistryService, ServiceMetrics, DockerDeployment
+from ..models import (
+    Project,
+    DockerRegistryService,
+    ServiceMetrics,
+    DockerDeployment,
+    Environment,
+)
 from django.utils import timezone
 from datetime import timedelta
 
@@ -38,12 +44,16 @@ class DockerServiceMetricsAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
+        env_slug=Environment.PRODUCTION_ENV,
         deployment_hash: str | None = None,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
             service = DockerRegistryService.objects.get(
-                slug=service_slug, project=project
+                slug=service_slug, project=project, environment=environment
             )
             deployment = None
             if deployment_hash is not None:
@@ -54,6 +64,10 @@ class DockerServiceMetricsAPIView(APIView):
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
         except DockerRegistryService.DoesNotExist:
             raise exceptions.NotFound(
