@@ -478,7 +478,7 @@ function ServiceURLFormItem({
                                 <InfoIcon size={15} />
                               </TooltipTrigger>
                               <TooltipContent className="max-w-64 text-balance">
-                                If checked, ZaneoOps will redirect with a 308
+                                If checked, ZaneOps will redirect with a 308
                                 status code; otherwise, it will redirect with a
                                 307 status code.
                               </TooltipContent>
