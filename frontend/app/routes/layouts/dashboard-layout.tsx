@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleUser,
   CommandIcon,
+  ExternalLink,
   GitCommitVertical,
   Hammer,
   HeartHandshake,
@@ -196,16 +197,23 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       target="_blank"
                       className="text-link underline inline-flex gap-1 items-center"
                     >
-                      release notes &nbsp;
+                      Release Notes
+                      <span>
+                        <ExternalLink size={15} />
+                      </span>
                     </a>
-                    to be aware of any breaking changes.
+                    &nbsp;to be aware of any breaking changes.
                   </AlertDescription>
                 </Alert>
               </DialogDescription>
             </DialogHeader>
 
-            <DialogFooter className="flex flex-wrap gap-3">
-              <fetcher.Form action="/trigger-update" method="POST">
+            <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3">
+              <fetcher.Form
+                action="/trigger-update"
+                method="POST"
+                className="order-1 md:order-1 w-full md:w-auto"
+              >
                 <input
                   type="hidden"
                   name="desired_version"
@@ -213,7 +221,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                 />
                 <SubmitButton
                   isPending={isPending}
-                  className="flex gap-1 items-center md:w-fit w-full"
+                  className="flex gap-1 items-center w-full md:w-fit"
                   onClick={() => setshowUpdateDialog(false)}
                 >
                   {isPending ? (
@@ -229,9 +237,11 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                   )}
                 </SubmitButton>
               </fetcher.Form>
+
               <Button
                 variant="outline"
                 onClick={() => setshowUpdateDialog(false)}
+                className="order-2 md:order-2 w-full md:w-auto"
               >
                 Cancel
               </Button>
