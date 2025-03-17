@@ -14,22 +14,9 @@ export async function clientLoader({
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";
-  const selectedEnvironment = searchParams.get("env")?.toString();
-  let currentEnvironment = "production";
-
-  const project = await queryClient.ensureQueryData(
-    projectQueries.single(params.projectSlug)
-  );
-
-  if (
-    selectedEnvironment &&
-    project.environments.find((env) => env.name == selectedEnvironment)
-  ) {
-    currentEnvironment = selectedEnvironment;
-  }
 
   const serviceList = await queryClient.ensureQueryData(
-    projectQueries.serviceList(params.projectSlug, currentEnvironment, {
+    projectQueries.serviceList(params.projectSlug, {
       query: queryString
     })
   );
@@ -39,18 +26,13 @@ export async function clientLoader({
 
 export default function ProjectServiceListPage({
   params: { projectSlug: project_slug },
-  loaderData,
-  matches: {
-    "2": {
-      data: { currentEnvironment }
-    }
-  }
+  loaderData
 }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
   const { data: serviceList } = useQuery({
-    ...projectQueries.serviceList(project_slug, currentEnvironment, {
+    ...projectQueries.serviceList(project_slug, {
       query
     }),
     initialData: loaderData.serviceList
@@ -79,7 +61,7 @@ export default function ProjectServiceListPage({
               <>
                 <div>
                   <h1 className="text-2xl font-bold">
-                    No services found in this environment
+                    No services found in this project
                   </h1>
                   <h2 className="text-lg">
                     Would you like to start by creating one?
