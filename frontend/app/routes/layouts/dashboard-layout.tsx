@@ -106,7 +106,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
-  const [showCustomDialog, setShowCustomDialog] = React.useState(false);
+  const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
 
   const { data: latestVersion } = useQuery({
     ...versionQueries.latest,
@@ -123,13 +123,13 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         description: latestVersion.tag,
         closeButton: true,
         duration: Infinity,
-        id: "new version available",
+        id: "new-version-available",
         icon: <Sparkles size={17} />,
         action: (
           <Button
             onClick={() => {
-              setShowCustomDialog(true);
-              toast.dismiss();
+              setshowUpdateDialog(true);
+              toast.dismiss("new-version-available");
             }}
             className="text-xs cursor-pointer"
             size="xs"
@@ -159,7 +159,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
       >
         <Outlet />
-        <Dialog open={showCustomDialog} onOpenChange={setShowCustomDialog}>
+        <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>ZaneOps Update Available</DialogTitle>
@@ -190,7 +190,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
                 <Alert className="my-6" variant="warning">
                   <AlertDescription>
-                    Before updating, review the&nbsp;
+                    Before updating, please review the&nbsp;
                     <a
                       href={latestVersion.url}
                       target="_blank"
@@ -198,7 +198,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                     >
                       release notes
                     </a>
-                    .
+                    to be aware of any breaking changes.
                   </AlertDescription>
                 </Alert>
               </DialogDescription>
@@ -222,7 +222,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                     </>
                   ) : (
                     <>
-                      <p>Update ZaneOps</p>
+                      <span>Update ZaneOps</span>
                       <ArrowBigUpDash size={15} />
                     </>
                   )}
@@ -230,7 +230,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
               </fetcher.Form>
               <Button
                 variant="outline"
-                onClick={() => setShowCustomDialog(false)}
+                onClick={() => setshowUpdateDialog(false)}
               >
                 Cancel
               </Button>
