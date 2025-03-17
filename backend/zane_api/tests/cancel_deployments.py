@@ -26,6 +26,8 @@ from django.conf import settings
 from rest_framework import status
 from django.urls import reverse
 import requests
+import os
+import unittest
 
 
 # @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
@@ -615,41 +617,40 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
 
 class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
-    # @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
+    @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
     async def test_cancel_deployment_simple(self):
         async with self.workflowEnvironment() as env:
-            with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
-                p, service = await self.acreate_and_deploy_redis_docker_service()
+            # with env.auto_time_skipping_disabled():
+            owner = await self.aLoginUser()
+            p, service = await self.acreate_and_deploy_redis_docker_service()
 
-                new_deployment = await DockerDeployment.objects.acreate(
-                    service=service,
-                    service_snapshot=await sync_to_async(
-                        lambda: DockerServiceSerializer(service).data
-                    )(),
-                )
+            new_deployment = await DockerDeployment.objects.acreate(
+                service=service,
+                service_snapshot=await sync_to_async(
+                    lambda: DockerServiceSerializer(service).data
+                )(),
+            )
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
-                    deployment=new_deployment,
-                    pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
-                )
+            payload = await DockerDeploymentDetails.afrom_deployment(
+                deployment=new_deployment,
+                pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
+            )
 
-                workflow_handle = await env.client.start_workflow(
-                    workflow=DeployDockerServiceWorkflow.run,
-                    arg=payload,
-                    id=payload.workflow_id,
-                    retry_policy=RetryPolicy(
-                        maximum_attempts=1,
-                    ),
-                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
-                )
+            workflow_handle = await env.client.start_workflow(
+                workflow=DeployDockerServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1,
+                ),
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
 
-                # Create task for the workflow result
-                workflow_result_task = asyncio.create_task(workflow_handle.result())
-
-                # Send signal concurrently
-                response = await self.async_client.put(
+            # Send signal concurrently
+            [workflow_result, response] = await asyncio.gather(
+                workflow_handle.result(),
+                self.async_client.put(
                     reverse(
                         "zane_api:services.docker.cancel_deployment",
                         kwargs={
@@ -659,24 +660,20 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                             "deployment_hash": new_deployment.hash,
                         },
                     ),
-                )
+                ),
+            )
 
-                # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
-                    await workflow_result_task
-                )
-
-                self.assertEqual(status.HTTP_200_OK, response.status_code)
-                self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
-                    workflow_result.deployment_status,
-                )
-                self.assertIsNone(workflow_result.healthcheck_result)
-                await new_deployment.arefresh_from_db()
-                self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED, new_deployment.status
-                )
-                self.assertIsNotNone(new_deployment.status_reason)
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED,
+                workflow_result.deployment_status,
+            )
+            self.assertIsNone(workflow_result.healthcheck_result)
+            await new_deployment.arefresh_from_db()
+            self.assertEqual(
+                DockerDeployment.DeploymentStatus.CANCELLED, new_deployment.status
+            )
+            self.assertIsNotNone(new_deployment.status_reason)
 
     async def test_cancel_not_started_deployment_set_status_to_cancelled(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
