@@ -31,15 +31,18 @@ import {
 export type ServiceHealthcheckFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceHealthcheckForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceHealthcheckFormProps) {
   const { data: service } = useServiceQuery({
     project_slug,
-    service_slug
+    service_slug,
+    env_slug
   });
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =

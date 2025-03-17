@@ -45,13 +45,19 @@ import {
 export type ServiceConfigsFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceConfigsForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceConfigsFormProps) {
-  const { data: service } = useServiceQuery({ project_slug, service_slug });
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
   const configs: Map<string, ConfigItem> = new Map();
   for (const config of service.configs ?? []) {
     configs.set(config.id, {

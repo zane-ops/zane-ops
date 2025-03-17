@@ -31,14 +31,16 @@ import type { clientAction as toggleClientAction } from "~/routes/services/toggl
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceDangerZoneForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceDangerZoneFormProps) {
   const deploymentListQuery = useQuery(
-    serviceQueries.deploymentList({ project_slug, service_slug })
+    serviceQueries.deploymentList({ project_slug, service_slug, env_slug })
   );
 
   const deploymentList = deploymentListQuery.data?.results ?? [];

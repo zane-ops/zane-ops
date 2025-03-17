@@ -12,7 +12,7 @@ export default [
   route("onboarding", "./routes/onboarding.tsx"),
 
   route(
-    "project/:projectSlug/services/:serviceSlug/deploy-service",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-service",
     "./routes/services/deploy-service.tsx"
   ),
   route(

@@ -10,11 +10,13 @@ import type { clientAction } from "~/routes/services/settings/services-settings"
 export type ServiceSlugFormProps = {
   service_slug: string;
   project_slug: string;
+  env_slug: string;
 };
 
 export function ServiceSlugForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceSlugFormProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
@@ -29,7 +31,7 @@ export function ServiceSlugForm({
 
     if (fetcher.state === "idle" && fetcher.data?.data?.slug) {
       navigate(
-        `/project/${project_slug}/services/${fetcher.data.data.slug}/settings`,
+        `/project/${project_slug}/${env_slug}/services/${fetcher.data.data.slug}/settings`,
         {
           replace: true,
           relative: "path"

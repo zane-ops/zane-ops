@@ -321,11 +321,17 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         navigate(
-          `/project/${params.projectSlug}/services/${params.serviceSlug}`
+          `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
         );
       }
     }
-  }, [fetcher.data, fetcher.state, params.projectSlug, params.serviceSlug]);
+  }, [
+    fetcher.data,
+    fetcher.state,
+    params.projectSlug,
+    params.serviceSlug,
+    params.envSlug
+  ]);
 
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>
