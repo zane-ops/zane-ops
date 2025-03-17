@@ -665,7 +665,10 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": project.slug}),
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()))
