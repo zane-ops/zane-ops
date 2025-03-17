@@ -220,6 +220,13 @@ export interface paths {
      */
     get: operations["projects_service_list_list_2"];
   };
+  "/api/projects/{slug}/clone-environment/{env_slug}/": {
+    /**
+     * Clone environment
+     * @description Create new environment from another
+     */
+    post: operations["cloneEnvironment"];
+  };
   "/api/projects/{slug}/create-environment/": {
     /**
      * Create new environment
@@ -260,6 +267,13 @@ export interface paths {
      * @description Get the settings of the API.
      */
     get: operations["getAPISettings"];
+  };
+  "/api/trigger-update/": {
+    /**
+     * Trigger Auto-Update
+     * @description Triggers the Docker auto-update workflow using Temporal.
+     */
+    post: operations["trigger_update_create"];
   };
 }
 
@@ -339,6 +353,12 @@ export interface components {
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
     };
+    AutoUpdateRequestRequest: {
+      desired_version: string;
+    };
+    AutoUpdateResponse: {
+      message: string;
+    };
     CancelDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelDockerServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CheckIfPortIsAvailableError: components["schemas"]["CheckIfPortIsAvailableNonFieldErrorsErrorComponent"] | components["schemas"]["CheckIfPortIsAvailablePortErrorComponent"];
@@ -382,6 +402,63 @@ export interface components {
      * @enum {string}
      */
     ClientErrorEnum: "client_error";
+    CloneEnvironmentDeployServicesErrorComponent: {
+      /**
+       * @description * `deploy_services` - deploy_services
+       * @enum {string}
+       */
+      attr: "deploy_services";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    CloneEnvironmentError: components["schemas"]["CloneEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CloneEnvironmentDeployServicesErrorComponent"] | components["schemas"]["CloneEnvironmentNameErrorComponent"];
+    CloneEnvironmentErrorResponse400: components["schemas"]["CloneEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CloneEnvironmentNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CloneEnvironmentNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CloneEnvironmentRequestRequest: {
+      /** @default false */
+      deploy_services?: boolean;
+      name: string;
+    };
+    CloneEnvironmentValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CloneEnvironmentError"][];
+    };
     Config: {
       id: string;
       name: string;
@@ -897,6 +974,12 @@ export interface components {
       id?: string;
       is_preview?: boolean;
       name: string;
+    };
+    EnvironmentWithServices: {
+      id: string;
+      is_preview: boolean;
+      name: string;
+      services: readonly components["schemas"]["DockerService"][];
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -1690,10 +1773,9 @@ export interface components {
        * * `max_length` - max_length
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
@@ -2641,6 +2723,44 @@ export interface components {
       comment: string;
     };
     ToggleDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    TriggerUpdateCreateDesiredVersionErrorComponent: {
+      /**
+       * @description * `desired_version` - desired_version
+       * @enum {string}
+       */
+      attr: "desired_version";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    TriggerUpdateCreateError: components["schemas"]["TriggerUpdateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["TriggerUpdateCreateDesiredVersionErrorComponent"];
+    TriggerUpdateCreateErrorResponse400: components["schemas"]["TriggerUpdateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    TriggerUpdateCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    TriggerUpdateCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["TriggerUpdateCreateError"][];
+    };
     /**
      * @description * `urls` - urls
      * @enum {string}
@@ -4654,6 +4774,52 @@ export interface operations {
     };
   };
   /**
+   * Clone environment
+   * @description Create new environment from another
+   */
+  cloneEnvironment: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CloneEnvironmentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CloneEnvironmentRequestRequest"];
+        "multipart/form-data": components["schemas"]["CloneEnvironmentRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentWithServices"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CloneEnvironmentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
    * Create new environment
    * @description Create empty environment with no services in it
    */
@@ -4892,6 +5058,41 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Trigger Auto-Update
+   * @description Triggers the Docker auto-update workflow using Temporal.
+   */
+  trigger_update_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AutoUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["AutoUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["AutoUpdateRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AutoUpdateResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["TriggerUpdateCreateErrorResponse400"];
         };
       };
       401: {

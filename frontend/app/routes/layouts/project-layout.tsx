@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ContainerIcon,
   LoaderIcon,
+  NetworkIcon,
   PlusIcon,
   Search,
   SettingsIcon
@@ -237,6 +238,12 @@ export default function ProjectDetail({
               <NavLink to="./settings">
                 <span>Settings</span>
                 <SettingsIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="./environments">
+                <span>Environments</span>
+                <NetworkIcon size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>
