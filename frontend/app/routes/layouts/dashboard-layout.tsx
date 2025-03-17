@@ -159,7 +159,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
       >
         <Outlet />
-        <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
+        <Dialog open={true} onOpenChange={setshowUpdateDialog}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>ZaneOps Update Available</DialogTitle>
@@ -174,23 +174,23 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                 <div className="flex flex-col gap-2.5">
                   <div className="flex  gap-2">
                     <WandSparkles size={15} className="text-secondary" />
-                    <p className="text-xs">Unlock New Features</p>
+                    <p>Unlock New Features</p>
                   </div>
 
                   <div className="flex gap-2">
                     <Hammer size={15} className="text-secondary" />
-                    <p className="text-xs">Fix Critical Issues</p>
+                    <p>Fix Critical Issues</p>
                   </div>
 
                   <div className="flex gap-2">
                     <Zap size={15} className="text-secondary" />
-                    <p className="text-xs">Boost Performance</p>
+                    <p>Boost Performance</p>
                   </div>
                 </div>
 
                 <Alert className="my-6" variant="warning">
                   <AlertDescription>
-                    Before updating, please review the&nbsp;
+                    Before updating, please review the &nbsp;
                     <a
                       href={latestVersion.url}
                       target="_blank"
@@ -204,7 +204,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
               </DialogDescription>
             </DialogHeader>
 
-            <DialogFooter>
+            <DialogFooter className="flex gap-3">
               <fetcher.Form action="/trigger-update" method="POST">
                 <input
                   type="hidden"
@@ -213,7 +213,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                 />
                 <SubmitButton
                   isPending={isPending}
-                  className="flex gap-1 items-center"
+                  className="flex gap-1 items-center md:w-fit w-full"
                 >
                   {isPending ? (
                     <>
