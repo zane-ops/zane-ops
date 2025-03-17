@@ -214,6 +214,28 @@ class EnvironmentDetailsAPIView(APIView):
     serializer_class = EnvironmentSerializer
 
     @extend_schema(
+        responses={200: EnvironmentWithServicesSerializer},
+        operation_id="getEnvironment",
+        summary="Get a single environment",
+    )
+    def get(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+        serializer = EnvironmentWithServicesSerializer(environment)
+        return Response(data=serializer.data)
+
+    @extend_schema(
         request=CreateEnvironmentRequestSerializer,
         operation_id="updateEnvironment",
         summary="Update an environment",
