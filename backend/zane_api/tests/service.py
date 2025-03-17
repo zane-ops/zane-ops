@@ -175,7 +175,11 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": "hello_nginx"},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "hello_nginx",
+                },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -597,7 +601,11 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -609,7 +617,11 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "cache-db",
+                },
             ),
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
@@ -650,7 +662,11 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": previous_service.slug},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": previous_service.slug,
+                },
             ),
             data={
                 "slug": "cache",
@@ -678,7 +694,11 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
             data={
                 "slug": "cache db",
@@ -692,7 +712,11 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": "zane-ops"},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "zane-ops",
+                },
             ),
             data={"slug": "zenops"},
         )
@@ -719,7 +743,11 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": "zane-ops"},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "zane-ops",
+                },
             ),
             data={"slug": "gh-clone"},
         )
@@ -746,7 +774,11 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         response = self.client.patch(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p.slug, "service_slug": "zane-ops"},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "zane-ops",
+                },
             ),
             data={"slug": "zane-ops"},
         )

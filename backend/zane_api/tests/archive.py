@@ -30,7 +30,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -63,7 +67,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -98,7 +106,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -141,7 +153,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -185,7 +201,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -226,7 +246,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -264,7 +288,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -316,7 +344,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -360,7 +392,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": "cache-db"},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "cache-db",
+                },
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
@@ -374,7 +410,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -400,7 +440,11 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)

@@ -34,7 +34,11 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
         response = await self.async_client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
-                kwargs={"project_slug": project.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)

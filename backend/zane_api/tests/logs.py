@@ -603,7 +603,11 @@ class RuntimeLogViewTests(AuthAPITestCase):
         response = await self.async_client.delete(
             reverse(
                 "zane_api:services.docker.archive",
-                kwargs={"project_slug": p.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)

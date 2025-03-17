@@ -495,7 +495,10 @@ class AuthAPITestCase(APITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
@@ -566,7 +569,10 @@ class AuthAPITestCase(APITestCase):
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
@@ -628,7 +634,10 @@ class AuthAPITestCase(APITestCase):
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
@@ -710,7 +719,10 @@ class AuthAPITestCase(APITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
@@ -784,7 +796,10 @@ class AuthAPITestCase(APITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
@@ -807,7 +822,10 @@ class AuthAPITestCase(APITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
@@ -830,7 +848,10 @@ class AuthAPITestCase(APITestCase):
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.docker.create",
-                kwargs={"project_slug": project.slug, "env_slug": "production"},
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
             ),
             data=create_service_payload,
         )
