@@ -254,7 +254,7 @@ class EnvironmentDetailsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A env with the slug `{env_slug}` does not exist in this project"
             )
-        if environment.name == "production":
+        if environment.name == Environment.PRODUCTION_ENV:
             raise exceptions.PermissionDenied(
                 "Cannot rename the production environment."
             )
@@ -295,7 +295,7 @@ class EnvironmentDetailsAPIView(APIView):
                 detail=f"A env with the slug `{env_slug}` does not exist in this project"
             )
 
-        if environment.name == "production":
+        if environment.name == Environment.PRODUCTION_ENV:
             raise exceptions.PermissionDenied(
                 "Cannot delete the production environment"
             )
