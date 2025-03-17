@@ -150,7 +150,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -186,7 +189,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -226,7 +232,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -656,7 +665,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -1441,7 +1453,11 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.request_deployment_changes",
-                kwargs={"project_slug": "project", "service_slug": service.slug},
+                kwargs={
+                    "project_slug": "project",
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
             data=changes_payload,
         )
@@ -1522,7 +1538,10 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         p = Project.objects.get(slug="zaneops")
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -1555,7 +1574,10 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
 

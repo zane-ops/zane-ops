@@ -34,7 +34,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -64,7 +67,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
@@ -94,7 +100,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
@@ -122,7 +131,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -144,7 +156,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -167,7 +182,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -198,7 +216,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -218,7 +239,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         p = Project.objects.get(slug="zane-ops")
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps({}),
             content_type="application/json",
         )
@@ -268,7 +292,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
@@ -294,7 +321,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
@@ -325,7 +355,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
@@ -354,7 +387,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
@@ -379,7 +415,10 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         }
 
         response = self.client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
         )
