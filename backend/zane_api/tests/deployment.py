@@ -69,6 +69,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployments_list",
                 kwargs={
                     "project_slug": "inexistent",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             )
@@ -1461,6 +1462,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": "project",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),

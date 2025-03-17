@@ -1,3 +1,4 @@
+# type: ignore
 from .base import AuthAPITestCase
 import unittest
 from unittest.mock import MagicMock, call
@@ -5,7 +6,6 @@ import os
 import asyncio
 from datetime import timedelta
 from temporalio.common import RetryPolicy
-from temporalio.testing import WorkflowEnvironment
 from asgiref.sync import sync_to_async
 from ..serializers import DockerServiceSerializer, URLModelSerializer
 from ..temporal.activities import get_swarm_service_name_for_deployment, ZaneProxyClient
@@ -21,7 +21,6 @@ from ..models import (
     DockerDeploymentChange,
     Volume,
     URL,
-    Config,
 )
 from ..dtos import URLDto
 from django.conf import settings
@@ -33,7 +32,7 @@ import requests
 @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
 class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_initial_step(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
             service_snapshot = await sync_to_async(
@@ -84,7 +83,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             )
 
     async def test_cancel_deployment_at_volume_created_step(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -151,7 +150,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
     async def test_cancel_deployment_at_config_created_step(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -224,7 +223,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             self.assertEqual(0, len(self.fake_docker_client.config_map))
 
     async def test_cancel_deployment_at_service_scaled_down(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service(
                 other_changes=[
@@ -315,7 +314,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             self.assertTrue(scaled_up)
 
     async def test_cancel_deployment_at_swarm_service_created(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -367,7 +366,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             self.assertIsNone(docker_deployment)
 
     async def test_cancel_deployment_at_deployment_exposed_to_http(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_caddy_docker_service()
 
@@ -426,7 +425,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     async def test_cancel_deployment_at_service_exposed_to_http(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_caddy_docker_service()
             url_to_update: URL = await service.urls.afirst()
@@ -530,7 +529,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_cancel_already_finished_do_nothing(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
             service_snapshot = await sync_to_async(
@@ -585,7 +584,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
     @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
     async def test_cancel_deployment_simple(self):
-        async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
+        async with self.workflowEnvironment() as env:
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -621,6 +620,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                     "zane_api:services.docker.cancel_deployment",
                     kwargs={
                         "project_slug": p.slug,
+                        "env_slug": "production",
                         "service_slug": service.slug,
                         "deployment_hash": new_deployment.hash,
                     },

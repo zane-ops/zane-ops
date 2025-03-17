@@ -657,7 +657,8 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(
             reverse(
-                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": project.slug, "env_slug": "production"},
             ),
             data=create_service_payload,
         )

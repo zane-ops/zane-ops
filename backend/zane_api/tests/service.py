@@ -263,7 +263,8 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         response = self.client.post(
             reverse(
-                "zane_api:services.docker.create", kwargs={"project_slug": "gh-clone"}
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": "gh-clone", "env_slug": "production"},
             ),
             data=json.dumps(create_service_payload),
             content_type="application/json",
@@ -682,7 +683,11 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.details",
-                kwargs={"project_slug": p2.slug, "service_slug": service.slug},
+                kwargs={
+                    "project_slug": p2.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
             ),
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
