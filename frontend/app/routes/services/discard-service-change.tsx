@@ -8,19 +8,23 @@ import { type Route } from "./+types/discard-service-change";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }
 export async function clientAction({
   request,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const toastId = toast.loading("Discarding service change...");
   const change_id = formData.get("change_id")?.toString();
 
   const { error: errors, data } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -29,6 +33,7 @@ export async function clientAction({
         path: {
           project_slug,
           service_slug,
+          env_slug,
           change_id: change_id!
         }
       }
@@ -43,7 +48,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     exact: true
   });
   toast.success("Change discarded successfully", {

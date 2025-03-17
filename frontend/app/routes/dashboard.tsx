@@ -292,7 +292,7 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
 
                   <TableCell className="flex justify-end">
                     <Link
-                      to={`/project/${project.slug}/settings`}
+                      to={`/project/${project.slug}/production/settings`}
                       className="w-fit flex items-center gap-3 hover:underline"
                     >
                       Settings
