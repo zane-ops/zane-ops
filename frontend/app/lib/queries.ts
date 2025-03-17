@@ -1183,3 +1183,23 @@ export const resourceQueries = {
       enabled: (query ?? "").trim().length > 0
     })
 };
+
+export type LatestRelease = {
+  tag: string;
+  url: string;
+};
+
+const ONE_HOUR_IN_MS = 60 * 60 * 1000;
+export const versionQueries = {
+  latest: queryOptions<LatestRelease>({
+    queryKey: ["LATEST_RELEASE"] as const,
+    queryFn: async ({ signal }) => {
+      const response = await fetch(
+        "https://cdn.zaneops.dev/api/latest-release",
+        { signal }
+      );
+      return response.json() as Promise<LatestRelease>;
+    },
+    refetchInterval: ONE_HOUR_IN_MS
+  })
+};

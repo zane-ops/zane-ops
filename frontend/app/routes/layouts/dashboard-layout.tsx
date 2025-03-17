@@ -1,17 +1,24 @@
 import {
+  ArrowBigUpDash,
   BookOpen,
   ChevronDown,
   ChevronRight,
   CircleUser,
   CommandIcon,
   GitCommitVertical,
+  Hammer,
   HeartHandshake,
   HeartIcon,
   HelpCircle,
+  LoaderIcon,
   LogOut,
   Menu,
+  Rocket,
   Search,
-  TagIcon
+  Sparkles,
+  TagIcon,
+  WandSparkles,
+  Zap
 } from "lucide-react";
 import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
 import { Logo } from "~/components/logo";
@@ -30,15 +37,22 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import { resourceQueries, serverQueries, userQueries } from "~/lib/queries";
+import {
+  resourceQueries,
+  serverQueries,
+  userQueries,
+  versionQueries
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
+import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
-import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -47,6 +61,14 @@ import {
   CommandItem,
   CommandList
 } from "~/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "~/components/ui/dialog";
 import { queryClient } from "~/root";
 import type { Route } from "./+types/dashboard-layout";
 
@@ -55,16 +77,20 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery] = await Promise.all([
-    queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence)
-  ]);
+  const [userQuery, userExistQuery, latestVersion, settings] =
+    await Promise.all([
+      queryClient.ensureQueryData(userQueries.authedUser),
+      queryClient.ensureQueryData(userQueries.checkUserExistence),
+      queryClient.ensureQueryData(versionQueries.latest),
+      queryClient.ensureQueryData(serverQueries.settings)
+    ]);
 
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
   }
 
   const user = userQuery.data?.user;
+  const previousVersion = settings?.image_version;
 
   if (!user) {
     let redirectPathName = `/login`;
@@ -76,18 +102,141 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
-  return user;
+  return { user, previousVersion, latestVersion };
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
+  const [showCustomDialog, setShowCustomDialog] = React.useState(false);
+
+  const { data: latestVersion } = useQuery({
+    ...versionQueries.latest,
+    initialData: loaderData.latestVersion
+  });
+
+  React.useEffect(() => {
+    if (
+      import.meta.env.PROD &&
+      loaderData.previousVersion !== "canary" &&
+      loaderData.previousVersion !== latestVersion.tag
+    ) {
+      toast.success("New version of ZaneOps available !", {
+        description: latestVersion.tag,
+        closeButton: true,
+        duration: Infinity,
+        id: "new version available",
+        icon: <Sparkles size={17} />,
+        action: (
+          <Button
+            onClick={() => {
+              setShowCustomDialog(true);
+              toast.dismiss();
+            }}
+            className="text-xs cursor-pointer"
+            size="xs"
+          >
+            Inspect
+          </Button>
+        ),
+        style: {
+          flex: "row",
+          justifyContent: "space-between"
+        }
+      });
+      return () => {
+        toast.dismiss();
+      };
+    }
+  }, [loaderData.previousVersion, latestVersion.tag]);
+
+  const fetcher = useFetcher();
+  const isPending = fetcher.state !== "idle";
+
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
-      <Header user={loaderData} />
+      <Header user={loaderData.user} />
       <main
         className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
       >
         <Outlet />
+        <Dialog open={showCustomDialog} onOpenChange={setShowCustomDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>ZaneOps Update Available</DialogTitle>
+              <DialogDescription>
+                <div className="flex bg-primary text-black p-2 rounded-sm border border-secondary  items-center gap-2 my-5">
+                  <Rocket size={15} />
+                  New Version Ready: {latestVersion.tag}
+                </div>
+                <p className="my-2">
+                  Stay ahead with the latest from ZaneOps! Update now to:
+                </p>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex  gap-2">
+                    <WandSparkles size={15} className="text-secondary" />
+                    <p className="text-xs">Unlock New Features</p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Hammer size={15} className="text-secondary" />
+                    <p className="text-xs">Fix Critical Issues</p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Zap size={15} className="text-secondary" />
+                    <p className="text-xs">Boost Performance</p>
+                  </div>
+                </div>
+
+                <Alert className="my-6" variant="warning">
+                  <AlertDescription>
+                    Before updating, review the&nbsp;
+                    <a
+                      href={latestVersion.url}
+                      target="_blank"
+                      className="text-link underline inline-flex gap-1 items-center"
+                    >
+                      release notes
+                    </a>
+                    .
+                  </AlertDescription>
+                </Alert>
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter>
+              <fetcher.Form action="/trigger-update" method="POST">
+                <input
+                  type="hidden"
+                  name="desired_version"
+                  value={latestVersion.tag}
+                />
+                <SubmitButton
+                  isPending={isPending}
+                  className="flex gap-1 items-center"
+                >
+                  {isPending ? (
+                    <>
+                      <span>Updating...</span>
+                      <LoaderIcon className="animate-spin" size={15} />
+                    </>
+                  ) : (
+                    <>
+                      <p>Update ZaneOps</p>
+                      <ArrowBigUpDash size={15} />
+                    </>
+                  )}
+                </SubmitButton>
+              </fetcher.Form>
+              <Button
+                variant="outline"
+                onClick={() => setShowCustomDialog(false)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>
@@ -95,7 +244,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 }
 
 type HeaderProps = {
-  user: Route.ComponentProps["loaderData"];
+  user: Route.ComponentProps["loaderData"]["user"];
 };
 
 function Header({ user }: HeaderProps) {

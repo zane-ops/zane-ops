@@ -238,6 +238,13 @@ export interface paths {
      */
     get: operations["getAPISettings"];
   };
+  "/api/trigger-update/": {
+    /**
+     * Trigger Auto-Update
+     * @description Triggers the Docker auto-update workflow using Temporal.
+     */
+    post: operations["trigger_update_create"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -314,6 +321,12 @@ export interface components {
     };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
+    };
+    AutoUpdateRequestRequest: {
+      desired_version: string;
+    };
+    AutoUpdateResponse: {
+      message: string;
     };
     CancelDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelDockerServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -2560,6 +2573,44 @@ export interface components {
       comment: string;
     };
     ToggleDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    TriggerUpdateCreateDesiredVersionErrorComponent: {
+      /**
+       * @description * `desired_version` - desired_version
+       * @enum {string}
+       */
+      attr: "desired_version";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    TriggerUpdateCreateError: components["schemas"]["TriggerUpdateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["TriggerUpdateCreateDesiredVersionErrorComponent"];
+    TriggerUpdateCreateErrorResponse400: components["schemas"]["TriggerUpdateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    TriggerUpdateCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    TriggerUpdateCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["TriggerUpdateCreateError"][];
+    };
     /**
      * @description * `urls` - urls
      * @enum {string}
@@ -4605,6 +4656,41 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Trigger Auto-Update
+   * @description Triggers the Docker auto-update workflow using Temporal.
+   */
+  trigger_update_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AutoUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["AutoUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["AutoUpdateRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AutoUpdateResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["TriggerUpdateCreateErrorResponse400"];
         };
       };
       401: {
