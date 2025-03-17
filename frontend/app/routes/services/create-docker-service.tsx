@@ -78,7 +78,9 @@ export default function CreateServicePage({
             <BreadcrumbLink
               asChild
               className={cn(
-                params.envSlug !== "production" ? "text-link" : "text-primary"
+                params.envSlug !== "production"
+                  ? "text-link"
+                  : "text-green-500 dark:text-primary"
               )}
             >
               <Link
