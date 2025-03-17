@@ -76,7 +76,7 @@ urlpatterns = [
         name="docker.check_port_mapping",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX}))/create-service/docker/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/create-service/docker/?$",
         views.CreateDockerServiceAPIView.as_view(),
         name="services.docker.create",
     ),
