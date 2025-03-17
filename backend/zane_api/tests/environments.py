@@ -702,7 +702,7 @@ class ProjectEnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:projects.service_list_with_env",
+                "zane_api:projects.service_list",
                 kwargs={"slug": p.slug, "env_slug": "production"},
             ),
         )
@@ -712,7 +712,7 @@ class ProjectEnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:projects.service_list_with_env",
+                "zane_api:projects.service_list",
                 kwargs={"slug": p.slug, "env_slug": "staging"},
             ),
         )
