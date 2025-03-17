@@ -47,6 +47,7 @@ export async function clientLoader({
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
+    envSlug: env_slug,
     deploymentHash: deployment_hash
   },
   request
@@ -66,6 +67,7 @@ export async function clientLoader({
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       filters,
       queryClient
     })
@@ -77,6 +79,7 @@ export default function DeploymentLogsPage({
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
+    envSlug: env_slug,
     deploymentHash: deployment_hash
   }
 }: Route.ComponentProps) {
@@ -104,6 +107,7 @@ export default function DeploymentLogsPage({
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled

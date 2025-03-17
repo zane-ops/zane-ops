@@ -156,7 +156,9 @@ export default function ServiceDetailsLayout({
           <BreadcrumbItem>
             <BreadcrumbLink
               asChild
-              className={cn(env_slug !== "production" && "text-link")}
+              className={cn(
+                env_slug !== "production" ? "text-link" : "text-primary"
+              )}
             >
               <Link
                 to={`/project/${project_slug}/${env_slug}`}

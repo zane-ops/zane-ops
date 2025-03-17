@@ -15,7 +15,11 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export async function clientAction({
   request,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
@@ -24,7 +28,7 @@ export async function clientAction({
   });
   if (
     formData.get("service_slug")?.toString().trim() !==
-    `${project_slug}/${service_slug}`
+    `${project_slug}/${env_slug}/${service_slug}`
   ) {
     return {
       errors: {
@@ -41,7 +45,7 @@ export async function clientAction({
   }
 
   const { error } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/archive-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -49,7 +53,8 @@ export async function clientAction({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       }
     }
@@ -65,9 +70,12 @@ export async function clientAction({
   }
 
   queryClient.removeQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug }).queryKey
+    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
+      .queryKey
   });
-  queryClient.invalidateQueries(projectQueries.serviceList(project_slug));
+  queryClient.invalidateQueries(
+    projectQueries.serviceList(project_slug, env_slug)
+  );
   queryClient.invalidateQueries({
     predicate: (query) =>
       query.queryKey[0] === resourceQueries.search().queryKey[0]

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  CheckIcon,
+  CopyIcon,
   LoaderIcon,
   PauseIcon,
   PlayIcon,
@@ -27,6 +29,7 @@ import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-service";
 import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
+import { wait } from "~/utils";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
@@ -108,6 +111,7 @@ export function ServiceDangerZoneForm({
         <DeleteConfirmationFormDialog
           service_slug={service_slug}
           project_slug={project_slug}
+          env_slug={env_slug}
         />
       </div>
     </div>
@@ -198,8 +202,9 @@ function StopServiceConfirmationDialog() {
 
 function DeleteConfirmationFormDialog({
   service_slug,
-  project_slug
-}: { service_slug: string; project_slug: string }) {
+  project_slug,
+  env_slug
+}: { service_slug: string; project_slug: string; env_slug: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -207,6 +212,7 @@ function DeleteConfirmationFormDialog({
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
+  const [hasCopied, startTransition] = React.useTransition();
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -259,12 +265,35 @@ function DeleteConfirmationFormDialog({
             </AlertDescription>
           </Alert>
 
-          <DialogDescription>
-            Please type&nbsp;
-            <strong>
-              {project_slug}/{service_slug}
-            </strong>
-            &nbsp;to confirm :
+          <DialogDescription className="flex items-center gap-1">
+            <span>Please type</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="inline-flex gap-1 items-center"
+              onClick={() => {
+                navigator.clipboard
+                  .writeText(`${project_slug}/${env_slug}/${service_slug}`)
+                  .then(() => {
+                    // show pending state (which is success state), until the user has stopped clicking the button
+                    startTransition(() => wait(1000));
+                  });
+              }}
+            >
+              <span>
+                {project_slug}/{env_slug}/{service_slug}
+              </span>
+              {hasCopied ? (
+                <>
+                  <CheckIcon size={12} className="flex-none" />
+                </>
+              ) : (
+                <>
+                  <CopyIcon size={12} className="flex-none" />
+                </>
+              )}
+            </Button>
+            <span>to confirm :</span>
           </DialogDescription>
         </DialogHeader>
 

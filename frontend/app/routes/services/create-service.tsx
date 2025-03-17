@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 import { type Route } from "./+types/create-service";
 
@@ -48,7 +49,12 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className={cn(
+                params.envSlug !== "production" ? "text-link" : "text-primary"
+              )}
+            >
               <Link
                 to={`/project/${params.projectSlug}/${params.envSlug}`}
                 prefetch="intent"

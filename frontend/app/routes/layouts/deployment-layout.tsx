@@ -20,7 +20,7 @@ import {
   TriangleAlertIcon,
   XIcon
 } from "lucide-react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { Link, Outlet } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
 import {
@@ -36,14 +36,12 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import {
   deploymentQueries,
   serverQueries,
   serviceQueries
 } from "~/lib/queries";
-import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import {
@@ -69,7 +67,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(
       serviceQueries.single({
         project_slug: params.projectSlug,
-        service_slug: params.serviceSlug
+        service_slug: params.serviceSlug,
+        env_slug: params.envSlug
       })
     ),
     queryClient.ensureQueryData(serverQueries.resourceLimits),
@@ -77,6 +76,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       deploymentQueries.single({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         deployment_hash: params.deploymentHash
       })
     )
@@ -94,6 +94,7 @@ export default function DeploymentLayoutPage({
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
+    envSlug: env_slug,
     deploymentHash: deployment_hash
   }
 }: Route.ComponentProps) {
@@ -101,6 +102,7 @@ export default function DeploymentLayoutPage({
     ...deploymentQueries.single({
       project_slug,
       service_slug,
+      env_slug,
       deployment_hash
     }),
     initialData: loaderData.deployment
@@ -120,13 +122,36 @@ export default function DeploymentLayoutPage({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${project_slug}/`}>{project_slug}</Link>
+              <Link
+                to={`/project/${project_slug}/production`}
+                prefetch="intent"
+              >
+                {project_slug}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className={cn(
+                env_slug !== "production" ? "text-link" : "text-primary"
+              )}
+            >
+              <Link
+                to={`/project/${project_slug}/${env_slug}`}
+                prefetch="intent"
+              >
+                {env_slug}
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <Link to={`/project/${project_slug}/services/${service_slug}`}>
+            <Link
+              to={`/project/${project_slug}/${env_slug}/services/${service_slug}`}
+            >
               {service_slug}
             </Link>
           </BreadcrumbItem>

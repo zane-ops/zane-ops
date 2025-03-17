@@ -68,7 +68,8 @@ export default function DeploymentDetailsPage({
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
-    deploymentHash: deployment_hash
+    deploymentHash: deployment_hash,
+    envSlug: env_slug
   },
   matches: {
     "2": { data: initialData }
@@ -78,6 +79,7 @@ export default function DeploymentDetailsPage({
     ...deploymentQueries.single({
       project_slug,
       service_slug,
+      env_slug,
       deployment_hash
     }),
     initialData: initialData.deployment
