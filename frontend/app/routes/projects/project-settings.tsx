@@ -147,7 +147,7 @@ async function updateProject(project_slug: string, formData: FormData) {
       projectQueries.single(userData.slug).queryKey,
       apiResponse.data
     );
-    throw redirect(`/project/${userData.slug}/settings`);
+    throw redirect(`/project/${userData.slug}/production/settings`);
   }
 }
 

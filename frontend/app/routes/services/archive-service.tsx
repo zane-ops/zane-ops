@@ -9,7 +9,7 @@ import { type Route } from "./+types/archive-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}/settings`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/settings`
   );
 }
 
@@ -89,5 +89,5 @@ export async function clientAction({
       </span>
     )
   });
-  throw redirect(`/project/${project_slug}`);
+  throw redirect(`/project/${project_slug}/${env_slug}`);
 }

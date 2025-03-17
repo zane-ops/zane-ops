@@ -2675,6 +2675,7 @@ export interface components {
       created_at: string;
       /** @default service */
       type: components["schemas"]["ServiceSearchTypeEnum"];
+      environment: string;
     };
     /**
      * @description * `service` - service

@@ -448,23 +448,35 @@ export function CommandMenu() {
                   const baseUrl = "/project";
                   const targetUrl =
                     resource.type === "project"
-                      ? `${baseUrl}/${resource.slug}`
-                      : `${baseUrl}/${resource.project_slug}/services/${resource.slug}`;
+                      ? `${baseUrl}/${resource.slug}/production`
+                      : `${baseUrl}/${resource.project_slug}/${resource.environment}/services/${resource.slug}`;
                   navigate(targetUrl);
                   setOpen(false);
                 }}
                 key={resource.id}
                 className="block"
               >
-                <p>{resource.slug}</p>
+                <div className="flex items-center gap-1 mb-1">
+                  <p>{resource.slug}</p>
+                </div>
                 <div className="text-link text-xs">
                   {resource.type === "project" ? (
                     "projects"
                   ) : (
                     <div className="flex gap-0.5 items-center">
-                      <span className="flex-none">projects</span>{" "}
+                      <span className="flex-none">projects</span>
                       <ChevronRight size={13} />
                       <span>{resource.project_slug}</span>
+                      <ChevronRight className="flex-none" size={13} />
+                      <div
+                        className={cn(
+                          "rounded-md border border-link text-link px-2  inline-flex gap-1 items-center",
+                          resource.environment === "production" &&
+                            "border-none bg-primary text-black"
+                        )}
+                      >
+                        <span>{resource.environment}</span>
+                      </div>
                       <ChevronRight className="flex-none" size={13} />
                       <span className="flex-none">services</span>
                     </div>
