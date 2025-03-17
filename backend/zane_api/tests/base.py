@@ -487,7 +487,7 @@ class AuthAPITestCase(APITestCase):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         project = Project.objects.get(slug="zaneops")
 
@@ -553,7 +553,7 @@ class AuthAPITestCase(APITestCase):
         owner = await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
@@ -614,7 +614,7 @@ class AuthAPITestCase(APITestCase):
         owner = await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
@@ -696,7 +696,7 @@ class AuthAPITestCase(APITestCase):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
@@ -769,7 +769,7 @@ class AuthAPITestCase(APITestCase):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
@@ -791,7 +791,7 @@ class AuthAPITestCase(APITestCase):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
@@ -813,7 +813,7 @@ class AuthAPITestCase(APITestCase):
         await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
+            data={"slug": "zaneops", "env_slug": "production"},
         )
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
