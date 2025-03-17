@@ -358,9 +358,15 @@ class ProjectServiceListView(APIView):
                 latest_deployment_status=Subquery(
                     DockerDeployment.objects.filter(
                         Q(service_id=OuterRef("pk"))
-                        & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
-                        & Q(is_current_production=True)
-                    ).values("status")[:1]
+                        & ~Q(
+                            status__in=[
+                                DockerDeployment.DeploymentStatus.CANCELLED,
+                                DockerDeployment.DeploymentStatus.CANCELLING,
+                            ]
+                        )
+                    )
+                    .order_by("-updated_at")
+                    .values("status")[:1]
                 ),
             )
         )
@@ -376,7 +382,6 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
                 DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.CANCELLING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
             }

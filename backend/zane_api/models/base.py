@@ -719,6 +719,7 @@ class DeploymentURL(models.Model):
 
 
 class BaseDeployment(models.Model):
+    updated_at = models.DateTimeField(auto_now=True)
     queued_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True)
     finished_at = models.DateTimeField(null=True)
