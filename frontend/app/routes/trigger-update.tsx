@@ -33,7 +33,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   toast.success("Success", {
     description:
-      "Update in progress... The UI stays responsive, so feel free to continue navigating the app. Once the new vresion is ready, you can reload the page to see the changes.",
+      "Update in progress... The UI stays responsive, so feel free to continue navigating the app. Once the new version is ready, you can reload the page to see the changes.",
     closeButton: true
   });
   return { data };
