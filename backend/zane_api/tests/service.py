@@ -196,6 +196,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "hello_nginx",
                 },
             ),
@@ -643,6 +644,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -658,6 +660,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
                 "zane_api:services.docker.details",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "cache-db",
                 },
@@ -704,6 +707,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": previous_service.slug,
                 },
             ),
@@ -736,6 +740,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -753,6 +758,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 "zane_api:services.docker.details",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "zane-ops",
                 },
@@ -785,6 +791,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "zane-ops",
                 },
             ),
@@ -815,6 +822,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 "zane_api:services.docker.details",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "zane-ops",
                 },

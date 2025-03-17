@@ -245,6 +245,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -299,6 +300,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -345,6 +347,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -362,6 +365,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -421,6 +425,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -440,6 +445,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -461,6 +467,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -510,6 +517,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -556,6 +564,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": deployment.hash,
                 },
@@ -605,6 +614,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.archive",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -920,6 +930,7 @@ class HttpLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_http_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": fist_deployment.hash,
                 },
@@ -969,6 +980,7 @@ class HttpLogViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deployment_http_logs",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": fist_deployment.hash,
                 },
@@ -1295,6 +1307,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             )

@@ -30,6 +30,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.docker.regenerate_deploy_token",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -143,6 +144,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -161,6 +163,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -228,6 +231,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -279,6 +283,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "app",
                 },
@@ -336,6 +341,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -383,6 +389,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "app",
                 },
@@ -442,6 +449,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -499,6 +507,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -550,6 +559,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "app",
                 },
@@ -610,6 +620,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -639,6 +650,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -663,6 +675,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -689,6 +702,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -712,6 +726,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -737,6 +752,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -768,6 +784,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -796,6 +813,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -840,6 +858,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "app",
                 },
@@ -896,6 +915,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "app",
                 },
@@ -960,6 +980,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -1010,6 +1031,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -1049,6 +1071,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": "app",
                 },
             ),
@@ -1086,6 +1109,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1116,6 +1140,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1144,6 +1169,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -1200,6 +1226,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1219,6 +1246,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": service.slug,
                 },
@@ -1244,6 +1272,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1263,6 +1292,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "change_id": change.id,
                 },
@@ -1302,6 +1332,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1330,6 +1361,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1349,6 +1381,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "change_id": change.id,
                 },
@@ -1400,6 +1433,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1454,6 +1488,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1527,6 +1562,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1599,6 +1635,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1666,6 +1703,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -1716,6 +1754,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),

@@ -660,6 +660,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 "zane_api:services.docker.cancel_deployment",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": new_deployment.hash,
                 },
@@ -689,6 +690,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 "zane_api:services.docker.cancel_deployment",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": new_deployment.hash,
                 },
@@ -704,6 +706,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -722,6 +725,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 "zane_api:services.docker.cancel_deployment",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                     "deployment_hash": new_deployment.hash,
                 },

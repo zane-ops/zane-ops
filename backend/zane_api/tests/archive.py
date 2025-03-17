@@ -70,6 +70,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -394,6 +395,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 "zane_api:services.docker.archive",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "cache-db",
                 },
