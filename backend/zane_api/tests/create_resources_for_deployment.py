@@ -369,6 +369,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                     "zane_api:services.docker.deploy_service",
                     kwargs={
                         "project_slug": p.slug,
+                        "env_slug": "production",
                         "service_slug": service.slug,
                     },
                 ),

@@ -612,7 +612,10 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         p, _ = self.create_and_deploy_caddy_docker_service()
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug})
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": p.slug, "env_slug": "production"},
+            )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(type(response.json()) is list)
@@ -634,7 +637,10 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         p, _ = self.create_and_deploy_caddy_docker_service()
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug}),
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": p.slug, "env_slug": "production"},
+            ),
             QUERY_STRING="query=redis",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
