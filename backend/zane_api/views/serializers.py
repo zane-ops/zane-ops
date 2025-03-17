@@ -501,6 +501,7 @@ class ServiceSearchSerializer(serializers.Serializer):
     slug = serializers.SlugField(required=True)
     created_at = serializers.DateTimeField(required=True)
     type = serializers.ChoiceField(choices=["service"], default="service")
+    environment = serializers.CharField(required=True)
 
 
 # ==============================

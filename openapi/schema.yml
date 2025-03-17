@@ -9763,8 +9763,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/ServiceSearchTypeEnum'
           default: service
+        environment:
+          type: string
       required:
       - created_at
+      - environment
       - id
       - project_slug
       - slug
