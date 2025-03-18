@@ -654,14 +654,11 @@ type EnvironmentListProps = {
 };
 function EnvironmentList({ environments }: EnvironmentListProps) {
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-6 w-full">
       {environments.map((env, index) => (
-        <section key={env.id} className="flex flex-col gap-4">
+        <section key={env.id} className="flex flex-col gap-2">
+          {index > 0 && <hr className="border border-dashed border-border" />}
           <EnvironmentRow environment={env} />
-
-          {index < environments.length - 1 && (
-            <hr className="border border-dashed border-border" />
-          )}
         </section>
       ))}
 
