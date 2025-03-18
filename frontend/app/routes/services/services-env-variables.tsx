@@ -1,4 +1,4 @@
-import Editor, { useMonaco } from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
@@ -108,7 +108,6 @@ export default function ServiceEnvVariablesPage({
   }
 
   const system_env_variables = service.system_env_variables ?? [];
-  const [hasCopied, startTransition] = React.useTransition();
   return (
     <div className="my-6 flex flex-col gap-4">
       <section>
@@ -119,34 +118,17 @@ export default function ServiceEnvVariablesPage({
                 {env_variables.size} User defined service&nbsp;
                 {pluralize("variable", env_variables.size)}
               </span>
-              <Button
+              <CopyButton
                 variant="outline"
                 size="sm"
-                className="inline-flex gap-1 items-center"
-                onClick={() => {
-                  const value = env_variables
-                    .values()
-                    .toArray()
-                    .map((env) => `${env.name}="${env.value}"`)
-                    .join("\n");
-                  navigator.clipboard.writeText(value).then(() => {
-                    // show pending state (which is success state), until the user has stopped clicking the button
-                    startTransition(() => wait(1000));
-                  });
-                }}
-              >
-                {hasCopied ? (
-                  <>
-                    <CheckIcon size={12} className="flex-none" />
-                    <span>Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <CopyIcon size={12} className="flex-none" />
-                    <span>Copy as .env</span>
-                  </>
-                )}
-              </Button>
+                showLabel
+                label={(hasCopied) => (hasCopied ? "Copied" : "Copy as .env")}
+                value={env_variables
+                  .values()
+                  .toArray()
+                  .map((env) => `${env.name}="${env.value}"`)
+                  .join("\n")}
+              />
             </>
           ) : (
             <span>No user defined variables</span>
