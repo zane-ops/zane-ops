@@ -213,6 +213,22 @@ export interface paths {
     /** Update a project */
     patch: operations["updateProject"];
   };
+  "/api/projects/{slug}/create-environment/": {
+    /**
+     * Create new environment
+     * @description Create empty environment with no services in it
+     */
+    post: operations["createNewEnvironment"];
+  };
+  "/api/projects/{slug}/environment-details/{env_slug}/": {
+    /**
+     * Archive environment
+     * @description Archive environment with the services inside of it
+     */
+    delete: operations["archiveEnvironment"];
+    /** Update an environment */
+    patch: operations["updateEnvironment"];
+  };
   "/api/projects/{slug}/service-list/": {
     /**
      * Get service list
@@ -252,6 +268,7 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     ArchiveDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ArchiveEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchivedProject: {
       id: number;
@@ -508,6 +525,47 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateDockerServiceError"][];
     };
+    CreateEnvironmentRequestRequest: {
+      name: string;
+    };
+    CreateNewEnvironmentError: components["schemas"]["CreateNewEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CreateNewEnvironmentNameErrorComponent"];
+    CreateNewEnvironmentErrorResponse400: components["schemas"]["CreateNewEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateNewEnvironmentNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateNewEnvironmentNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateNewEnvironmentValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateNewEnvironmentError"][];
+    };
     CreateProjectDescriptionErrorComponent: {
       /**
        * @description * `description` - description
@@ -609,6 +667,7 @@ export interface components {
       command: string | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
+      environment: components["schemas"]["Environment"];
       credentials: components["schemas"]["DockerCredential"] | null;
       urls: readonly components["schemas"]["URLModel"][];
       volumes: readonly components["schemas"]["Volume"][];
@@ -716,6 +775,7 @@ export interface components {
       command: string | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
+      environment: components["schemas"]["Environment"];
       credentials: components["schemas"]["DockerCredential"] | null;
       urls: readonly components["schemas"]["URLModel"][];
       volumes: readonly components["schemas"]["Volume"][];
@@ -833,6 +893,16 @@ export interface components {
     };
     EnvStringChangeRequest: {
       new_value: string;
+    };
+    Environment: {
+      id: string;
+      is_preview: boolean;
+      name: string;
+    };
+    EnvironmentRequest: {
+      id?: string;
+      is_preview?: boolean;
+      name: string;
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -1228,6 +1298,9 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
     };
+    PatchedCreateEnvironmentRequestRequest: {
+      name?: string;
+    };
     PatchedDockerServiceRequest: {
       id?: string;
       slug?: string;
@@ -1275,6 +1348,7 @@ export interface components {
       field: components["schemas"]["PortItemChangeFieldEnum"];
     };
     Project: {
+      environments: readonly components["schemas"]["Environment"][];
       description: string | null;
       id: string;
       slug: string;
@@ -2675,6 +2749,44 @@ export interface components {
      * @enum {string}
      */
     UnitEnum: "BYTES" | "KILOBYTES" | "MEGABYTES" | "GIGABYTES";
+    UpdateEnvironmentError: components["schemas"]["UpdateEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateEnvironmentNameErrorComponent"];
+    UpdateEnvironmentErrorResponse400: components["schemas"]["UpdateEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateEnvironmentNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    UpdateEnvironmentNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateEnvironmentValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateEnvironmentError"][];
+    };
     UpdateProjectDescriptionErrorComponent: {
       /**
        * @description * `description` - description
@@ -4524,6 +4636,132 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["UpdateProjectErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create new environment
+   * @description Create empty environment with no services in it
+   */
+  createNewEnvironment: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateEnvironmentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateEnvironmentRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateEnvironmentRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Environment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateNewEnvironmentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Archive environment
+   * @description Archive environment with the services inside of it
+   */
+  archiveEnvironment: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ArchiveEnvironmentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update an environment */
+  updateEnvironment: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Environment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateEnvironmentErrorResponse400"];
         };
       };
       401: {

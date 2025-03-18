@@ -28,6 +28,7 @@ class TimestampedModel(models.Model):
 
 
 class Project(TimestampedModel):
+    environments: Manager["Environment"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -40,6 +41,14 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
+
+    @property
+    def production_env(self):
+        return self.environments.get(name=Environment.PRODUCTION_ENV)
+
+    @property
+    async def aproduction_env(self):
+        return await self.environments.aget(name=Environment.PRODUCTION_ENV)
 
     @property
     def create_task_id(self):
@@ -133,7 +142,7 @@ class BaseService(TimestampedModel):
     healthcheck = models.ForeignKey(
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
-    network_alias = models.CharField(max_length=300, null=True, unique=True)
+    network_alias = models.CharField(max_length=300, null=True)
     resource_limits = models.JSONField(
         max_length=255,
         null=True,
@@ -151,10 +160,6 @@ class BaseService(TimestampedModel):
 
     class Meta:
         abstract = True
-        unique_together = (
-            "slug",
-            "project",
-        )
 
     def delete_resources(self):
         self.ports.filter().delete()
@@ -237,8 +242,26 @@ class DockerRegistryService(BaseService):
         null=True,
     )
 
+    environment: models.ForeignKey["Environment"] = models.ForeignKey(
+        to="Environment",
+        on_delete=models.CASCADE,
+        related_name="services",
+    )
+
     def __str__(self):
         return f"DockerRegistryService({self.slug})"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug", "project", "environment"],
+                name="unique_slug_per_env_and_project",
+            ),
+            models.UniqueConstraint(
+                fields=["network_alias", "project", "environment"],
+                name="unique_network_alias_per_env_and_project",
+            ),
+        ]
 
     @property
     def unprefixed_id(self):
@@ -270,6 +293,11 @@ class DockerRegistryService(BaseService):
                 "key": "ZANE",
                 "value": "true",
                 "comment": "Is the service deployed on zaneops?",
+            },
+            {
+                "key": "ZANE_ENVIRONMENT",
+                "value": f"{self.environment.name}",
+                "comment": "The current environment where the service is deployed",
             },
             {
                 "key": "ZANE_PRIVATE_DOMAIN",
@@ -427,12 +455,12 @@ class DockerRegistryService(BaseService):
                     if change.type == DockerDeploymentChange.ChangeType.DELETE:
                         self.volumes.get(id=change.item_id).delete()
                     if change.type == DockerDeploymentChange.ChangeType.UPDATE:
-                        config = self.volumes.get(id=change.item_id)
-                        config.host_path = change.new_value.get("host_path")
-                        config.container_path = change.new_value.get("container_path")
-                        config.mode = change.new_value.get("mode")
-                        config.name = change.new_value.get("name", config.name)
-                        config.save()
+                        volume = self.volumes.get(id=change.item_id)
+                        volume.host_path = change.new_value.get("host_path")
+                        volume.container_path = change.new_value.get("container_path")
+                        volume.mode = change.new_value.get("mode")
+                        volume.name = change.new_value.get("name", volume.name)
+                        volume.save()
                 case DockerDeploymentChange.ChangeField.CONFIGS:
                     if change.type == DockerDeploymentChange.ChangeType.ADD:
                         fake = Faker()
@@ -518,6 +546,16 @@ class DockerRegistryService(BaseService):
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
         self.refresh_from_db()
+
+    def clone(self, environment: "Environment"):
+        service = DockerRegistryService.objects.create(
+            slug=self.slug,
+            environment=environment,
+            project=self.project,
+            network_alias=self.network_alias,
+            deploy_token=generate_random_chars(20),
+        )
+        return service
 
     def add_change(self, change: "DockerDeploymentChange"):
         change.service = self
@@ -657,7 +695,7 @@ class Config(TimestampedModel):
 class DeploymentURL(models.Model):
     domain = models.URLField()
     port = models.PositiveIntegerField(default=80)
-    deployment = models.ForeignKey(
+    deployment: models.ForeignKey["DockerDeployment"] = models.ForeignKey(
         to="DockerDeployment",
         on_delete=models.CASCADE,
         related_name="urls",
@@ -681,6 +719,7 @@ class DeploymentURL(models.Model):
 
 
 class BaseDeployment(models.Model):
+    updated_at = models.DateTimeField(auto_now=True)
     queued_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True)
     finished_at = models.DateTimeField(null=True)
@@ -690,7 +729,9 @@ class BaseDeployment(models.Model):
 
 
 class DockerDeployment(BaseDeployment):
+    environment_id: str
     HASH_PREFIX = "dpl_dkr_"
+    urls = Manager["DeploymentURL"]
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
 
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
@@ -768,14 +809,12 @@ class DockerDeployment(BaseDeployment):
     def network_aliases(self):
         aliases = []
         if self.service is not None and len(self.service.network_aliases) > 0:
-            aliases = self.service.network_aliases + [
-                f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}",
-            ]
+            aliases = self.service.network_aliases + [self.network_alias]
         return aliases
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"{self.service.network_alias}-{self.service.environment_id.replace(Environment.ID_PREFIX, '')}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
 
     class Meta:
         ordering = ("-queued_at",)
@@ -994,3 +1033,44 @@ class HttpLog(Log):
             models.Index(fields=["request_query"]),
         ]
         ordering = ("-time",)
+
+
+class Environment(TimestampedModel):
+    ID_PREFIX = "project_env_"
+    PRODUCTION_ENV = "production"
+    services: Manager[DockerRegistryService]
+    id = ShortUUIDField(
+        length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
+    )
+
+    name = models.SlugField(max_length=255)
+    project = models.ForeignKey(
+        to=Project, on_delete=models.CASCADE, related_name="environments"
+    )
+    is_preview = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Environment(project={self.project.slug}, name={self.name})"
+
+    @property
+    def workflow_id(self) -> str:
+        return f"create-env-{self.project_id}-{self.id}"
+
+    @property
+    def archive_workflow_id(self) -> str:
+        return f"archive-env-{self.project_id}-{self.id}"
+
+    @property
+    def is_production(self):
+        return self.name == "production"  # production is a reserved name
+
+    class Meta:
+        indexes = [models.Index(fields=["name"])]
+        unique_together = ["name", "project"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project"],
+                condition=models.Q(name="production"),
+                name="unique_production_per_project",
+            )
+        ]

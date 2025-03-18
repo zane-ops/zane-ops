@@ -3,7 +3,6 @@ from unittest.mock import patch, Mock
 import requests
 from django.urls import reverse
 from rest_framework import status
-from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..models import (
@@ -271,6 +270,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -369,6 +369,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                     "zane_api:services.docker.deploy_service",
                     kwargs={
                         "project_slug": p.slug,
+                        "env_slug": "production",
                         "service_slug": service.slug,
                     },
                 ),
@@ -382,15 +383,22 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self.assertFalse(new_deployment.is_current_production)
 
     async def test_set_deployment_as_failed_when_image_fails_to_pull(self):
-        owner = await self.aLoginUser()
-        p = await Project.objects.acreate(slug="sandbox", owner=owner)
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = await Project.objects.aget(slug="zane-ops")
 
         create_service_payload = {
             "slug": "app",
             "image": "redis:alpine",
         }
         response = await self.async_client.post(
-            reverse("zane_api:services.docker.create", kwargs={"project_slug": p.slug}),
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -415,6 +423,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -436,6 +445,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),
@@ -457,6 +467,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                 "zane_api:services.docker.deploy_service",
                 kwargs={
                     "project_slug": p.slug,
+                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),

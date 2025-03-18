@@ -952,12 +952,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{project_slug}/archive-service/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveDockerService
       description: Archive a service created from a docker image.
       summary: Archive a docker service
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1032,7 +1038,7 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/projects/{project_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/:
     put:
       operationId: cancelDockerServiceDeployment
       description: Cancel a deployment in progress.
@@ -1043,6 +1049,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: project_slug
@@ -1128,7 +1140,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
+  /api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
     delete:
       operationId: cancelDeploymentChanges
       description: Cancel a config change that was requested.
@@ -1139,6 +1151,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: project_slug
@@ -1220,12 +1238,18 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/projects/{project_slug}/create-service/docker/:
+  /api/projects/{project_slug}/{env_slug}/create-service/docker/:
     post:
       operationId: createDockerService
       description: Create a service from a docker image.
       summary: Create a docker service
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1316,12 +1340,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/deploy-service/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/:
     put:
       operationId: deployDockerService
       description: Apply all pending changes for the service and trigger a new deployment.
       summary: Deploy a docker service
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1411,7 +1441,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
     put:
       operationId: redeployDockerService
       description: Revert the service to the state of a previous deployment.
@@ -1422,6 +1452,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: project_slug
@@ -1501,12 +1537,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/request-env-changes/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/:
     put:
       operationId: requestEnvChanges
       description: Request a change to the environments variables of a service.
       summary: Request env changes
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1597,12 +1639,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/request-service-changes/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/:
     put:
       operationId: requestDeploymentChanges
       description: Request a change to the configuration of a service.
       summary: Request config changes
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1692,12 +1740,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/:
     get:
       operationId: getDockerService
       description: See all the details of a service.
       summary: Get single service
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1780,6 +1834,12 @@ paths:
       operationId: updateService
       summary: Update a service
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -1869,13 +1929,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/:
     get:
       operationId: projects_service_details_docker_deployments_list
       description: List all deployments for a service, the default order is last created
         descendant.
       summary: List all deployments
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - name: page
         required: false
         in: query
@@ -2008,7 +2074,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedDockerServiceDeploymentList'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
     get:
       operationId: projects_service_details_docker_deployments_retrieve
       summary: Get single deployment
@@ -2018,6 +2084,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: project_slug
@@ -2097,7 +2169,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/:
     get:
       operationId: projects_service_details_docker_deployments_http_logs_list
       summary: Get deployment HTTP logs
@@ -2113,6 +2185,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - name: per_page
         required: false
@@ -2305,8 +2383,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/:
-    get:
+  ? /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
+  : get:
       operationId: projects_service_details_docker_deployments_http_logs_retrieve
       summary: Get single deployment http log
       parameters:
@@ -2315,6 +2393,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: project_slug
@@ -2400,8 +2484,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpLog'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/:
-    get:
+  ? /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/
+  : get:
       operationId: projects_service_details_docker_deployments_http_logs_fields_list
       summary: Get deployment http logs fields values
       parameters:
@@ -2410,6 +2494,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: field
@@ -2512,7 +2602,7 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
     get:
       operationId: projects_service_details_docker_deployments_logs_retrieve
       summary: Get deployment logs
@@ -2527,6 +2617,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
         name: level
@@ -2651,7 +2747,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/:
     get:
       operationId: projects_service_details_docker_deployments_metrics_list
       summary: Get service or deployment metrics
@@ -2661,6 +2757,12 @@ paths:
         schema:
           type: string
           pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: path
         name: project_slug
@@ -2760,7 +2862,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/:
     get:
       operationId: projects_service_details_docker_http_logs_list
       summary: Get service HTTP logs
@@ -2771,6 +2873,12 @@ paths:
         description: The pagination cursor value.
         schema:
           type: string
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - name: per_page
         required: false
         in: query
@@ -2962,11 +3070,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/:
     get:
       operationId: projects_service_details_docker_http_logs_retrieve
       summary: Get single service http log
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -3051,11 +3165,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpLog'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/http-logs/fields/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/:
     get:
       operationId: projects_service_details_docker_http_logs_fields_list
       summary: Get service http logs fields values
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: query
         name: field
         schema:
@@ -3157,11 +3277,17 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/metrics/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/:
     get:
       operationId: projects_service_details_docker_metrics_list
       summary: Get service or deployment metrics
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -3260,11 +3386,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
           description: ''
-  /api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
+  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
     patch:
       operationId: regenerateServiceDeployToken
       summary: Regenerate service deploy token
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -3354,12 +3486,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerService'
           description: ''
-  /api/projects/{project_slug}/toggle-service/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/:
     put:
       operationId: toggleDockerService
       description: Stops a running docker service and restart it if it was stopped.
       summary: Stop/Restart a docker service
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: path
         name: project_slug
         schema:
@@ -3680,12 +3818,18 @@ paths:
           description: ''
         '200':
           description: No response body
-  /api/projects/{slug}/service-list/:
+  /api/projects/{slug}/{env_slug}/service-list/:
     get:
       operationId: projects_service_list_list
       description: Get all services in a project
       summary: Get service list
       parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
       - in: query
         name: query
         schema:
@@ -3765,6 +3909,447 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceCardResponse'
           description: ''
+  /api/projects/{slug}/clone-environment/{env_slug}/:
+    post:
+      operationId: cloneEnvironment
+      description: Create new environment from another
+      summary: Clone environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloneEnvironmentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CloneEnvironmentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CloneEnvironmentRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloneEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentWithServices'
+          description: ''
+  /api/projects/{slug}/create-environment/:
+    post:
+      operationId: createNewEnvironment
+      description: Create empty environment with no services in it
+      summary: Create new environment
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateEnvironmentRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNewEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+          description: ''
+  /api/projects/{slug}/environment-details/{env_slug}/:
+    get:
+      operationId: getEnvironment
+      summary: Get a single environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentWithServices'
+          description: ''
+    patch:
+      operationId: updateEnvironment
+      summary: Update an environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+          description: ''
+    delete:
+      operationId: archiveEnvironment
+      description: Archive environment with the services inside of it
+      summary: Archive environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveEnvironmentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -4015,6 +4600,13 @@ paths:
 components:
   schemas:
     ArchiveDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ArchiveEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -4295,6 +4887,124 @@ components:
       - client_error
       type: string
       description: '* `client_error` - Client Error'
+    CloneEnvironmentDeployServicesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deploy_services
+          type: string
+          description: '* `deploy_services` - deploy_services'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CloneEnvironmentError:
+      oneOf:
+      - $ref: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+      - $ref: '#/components/schemas/CloneEnvironmentNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
+          deploy_services: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+          name: '#/components/schemas/CloneEnvironmentNameErrorComponent'
+    CloneEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CloneEnvironmentValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CloneEnvironmentValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CloneEnvironmentNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CloneEnvironmentNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CloneEnvironmentRequestRequest:
+      type: object
+      properties:
+        deploy_services:
+          type: boolean
+          default: false
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+    CloneEnvironmentValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloneEnvironmentError'
+      required:
+      - errors
+      - type
     Config:
       type: object
       properties:
@@ -4586,6 +5296,97 @@ components:
       required:
       - errors
       - type
+    CreateEnvironmentRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+    CreateNewEnvironmentError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateNewEnvironmentNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateNewEnvironmentNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateNewEnvironmentNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/CreateNewEnvironmentNameErrorComponent'
+    CreateNewEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateNewEnvironmentValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateNewEnvironmentValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateNewEnvironmentNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateNewEnvironmentNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateNewEnvironmentValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateNewEnvironmentError'
+      required:
+      - errors
+      - type
     CreateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -4816,6 +5617,10 @@ components:
         project_id:
           type: string
           readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
         credentials:
           allOf:
           - $ref: '#/components/schemas/DockerCredential'
@@ -4879,6 +5684,7 @@ components:
       - credentials
       - deploy_token
       - env_variables
+      - environment
       - healthcheck
       - id
       - image
@@ -5123,6 +5929,10 @@ components:
         project_id:
           type: string
           readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
         credentials:
           allOf:
           - $ref: '#/components/schemas/DockerCredential'
@@ -5186,6 +5996,7 @@ components:
       - credentials
       - deploy_token
       - env_variables
+      - environment
       - healthcheck
       - id
       - image
@@ -5446,6 +6257,60 @@ components:
           type: string
       required:
       - new_value
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        is_preview:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - is_preview
+      - name
+    EnvironmentRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        is_preview:
+          type: boolean
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+    EnvironmentWithServices:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        is_preview:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/DockerService'
+          readOnly: true
+      required:
+      - id
+      - is_preview
+      - name
+      - services
     Error401:
       type: object
       properties:
@@ -5668,6 +6533,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetDockerServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -6328,6 +7200,14 @@ components:
       required:
       - errors
       - type
+    PatchedCreateEnvironmentRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedDockerServiceRequest:
       type: object
       properties:
@@ -6461,6 +7341,11 @@ components:
     Project:
       type: object
       properties:
+        environments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Environment'
+          readOnly: true
         description:
           type: string
           nullable: true
@@ -6488,6 +7373,7 @@ components:
       required:
       - created_at
       - description
+      - environments
       - healthy_services
       - id
       - slug
@@ -7203,7 +8089,6 @@ components:
           - max_length
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
-          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -7211,7 +8096,6 @@ components:
             * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
         detail:
           type: string
       required:
@@ -8879,8 +9763,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/ServiceSearchTypeEnum'
           default: service
+        environment:
+          type: string
       required:
       - created_at
+      - environment
       - id
       - project_slug
       - slug
@@ -9198,6 +10085,87 @@ components:
         * `KILOBYTES` - kilobytes
         * `MEGABYTES` - megabytes
         * `GIGABYTES` - gigabytes
+    UpdateEnvironmentError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateEnvironmentNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateEnvironmentNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateEnvironmentNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/UpdateEnvironmentNameErrorComponent'
+    UpdateEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateEnvironmentValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateEnvironmentValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateEnvironmentNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateEnvironmentNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateEnvironmentValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateEnvironmentError'
+      required:
+      - errors
+      - type
     UpdateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -9423,7 +10391,7 @@ components:
           maxLength: 255
         password:
           type: string
-          minLength: 6
+          minLength: 8
       required:
       - password
       - username

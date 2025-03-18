@@ -132,12 +132,14 @@ def compute_docker_service_snapshot_without_changes(
     )
 
     service_snapshot = DockerServiceSnapshot.from_dict(
-        DockerServiceSerializer(service).data
+        DockerServiceSerializer(service).data  # type: ignore
     )
     return compute_docker_service_snapshot(service_snapshot, deployment_changes)
 
 
-def compute_docker_changes_from_snapshots(current: dict, target: dict):
+def compute_docker_changes_from_snapshots(
+    current: dict, target: dict
+) -> list[DockerDeploymentChange]:
     current_snapshot = DockerServiceSnapshot.from_dict(current)
     target_snapshot = DockerServiceSnapshot.from_dict(target)
 
@@ -201,7 +203,6 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                         )
                     pass
             case "healthcheck":
-
                 if current_value != target_value:
                     if target_value is not None:
                         # set associated port to the http port
@@ -231,6 +232,28 @@ def compute_docker_changes_from_snapshots(current: dict, target: dict):
                             ),
                             old_value=(
                                 dataclasses.asdict(current_value)
+                                if current_value is not None
+                                else None
+                            ),
+                        )
+                    )
+            case "resource_limits":
+                if current_value != target_value:
+                    current_value = cast(ResourceLimitsDto, current_value)
+                    if target_value is not None:
+                        target_value = cast(ResourceLimitsDto, target_value)
+
+                    changes.append(
+                        DockerDeploymentChange(
+                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                            field=service_field.name,
+                            new_value=(
+                                target_value.to_dict()
+                                if target_value is not None
+                                else None
+                            ),
+                            old_value=(
+                                current_value.to_dict()
                                 if current_value is not None
                                 else None
                             ),

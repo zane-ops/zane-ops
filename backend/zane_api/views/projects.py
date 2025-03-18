@@ -50,6 +50,7 @@ from ..models import (
     DockerDeploymentChange,
     GitDeployment,
     Config,
+    Environment,
 )
 from ..serializers import (
     ProjectSerializer,
@@ -160,6 +161,8 @@ class ProjectsListAPIView(ListCreateAPIView):
                     owner=request.user,
                     description=data.get("description"),  # type: ignore
                 )
+                # Create default production environment
+                new_project.environments.create(name=Environment.PRODUCTION_ENV)
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"
@@ -280,6 +283,9 @@ class ProjectDetailsView(APIView):
         URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
         Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
         docker_service_list.delete()
 
         transaction.on_commit(
@@ -313,16 +319,28 @@ class ProjectServiceListView(APIView):
         summary="Get service list",
         description="Get all services in a project",
     )
-    def get(self, request: Request, slug: str):
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
         try:
             project = Project.objects.get(slug=slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
             )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         # Prefetch related fields and use annotate to count volumes
-        filters = Q(project=project)
+        filters = Q(project=project) & Q(environment=environment)
         query = request.query_params.get("query", "")
         if query:
             filters = filters & Q(slug__icontains=query)
@@ -340,9 +358,15 @@ class ProjectServiceListView(APIView):
                 latest_deployment_status=Subquery(
                     DockerDeployment.objects.filter(
                         Q(service_id=OuterRef("pk"))
-                        & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
-                        & Q(is_current_production=True)
-                    ).values("status")[:1]
+                        & ~Q(
+                            status__in=[
+                                DockerDeployment.DeploymentStatus.CANCELLED,
+                                DockerDeployment.DeploymentStatus.CANCELLING,
+                            ]
+                        )
+                    )
+                    .order_by("-updated_at")
+                    .values("status")[:1]
                 ),
             )
         )
@@ -358,7 +382,6 @@ class ProjectServiceListView(APIView):
                 DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
                 DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.CANCELLING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
                 DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
             }

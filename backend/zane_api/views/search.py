@@ -59,7 +59,7 @@ class ResouceSearchAPIView(APIView):
 
         services = DockerRegistryService.objects.filter(
             slug__istartswith=query
-        ).select_related("project")[:5]
+        ).select_related("project", "environment")[:5]
 
         services_object = [
             {
@@ -67,6 +67,7 @@ class ResouceSearchAPIView(APIView):
                 "slug": service.slug,
                 "created_at": service.created_at,
                 "project_slug": service.project.slug,
+                "environment": service.environment.name,
             }
             for service in services
         ]

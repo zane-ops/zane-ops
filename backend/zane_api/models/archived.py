@@ -15,6 +15,7 @@ class TimestampArchivedModel(models.Model):
 
 
 class ArchivedProject(TimestampArchivedModel):
+    environments: models.Manager["ArchivedEnvironment"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -56,6 +57,9 @@ class ArchivedProject(TimestampArchivedModel):
                 original_id=project.id,
                 description=project.description,
             )
+
+        for env in project.environments.filter(is_preview=False):
+            archived_version.environments.create(original_id=env.id, name=env.name)
         return archived_version
 
     def __str__(self):
@@ -64,6 +68,14 @@ class ArchivedProject(TimestampArchivedModel):
     class Meta:
         indexes = [models.Index(fields=["slug"])]
         ordering = ["-archived_at"]
+
+
+class ArchivedEnvironment(TimestampArchivedModel):
+    original_id = models.CharField(max_length=255)
+    name = models.SlugField(max_length=255, blank=True)
+    project = models.ForeignKey(
+        to=ArchivedProject, on_delete=models.CASCADE, related_name="environments"
+    )
 
 
 class ArchivedURL(models.Model):
@@ -173,6 +185,7 @@ class ArchivedDockerService(ArchivedBaseService):
     deployments = models.JSONField(
         null=False, default=list
     )  # type: list[dict[str, str]]
+    environment_id = models.CharField(null=True)
 
     @property
     def workflow_id(self):
@@ -190,6 +203,7 @@ class ArchivedDockerService(ArchivedBaseService):
             original_id=service.id,
             credentials=service.credentials,
             resource_limits=service.resource_limits,
+            environment_id=service.environment_id,
             healthcheck=(
                 dict(
                     type=service.healthcheck.type,

@@ -9,6 +9,7 @@ from temporalio.exceptions import ApplicationError
 from temporalio.service import RPCError
 
 
+import platform
 from ..main import create_schedule, delete_schedule, pause_schedule, unpause_schedule
 
 with workflow.unsafe.imports_passed_through():
@@ -29,7 +30,6 @@ with workflow.unsafe.imports_passed_through():
         URL,
         DockerDeploymentChange,
     )
-    from docker.models.networks import Network
     from docker.models.services import Service
     from urllib3.exceptions import HTTPError
     from requests import RequestException
@@ -71,6 +71,7 @@ from ...dtos import (
 from ..shared import (
     DeploymentCreateConfigsResult,
     ProjectDetails,
+    EnvironmentDetails,
     ArchivedProjectDetails,
     ArchivedServiceDetails,
     SimpleDeploymentDetails,
@@ -173,6 +174,10 @@ def search_images_docker_hub(term: str) -> List[DockerImageResult]:
 
 def get_network_resource_name(project_id: str) -> str:
     return f"net-{project_id}"
+
+
+def get_env_network_resource_name(env_id: str, project_id: str) -> str:
+    return f"net-{project_id}-{env_id}"
 
 
 def get_resource_labels(project_id: str, **kwargs):
@@ -529,11 +534,7 @@ class ZaneProxyClient:
                         "retries": 2,
                     },
                     "upstreams": [
-                        {
-                            "dial": (
-                                f"{service.network_alias}.{current_deployment.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}:{http_port}"
-                            )
-                        },
+                        {"dial": f"{current_deployment.network_alias}:{http_port}"},
                     ],
                 }
             )
@@ -775,14 +776,41 @@ class DockerSwarmActivities:
                 f"Project with id=`{payload.id}` does not exist.", non_retryable=True
             )
 
+        production_env = await project.aproduction_env
         network = self.docker_client.networks.create(
-            name=get_network_resource_name(project.id),
+            name=get_env_network_resource_name(
+                production_env.id, project_id=project.id
+            ),
             scope="swarm",
             driver="overlay",
-            labels=get_resource_labels(project.id),
+            labels=get_resource_labels(project.id, is_production="True"),
             attachable=True,
         )
         return network.id  # type:ignore
+
+    @activity.defn
+    async def create_environment_network(self, payload: EnvironmentDetails) -> str:
+        network = self.docker_client.networks.create(
+            name=get_env_network_resource_name(
+                payload.id, project_id=payload.project_id
+            ),
+            scope="swarm",
+            driver="overlay",
+            labels=get_resource_labels(payload.project_id),
+            attachable=True,
+        )
+        return network.id  # type:ignore
+
+    @activity.defn
+    async def delete_environment_network(self, payload: EnvironmentDetails):
+        try:
+            network = self.docker_client.networks.get(
+                get_env_network_resource_name(payload.id, project_id=payload.project_id)
+            )
+        except docker.errors.NotFound:
+            pass  # network has probably been already delete
+        else:
+            network.remove()
 
     @activity.defn
     async def get_archived_project_services(
@@ -819,6 +847,44 @@ class DockerSwarmActivities:
                         for url in service.urls.all()
                     ],
                     project_id=archived_project.original_id,
+                    deployments=[
+                        SimpleDeploymentDetails(
+                            hash=dpl.get("hash"),  # type: ignore
+                            urls=dpl.get("urls") or [],  # type: ignore
+                            project_id=service.project.original_id,
+                            service_id=service.original_id,
+                        )
+                        for dpl in service.deployments
+                    ],
+                )
+            )
+        return archived_services
+
+    @activity.defn
+    async def get_archived_env_services(
+        self, environment: EnvironmentDetails
+    ) -> List[ArchivedServiceDetails]:
+        archived_docker_services = (
+            ArchivedDockerService.objects.filter(environment_id=environment.id)
+            .select_related("project")
+            .prefetch_related("volumes", "urls", "configs")
+        )
+
+        archived_services: List[ArchivedServiceDetails] = []
+        async for service in archived_docker_services:
+            archived_services.append(
+                ArchivedServiceDetails(
+                    original_id=service.original_id,
+                    urls=[
+                        URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            strip_prefix=url.strip_prefix,
+                            id=url.original_id,
+                        )
+                        for url in service.urls.all()
+                    ],
+                    project_id=service.project.original_id,
                     deployments=[
                         SimpleDeploymentDetails(
                             hash=dpl.get("hash"),  # type: ignore
@@ -921,10 +987,19 @@ class DockerSwarmActivities:
         )
 
     @activity.defn
-    async def remove_project_network(self, project_details: ArchivedProjectDetails):
+    async def remove_project_network(
+        self, project_details: ArchivedProjectDetails
+    ) -> List[str]:
         try:
-            network_associated_to_project: Network = self.docker_client.networks.get(
-                get_network_resource_name(project_id=project_details.original_id)
+            networks_associated_to_project = self.docker_client.networks.list(
+                filters={
+                    "label": [
+                        f"{key}={value}"
+                        for key, value in get_resource_labels(
+                            project_id=project_details.original_id
+                        ).items()
+                    ]
+                }
             )
         except docker.errors.NotFound:
             raise ApplicationError(
@@ -933,7 +1008,10 @@ class DockerSwarmActivities:
                 non_retryable=True,
             )
 
-        network_associated_to_project.remove()
+        deleted_networks: List[str] = [net.name for net in networks_associated_to_project]  # type: ignore
+        for network in networks_associated_to_project:
+            network.remove()
+        return deleted_networks
 
     @activity.defn
     async def prepare_deployment(self, deployment: DockerDeploymentDetails):
@@ -1075,13 +1153,18 @@ class DockerSwarmActivities:
             .afirst()
         )
 
-        if latest_production_deployment:
+        if latest_production_deployment is not None:
+            if (
+                latest_production_deployment.service_snapshot.get("environment") is None  # type: ignore
+            ):
+                latest_production_deployment.service_snapshot["environment"] = (  # type: ignore
+                    deployment.service.environment.to_dict()
+                )
             return SimpleDeploymentDetails(
                 hash=latest_production_deployment.hash,
                 service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
-                # url=latest_production_deployment.url,
                 urls=[url.domain async for url in latest_production_deployment.urls.all()],  # type: ignore
                 service_snapshot=DockerServiceSnapshot.from_dict(
                     latest_production_deployment.service_snapshot  # type: ignore
@@ -1096,7 +1179,7 @@ class DockerSwarmActivities:
                 Q(service_id=deployment.service.id)
                 & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
             )
-            .select_related("service")
+            .select_related("service", "service__environment")
             .order_by("queued_at")
             .afirst()
         )
@@ -1479,10 +1562,10 @@ class DockerSwarmActivities:
                     else None
                 ),
             )
-        except docker.errors.ImageNotFound as e:
+        except docker.errors.ImageNotFound:
             await deployment_log(
                 deployment,
-                f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}this image does not exists or may require credentials to pull ❌{Colors.ENDC}",
+                f"Error when pulling image {Colors.ORANGE}{service.image}{Colors.ENDC} {Colors.GREY}this image either does not exists for this platform (linux/{platform.machine()}) or may require credentials to pull ❌{Colors.ENDC}",
             )
             return False
         except docker.errors.APIError as e:
@@ -1521,6 +1604,7 @@ class DockerSwarmActivities:
             envs.extend(
                 [
                     "ZANE=true",
+                    f"ZANE_ENVIRONMENT={service.environment.name}",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                     f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
                     "ZANE_DEPLOYMENT_TYPE=docker",
@@ -1642,8 +1726,10 @@ class DockerSwarmActivities:
                 ),
                 networks=[
                     NetworkAttachmentConfig(
-                        target=get_network_resource_name(service.project_id),
-                        aliases=[alias for alias in service.network_aliases],
+                        target=get_env_network_resource_name(
+                            service.environment.id, service.project_id
+                        ),
+                        aliases=service.network_aliases,
                     ),
                     NetworkAttachmentConfig(
                         target="zane",

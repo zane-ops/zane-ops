@@ -28,6 +28,7 @@ with workflow.unsafe.imports_passed_through():
         ProjectDetails,
         ArchivedProjectDetails,
         DockerDeploymentDetails,
+        EnvironmentDetails,
     )
     from django.conf import settings
     from .schedules import (
@@ -157,18 +158,17 @@ class DockerDeploymentStep(Enum):
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     def __init__(self):
-        self.cancellation_requested = False
+        self.cancellation_requested = None
         self.created_volumes: List[VolumeDto] = []
         self.created_configs: List[ConfigDto] = []
-        self.deployment_hash: str | None = None
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
-        if self.deployment_hash == input.deployment_hash:
-            self.cancellation_requested = True
+        self.cancellation_requested = input.deployment_hash
+        print(f"Sending signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(
@@ -179,8 +179,6 @@ class DeployDockerServiceWorkflow:
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
-
-        self.deployment_hash = deployment.hash
 
         print("Running DeployDockerServiceWorkflow with payload: ")
         jprint(deployment)  # type: ignore
@@ -217,8 +215,8 @@ class DeployDockerServiceWorkflow:
                 print(f"{workflow.time()=}, {start_time=}")
                 try:
                     await workflow.wait_condition(
-                        lambda: self.cancellation_requested,
-                        timeout=timedelta(seconds=60),
+                        lambda: self.cancellation_requested == deployment.hash,
+                        timeout=timedelta(seconds=5),
                     )
                 except TimeoutError as error:
                     print(f"TimeoutError {error=}")
@@ -722,7 +720,75 @@ class SystemCleanupWorkflow:
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
-            pass
+
+
+@workflow.defn(name="create-env-network")
+class CreateEnvNetworkWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, environment: EnvironmentDetails):
+        print(f"Running workflow CreateEnvNetworkWorkflow(payload={environment})")
+        return await workflow.execute_activity_method(
+            DockerSwarmActivities.create_environment_network,
+            arg=environment,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+
+@workflow.defn(name="archive-env")
+class ArchiveEnvWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, environment: EnvironmentDetails):
+        print(f"Running workflow ArchiveEnvWorkflow(payload={environment})")
+        services = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_archived_env_services,
+            environment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=self.retry_policy,
+        )
+
+        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.unexpose_docker_service_from_http,
+                    service,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=self.retry_policy,
+                )
+                for service in services
+            ]
+        )
+
+        print(f"Running activities `cleanup_docker_service_resources({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.cleanup_docker_service_resources,
+                    service,
+                    start_to_close_timeout=timedelta(seconds=60),
+                    retry_policy=self.retry_policy,
+                )
+                for service in services
+            ]
+        )
+
+        return await workflow.execute_activity_method(
+            DockerSwarmActivities.delete_environment_network,
+            arg=environment,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
 
 
 @workflow.defn(name="auto-update-docker-service-workflow")
@@ -749,7 +815,7 @@ class AutoUpdateDockerServiceWorkflow:
             print(
                 f"Running activity `update_docker_service({service=}, {desired_version=})`"
             )
-            await workflow.execute_activity_method(
+            await workflow.execute_activity(
                 update_docker_service,
                 UpdateDetails(
                     service_name=service,
@@ -788,11 +854,16 @@ def get_workflows_and_activities():
             SystemCleanupWorkflow,
             GetDockerDeploymentStatsWorkflow,
             AutoUpdateDockerServiceWorkflow,
+            CreateEnvNetworkWorkflow,
+            ArchiveEnvWorkflow,
         ],
         activities=[
             metrics_activities.get_deployment_stats,
             metrics_activities.save_deployment_stats,
             swarm_activities.toggle_cancelling_status,
+            swarm_activities.create_environment_network,
+            swarm_activities.get_archived_env_services,
+            swarm_activities.delete_environment_network,
             swarm_activities.save_cancelled_deployment,
             swarm_activities.create_deployment_stats_schedule,
             monitor_activities.monitor_close_faulty_db_connections,

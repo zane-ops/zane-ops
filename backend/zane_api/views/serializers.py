@@ -501,6 +501,7 @@ class ServiceSearchSerializer(serializers.Serializer):
     slug = serializers.SlugField(required=True)
     created_at = serializers.DateTimeField(required=True)
     type = serializers.ChoiceField(choices=["service"], default="service")
+    environment = serializers.CharField(required=True)
 
 
 # ==============================
@@ -1427,7 +1428,7 @@ class UserExistenceResponseSerializer(serializers.Serializer):
 
 class UserCreationRequestSerializer(serializers.Serializer):
     username = serializers.CharField(min_length=1, max_length=255)
-    password = serializers.CharField(min_length=6)
+    password = serializers.CharField(min_length=8)
 
 
 class UserCreatedResponseSerializer(serializers.Serializer):
@@ -1445,3 +1446,17 @@ class AutoUpdateRequestSerializer(serializers.Serializer):
 
 class AutoUpdateResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
+
+
+# ==========================================
+#               Environments               #
+# ==========================================
+
+
+class CreateEnvironmentRequestSerializer(serializers.Serializer):
+    name = serializers.SlugField(max_length=255)
+
+
+class CloneEnvironmentRequestSerializer(serializers.Serializer):
+    deploy_services = serializers.BooleanField(default=False, required=False)
+    name = serializers.SlugField(max_length=255)

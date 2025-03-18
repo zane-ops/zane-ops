@@ -17,6 +17,9 @@ from ..models import (
     URL,
     DockerDeploymentChange,
     Config,
+    ArchivedEnvironment,
+    HealthCheck,
+    Environment,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -307,9 +310,37 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         archived_project: ArchivedProject = ArchivedProject.objects.filter(
             slug="gh-clone"
         ).first()
+
         self.assertIsNotNone(archived_project)
         self.assertNotEquals("", archived_project.original_id)
         self.assertEqual("Github clone", archived_project.description)
+
+    def test_archive_project_should_include_archived_envs(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "gh-clone"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        archived_project: ArchivedProject = ArchivedProject.objects.filter(
+            slug="gh-clone"
+        ).first()
+        archived_envs = ArchivedEnvironment.objects.filter(
+            project=archived_project
+        ).all()
+
+        self.assertIsNotNone(archived_project)
+        self.assertGreater(len(archived_envs), 0)
+
+        deleted_environment_count = Environment.objects.filter(
+            project__slug="gh-clone"
+        ).count()
+        self.assertEqual(0, deleted_environment_count)
 
     def test_non_existent(self):
         self.loginUser()
@@ -356,6 +387,16 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                     },
                 ),
                 DockerDeploymentChange(
+                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "echo 1",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                ),
+                DockerDeploymentChange(
                     field=DockerDeploymentChange.ChangeField.CONFIGS,
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={
@@ -396,7 +437,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                     type=DockerDeploymentChange.ChangeType.ADD,
                     new_value={"host": 8080, "forwarded": 80},
                 ),
-            ]
+            ],
         )
 
         first_deployment: DockerDeployment = await service.deployments.afirst()
@@ -453,6 +494,10 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(0, await deleted_urls.acount())
         self.assertEqual(2, await archived_service.urls.acount())
 
+        # healthcheck are cleaned up
+        deleted_healthcheck = await HealthCheck.objects.filter().afirst()
+        self.assertIsNone(deleted_healthcheck)
+
         # --- Docker Resources ---
         # service is removed
         deleted_docker_service = self.fake_docker_client.get_deployment_service(
@@ -464,25 +509,14 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
 
 
-class DockerAddNetworkTest(AuthAPITestCase):
-    async def test_network_creation_workflow(self):
+class DockerRemoveNetworkTest(AuthAPITestCase):
+    async def test_network_is_deleted_on_archived_project(self):
         await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zane-ops"},
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        project = await Project.objects.filter(slug="zane-ops").afirst()
-        self.assertIsNotNone(project)
-        network = self.fake_docker_client.get_network(project)
-        self.assertIsNotNone(network)
-
-
-class DockerRemoveNetworkTest(AuthAPITestCase):
-    async def test_network_is_deleted_on_archived_project(self):
-        owner = await self.aLoginUser()
-        project = await Project.objects.acreate(slug="zane-ops", owner=owner)
-        self.fake_docker_client.create_network(project)
+        project = await Project.objects.aget(slug="zane-ops")
 
         response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
@@ -492,7 +526,7 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
             original_id=project.id
         ).afirst()
         self.assertIsNotNone(archived_project)
-        self.assertIsNone(self.fake_docker_client.get_network(project))
+        self.assertIsNone(self.fake_docker_client.get_project_network(project))
         self.assertEqual(0, len(self.fake_docker_client.get_networks()))
 
 
@@ -578,7 +612,10 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         p, _ = self.create_and_deploy_caddy_docker_service()
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug})
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": p.slug, "env_slug": "production"},
+            )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(type(response.json()) is list)
@@ -600,27 +637,38 @@ class ProjectResourcesViewTests(AuthAPITestCase):
         p, _ = self.create_and_deploy_caddy_docker_service()
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": p.slug}),
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": p.slug, "env_slug": "production"},
+            ),
             QUERY_STRING="query=redis",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()))
 
     def test_create_service_without_being_deployed_yet(self):
-        owner = self.loginUser()
-        project, _ = Project.objects.get_or_create(slug="zaneops", owner=owner)
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops"},
+        )
+        project = Project.objects.get(slug="zaneops")
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = self.client.post(
             reverse(
-                "zane_api:services.docker.create", kwargs={"project_slug": project.slug}
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": project.slug, "env_slug": "production"},
             ),
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         response = self.client.get(
-            reverse("zane_api:projects.service_list", kwargs={"slug": project.slug}),
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()))

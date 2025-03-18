@@ -50,13 +50,21 @@ class UserSerializer(ModelSerializer):
         fields = ["username", "first_name", "last_name"]
 
 
+class EnvironmentSerializer(ModelSerializer):
+    class Meta:
+        model = models.Environment
+        fields = ["id", "is_preview", "name"]
+
+
 class ProjectSerializer(ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
+    environments = EnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Project
         fields = [
+            "environments",
             "description",
             "id",
             "slug",
@@ -207,6 +215,7 @@ class DockerServiceSerializer(ModelSerializer):
     system_env_variables = SystemEnvVariablesSerializer(
         allow_null=False, many=True, default=[]
     )
+    environment = EnvironmentSerializer(read_only=True)
 
     class Meta:
         model = models.DockerRegistryService
@@ -219,6 +228,7 @@ class DockerServiceSerializer(ModelSerializer):
             "command",
             "healthcheck",
             "project_id",
+            "environment",
             "credentials",
             "urls",
             "volumes",
@@ -305,4 +315,17 @@ class HttpLogSerializer(ModelSerializer):
             "request_headers",
             "response_headers",
             "request_user_agent",
+        ]
+
+
+class EnvironmentWithServicesSerializer(ModelSerializer):
+    services = DockerServiceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Environment
+        fields = [
+            "id",
+            "is_preview",
+            "name",
+            "services",
         ]

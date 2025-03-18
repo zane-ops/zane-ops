@@ -13,11 +13,11 @@ from ..models import (
     DockerDeployment,
     DockerDeploymentChange,
     DeploymentURL,
+    Environment,
 )
 from django.db.models import Q
 import django.db.transaction as transaction
 from .serializers import DockerServiceWebhookDeployRequestSerializer
-from django.conf import settings
 from ..temporal.shared import DockerDeploymentDetails
 from ..temporal.main import start_workflow
 from ..temporal.workflows import DeployDockerServiceWorkflow
@@ -30,19 +30,32 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         summary="Regenerate service deploy token",
         operation_id="regenerateServiceDeployToken",
     )
-    def patch(self, request: Request, project_slug: str, service_slug: str):
+    def patch(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
             )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         service = (
             DockerRegistryService.objects.filter(
-                Q(slug=service_slug) & Q(project=project)
+                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
-            .select_related("project", "healthcheck")
+            .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables")
         ).first()
 
@@ -76,7 +89,7 @@ class WebhookDeployServiceAPIView(APIView):
 
         service = (
             DockerRegistryService.objects.filter(deploy_token=deploy_token)
-            .select_related("project", "healthcheck")
+            .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
 
@@ -90,7 +103,7 @@ class WebhookDeployServiceAPIView(APIView):
             context={"service": service},
         )
         if form.is_valid(raise_exception=True):
-            new_image = form.data.get("new_image")
+            new_image = form.data.get("new_image")  # type: ignore
 
             if new_image is not None:
                 service.add_change(
@@ -109,7 +122,7 @@ class WebhookDeployServiceAPIView(APIView):
                     )
                 )
 
-            commit_message = form.data.get("commit_message")
+            commit_message = form.data.get("commit_message")  # type: ignore
             new_deployment = DockerDeployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",

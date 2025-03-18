@@ -1,5 +1,5 @@
 from .base import AuthAPITestCase
-from ..models import Project, DockerRegistryService
+from ..models import Project, DockerRegistryService, Environment
 from django.urls import reverse
 from rest_framework import status
 
@@ -15,12 +15,27 @@ class ResourceSearchViewTests(AuthAPITestCase):
                 Project(owner=owner, slug="zaneops"),
             ]
         )
+        Environment.objects.bulk_create(
+            [Environment(project=p, name="production") for p in projects]
+        )
 
         DockerRegistryService.objects.bulk_create(
             [
-                DockerRegistryService(project=projects[0], slug="gh-clone"),
-                DockerRegistryService(project=projects[1], slug="gh-next"),
-                DockerRegistryService(project=projects[2], slug="zaneops"),
+                DockerRegistryService(
+                    project=projects[0],
+                    slug="gh-clone",
+                    environment=projects[0].production_env,
+                ),
+                DockerRegistryService(
+                    project=projects[1],
+                    slug="gh-next",
+                    environment=projects[1].production_env,
+                ),
+                DockerRegistryService(
+                    project=projects[2],
+                    slug="zaneops",
+                    environment=projects[2].production_env,
+                ),
             ]
         )
 
@@ -41,12 +56,27 @@ class ResourceSearchViewTests(AuthAPITestCase):
                 Project(owner=owner, slug="zaneops"),
             ]
         )
+        Environment.objects.bulk_create(
+            [Environment(project=p, name="production") for p in projects]
+        )
 
         DockerRegistryService.objects.bulk_create(
             [
-                DockerRegistryService(project=projects[0], slug="gh-clone"),
-                DockerRegistryService(project=projects[1], slug="gh-next"),
-                DockerRegistryService(project=projects[2], slug="zaneops"),
+                DockerRegistryService(
+                    project=projects[0],
+                    slug="gh-clone",
+                    environment=projects[0].production_env,
+                ),
+                DockerRegistryService(
+                    project=projects[1],
+                    slug="gh-next",
+                    environment=projects[1].production_env,
+                ),
+                DockerRegistryService(
+                    project=projects[2],
+                    slug="zaneops",
+                    environment=projects[2].production_env,
+                ),
             ]
         )
 
