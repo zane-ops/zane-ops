@@ -1,6 +1,7 @@
 import {
   AlertCircleIcon,
   CheckIcon,
+  ChevronRightIcon,
   ExternalLinkIcon,
   FlameIcon,
   InfoIcon,
@@ -17,6 +18,12 @@ import { flushSync } from "react-dom";
 import { redirect, useFetcher, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { CopyButton } from "~/components/copy-button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -43,6 +50,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
+
 import { type Project, projectQueries, resourceQueries } from "~/lib/queries";
 import {
   type ErrorResponseFromAPI,
@@ -163,6 +171,29 @@ export async function clientAction({
       }
       return archiveProject(params.projectSlug);
     }
+    case "archive_environment": {
+      if (
+        formData.get("name")?.toString().trim() !==
+        `${params.projectSlug}/${formData.get("environment")?.toString()}`
+      ) {
+        return {
+          errors: {
+            type: "validation_error",
+            errors: [
+              {
+                attr: "name",
+                code: "invalid",
+                detail: "The environment name does not match"
+              }
+            ]
+          } satisfies ErrorResponseFromAPI
+        };
+      }
+      return archiveEnvironment(
+        params.projectSlug,
+        formData.get("environment")!.toString()
+      );
+    }
     default: {
       throw new Error("Unexpected intent");
     }
@@ -279,8 +310,9 @@ async function createEnvironment(project_slug: string, formData: FormData) {
   await Promise.all([
     queryClient.invalidateQueries(projectQueries.single(project_slug))
   ]);
-  return { data };
+  throw redirect(`/project/${project_slug}/${data.name}`);
 }
+
 async function cloneEnvironment(
   project_slug: string,
   cloned_environment: string,
@@ -321,7 +353,7 @@ async function cloneEnvironment(
   await Promise.all([
     queryClient.invalidateQueries(projectQueries.single(project_slug))
   ]);
-  return { data };
+  throw redirect(`/project/${project_slug}/${data.name}`);
 }
 
 async function archiveProject(project_slug: string) {
@@ -358,6 +390,52 @@ async function archiveProject(project_slug: string) {
     )
   });
   throw redirect(`/`);
+}
+
+async function archiveEnvironment(project_slug: string, env_slug: string) {
+  const apiResponse = await apiClient.DELETE(
+    "/api/projects/{slug}/environment-details/{env_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          slug: project_slug,
+          env_slug
+        }
+      }
+    }
+  );
+
+  if (apiResponse.error) {
+    return {
+      errors: apiResponse.error
+    };
+  }
+
+  await Promise.all([
+    queryClient.invalidateQueries(projectQueries.single(project_slug)),
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        query.queryKey[0] === resourceQueries.search().queryKey[0]
+    })
+  ]);
+
+  toast.success("Success", {
+    closeButton: true,
+    description: (
+      <span>
+        Environment `<strong>{env_slug}</strong>` has been successfully deleted.
+      </span>
+    )
+  });
+
+  return {
+    data: {
+      name: env_slug
+    }
+  };
 }
 
 type ProjectDetailsFormProps = {
@@ -817,23 +895,26 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
               <LockKeyholeIcon size={15} />
             </div>
           ) : !isEditing ? (
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                flushSync(() => {
-                  setIsEditing(true);
-                });
-                inputRef.current?.focus();
-              }}
-              className={cn(
-                "absolute inset-y-0 right-0 text-sm py-0 border-0",
-                "bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-              )}
-            >
-              <span>Edit</span>
-              <PencilLineIcon size={15} />
-            </Button>
+            <div className="absolute inset-y-0 right-0 flex items-center gap-1">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  flushSync(() => {
+                    setIsEditing(true);
+                  });
+                  inputRef.current?.focus();
+                }}
+                className={cn(
+                  "text-sm py-0 border-0",
+                  "bg-inherit inline-flex items-center gap-2 border-muted-foreground px-2.5 py-0.5"
+                )}
+              >
+                <span>rename</span>
+                <PencilLineIcon size={15} />
+              </Button>
+              <EnvironmentDeleteFormDialog environment={env.name} />
+            </div>
           ) : (
             <div className="flex gap-2 ">
               <SubmitButton
@@ -879,18 +960,157 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
         )}
       </fetcher.Form>
 
-      {/* <Accordion
-        type="single"
-        collapsible
-        className="border-t border-border"
-      >
+      {/* TODO : later */}
+      <Accordion type="single" collapsible className="border-t border-border">
         <AccordionItem value="system">
           <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
             <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
             No env specific variables
           </AccordionTrigger>
         </AccordionItem>
-      </Accordion> */}
+      </Accordion>
     </>
+  );
+}
+
+function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
+  const params = useParams<Route.ComponentProps["params"]>();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof clientAction>();
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
+  const [data, setData] = React.useState(fetcher.data);
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (fetcher.data.errors) {
+        const errors = getFormErrorsFromResponseData(fetcher.data.errors);
+        const key = Object.keys(errors ?? {})[0];
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+        return;
+      }
+      formRef.current?.reset();
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          setData(undefined);
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          type="button"
+          className={cn(
+            "text-sm py-0 border-0",
+            "bg-inherit inline-flex items-center gap-2 border-muted-foreground px-2.5 py-0.5",
+            "text-red-400"
+          )}
+        >
+          <span>delete</span>
+          <Trash2Icon size={15} className="flex-none text-red-400" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="gap-0">
+        <DialogHeader className="pb-4">
+          <DialogTitle>Delete this environment ?</DialogTitle>
+
+          <Alert variant="danger" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Attention !</AlertTitle>
+            <AlertDescription>
+              Deleting this environment will also delete all its services and
+              delete all the deployments related to the services, This action is
+              irreversible.
+            </AlertDescription>
+          </Alert>
+
+          <DialogDescription className="inline-flex gap-1 items-center">
+            <span>Please type</span>
+            <CopyButton
+              variant="outline"
+              size="sm"
+              showLabel
+              value={`${params.projectSlug}/${environment}`}
+              label={`${params.projectSlug}/${environment}`}
+            />
+            <span>to confirm :</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
+
+        <fetcher.Form
+          className="flex flex-col w-full mb-5 gap-1"
+          method="post"
+          id="delete-form"
+          ref={formRef}
+        >
+          <FieldSet name="name" errors={errors.name}>
+            <FieldSetInput />
+          </FieldSet>
+
+          <input type="hidden" name="environment" value={environment} />
+        </fetcher.Form>
+
+        <DialogFooter className="-mx-6 px-6 pt-4">
+          <div className="flex items-center gap-4 w-full">
+            <SubmitButton
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+              value="archive_environment"
+              name="intent"
+              form="delete-form"
+              isPending={isPending}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Delete</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsOpen(false);
+                setData(undefined);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
