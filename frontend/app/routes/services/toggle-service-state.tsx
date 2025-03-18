@@ -8,15 +8,20 @@ import { type Route } from "./+types/toggle-service-state";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}/settings`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/settings`
   );
 }
 
 export async function clientAction({
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ClientActionArgs) {
   const deploymentList = queryClient.getQueryData(
-    serviceQueries.deploymentList({ project_slug, service_slug }).queryKey
+    serviceQueries.deploymentList({ project_slug, service_slug, env_slug })
+      .queryKey
   );
 
   const currentProductionDeployment = deploymentList?.results.find(
@@ -25,7 +30,7 @@ export async function clientAction({
   const wasSleeping = currentProductionDeployment?.status == "SLEEPING";
 
   const { error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/toggle-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -33,7 +38,8 @@ export async function clientAction({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       }
     }
@@ -51,7 +57,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug })
+    serviceQueries.single({ project_slug, service_slug, env_slug })
   );
 
   toast.success("Success", {

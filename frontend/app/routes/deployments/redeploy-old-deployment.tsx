@@ -8,16 +8,16 @@ import { type Route } from "./+types/redeploy-old-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }
 
 export async function clientAction({ params }: Route.ClientActionArgs) {
   const toasId = toast.loading(
-    `Queuing redeployment for #${params.deploymentHash}...`
+    `Queueing redeployment for #${params.deploymentHash}...`
   );
   const { error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/",
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -26,7 +26,8 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
         path: {
           project_slug: params.projectSlug,
           service_slug: params.serviceSlug,
-          deployment_hash: params.deploymentHash
+          deployment_hash: params.deploymentHash,
+          env_slug: params.envSlug
         }
       }
     }
@@ -40,14 +41,15 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       closeButton: true
     });
     throw redirect(
-      `/project/${params.projectSlug}/services/${params.serviceSlug}`
+      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
     );
   }
 
   await queryClient.invalidateQueries(
     serviceQueries.single({
       project_slug: params.projectSlug,
-      service_slug: params.serviceSlug
+      service_slug: params.serviceSlug,
+      env_slug: params.envSlug
     })
   );
   toast.success("Success", {
@@ -56,6 +58,6 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     closeButton: true
   });
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }

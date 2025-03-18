@@ -49,7 +49,11 @@ import type { Route } from "./+types/service-http-logs";
 
 export async function clientLoader({
   request,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
@@ -71,6 +75,7 @@ export async function clientLoader({
       serviceQueries.httpLogs({
         project_slug,
         service_slug,
+        env_slug,
         filters,
         queryClient
       })
@@ -80,7 +85,8 @@ export async function clientLoader({
           serviceQueries.singleHttpLog({
             project_slug,
             request_uuid: search.request_id,
-            service_slug
+            service_slug,
+            env_slug
           })
         )
       : undefined
@@ -91,7 +97,11 @@ type SortDirection = "ascending" | "descending" | "indeterminate";
 
 export default function ServiceHttpLogsPage({
   loaderData,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
@@ -115,6 +125,7 @@ export default function ServiceHttpLogsPage({
     ...serviceQueries.httpLogs({
       project_slug,
       service_slug,
+      env_slug,
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
@@ -896,8 +907,11 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
-  const { projectSlug: project_slug, serviceSlug: service_slug } =
-    useParams() as Required<Route.LoaderArgs["params"]>;
+  const {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -905,6 +919,7 @@ function HostFilter({ hosts }: HostFilterProps) {
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
+      env_slug,
       field: "request_host",
       value: inputValue
     })
@@ -936,8 +951,11 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
-  const { projectSlug: project_slug, serviceSlug: service_slug } =
-    useParams() as Required<Route.LoaderArgs["params"]>;
+  const {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -945,6 +963,7 @@ function PathFilter({ paths }: PathFilterProps) {
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
+      env_slug,
       field: "request_path",
       value: inputValue
     })
@@ -976,8 +995,11 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
-  const { projectSlug: project_slug, serviceSlug: service_slug } =
-    useParams() as Required<Route.LoaderArgs["params"]>;
+  const {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -985,6 +1007,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
+      env_slug,
       field: "request_ip",
       value: inputValue
     })
@@ -1014,8 +1037,11 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
-  const { projectSlug: project_slug, serviceSlug: service_slug } =
-    useParams() as Required<Route.LoaderArgs["params"]>;
+  const {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -1023,6 +1049,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
+      env_slug,
       field: "request_user_agent",
       value: inputValue
     })

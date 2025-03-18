@@ -26,11 +26,13 @@ import { wait } from "~/utils";
 export type ServiceDeployURLFormProps = {
   service_slug: string;
   project_slug: string;
+  env_slug: string;
 };
 
 export function ServiceDeployURLForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceDeployURLFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const [isDeployURLShown, setIsDeployURLShown] = React.useState(false);
@@ -38,7 +40,8 @@ export function ServiceDeployURLForm({
   const isPending = fetcher.state !== "idle";
   const { data: service } = useServiceQuery({
     project_slug,
-    service_slug
+    service_slug,
+    env_slug
   });
   const currentURL = new URL(window.location.href);
   const deployURL = service.deploy_token

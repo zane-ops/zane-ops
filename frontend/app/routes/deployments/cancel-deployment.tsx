@@ -8,7 +8,7 @@ import { type Route } from "./+types/cancel-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }
 
@@ -17,7 +17,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     `Requesting cancellation for deployment #${params.deploymentHash}...`
   );
   const { error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -26,7 +26,8 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
         path: {
           project_slug: params.projectSlug,
           service_slug: params.serviceSlug,
-          deployment_hash: params.deploymentHash
+          deployment_hash: params.deploymentHash,
+          env_slug: params.envSlug
         }
       }
     }
@@ -40,14 +41,15 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       closeButton: true
     });
     throw redirect(
-      `/project/${params.projectSlug}/services/${params.serviceSlug}`
+      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
     );
   }
 
   await queryClient.invalidateQueries({
     ...serviceQueries.single({
       project_slug: params.projectSlug,
-      service_slug: params.serviceSlug
+      service_slug: params.serviceSlug,
+      env_slug: params.envSlug
     }),
     exact: true
   });
@@ -58,6 +60,6 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
   });
 
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }

@@ -52,7 +52,8 @@ export async function clientLoader({
   params: {
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
-    serviceSlug: service_slug
+    serviceSlug: service_slug,
+    envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
@@ -76,6 +77,7 @@ export async function clientLoader({
         deployment_hash,
         project_slug,
         service_slug,
+        env_slug,
         filters,
         queryClient
       })
@@ -85,8 +87,9 @@ export async function clientLoader({
           deploymentQueries.singleHttpLog({
             deployment_hash,
             project_slug,
-            request_uuid: search.request_id,
-            service_slug
+            service_slug,
+            env_slug,
+            request_uuid: search.request_id
           })
         )
       : undefined
@@ -101,7 +104,8 @@ export default function DeploymentHttpLogsPage({
   params: {
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
-    serviceSlug: service_slug
+    serviceSlug: service_slug,
+    envSlug: env_slug
   }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -127,6 +131,7 @@ export default function DeploymentHttpLogsPage({
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
@@ -912,7 +917,8 @@ function HostFilter({ hosts }: HostFilterProps) {
   const {
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
-    serviceSlug: service_slug
+    serviceSlug: service_slug,
+    envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
@@ -922,6 +928,7 @@ function HostFilter({ hosts }: HostFilterProps) {
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       field: "request_host",
       value: inputValue
     })
@@ -956,7 +963,8 @@ function PathFilter({ paths }: PathFilterProps) {
   const {
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
-    serviceSlug: service_slug
+    serviceSlug: service_slug,
+    envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
@@ -966,6 +974,7 @@ function PathFilter({ paths }: PathFilterProps) {
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       field: "request_path",
       value: inputValue
     })
@@ -1000,7 +1009,8 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
   const {
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
-    serviceSlug: service_slug
+    serviceSlug: service_slug,
+    envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
@@ -1010,6 +1020,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       field: "request_ip",
       value: inputValue
     })
@@ -1042,7 +1053,8 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
   const {
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
-    serviceSlug: service_slug
+    serviceSlug: service_slug,
+    envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
@@ -1052,6 +1064,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
       deployment_hash,
       project_slug,
       service_slug,
+      env_slug,
       field: "request_user_agent",
       value: inputValue
     })

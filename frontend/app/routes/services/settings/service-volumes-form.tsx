@@ -47,13 +47,19 @@ import {
 export type ServiceVolumesFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceVolumesForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceVolumesFormProps) {
-  const { data: service } = useServiceQuery({ project_slug, service_slug });
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
   const volumes: Map<string, VolumeItem> = new Map();
   for (const volume of service?.volumes ?? []) {
     volumes.set(volume.id, {

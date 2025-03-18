@@ -73,7 +73,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     predicate: (query) =>
       query.queryKey.includes(projectQueries.list().queryKey[0])
   });
-  throw redirect(`/project/${apiResponse.data.slug}`);
+  throw redirect(`/project/${apiResponse.data.slug}/production`);
 }
 
 function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {

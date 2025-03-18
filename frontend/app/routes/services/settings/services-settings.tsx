@@ -48,7 +48,11 @@ import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
 
 export default function ServiceSettingsPage({
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ComponentProps) {
   return (
     <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
@@ -66,6 +70,7 @@ export default function ServiceSettingsPage({
             <ServiceSlugForm
               service_slug={service_slug}
               project_slug={project_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -83,6 +88,7 @@ export default function ServiceSettingsPage({
             <ServiceSourceForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -100,6 +106,7 @@ export default function ServiceSettingsPage({
               <NetworkAliasesGroup
                 project_slug={project_slug}
                 service_slug={service_slug}
+                env_slug={env_slug}
               />
             </div>
             <hr className="w-full max-w-4xl border-border" />
@@ -107,11 +114,13 @@ export default function ServiceSettingsPage({
             <ServicePortsForm
               service_slug={service_slug}
               project_slug={project_slug}
+              env_slug={env_slug}
             />
             <hr className="w-full max-w-4xl border-border" />
             <ServiceURLsForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -128,19 +137,23 @@ export default function ServiceSettingsPage({
             <ServiceCommandForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
             <ServiceHealthcheckForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
             <ServiceResourceLimits
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
             <hr className="w-full max-w-4xl border-border" />
             <ServiceDeployURLForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -157,6 +170,7 @@ export default function ServiceSettingsPage({
             <ServiceVolumesForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -173,6 +187,7 @@ export default function ServiceSettingsPage({
             <ServiceConfigsForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -188,6 +203,7 @@ export default function ServiceSettingsPage({
             <ServiceDangerZoneForm
               project_slug={project_slug}
               service_slug={service_slug}
+              env_slug={env_slug}
             />
           </div>
         </section>
@@ -268,14 +284,17 @@ export default function ServiceSettingsPage({
 
 function NetworkAliasesGroup({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 }) {
   const { data: service } = useServiceQuery({
     project_slug,
-    service_slug
+    service_slug,
+    env_slug
   });
   const [hasCopied, startTransition] = React.useTransition();
 
@@ -339,8 +358,9 @@ function NetworkAliasesGroup({
 
 export function useServiceQuery({
   project_slug,
-  service_slug
-}: { project_slug: string; service_slug: string }) {
+  service_slug,
+  env_slug
+}: { project_slug: string; service_slug: string; env_slug: string }) {
   const {
     "2": {
       data: { service: initialData }
@@ -348,7 +368,7 @@ export function useServiceQuery({
   } = useMatches() as Route.ComponentProps["matches"];
 
   return useQuery({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     initialData
   });
 }
@@ -403,6 +423,7 @@ export async function clientAction({
       return updateServiceSlug({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -412,6 +433,7 @@ export async function clientAction({
       return requestServiceChange({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
@@ -419,13 +441,15 @@ export async function clientAction({
       return cancelServiceChange({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
         formData
       });
     }
     case "regenerate-deploy-token": {
       return regenerateDeployToken({
         project_slug: params.projectSlug,
-        service_slug: params.serviceSlug
+        service_slug: params.serviceSlug,
+        env_slug: params.envSlug
       });
     }
     default: {
@@ -436,14 +460,16 @@ export async function clientAction({
 
 async function regenerateDeployToken({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 }) {
   const toastId = toast.loading("Regenerating service deploy URL...");
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -451,7 +477,8 @@ async function regenerateDeployToken({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       }
     }
@@ -470,7 +497,7 @@ async function regenerateDeployToken({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     exact: true
   });
 
@@ -483,22 +510,25 @@ async function regenerateDeployToken({
 async function updateServiceSlug({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const userData = {
     slug: formData.get("slug")?.toString()
   };
   await queryClient.cancelQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug }).queryKey,
+    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
+      .queryKey,
     exact: true
   });
 
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/service-details/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -506,7 +536,8 @@ async function updateServiceSlug({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       },
       body: userData
@@ -522,9 +553,15 @@ async function updateServiceSlug({
 
   await Promise.all([
     queryClient.invalidateQueries(
-      serviceQueries.single({ project_slug, service_slug: service_slug })
+      serviceQueries.single({
+        project_slug,
+        service_slug: service_slug,
+        env_slug
+      })
     ),
-    queryClient.invalidateQueries(projectQueries.serviceList(project_slug)),
+    queryClient.invalidateQueries(
+      projectQueries.serviceList(project_slug, env_slug)
+    ),
     queryClient.invalidateQueries({
       predicate: (query) =>
         query.queryKey[0] === resourceQueries.search().queryKey[0]
@@ -533,7 +570,8 @@ async function updateServiceSlug({
 
   if (data.slug !== service_slug) {
     queryClient.setQueryData(
-      serviceQueries.single({ project_slug, service_slug: data.slug }).queryKey,
+      serviceQueries.single({ project_slug, service_slug: data.slug, env_slug })
+        .queryKey,
       data
     );
   }
@@ -544,7 +582,7 @@ async function updateServiceSlug({
 
 type ChangeRequestBody = RequestInput<
   "put",
-  "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/"
 >;
 type FindByType<Union, Type> = Union extends { field: Type } ? Union : never;
 type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
@@ -555,10 +593,12 @@ type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
 async function requestServiceChange({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const field = formData
@@ -693,7 +733,7 @@ async function requestServiceChange({
     userData = undefined;
   }
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -701,7 +741,8 @@ async function requestServiceChange({
       params: {
         path: {
           project_slug,
-          service_slug
+          service_slug,
+          env_slug
         }
       },
       body: {
@@ -729,7 +770,11 @@ async function requestServiceChange({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug: service_slug }),
+    ...serviceQueries.single({
+      project_slug,
+      service_slug: service_slug,
+      env_slug
+    }),
     exact: true
   });
 
@@ -745,16 +790,18 @@ async function requestServiceChange({
 async function cancelServiceChange({
   project_slug,
   service_slug,
+  env_slug,
   formData
 }: {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
   formData: FormData;
 }) {
   const toastId = toast.loading("Discarding service change...");
   const change_id = formData.get("change_id")?.toString();
   const { error: errors, data } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -763,6 +810,7 @@ async function cancelServiceChange({
         path: {
           project_slug,
           service_slug,
+          env_slug,
           change_id: change_id!
         }
       }
@@ -782,7 +830,7 @@ async function cancelServiceChange({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug }),
+    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
     exact: true
   });
   toast.success("Change discarded successfully", {

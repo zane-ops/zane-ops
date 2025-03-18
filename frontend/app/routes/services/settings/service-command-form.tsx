@@ -15,15 +15,18 @@ import {
 export type ServiceCommandFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceCommandForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceCommandFormProps) {
   const { data: service } = useServiceQuery({
     project_slug,
-    service_slug
+    service_slug,
+    env_slug
   });
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const { fetcher, data, reset } = useFetcherWithCallbacks({

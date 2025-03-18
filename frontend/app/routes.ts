@@ -13,23 +13,23 @@ export default [
   route("trigger-update", "./routes/trigger-update.tsx"),
 
   route(
-    "project/:projectSlug/services/:serviceSlug/deploy-service",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-service",
     "./routes/services/deploy-service.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/discard-multiple-changes",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/discard-multiple-changes",
     "./routes/services/discard-multiple-changes.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/discard-change",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/discard-change",
     "./routes/services/discard-service-change.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/archive-service",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-service",
     "./routes/services/archive-service.tsx"
   ),
   route(
-    "project/:projectSlug/services/:serviceSlug/toggle-service-state",
+    "project/:projectSlug/:envSlug/services/:serviceSlug/toggle-service-state",
     "./routes/services/toggle-service-state.tsx"
   ),
 
@@ -37,7 +37,7 @@ export default [
     index("./routes/dashboard.tsx"),
     route("create-project", "./routes/projects/create-project.tsx"),
 
-    ...prefix("project/:projectSlug", [
+    ...prefix("project/:projectSlug/:envSlug", [
       route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-service-list.tsx"),
         route("settings", "./routes/projects/project-settings.tsx")

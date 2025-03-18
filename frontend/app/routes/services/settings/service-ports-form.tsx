@@ -42,13 +42,19 @@ import {
 export type ServicePortsFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServicePortsForm({
   service_slug,
-  project_slug
+  project_slug,
+  env_slug
 }: ServicePortsFormProps) {
-  const { data: service } = useServiceQuery({ project_slug, service_slug });
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
   const ports: Map<string, ServicePortItemProps> = new Map();
   for (const port of service.ports ?? []) {
     ports.set(port.id, {

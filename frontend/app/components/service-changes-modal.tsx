@@ -65,7 +65,9 @@ export function ServiceChangesModal({
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         setIsOpen(false);
-        navigate(`/project/${project_slug}/services/${service.slug}`);
+        navigate(
+          `/project/${project_slug}/${service.environment.name}/services/${service.slug}`
+        );
       }
     }
   }, [fetcher.data, fetcher.state]);

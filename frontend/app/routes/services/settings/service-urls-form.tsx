@@ -51,13 +51,19 @@ type UrlItem = {
 export type ServiceURLsFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceURLsForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceURLsFormProps) {
-  const { data: service } = useServiceQuery({ project_slug, service_slug });
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
 
   const urls: Map<string, UrlItem> = new Map();
   for (const url of service?.urls ?? []) {
@@ -472,7 +478,7 @@ function ServiceURLFormItem({
                                 <InfoIcon size={15} />
                               </TooltipTrigger>
                               <TooltipContent className="max-w-64 text-balance">
-                                If checked, ZaneoOps will redirect with a 308
+                                If checked, ZaneOps will redirect with a 308
                                 status code; otherwise, it will redirect with a
                                 307 status code.
                               </TooltipContent>

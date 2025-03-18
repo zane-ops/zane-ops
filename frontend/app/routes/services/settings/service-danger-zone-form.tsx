@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  CheckIcon,
+  CopyIcon,
   LoaderIcon,
   PauseIcon,
   PlayIcon,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Form, useFetcher, useNavigation } from "react-router";
+import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -27,18 +30,21 @@ import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-service";
 import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
+import { wait } from "~/utils";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
   service_slug: string;
+  env_slug: string;
 };
 
 export function ServiceDangerZoneForm({
   project_slug,
-  service_slug
+  service_slug,
+  env_slug
 }: ServiceDangerZoneFormProps) {
   const deploymentListQuery = useQuery(
-    serviceQueries.deploymentList({ project_slug, service_slug })
+    serviceQueries.deploymentList({ project_slug, service_slug, env_slug })
   );
 
   const deploymentList = deploymentListQuery.data?.results ?? [];
@@ -106,6 +112,7 @@ export function ServiceDangerZoneForm({
         <DeleteConfirmationFormDialog
           service_slug={service_slug}
           project_slug={project_slug}
+          env_slug={env_slug}
         />
       </div>
     </div>
@@ -196,8 +203,9 @@ function StopServiceConfirmationDialog() {
 
 function DeleteConfirmationFormDialog({
   service_slug,
-  project_slug
-}: { service_slug: string; project_slug: string }) {
+  project_slug,
+  env_slug
+}: { service_slug: string; project_slug: string; env_slug: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -205,6 +213,7 @@ function DeleteConfirmationFormDialog({
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
+  const [hasCopied, startTransition] = React.useTransition();
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -257,12 +266,17 @@ function DeleteConfirmationFormDialog({
             </AlertDescription>
           </Alert>
 
-          <DialogDescription>
-            Please type&nbsp;
-            <strong>
-              {project_slug}/{service_slug}
-            </strong>
-            &nbsp;to confirm :
+          <DialogDescription className="flex items-center gap-1">
+            <span>Please type</span>
+            <CopyButton
+              variant="outline"
+              size="sm"
+              showLabel
+              className="inline-flex gap-1 items-center"
+              value={`${project_slug}/${env_slug}/${service_slug}`}
+              label={`${project_slug}/${env_slug}/${service_slug}`}
+            />
+            <span>to confirm :</span>
           </DialogDescription>
         </DialogHeader>
 

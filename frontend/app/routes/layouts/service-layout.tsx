@@ -64,7 +64,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(
       serviceQueries.single({
         project_slug: params.projectSlug,
-        service_slug: params.serviceSlug
+        service_slug: params.serviceSlug,
+        env_slug: params.envSlug
       })
     ),
     queryClient.ensureQueryData(serverQueries.resourceLimits)
@@ -86,14 +87,19 @@ const TABS = {
 
 export default function ServiceDetailsLayout({
   loaderData,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ComponentProps) {
   const location = useLocation();
 
   const { data: service } = useQuery({
     ...serviceQueries.single({
       project_slug,
-      service_slug
+      service_slug,
+      env_slug
     }),
     initialData: loaderData.service
   });
@@ -138,8 +144,29 @@ export default function ServiceDetailsLayout({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/project/${project_slug}/`} prefetch="intent">
+              <Link
+                to={`/project/${project_slug}/production`}
+                prefetch="intent"
+              >
                 {project_slug}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className={cn(
+                env_slug !== "production"
+                  ? "text-link"
+                  : "text-green-500 dark:text-primary"
+              )}
+            >
+              <Link
+                to={`/project/${project_slug}/${env_slug}`}
+                prefetch="intent"
+              >
+                {env_slug}
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -301,11 +328,17 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         navigate(
-          `/project/${params.projectSlug}/services/${params.serviceSlug}`
+          `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
         );
       }
     }
-  }, [fetcher.data, fetcher.state, params.projectSlug, params.serviceSlug]);
+  }, [
+    fetcher.data,
+    fetcher.state,
+    params.projectSlug,
+    params.serviceSlug,
+    params.envSlug
+  ]);
 
   return (
     <div className={cn("flex items-center gap-2 flex-wrap", className)}>

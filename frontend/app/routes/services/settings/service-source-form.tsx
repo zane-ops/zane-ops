@@ -30,11 +30,13 @@ import {
 export type ServiceFormProps = {
   service_slug: string;
   project_slug: string;
+  env_slug: string;
 };
 
 export function ServiceSourceForm({
   service_slug,
-  project_slug
+  project_slug,
+  env_slug
 }: ServiceFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
@@ -44,7 +46,11 @@ export function ServiceSourceForm({
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
-  const { data: service } = useServiceQuery({ project_slug, service_slug });
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
 
   React.useEffect(() => {
     setData(fetcher.data);

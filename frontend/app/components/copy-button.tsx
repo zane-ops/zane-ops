@@ -9,13 +9,15 @@ export type CopyButtonProps = Omit<
   "value"
 > & {
   value: string;
-  label: string;
+  label: string | ((hasCopied?: boolean) => string);
+  showLabel?: boolean;
 };
 
 export function CopyButton({
   value,
   label,
   className,
+  showLabel,
   ...props
 }: CopyButtonProps) {
   const [hasCopied, startTransition] = React.useTransition();
@@ -25,8 +27,10 @@ export function CopyButton({
       {...props}
       className={cn(
         "px-2.5 py-0.5",
+        "inline-flex gap-1 items-center",
         "focus-visible:opacity-100 group-hover:opacity-100",
         hasCopied ? "opacity-100" : "md:opacity-0",
+        showLabel && "!opacity-100",
         className
       )}
       onClick={() => {
@@ -36,12 +40,15 @@ export function CopyButton({
         });
       }}
     >
+      <span className={cn(!showLabel && "sr-only")}>
+        {typeof label === "string" ? label : label(hasCopied)}
+      </span>
+
       {hasCopied ? (
         <CheckIcon size={15} className="flex-none" />
       ) : (
         <CopyIcon size={15} className="flex-none" />
       )}
-      <span className="sr-only">{label}</span>
     </Button>
   );
 }

@@ -42,7 +42,8 @@ export async function clientLoader({
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
-    deploymentHash: deployment_hash
+    deploymentHash: deployment_hash,
+    envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
@@ -54,6 +55,7 @@ export async function clientLoader({
     deploymentQueries.metrics({
       project_slug,
       service_slug,
+      env_slug,
       deployment_hash,
       filters
     })
@@ -72,7 +74,8 @@ export default function DeploymentMetricsPage({
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
-    deploymentHash: deployment_hash
+    deploymentHash: deployment_hash,
+    envSlug: env_slug
   }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -83,6 +86,7 @@ export default function DeploymentMetricsPage({
     ...deploymentQueries.metrics({
       project_slug,
       service_slug,
+      env_slug,
       deployment_hash,
       filters
     }),

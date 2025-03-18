@@ -8,17 +8,21 @@ import { type Route } from "./+types/deploy-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }
 
 export async function clientAction({
   request,
-  params: { projectSlug: project_slug, serviceSlug: service_slug }
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  }
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const { error, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/deploy-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -29,6 +33,7 @@ export async function clientAction({
       params: {
         path: {
           project_slug,
+          env_slug,
           service_slug
         }
       }
@@ -48,7 +53,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug })
+    serviceQueries.single({ project_slug, service_slug, env_slug })
   );
   toast.success("Success", {
     description: "Deployment queued sucesfully !",

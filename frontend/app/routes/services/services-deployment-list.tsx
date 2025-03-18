@@ -36,7 +36,11 @@ import { queryClient } from "~/root";
 import { type Route } from "./+types/services-deployment-list";
 
 export async function clientLoader({
-  params: { projectSlug: project_slug, serviceSlug: service_slug },
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  },
   request
 }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
@@ -52,7 +56,12 @@ export async function clientLoader({
   };
 
   const deploymentList = await queryClient.ensureQueryData(
-    serviceQueries.deploymentList({ project_slug, service_slug, filters })
+    serviceQueries.deploymentList({
+      project_slug,
+      service_slug,
+      filters,
+      env_slug
+    })
   );
 
   return { deploymentList };
@@ -78,7 +87,11 @@ function DeployForm() {
 }
 
 export default function DeploymentListPage({
-  params: { projectSlug: project_slug, serviceSlug: service_slug },
+  params: {
+    projectSlug: project_slug,
+    serviceSlug: service_slug,
+    envSlug: env_slug
+  },
   loaderData
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,7 +110,12 @@ export default function DeploymentListPage({
   const {
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({
-    ...serviceQueries.deploymentList({ project_slug, service_slug, filters }),
+    ...serviceQueries.deploymentList({
+      project_slug,
+      service_slug,
+      filters,
+      env_slug
+    }),
     initialData: loaderData.deploymentList
   });
 
