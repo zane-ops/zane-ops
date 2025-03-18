@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Form, useFetcher, useNavigation } from "react-router";
+import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -267,32 +268,14 @@ function DeleteConfirmationFormDialog({
 
           <DialogDescription className="flex items-center gap-1">
             <span>Please type</span>
-            <Button
+            <CopyButton
               variant="outline"
               size="sm"
+              showLabel
               className="inline-flex gap-1 items-center"
-              onClick={() => {
-                navigator.clipboard
-                  .writeText(`${project_slug}/${env_slug}/${service_slug}`)
-                  .then(() => {
-                    // show pending state (which is success state), until the user has stopped clicking the button
-                    startTransition(() => wait(1000));
-                  });
-              }}
-            >
-              <span>
-                {project_slug}/{env_slug}/{service_slug}
-              </span>
-              {hasCopied ? (
-                <>
-                  <CheckIcon size={12} className="flex-none" />
-                </>
-              ) : (
-                <>
-                  <CopyIcon size={12} className="flex-none" />
-                </>
-              )}
-            </Button>
+              value={`${project_slug}/${env_slug}/${service_slug}`}
+              label={`${project_slug}/${env_slug}/${service_slug}`}
+            />
             <span>to confirm :</span>
           </DialogDescription>
         </DialogHeader>

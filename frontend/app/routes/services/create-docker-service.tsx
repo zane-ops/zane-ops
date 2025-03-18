@@ -124,6 +124,7 @@ export default function CreateServicePage({
       {currentStep === "CREATED" && (
         <StepServiceCreated
           projectSlug={params.projectSlug}
+          envSlug={params.envSlug}
           serviceSlug={serviceSlug}
           onSuccess={(hash) => {
             setCurrentStep("DEPLOYED");
@@ -135,6 +136,7 @@ export default function CreateServicePage({
       {currentStep === "DEPLOYED" && (
         <StepServiceDeployed
           projectSlug={params.projectSlug}
+          envSlug={params.envSlug}
           serviceSlug={serviceSlug}
           deploymentHash={deploymentHash}
         />
@@ -423,12 +425,14 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
 type StepServiceCreatedProps = {
   serviceSlug: string;
   projectSlug: string;
+  envSlug: string;
   onSuccess: (deploymentHash: string) => void;
 };
 
 function StepServiceCreated({
   serviceSlug,
   projectSlug,
+  envSlug,
   onSuccess
 }: StepServiceCreatedProps) {
   // const navigation = useNavigation();
@@ -482,7 +486,7 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={`/project/${projectSlug}/services/${serviceSlug}`}
+              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -497,12 +501,14 @@ function StepServiceCreated({
 type StepServiceDeployedProps = {
   projectSlug: string;
   serviceSlug: string;
+  envSlug: string;
   deploymentHash: string;
 };
 
 function StepServiceDeployed({
   projectSlug,
   serviceSlug,
+  envSlug,
   deploymentHash
 }: StepServiceDeployedProps) {
   return (
@@ -520,7 +526,7 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${projectSlug}/services/${serviceSlug}/deployments/${deploymentHash}`}
+              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}`}
               className="flex gap-2  items-center"
             >
               Inspect deployment <ArrowRightIcon size={20} />
