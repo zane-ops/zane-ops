@@ -71,6 +71,7 @@ import {
   DialogTitle
 } from "~/components/ui/dialog";
 import { queryClient } from "~/root";
+import type { clientAction } from "~/routes/trigger-update";
 import type { Route } from "./+types/dashboard-layout";
 
 export function meta() {
@@ -114,6 +115,15 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     initialData: loaderData.latestVersion
   });
 
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.data) {
+      setshowUpdateDialog(false);
+    }
+  }, [fetcher.data, fetcher.state]);
+
   React.useEffect(() => {
     if (
       import.meta.env.PROD &&
@@ -143,14 +153,8 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
           justifyContent: "space-between"
         }
       });
-      return () => {
-        toast.dismiss();
-      };
     }
   }, [loaderData.previousVersion, latestVersion.tag]);
-
-  const fetcher = useFetcher();
-  const isPending = fetcher.state !== "idle";
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
