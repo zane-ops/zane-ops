@@ -79,7 +79,7 @@ export default function ServiceMetricsPage({
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
   });
-  const { data: metrics } = useQuery({
+  const { data } = useQuery({
     ...serviceQueries.metrics({
       project_slug,
       service_slug,
@@ -88,6 +88,8 @@ export default function ServiceMetricsPage({
     }),
     initialData: loaderData.metrics
   });
+
+  const metrics = data.map((m) => ({ ...m, avg_cpu: m.avg_cpu / 100 }));
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -152,7 +154,10 @@ export default function ServiceMetricsPage({
                   <YAxis
                     tickLine={false}
                     axisLine={false}
-                    domain={[0, 100]}
+                    domain={[
+                      0,
+                      service.resource_limits?.cpus ?? limits.no_of_cpus
+                    ]}
                     allowDataOverflow
                     type="number"
                   />
@@ -190,7 +195,9 @@ export default function ServiceMetricsPage({
                               <span>{formattedDate}</span>
                               <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums text-card-foreground text-sm">
                                 {Number(value).toFixed(2)}
-                                <span className="font-normal text-grey">%</span>
+                                <span className="font-normal text-grey">
+                                  CPUs
+                                </span>
                               </div>
                             </div>
                           );
