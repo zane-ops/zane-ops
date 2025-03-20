@@ -350,8 +350,9 @@ class EnvironmentDetailsAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class EnvironmentVariablesAPIView(viewsets.ModelViewSet):
+class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
     serializer_class = EnvironmentVariableSerializer
+    pagination_class = None
     queryset = (
         EnvironmentEnvVariable.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
@@ -374,3 +375,27 @@ class EnvironmentVariablesAPIView(viewsets.ModelViewSet):
             )
 
         return environment.variables.all()  # type: ignore
+
+    def perform_create(self, serializer: EnvironmentVariableSerializer):
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        data = serializer.data
+        environment.variables.create(
+            key=data["key"],
+            value=data["value"],
+        )  # type: ignore

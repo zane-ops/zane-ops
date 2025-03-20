@@ -10,7 +10,7 @@ from rest_framework import serializers
 from rest_framework.serializers import *  # type: ignore
 
 from . import models
-from .validators import validate_url_path, validate_url_domain
+from .validators import validate_env_name, validate_url_path, validate_url_domain
 
 
 class ErrorCode409Enum(TextChoices):
@@ -51,6 +51,9 @@ class UserSerializer(ModelSerializer):
 
 
 class EnvironmentVariableSerializer(ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    key = serializers.CharField(required=True, validators=[validate_env_name])
+
     class Meta:
         model = models.EnvironmentEnvVariable
         fields = ["id", "key", "value"]

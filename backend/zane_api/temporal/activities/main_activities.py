@@ -1596,10 +1596,12 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
-            # env variables
             envs: list[str] = [
-                f"{env.key}={env.value}" for env in service.env_variables
+                f"{env.key}={env.value}" for env in service.environment.variables
             ]
+
+            envs += [f"{env.key}={env.value}" for env in service.env_variables]
+
             # zane-specific-envs
             envs.extend(
                 [

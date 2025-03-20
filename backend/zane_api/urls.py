@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.urls import re_path
+from rest_framework import routers
 
 from . import views
 
@@ -244,3 +245,13 @@ urlpatterns = [
         name="app.trigger_update",
     ),
 ]
+
+
+router = routers.SimpleRouter()
+
+router.register(
+    rf"projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/variables",
+    views.EnvironmentVariablesViewSet,
+    basename="environment.variables",
+)
+urlpatterns += router.urls
