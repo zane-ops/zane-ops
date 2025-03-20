@@ -143,7 +143,14 @@ export default function ProjectDetail({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{slug}</BreadcrumbPage>
+            <BreadcrumbLink asChild>
+              <Link
+                to={`/project/${params.projectSlug}/production`}
+                prefetch="intent"
+              >
+                {slug}
+              </Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
 
           <BreadcrumbSeparator />
