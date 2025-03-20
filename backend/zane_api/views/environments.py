@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from drf_spectacular.utils import (
@@ -28,11 +28,13 @@ from ..models import (
     DockerDeploymentChange,
     DockerDeployment,
     DeploymentURL,
+    EnvironmentEnvVariable,
 )
 from ..serializers import (
     EnvironmentSerializer,
     EnvironmentWithServicesSerializer,
     DockerServiceSerializer,
+    EnvironmentVariableSerializer,
 )
 from ..temporal import (
     start_workflow,
@@ -43,6 +45,9 @@ from ..temporal import (
     DockerDeploymentDetails,
 )
 from .helpers import compute_docker_changes_from_snapshots
+from rest_framework.generics import ListAPIView, ListCreateAPIView
+from rest_framework import viewsets
+from django.db.models import QuerySet
 
 
 class CreateEnviromentAPIView(APIView):
@@ -343,3 +348,29 @@ class EnvironmentDetailsAPIView(APIView):
 
         environment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EnvironmentVariablesAPIView(viewsets.ModelViewSet):
+    serializer_class = EnvironmentVariableSerializer
+    queryset = (
+        EnvironmentEnvVariable.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_queryset(self):
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        return environment.variables.all()  # type: ignore

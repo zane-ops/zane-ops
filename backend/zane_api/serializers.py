@@ -50,10 +50,18 @@ class UserSerializer(ModelSerializer):
         fields = ["username", "first_name", "last_name"]
 
 
+class EnvironmentVariableSerializer(ModelSerializer):
+    class Meta:
+        model = models.EnvironmentEnvVariable
+        fields = ["id", "key", "value"]
+
+
 class EnvironmentSerializer(ModelSerializer):
+    variables = EnvironmentVariableSerializer(many=True, read_only=True)
+
     class Meta:
         model = models.Environment
-        fields = ["id", "is_preview", "name"]
+        fields = ["id", "is_preview", "name", "variables"]
 
 
 class ProjectSerializer(ModelSerializer):
