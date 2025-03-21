@@ -173,7 +173,7 @@ class URLRequestSerializer(serializers.Serializer):
         existing_urls = URL.objects.filter(
             Q(domain=attrs["domain"].lower())
             & Q(base_path=attrs["base_path"].lower())
-            & ~Q(dockerregistryservice__id=service.id if service is not None else None)
+            & ~Q(service__id=service.id if service is not None else None)
         ).distinct()
         if len(existing_urls) > 0:
             raise serializers.ValidationError(
@@ -203,7 +203,7 @@ class URLRequestSerializer(serializers.Serializer):
 
         existing_parent_domain = URL.objects.filter(
             Q(domain=domain_as_wildcard.lower())
-            & ~Q(dockerregistryservice=service)
+            & ~Q(service=service)
             & Q(base_path=attrs["base_path"].lower())
         ).distinct()
         if len(existing_parent_domain) > 0:
@@ -756,7 +756,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
             already_existing_volumes = Volume.objects.filter(
                 Q(host_path__isnull=False)
                 & Q(host_path=new_value.get("host_path"))
-                & ~Q(dockerregistryservice__id=service.id)
+                & ~Q(service__id=service.id)
             ).values("mode")
             if len(already_existing_volumes) > 0:
                 mode_set = {volume["mode"] for volume in already_existing_volumes}
@@ -963,7 +963,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if port is not already used by another service
         already_existing_port = PortConfiguration.objects.filter(
-            Q(host=public_port) & ~Q(dockerregistryservice=service)
+            Q(host=public_port) & ~Q(service=service)
         ).first()
         if already_existing_port is not None:
             raise serializers.ValidationError(

@@ -296,9 +296,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await PortConfiguration.objects.filter(
-                dockerregistryservice__slug=service.slug
-            ).acount(),
+            await PortConfiguration.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (

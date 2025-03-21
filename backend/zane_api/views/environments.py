@@ -329,13 +329,11 @@ class EnvironmentDetailsAPIView(APIView):
                 ArchivedDockerService.create_from_service(service, archived_version)
                 id_list.append(service.id)
 
-        PortConfiguration.objects.filter(
-            Q(dockerregistryservice__id__in=id_list)
-        ).delete()
-        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()

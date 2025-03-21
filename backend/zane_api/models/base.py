@@ -228,6 +228,10 @@ class Service(BaseService):
     configs: Manager["Config"]
     project_id: str
 
+    class ServiceType(models.TextChoices):
+        DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
+        GIT_REPOSITORY = "GIT_REPOSITORY", _("Git repository")
+
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -247,6 +251,22 @@ class Service(BaseService):
         on_delete=models.CASCADE,
         related_name="services",
     )
+
+    type = models.CharField(
+        max_length=15, choices=ServiceType.choices, default=ServiceType.DOCKER_REGISTRY
+    )
+
+    # git attributes
+    repository_url = models.URLField(max_length=2048, null=True)
+    dockerfile_path = models.CharField(max_length=255, default="/Dockerfile")
+    docker_build_context_dir = models.CharField(max_length=255, default="/")
+    branch_name = models.CharField(max_length=255, null=True)
+    commit_sha = models.CharField(max_length=45, default="HEAD")
+
+    # TODO: later, when we will support pull requests environments and auto-deploy
+    # auto_deploy = models.BooleanField(default=False)
+    # previews_enabled = models.BooleanField(default=False)
+    # delete_preview_after_merge = models.BooleanField(default=True)
 
     def __str__(self):
         return f"Service({self.slug})"
@@ -595,32 +615,6 @@ class ServiceMetrics(TimestampedModel):
         indexes = [models.Index(fields=["created_at"])]
 
 
-class GitRepositoryService(BaseService):
-    ID_PREFIX = "srv_git_"
-    id = ShortUUIDField(
-        length=11,
-        max_length=255,
-        primary_key=True,
-        prefix=ID_PREFIX,
-    )
-    previews_enabled = models.BooleanField(default=True)
-    auto_deploy = models.BooleanField(default=True)
-    preview_protected = models.BooleanField(default=True)
-    delete_preview_after_merge = models.BooleanField(default=True)
-    production_branch_name = models.CharField(max_length=255)
-    repository_url = models.URLField(max_length=1000)
-    build_success_webhook_url = models.URLField(null=True, blank=True)
-
-    # for docker build context
-    dockerfile_path = models.CharField(max_length=255, default="./Dockerfile")
-    docker_build_context_dir = models.CharField(max_length=255, default=".")
-    docker_cmd = models.CharField(max_length=255, null=True, blank=True)
-
-    @property
-    def unprefixed_id(self):
-        return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
-
-
 class Volume(TimestampedModel):
     ID_PREFIX = "vol_"
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
@@ -725,12 +719,23 @@ class Deployment(BaseDeployment):
 
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
+    class DeploymentTriggerMethod(models.TextChoices):
+        MANUAL = "MANUAL", _("Manual")
+        WEBHOOK = "WEBHOOK", _("Webhook")
+
+    class BuildStatus(models.TextChoices):
+        QUEUED = "QUEUED", _("Queued")
+        PENDING = "PENDING", _("Pending")
+        SUCCESS = "SUCCESS", _("Success")
+        ERROR = "ERROR", _("Error")
+
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
         CANCELLED = "CANCELLED", _("Cancelled")
         CANCELLING = "CANCELLING", _("Cancelling")
         FAILED = "FAILED", _("Failed")
         PREPARING = "PREPARING", _("Preparing")
+        BUILDING = "BUILDING", _("Building")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
         HEALTHY = "HEALTHY", _("Healthy")
@@ -760,6 +765,22 @@ class Deployment(BaseDeployment):
     )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
+
+    build_status = models.CharField(
+        max_length=10,
+        choices=BuildStatus.choices,
+        default=BuildStatus.QUEUED,
+    )
+
+    trigger_method = models.CharField(
+        max_length=15,
+        choices=DeploymentTriggerMethod.choices,
+        default=DeploymentTriggerMethod.MANUAL,
+    )
+    commit_sha = models.CharField(max_length=45, null=True)
+    commit_author_name = models.TextField(max_length=1024, null=True)
+    build_duration_in_ms = models.PositiveIntegerField(null=True)
+    pull_request_number = models.PositiveIntegerField(null=True)
 
     @classmethod
     def get_next_deployment_slot(
@@ -808,6 +829,7 @@ class Deployment(BaseDeployment):
         ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
+            models.Index(fields=["build_status"]),
             models.Index(fields=["is_current_production"]),
         ]
 
@@ -883,80 +905,6 @@ class DeploymentChange(BaseDeploymentChange):
             f"\n\tapplied={repr(self.applied)}"
             f"\n)"
         )
-
-
-class GitDeployment(BaseDeployment):
-    HASH_PREFIX = "dpl_git_"
-    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
-
-    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
-
-    class BuildStatus(models.TextChoices):
-        ERROR = "ERROR", _("Error")
-        SUCCESS = "SUCCESS", _("Success")
-        PENDING = "PENDING", _("Pending")
-        QUEUED = "QUEUED", _("Queued")
-
-    build_status = models.CharField(
-        max_length=10,
-        choices=BuildStatus.choices,
-        default=BuildStatus.QUEUED,
-    )
-
-    class DeploymentStatus(models.TextChoices):
-        QUEUED = "QUEUED", _("Queued")
-        PREPARING = "PREPARING", _("Preparing")
-        FAILED = "FAILED", _("Failed")
-        REMOVED = "REMOVED", _("Removed")
-        STARTING = "STARTING", _("Starting")
-        RESTARTING = "RESTARTING", _("Restarting")
-        BUILDING = "BUILDING", _("Building")
-        CANCELLED = "CANCELLED", _("Cancelled")
-        HEALTHY = "HEALTHY", _("Healthy")
-        UNHEALTHY = "UNHEALTHY", _("UnHealthy")
-        OFFLINE = "OFFLINE", _("Offline")
-        SLEEPING = "SLEEPING", _("Sleeping")  # preview deploys
-
-    status = models.CharField(
-        max_length=10,
-        choices=DeploymentStatus.choices,
-        default=DeploymentStatus.QUEUED,
-    )
-    status_reason = models.CharField(max_length=255, null=True)
-
-    class DeploymentEnvironment(models.TextChoices):
-        PRODUCTION = "PRODUCTION", _("Production")
-        PREVIEW = "PREVIEW", _("Preview")
-
-    deployment_environment = models.CharField(
-        max_length=10,
-        choices=DeploymentEnvironment.choices,
-        default=DeploymentEnvironment.PREVIEW,
-    )
-    is_current_production = models.BooleanField(default=False)
-
-    commit_hash = models.CharField(
-        max_length=40
-    )  # Typical length of a Git commit hash, but we will use the short version
-    commit_message = models.TextField(blank=True)
-    build_duration_in_ms = models.PositiveIntegerField(null=True)
-    branch = models.CharField(max_length=255)
-    service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
-    commit_author_username = models.CharField(max_length=255)
-    commit_author_avatar_url = models.URLField(null=True)
-
-    def __str__(self):
-        return f"GitDeployment(branch={self.branch} - commit_ha={self.commit_hash[:7]} - status={self.build_status})"
-
-    @property
-    def unprefixed_hash(self):
-        return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["is_current_production"]),
-        ]
 
 
 class Log(models.Model):

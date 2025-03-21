@@ -481,9 +481,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(2, await archived_service.env_variables.acount())
 
         # ports are cleaned up
-        deleted_ports = PortConfiguration.objects.filter(
-            dockerregistryservice__slug=service.slug
-        )
+        deleted_ports = PortConfiguration.objects.filter(service__slug=service.slug)
         self.assertEqual(0, await deleted_ports.acount())
         self.assertEqual(1, await archived_service.ports.acount())
 

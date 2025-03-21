@@ -48,7 +48,6 @@ from ..models import (
     Volume,
     Deployment,
     DeploymentChange,
-    GitDeployment,
     Config,
     Environment,
 )
@@ -87,7 +86,7 @@ class ProjectsListAPIView(ListCreateAPIView):
         docker_total = Deployment.objects.filter(
             Q(is_current_production=True)
             & (
-                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
+                Q(status=Deployment.DeploymentStatus.HEALTHY)
                 | Q(status=Deployment.DeploymentStatus.UNHEALTHY)
                 | Q(status=Deployment.DeploymentStatus.FAILED)
             )
@@ -97,9 +96,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             healthy_services=Sum(
                 Case(
                     When(
-                        dockerregistryservice__id__in=[
-                            item["service"] for item in docker_healthy
-                        ],
+                        service__id__in=[item["service"] for item in docker_healthy],
                         then=1,
                     ),
                     output_field=IntegerField(),
@@ -109,11 +106,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             total_services=Sum(
                 Case(
                     When(
-                        Q(
-                            dockerregistryservice__id__in=[
-                                item["service"] for item in docker_total
-                            ]
-                        ),
+                        Q(service__id__in=[item["service"] for item in docker_total]),
                         then=1,
                     ),
                     output_field=IntegerField(),
@@ -277,12 +270,10 @@ class ProjectDetailsView(APIView):
             ArchivedDockerService.create_from_service(service, archived_version)
             id_list.append(service.id)
 
-        PortConfiguration.objects.filter(
-            Q(dockerregistryservice__id__in=id_list)
-        ).delete()
-        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()
