@@ -139,7 +139,7 @@ class URLModelSerializer(ModelSerializer):
 
 class DockerEnvVariableSerializer(ModelSerializer):
     class Meta:
-        model = models.DockerEnvVariable
+        model = models.EnvVariable
         fields = ["id", "key", "value"]
 
 
@@ -172,7 +172,7 @@ class HealthCheckSerializer(ModelSerializer):
 
 class DockerDeploymentChangeSerializer(ModelSerializer):
     class Meta:
-        model = models.DockerDeploymentChange
+        model = models.DeploymentChange
         fields = [
             "id",
             "type",

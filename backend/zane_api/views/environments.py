@@ -25,7 +25,7 @@ from ..models import (
     Volume,
     Config,
     Environment,
-    DockerDeploymentChange,
+    DeploymentChange,
     Deployment,
     DeploymentURL,
     SharedEnvVariable,
@@ -170,13 +170,13 @@ class CloneEnviromentAPIView(APIView):
 
                 for change in changes:
                     match change.field:
-                        case DockerDeploymentChange.ChangeField.URLS:
+                        case DeploymentChange.ChangeField.URLS:
                             if change.new_value.get("redirect_to") is not None:  # type: ignore
                                 # we don't copy over redirected urls, as they might not be needed
                                 continue
                             # We also don't want to copy the same URL because it might clash with the original service
                             change.new_value["domain"] = URL.generate_default_domain(cloned_service)  # type: ignore
-                        case DockerDeploymentChange.ChangeField.PORTS:
+                        case DeploymentChange.ChangeField.PORTS:
                             # Don't copy port changes to not cause conflicts with other ports
                             continue
                     change.service = cloned_service

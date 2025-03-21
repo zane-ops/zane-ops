@@ -8,7 +8,7 @@ from ..models import (
     Service,
     ArchivedDockerService,
     Environment,
-    DockerDeploymentChange,
+    DeploymentChange,
     Volume,
     URL,
 )
@@ -379,9 +379,9 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
     def test_clone_environment_with_simple_service(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "image": "valkey/valkey:7.2-alpine",
                         "credentials": {
@@ -390,9 +390,9 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
                         },
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.COMMAND,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.COMMAND,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value="redis-cli",
                 ),
             ]
@@ -423,12 +423,12 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         self.assertEqual(2, cloned_service.unapplied_changes.count())
         source_change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.SOURCE
+            field=DeploymentChange.ChangeField.SOURCE
         ).first()
         self.assertIsNotNone(source_change)
 
         cmd_change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.COMMAND
+            field=DeploymentChange.ChangeField.COMMAND
         ).first()
         self.assertIsNotNone(cmd_change)
 
@@ -451,16 +451,16 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertIsNotNone(cloned_service)
 
         healthcheck_change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.HEALTHCHECK
+            field=DeploymentChange.ChangeField.HEALTHCHECK
         ).first()
         self.assertIsNotNone(healthcheck_change)
 
     def test_clone_environment_with_service_resource_limits(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "cpus": 2,
                         "memory": {"value": 500, "unit": "MEGABYTES"},
@@ -485,25 +485,25 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertIsNotNone(cloned_service)
 
         change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
+            field=DeploymentChange.ChangeField.RESOURCE_LIMITS
         ).first()
         self.assertIsNotNone(change)
 
     def test_clone_environment_with_service_volumes(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                DeploymentChange(
+                    type=DeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.VOLUMES,
                     new_value={
                         "container_path": "/data",
                         "name": "docker-volume",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                 ),
-                DockerDeploymentChange(
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                DeploymentChange(
+                    type=DeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.VOLUMES,
                     new_value={
                         "container_path": "/var/run/docker.sock",
                         "host_path": "/var/run/docker.sock",
@@ -530,16 +530,16 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertIsNotNone(cloned_service)
 
         volume_changes = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.VOLUMES
+            field=DeploymentChange.ChangeField.VOLUMES
         )
         self.assertEqual(2, volume_changes.count())
 
     def test_clone_environment_with_service_urls(self):
         p, service = self.create_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "dcr.fredkiss.dev",
                         "base_path": "/portainer",
@@ -569,7 +569,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertIsNotNone(cloned_service)
 
         url_changes = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.URLS
+            field=DeploymentChange.ChangeField.URLS
         )
         self.assertEqual(1, url_changes.count())
 
@@ -587,9 +587,9 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
     def test_clone_environment_with_service_ports_do_not_clone_the_ports(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "host": 6379,
                         "forwarded": 6379,
@@ -614,7 +614,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertIsNotNone(cloned_service)
 
         port_changes = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.PORTS
+            field=DeploymentChange.ChangeField.PORTS
         )
         self.assertEqual(0, port_changes.count())
 
@@ -848,10 +848,10 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
         p, service = await self.acreate_redis_docker_service()
 
         # add env in service with the same name
-        await DockerDeploymentChange.objects.acreate(
+        await DeploymentChange.objects.acreate(
             service=service,
-            field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-            type=DockerDeploymentChange.ChangeType.ADD,
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "key": "GITHUB_PERSONAL_ACCESS_TOKEN",
                 "value": "ghp_service_token",
@@ -895,30 +895,30 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
         p, service = await self.acreate_redis_docker_service()
 
         # add env in service with the same name
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
+                DeploymentChange(
                     service=service,
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "GITHUB_PAT",
                         "value": "hello-{{env.GITHUB_PAT}}",
                     },
                 ),
-                DockerDeploymentChange(
+                DeploymentChange(
                     service=service,
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "REFERENCE_NOT_FOUND",
                         "value": "{{env.NON_EXISTENT}}",
                     },
                 ),
-                DockerDeploymentChange(
+                DeploymentChange(
                     service=service,
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "INVALID_NAME",
                         "value": "{{env.GITHUB PAT}}",

@@ -47,7 +47,7 @@ from ..models import (
     URL,
     Volume,
     Deployment,
-    DockerDeploymentChange,
+    DeploymentChange,
     GitDeployment,
     Config,
     Environment,
@@ -389,7 +389,7 @@ class ProjectServiceListView(APIView):
             service_image = service.image
             if service_image is None:
                 image_change = service.unapplied_changes.filter(
-                    field=DockerDeploymentChange.ChangeField.SOURCE
+                    field=DeploymentChange.ChangeField.SOURCE
                 ).first()
                 service_image = image_change.new_value["image"]  # type: ignore
 

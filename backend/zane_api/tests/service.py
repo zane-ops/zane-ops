@@ -14,7 +14,7 @@ from ..models import (
     Project,
     Service,
     Deployment,
-    DockerDeploymentChange,
+    DeploymentChange,
 )
 
 
@@ -108,7 +108,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNotNone(created_service)
         change = created_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.SOURCE
+            field=DeploymentChange.ChangeField.SOURCE
         ).first()
         self.assertIsNone(change.new_value.get("credentials"))
 
@@ -520,9 +520,9 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             mock_monotonic.side_effect = [0, 0, 0, 31]
             _, service = await self.acreate_and_deploy_redis_docker_service(
                 other_changes=[
-                    DockerDeploymentChange(
-                        field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                    DeploymentChange(
+                        field=DeploymentChange.ChangeField.HEALTHCHECK,
+                        type=DeploymentChange.ChangeType.UPDATE,
                         new_value={
                             "type": "COMMAND",
                             "value": self.fake_docker_client.FAILING_CMD,

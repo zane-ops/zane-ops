@@ -32,12 +32,12 @@ from ..models import (
     ArchivedProject,
     Service,
     Volume,
-    DockerEnvVariable,
+    EnvVariable,
     PortConfiguration,
     HttpLog,
     Config,
     DeploymentURL,
-    DockerDeploymentChange,
+    DeploymentChange,
 )
 from ..temporal.activities import (
     check_if_docker_image_exists,
@@ -875,7 +875,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
 
             try:
                 service.env_variables.get(id=item_id)  # type: ignore
-            except DockerEnvVariable.DoesNotExist:
+            except EnvVariable.DoesNotExist:
                 raise serializers.ValidationError(
                     {
                         "item_id": [
@@ -1366,7 +1366,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         env_changes = [
             DeploymentChangeDto(
                 type="ADD",
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                field=DeploymentChange.ChangeField.ENV_VARIABLES,
                 new_value={
                     "key": key,
                     "value": value,

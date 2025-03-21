@@ -16,7 +16,7 @@ from ..temporal import (
 )
 from ..models import (
     Deployment,
-    DockerDeploymentChange,
+    DeploymentChange,
     Volume,
     URL,
     DeploymentURL,
@@ -95,9 +95,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment = await Deployment.objects.acreate(
                     service=service,
                 )
-                await DockerDeploymentChange.objects.acreate(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                await DeploymentChange.objects.acreate(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
@@ -165,9 +165,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment = await Deployment.objects.acreate(
                     service=service,
                 )
-                await DockerDeploymentChange.objects.acreate(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                await DeploymentChange.objects.acreate(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value=dict(
                         mount_path="/etc/caddy/Caddyfile",
                         contents="""
@@ -238,9 +238,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service(
                     other_changes=[
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.PORTS,
-                            type=DockerDeploymentChange.ChangeType.ADD,
+                        DeploymentChange(
+                            field=DeploymentChange.ChangeField.PORTS,
+                            type=DeploymentChange.ChangeType.ADD,
                             new_value={
                                 "host": 6739,
                                 "forwarded": 6739,
@@ -465,11 +465,11 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment = await Deployment.objects.acreate(
                     service=service,
                 )
-                await DockerDeploymentChange.objects.abulk_create(
+                await DeploymentChange.objects.abulk_create(
                     [
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.URLS,
-                            type=DockerDeploymentChange.ChangeType.ADD,
+                        DeploymentChange(
+                            field=DeploymentChange.ChangeField.URLS,
+                            type=DeploymentChange.ChangeType.ADD,
                             new_value=dict(
                                 domain=url_to_add.domain,
                                 base_path=url_to_add.base_path,
@@ -477,9 +477,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                             ),
                             service=service,
                         ),
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.URLS,
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                        DeploymentChange(
+                            field=DeploymentChange.ChangeField.URLS,
+                            type=DeploymentChange.ChangeType.UPDATE,
                             item_id=url_to_update.id,
                             old_value=URLModelSerializer(url_to_update).data,
                             new_value=dict(

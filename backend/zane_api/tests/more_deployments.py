@@ -6,7 +6,7 @@ from ..models import (
     Project,
     Service,
     Deployment,
-    DockerDeploymentChange,
+    DeploymentChange,
     Config,
     Volume,
     URL,
@@ -131,7 +131,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": {
                 "cpus": 1,
@@ -153,7 +153,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": {"cpus": 2, "memory": {"value": 500}},
         }
@@ -174,18 +174,16 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         service = await Service.objects.aget(slug=service.slug)
-        unapplied_changes_count = await DockerDeploymentChange.objects.filter(
+        unapplied_changes_count = await DeploymentChange.objects.filter(
             service__slug=service.slug, applied=False
         ).acount()
 
         self.assertEqual(1, unapplied_changes_count)
 
-        resource_limit_change: DockerDeploymentChange = (
-            await DockerDeploymentChange.objects.filter(
-                applied=False,
-                field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-            ).afirst()
-        )
+        resource_limit_change: DeploymentChange = await DeploymentChange.objects.filter(
+            applied=False,
+            field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+        ).afirst()
         self.assertEqual(
             {"cpus": 2, "memory": {"value": 500, "unit": "MEGABYTES"}},
             resource_limit_change.new_value,
@@ -220,7 +218,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             "language": "caddyfile",
         }
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "field": DeploymentChange.ChangeField.CONFIGS,
             "type": "ADD",
             "new_value": config,
         }
@@ -239,9 +237,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNotNone(change)
         self.assertEqual(config, change.new_value)
@@ -273,7 +271,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             "mount_path": "/etc/caddy/Caddyfile",
         }
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "field": DeploymentChange.ChangeField.CONFIGS,
             "type": "ADD",
             "new_value": config,
         }
@@ -292,9 +290,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNotNone(change)
         self.assertIsNotNone(change.new_value.get("name"))
@@ -330,7 +328,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         service.configs.add(config)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "field": DeploymentChange.ChangeField.CONFIGS,
             "type": "DELETE",
             "item_id": config.id,
         }
@@ -349,9 +347,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNotNone(change)
         self.assertEqual(ConfigSerializer(config).data, change.old_value)
@@ -379,7 +377,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "field": DeploymentChange.ChangeField.CONFIGS,
             "type": "DELETE",
             "item_id": "cf_1oasdkjfhb",
         }
@@ -398,9 +396,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNone(change)
 
@@ -435,8 +433,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         service.configs.add(config)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.CONFIGS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": dict(
                 contents=':80 respond "No ! I am the real file"',
                 mount_path="/etc/caddy/Caddyfile",
@@ -457,9 +455,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNone(change)
 
@@ -493,8 +491,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         service.volumes.add(config)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.CONFIGS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": dict(
                 contents=':80 respond "This shouldn\'t work"',
                 mount_path="/etc/caddy/Caddyfile",
@@ -515,9 +513,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNone(change)
 
@@ -549,7 +547,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             "name": "caddyfile",
         }
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
+            "field": DeploymentChange.ChangeField.CONFIGS,
             "type": "ADD",
             "new_value": config,
         }
@@ -568,9 +566,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNone(change)
 
@@ -605,8 +603,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         service.configs.add(config)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
-            "type": DockerDeploymentChange.ChangeType.UPDATE,
+            "field": DeploymentChange.ChangeField.CONFIGS,
+            "type": DeploymentChange.ChangeType.UPDATE,
             "new_value": dict(
                 contents=':80 respond "No ! I am the real file"',
                 mount_path="/etc/caddy/Caddyfile",
@@ -628,9 +626,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug="app",
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).first()
         self.assertIsNotNone(change)
 
@@ -638,8 +636,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.PORTS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.PORTS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "forwarded": 8000,
             },
@@ -663,8 +661,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.PORTS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.PORTS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "host": 80,
                 "forwarded": 8000,
@@ -688,8 +686,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.URLS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.URLS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "domain": "dcr.fredkiss.dev",
                 "base_path": "/portainer",
@@ -714,8 +712,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.URLS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.URLS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "base_path": "/portainer",
                 "associated_port": 80,
@@ -740,8 +738,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.URLS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.URLS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "domain": "dcr.fredkiss.dev",
                 "base_path": "/portainer",
@@ -767,8 +765,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.URLS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.URLS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "domain": "dcr.fredkiss.dev",
                 "base_path": "/portainer",
@@ -800,8 +798,8 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         first_url: DeploymentURL = await latest_deployment.urls.afirst()  # type: ignore
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.URLS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.URLS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "domain": first_url.domain,
                 "base_path": "/portainer",
@@ -868,11 +866,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        changes: QuerySet[DockerDeploymentChange] = (
-            DockerDeploymentChange.objects.filter(
-                service__slug="app",
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-            )
+        changes: QuerySet[DeploymentChange] = DeploymentChange.objects.filter(
+            service__slug="app",
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
         )
         self.assertEqual(3, changes.count())
         env_variables = {
@@ -924,11 +920,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        changes: QuerySet[DockerDeploymentChange] = (
-            DockerDeploymentChange.objects.filter(
-                service__slug="app",
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-            )
+        changes: QuerySet[DeploymentChange] = DeploymentChange.objects.filter(
+            service__slug="app",
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
         )
         self.assertEqual(0, changes.count())
 
@@ -958,9 +952,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         service = Service.objects.get(slug="app")
 
         service.add_change(
-            DockerDeploymentChange(
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                type=DockerDeploymentChange.ChangeType.ADD,
+            DeploymentChange(
+                field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                type=DeploymentChange.ChangeType.ADD,
                 new_value={"key": "POSTGRES_USER", "value": "zane"},
             )
         )
@@ -1079,11 +1073,9 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        changes: QuerySet[DockerDeploymentChange] = (
-            DockerDeploymentChange.objects.filter(
-                service__slug="app",
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-            )
+        changes: QuerySet[DeploymentChange] = DeploymentChange.objects.filter(
+            service__slug="app",
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
         )
         self.assertEqual(0, changes.count())
 
@@ -1185,9 +1177,9 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
@@ -1209,8 +1201,8 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
 
         # what we want to do
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.VOLUMES,
-            "type": DockerDeploymentChange.ChangeType.UPDATE,
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.UPDATE,
             "item_id": new_volume.id,
             "new_value": {
                 "name": "logs",
@@ -1236,8 +1228,8 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
 
         # now try to delete and recreate the volume
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.VOLUMES,
-            "type": DockerDeploymentChange.ChangeType.DELETE,
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.DELETE,
             "item_id": new_volume.id,
         }
 
@@ -1256,8 +1248,8 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.VOLUMES,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "name": "logs",
                 "mode": Volume.VolumeMode.READ_ONLY,
@@ -1281,10 +1273,10 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Now revert the `delete` change (should not be allowed)
-        change: DockerDeploymentChange = await service.changes.filter(
+        change: DeploymentChange = await service.changes.filter(
             applied=False,
-            type=DockerDeploymentChange.ChangeType.DELETE,
-            field=DockerDeploymentChange.ChangeField.VOLUMES,
+            type=DeploymentChange.ChangeType.DELETE,
+            field=DeploymentChange.ChangeField.VOLUMES,
         ).afirst()
 
         response = await self.async_client.delete(
@@ -1304,9 +1296,9 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -1321,8 +1313,8 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
 
         # try to delete and recreate the config file
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
-            "type": DockerDeploymentChange.ChangeType.DELETE,
+            "field": DeploymentChange.ChangeField.CONFIGS,
+            "type": DeploymentChange.ChangeType.DELETE,
             "item_id": new_config.id,
         }
 
@@ -1341,8 +1333,8 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.CONFIGS,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.CONFIGS,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "name": "caddyfile",
                 "language": "caddyfile",
@@ -1370,10 +1362,10 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Now revert the `delete` change (should not be allowed)
-        change: DockerDeploymentChange = await service.changes.filter(
+        change: DeploymentChange = await service.changes.filter(
             applied=False,
-            type=DockerDeploymentChange.ChangeType.DELETE,
-            field=DockerDeploymentChange.ChangeField.CONFIGS,
+            type=DeploymentChange.ChangeType.DELETE,
+            field=DeploymentChange.ChangeField.CONFIGS,
         ).afirst()
 
         response = await self.async_client.delete(
@@ -1402,26 +1394,26 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         )
         service.configs.add(config_to_delete)
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value=dict(
                         mount_path="/etc/caddy/Caddyfile",
                         contents="import ./*.caddy",
                     ),
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=config_to_delete.id,
                     service=service,
                 ),
@@ -1461,17 +1453,17 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         )
         service.configs.add(config_to_update)
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     item_id=config_to_update.id,
                     new_value=dict(
                         mount_path="/etc/caddy/Caddyfile",
@@ -1517,17 +1509,17 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         )
         service.urls.add(url_to_delete, url_to_update)
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server.fred.kiss",
                         "base_path": "/",
@@ -1536,9 +1528,9 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     item_id=url_to_update.id,
                     new_value={
                         "domain": "proxy.fredkiss.dev",
@@ -1548,9 +1540,9 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=url_to_delete.id,
                     service=service,
                 ),
@@ -1586,17 +1578,17 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     def test_apply_urls_changes_create_as_many_deployment_urls_as_there_ports(self):
         p, service = self.create_caddy_docker_service()
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server.fred.kiss",
                         "base_path": "/",
@@ -1605,9 +1597,9 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "proxy.fredkiss.dev",
                         "base_path": "/config",
@@ -1616,9 +1608,9 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "proxy2.fredkiss.dev",
                         "base_path": "/config",
@@ -1662,26 +1654,26 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         )
         service.ports.add(port_to_delete, port_to_update)
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "forwarded": 9000,
                         "host": 9000,
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     item_id=port_to_update.id,
                     new_value={
                         "forwarded": 80,
@@ -1689,9 +1681,9 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=port_to_delete.id,
                     service=service,
                 ),
@@ -1727,17 +1719,17 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
     ):
         p, service = self.create_caddy_docker_service()
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "hello.local",
                         "base_path": "/",
@@ -1770,9 +1762,9 @@ class DockerServiceUpdateViewTests(AuthAPITestCase):
     async def test_update_service_with_config_remove_deleted_config(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -1784,11 +1776,11 @@ class DockerServiceUpdateViewTests(AuthAPITestCase):
         )
         config_to_delete: Config = await service.configs.afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.DELETE,
                     service=service,
                     item_id=config_to_delete.id,
                 ),
@@ -1813,9 +1805,9 @@ class DockerServiceUpdateViewTests(AuthAPITestCase):
     ):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -1827,11 +1819,11 @@ class DockerServiceUpdateViewTests(AuthAPITestCase):
         )
         config_to_update: Config = await service.configs.afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     service=service,
                     item_id=config_to_update.id,
                     new_value={

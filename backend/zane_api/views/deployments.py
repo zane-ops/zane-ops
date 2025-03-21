@@ -11,7 +11,7 @@ from ..models import (
     Service,
     Project,
     Deployment,
-    DockerDeploymentChange,
+    DeploymentChange,
     DeploymentURL,
     Environment,
 )
@@ -107,9 +107,9 @@ class WebhookDeployServiceAPIView(APIView):
 
             if new_image is not None:
                 service.add_change(
-                    DockerDeploymentChange(
-                        type=DockerDeploymentChange.ChangeType.UPDATE,
-                        field=DockerDeploymentChange.ChangeField.SOURCE,
+                    DeploymentChange(
+                        type=DeploymentChange.ChangeType.UPDATE,
+                        field=DeploymentChange.ChangeField.SOURCE,
                         old_value={
                             "image": service.image,
                             "credentials": service.credentials,

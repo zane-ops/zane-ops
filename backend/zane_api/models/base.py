@@ -197,7 +197,7 @@ class BaseEnvVariable(models.Model):
         abstract = True
 
 
-class DockerEnvVariable(BaseEnvVariable):
+class EnvVariable(BaseEnvVariable):
     ID_PREFIX = "env_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -220,9 +220,9 @@ class DockerEnvVariable(BaseEnvVariable):
 
 class Service(BaseService):
     deployments: Manager["Deployment"]
-    changes: Manager["DockerDeploymentChange"]
+    changes: Manager["DeploymentChange"]
     ports: Manager["PortConfiguration"]
-    env_variables: Manager[DockerEnvVariable]
+    env_variables: Manager[EnvVariable]
     urls: Manager[URL]
     volumes: Manager["Volume"]
     configs: Manager["Config"]
@@ -394,9 +394,9 @@ class Service(BaseService):
     def apply_pending_changes(self, deployment: "Deployment"):
         for change in self.unapplied_changes:
             match change.field:
-                case DockerDeploymentChange.ChangeField.COMMAND:
+                case DeploymentChange.ChangeField.COMMAND:
                     setattr(self, change.field, change.new_value)
-                case DockerDeploymentChange.ChangeField.SOURCE:
+                case DeploymentChange.ChangeField.SOURCE:
                     self.image = change.new_value.get("image")
                     credentials = change.new_value.get("credentials")
 
@@ -408,7 +408,7 @@ class Service(BaseService):
                             "password": credentials.get("password"),
                         }
                     )
-                case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                     if change.new_value is None:
                         self.resource_limits = None
                         continue
@@ -416,7 +416,7 @@ class Service(BaseService):
                         "cpus": change.new_value.get("cpus"),
                         "memory": change.new_value.get("memory"),
                     }
-                case DockerDeploymentChange.ChangeField.HEALTHCHECK:
+                case DeploymentChange.ChangeField.HEALTHCHECK:
                     if change.new_value is None:
                         if self.healthcheck is not None:
                             self.healthcheck.delete()
@@ -440,8 +440,8 @@ class Service(BaseService):
                         or HealthCheck.DEFAULT_INTERVAL_SECONDS
                     )
                     self.healthcheck.save()
-                case DockerDeploymentChange.ChangeField.VOLUMES:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.VOLUMES:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
                         self.volumes.add(
@@ -452,17 +452,17 @@ class Service(BaseService):
                                 name=change.new_value.get("name", fake.slug().lower()),
                             )
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.volumes.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         volume = self.volumes.get(id=change.item_id)
                         volume.host_path = change.new_value.get("host_path")
                         volume.container_path = change.new_value.get("container_path")
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
-                case DockerDeploymentChange.ChangeField.CONFIGS:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.CONFIGS:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
                         self.configs.add(
@@ -473,9 +473,9 @@ class Service(BaseService):
                                 language=change.new_value.get("language", "plaintext"),
                             )
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.configs.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         config = self.configs.get(id=change.item_id)
                         config.mount_path = change.new_value.get(
                             "mount_path", config.mount_path
@@ -491,22 +491,22 @@ class Service(BaseService):
                             "language", config.language
                         )
                         config.save()
-                case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
-                        DockerEnvVariable.objects.create(
+                case DeploymentChange.ChangeField.ENV_VARIABLES:
+                    if change.type == DeploymentChange.ChangeType.ADD:
+                        EnvVariable.objects.create(
                             key=change.new_value.get("key"),
                             value=change.new_value.get("value"),
                             service=self,
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.env_variables.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         env = self.env_variables.get(id=change.item_id)
                         env.key = change.new_value.get("key")
                         env.value = change.new_value.get("value")
                         env.save()
-                case DockerDeploymentChange.ChangeField.URLS:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.URLS:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         self.urls.add(
                             URL.objects.create(
                                 domain=change.new_value.get("domain"),
@@ -516,9 +516,9 @@ class Service(BaseService):
                                 associated_port=change.new_value.get("associated_port"),
                             )
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.urls.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         url = self.urls.get(id=change.item_id)
                         url.domain = change.new_value.get("domain")
                         url.base_path = change.new_value.get("base_path")
@@ -526,8 +526,8 @@ class Service(BaseService):
                         url.redirect_to = change.new_value.get("redirect_to")
                         url.associated_port = change.new_value.get("associated_port")
                         url.save()
-                case DockerDeploymentChange.ChangeField.PORTS:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.PORTS:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         self.ports.add(
                             PortConfiguration.objects.create(
                                 host=change.new_value.get("host"),
@@ -535,9 +535,9 @@ class Service(BaseService):
                             )
                         )
 
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.ports.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         port = self.ports.get(id=change.item_id)
                         port.host = change.new_value.get("host")
                         port.forwarded = change.new_value.get("forwarded")
@@ -557,14 +557,14 @@ class Service(BaseService):
         )
         return service
 
-    def add_change(self, change: "DockerDeploymentChange"):
+    def add_change(self, change: "DeploymentChange"):
         change.service = self
         match change.field:
             case (
-                DockerDeploymentChange.ChangeField.SOURCE
-                | DockerDeploymentChange.ChangeField.COMMAND
-                | DockerDeploymentChange.ChangeField.HEALTHCHECK
-                | DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
+                DeploymentChange.ChangeField.SOURCE
+                | DeploymentChange.ChangeField.COMMAND
+                | DeploymentChange.ChangeField.HEALTHCHECK
+                | DeploymentChange.ChangeField.RESOURCE_LIMITS
             ):
                 change_for_field = self.unapplied_changes.filter(
                     field=change.field
@@ -844,7 +844,7 @@ class BaseDeploymentChange(TimestampedModel):
         ]
 
 
-class DockerDeploymentChange(BaseDeploymentChange):
+class DeploymentChange(BaseDeploymentChange):
     ID_PREFIX = "chg_dkr_"
     id = ShortUUIDField(
         length=11,

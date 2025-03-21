@@ -63,7 +63,7 @@ from ..models import (
     Deployment,
     ArchivedProject,
     ArchivedDockerService,
-    DockerDeploymentChange,
+    DeploymentChange,
     HttpLog,
     DeploymentURL,
     Environment,
@@ -161,10 +161,10 @@ class CreateDockerServiceAPIView(APIView):
                     ):
                         source_data["credentials"] = docker_credentials
 
-                    DockerDeploymentChange.objects.create(
-                        field=DockerDeploymentChange.ChangeField.SOURCE,
+                    DeploymentChange.objects.create(
+                        field=DeploymentChange.ChangeField.SOURCE,
                         new_value=source_data,
-                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        type=DeploymentChange.ChangeType.UPDATE,
                         service=service,
                     )
 
@@ -240,15 +240,15 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             )
 
         field_serializer_map = {
-            DockerDeploymentChange.ChangeField.URLS: URLItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.VOLUMES: VolumeItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.ENV_VARIABLES: EnvItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.PORTS: PortItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.COMMAND: DockerCommandFieldChangeSerializer,
-            DockerDeploymentChange.ChangeField.SOURCE: DockerSourceFieldChangeSerializer,
-            DockerDeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
-            DockerDeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
-            DockerDeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
+            DeploymentChange.ChangeField.URLS: URLItemChangeSerializer,
+            DeploymentChange.ChangeField.VOLUMES: VolumeItemChangeSerializer,
+            DeploymentChange.ChangeField.ENV_VARIABLES: EnvItemChangeSerializer,
+            DeploymentChange.ChangeField.PORTS: PortItemChangeSerializer,
+            DeploymentChange.ChangeField.COMMAND: DockerCommandFieldChangeSerializer,
+            DeploymentChange.ChangeField.SOURCE: DockerSourceFieldChangeSerializer,
+            DeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
+            DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
+            DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -269,13 +269,13 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 change_type = data.get("type")  # type: ignore
                 old_value: Any = None
                 match field:
-                    case DockerDeploymentChange.ChangeField.COMMAND:
+                    case DeploymentChange.ChangeField.COMMAND:
                         old_value = getattr(service, field)
-                    case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                    case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                         if new_value is not None and len(new_value) == 0:
                             new_value = None
                         old_value = getattr(service, field)
-                    case DockerDeploymentChange.ChangeField.SOURCE:
+                    case DeploymentChange.ChangeField.SOURCE:
                         if new_value.get("credentials") is not None and (  # type: ignore
                             len(new_value["credentials"]) == 0  # type: ignore
                             or new_value.get("credentials")  # type: ignore
@@ -289,34 +289,34 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                             "image": service.image,
                             "credentials": service.credentials,
                         }
-                    case DockerDeploymentChange.ChangeField.HEALTHCHECK:
+                    case DeploymentChange.ChangeField.HEALTHCHECK:
                         old_value = (
                             HealthCheckSerializer(service.healthcheck).data
                             if service.healthcheck is not None
                             else None
                         )
-                    case DockerDeploymentChange.ChangeField.VOLUMES:
+                    case DeploymentChange.ChangeField.VOLUMES:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = VolumeSerializer(
                                 service.volumes.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.CONFIGS:
+                    case DeploymentChange.ChangeField.CONFIGS:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = ConfigSerializer(
                                 service.configs.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.URLS:
+                    case DeploymentChange.ChangeField.URLS:
                         old_value = None
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = URLModelSerializer(
                                 service.urls.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.PORTS:
+                    case DeploymentChange.ChangeField.PORTS:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = PortConfigurationSerializer(
                                 service.ports.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
+                    case DeploymentChange.ChangeField.ENV_VARIABLES:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = DockerEnvVariableSerializer(
                                 service.env_variables.get(id=item_id)  # type: ignore
@@ -324,7 +324,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
 
                 if new_value != old_value:
                     service.add_change(
-                        DockerDeploymentChange(
+                        DeploymentChange(
                             type=change_type,
                             field=field,
                             old_value=old_value,
@@ -393,9 +393,9 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
 
             for key, value in values.items():
                 service.add_change(
-                    DockerDeploymentChange(
-                        type=DockerDeploymentChange.ChangeType.ADD,
-                        field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    DeploymentChange(
+                        type=DeploymentChange.ChangeType.ADD,
+                        field=DeploymentChange.ChangeField.ENV_VARIABLES,
                         new_value={
                             "key": key,
                             "value": value,
@@ -459,7 +459,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             )
         try:
             found_change = service.unapplied_changes.get(id=change_id)
-        except DockerDeploymentChange.DoesNotExist:
+        except DeploymentChange.DoesNotExist:
             raise exceptions.NotFound(
                 f"A pending change with id `{change_id}` does not exist in this service."
             )

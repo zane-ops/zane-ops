@@ -9,7 +9,7 @@ from ..models import (
     Project,
     Deployment,
     Service,
-    DockerDeploymentChange,
+    DeploymentChange,
     Volume,
     URL,
 )
@@ -24,9 +24,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -53,9 +53,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server.fred.kiss",
                         "base_path": "/",
@@ -63,9 +63,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         "associated_port": 80,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server2.fred.kiss",
                         "base_path": "/",
@@ -76,9 +76,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         },
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server3.fred.kiss",
                         "base_path": "/",
@@ -123,9 +123,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "REDIS_PASSWORD",
                         "value": "super-secret-key-value-random123",
@@ -143,9 +143,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
@@ -173,9 +173,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         }
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value=resource_limits,
                 ),
             ]
@@ -204,9 +204,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "host_path": "/var/www/caddy/data",
@@ -230,17 +230,17 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/delete",
                         "host_path": "/delete",
@@ -250,11 +250,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             ]
         )
         volume_to_delete = await service.volumes.filter(host_path="/delete").afirst()
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=volume_to_delete.id,
                     service=service,
                 ),
@@ -284,9 +284,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"host": 6383, "forwarded": 6379},
                 ),
             ]
@@ -395,11 +395,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
         service = await Service.objects.aget(slug="app")
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "image": self.fake_docker_client.NONEXISTANT_IMAGE,
                     },

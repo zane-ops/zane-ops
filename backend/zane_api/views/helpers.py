@@ -17,7 +17,7 @@ from ..dtos import (
     DeploymentChangeDto,
     ResourceLimitsDto,
 )
-from ..models import Service, DockerDeploymentChange
+from ..models import Service, DeploymentChange
 from ..serializers import DockerServiceSerializer
 
 
@@ -47,18 +47,18 @@ def compute_docker_service_snapshot(
     changes: Iterable[DeploymentChangeDto],
 ):
     field_dto_map = {
-        DockerDeploymentChange.ChangeField.VOLUMES: VolumeDto,
-        DockerDeploymentChange.ChangeField.ENV_VARIABLES: EnvVariableDto,
-        DockerDeploymentChange.ChangeField.PORTS: PortConfigurationDto,
-        DockerDeploymentChange.ChangeField.URLS: URLDto,
-        DockerDeploymentChange.ChangeField.CONFIGS: ConfigDto,
+        DeploymentChange.ChangeField.VOLUMES: VolumeDto,
+        DeploymentChange.ChangeField.ENV_VARIABLES: EnvVariableDto,
+        DeploymentChange.ChangeField.PORTS: PortConfigurationDto,
+        DeploymentChange.ChangeField.URLS: URLDto,
+        DeploymentChange.ChangeField.CONFIGS: ConfigDto,
     }
 
     for change in changes:
         match change.field:
-            case DockerDeploymentChange.ChangeField.COMMAND:
+            case DeploymentChange.ChangeField.COMMAND:
                 setattr(service_snapshot, change.field, change.new_value)
-            case DockerDeploymentChange.ChangeField.HEALTHCHECK:
+            case DeploymentChange.ChangeField.HEALTHCHECK:
                 service_snapshot.healthcheck = (
                     HealthCheckDto.from_dict(
                         change.new_value,
@@ -66,7 +66,7 @@ def compute_docker_service_snapshot(
                     if change.new_value is not None
                     else None
                 )
-            case DockerDeploymentChange.ChangeField.SOURCE:
+            case DeploymentChange.ChangeField.SOURCE:
                 service_snapshot.image = change.new_value["image"]  # type: ignore
                 if change.new_value.get("credentials") is not None:  # type: ignore
                     service_snapshot.credentials = (
@@ -74,7 +74,7 @@ def compute_docker_service_snapshot(
                         if change.new_value is not None
                         else None
                     )
-            case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+            case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                 service_snapshot.resource_limits = (
                     ResourceLimitsDto.from_dict(change.new_value)
                     if change.new_value is not None
@@ -135,11 +135,11 @@ def compute_docker_service_snapshot_without_changes(service: Service, change_id:
 
 def compute_docker_changes_from_snapshots(
     current: dict, target: dict
-) -> list[DockerDeploymentChange]:
+) -> list[DeploymentChange]:
     current_snapshot = DockerServiceSnapshot.from_dict(current)
     target_snapshot = DockerServiceSnapshot.from_dict(target)
 
-    changes: list[DockerDeploymentChange] = []
+    changes: list[DeploymentChange] = []
 
     for service_field in fields(current_snapshot):
         current_value = getattr(current_snapshot, service_field.name)
@@ -148,8 +148,8 @@ def compute_docker_changes_from_snapshots(
             case "command":
                 if current_value != target_value:
                     changes.append(
-                        DockerDeploymentChange(
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                        DeploymentChange(
+                            type=DeploymentChange.ChangeType.UPDATE,
                             field=service_field.name,
                             new_value=target_value,
                             old_value=current_value,
@@ -161,7 +161,7 @@ def compute_docker_changes_from_snapshots(
                         (
                             change
                             for change in changes
-                            if change.field == DockerDeploymentChange.ChangeField.SOURCE
+                            if change.field == DeploymentChange.ChangeField.SOURCE
                         ),
                         None,
                     )
@@ -176,9 +176,9 @@ def compute_docker_changes_from_snapshots(
                         }
                     else:
                         changes.append(
-                            DockerDeploymentChange(
-                                type=DockerDeploymentChange.ChangeType.UPDATE,
-                                field=DockerDeploymentChange.ChangeField.SOURCE,
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.UPDATE,
+                                field=DeploymentChange.ChangeField.SOURCE,
                                 new_value={
                                     "image": target_snapshot.image,
                                     "credentials": (
@@ -218,8 +218,8 @@ def compute_docker_changes_from_snapshots(
                                 continue
 
                     changes.append(
-                        DockerDeploymentChange(
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                        DeploymentChange(
+                            type=DeploymentChange.ChangeType.UPDATE,
                             field=service_field.name,
                             new_value=(
                                 dataclasses.asdict(target_value)
@@ -240,8 +240,8 @@ def compute_docker_changes_from_snapshots(
                         target_value = cast(ResourceLimitsDto, target_value)
 
                     changes.append(
-                        DockerDeploymentChange(
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                        DeploymentChange(
+                            type=DeploymentChange.ChangeType.UPDATE,
                             field=service_field.name,
                             new_value=(
                                 target_value.to_dict()
@@ -276,8 +276,8 @@ def compute_docker_changes_from_snapshots(
                 for item_id in current_items:
                     if item_id not in target_items:
                         changes.append(
-                            DockerDeploymentChange(
-                                type=DockerDeploymentChange.ChangeType.DELETE,
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.DELETE,
                                 field=service_field.name,
                                 item_id=item_id,
                                 old_value=dataclasses.asdict(current_items[item_id]),
@@ -307,8 +307,8 @@ def compute_docker_changes_from_snapshots(
                                 else:
                                     continue
                         changes.append(
-                            DockerDeploymentChange(
-                                type=DockerDeploymentChange.ChangeType.UPDATE,
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.UPDATE,
                                 field=service_field.name,
                                 item_id=item_id,
                                 new_value=dataclasses.asdict(new_value),
@@ -342,8 +342,8 @@ def compute_docker_changes_from_snapshots(
                                     continue
 
                         changes.append(
-                            DockerDeploymentChange(
-                                type=DockerDeploymentChange.ChangeType.ADD,
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.ADD,
                                 field=service_field.name,
                                 new_value=dataclasses.asdict(element),
                             )

@@ -3,7 +3,7 @@ from .base import AuthAPITestCase
 from django.urls import reverse
 from ..models import (
     Deployment,
-    DockerDeploymentChange,
+    DeploymentChange,
     HealthCheck,
 )
 from rest_framework import status
@@ -43,9 +43,9 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             status=status.HTTP_200_OK,
         )
 
-        await DockerDeploymentChange.objects.acreate(
-            field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+        await DeploymentChange.objects.acreate(
+            field=DeploymentChange.ChangeField.HEALTHCHECK,
+            type=DeploymentChange.ChangeType.UPDATE,
             new_value={
                 "type": "PATH",
                 "value": "/",
@@ -89,9 +89,9 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             status=status.HTTP_200_OK,
         )
 
-        await DockerDeploymentChange.objects.acreate(
-            field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+        await DeploymentChange.objects.acreate(
+            field=DeploymentChange.ChangeField.HEALTHCHECK,
+            type=DeploymentChange.ChangeType.UPDATE,
             new_value={
                 "type": "PATH",
                 "value": "/",

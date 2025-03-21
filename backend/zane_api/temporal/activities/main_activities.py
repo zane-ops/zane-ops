@@ -29,7 +29,7 @@ with workflow.unsafe.imports_passed_through():
         Deployment,
         HealthCheck,
         URL,
-        DockerDeploymentChange,
+        DeploymentChange,
     )
     from docker.models.services import Service
     from urllib3.exceptions import HTTPError
@@ -2186,14 +2186,14 @@ class DockerSwarmActivities:
         new_urls = [
             URLDto.from_dict(change.new_value)
             for change in deployment.changes
-            if change.type == DockerDeploymentChange.ChangeType.ADD
-            and change.field == DockerDeploymentChange.ChangeField.URLS
+            if change.type == DeploymentChange.ChangeType.ADD
+            and change.field == DeploymentChange.ChangeField.URLS
         ]
         updated_url_changes = [
             change
             for change in deployment.changes
-            if change.type == DockerDeploymentChange.ChangeType.UPDATE
-            and change.field == DockerDeploymentChange.ChangeField.URLS
+            if change.type == DeploymentChange.ChangeType.UPDATE
+            and change.field == DeploymentChange.ChangeField.URLS
         ]
         for url in new_urls:
             ZaneProxyClient.remove_service_url(deployment.service.id, url)

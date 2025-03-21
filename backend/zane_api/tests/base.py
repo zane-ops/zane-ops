@@ -31,7 +31,7 @@ from search.loki_client import LokiSearchClient
 
 from ..models import (
     Project,
-    DockerDeploymentChange,
+    DeploymentChange,
     Service,
     Deployment,
     Volume,
@@ -484,7 +484,7 @@ class AuthAPITestCase(APITestCase):
     def create_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ):
         self.loginUser()
         response = self.client.post(
@@ -509,9 +509,9 @@ class AuthAPITestCase(APITestCase):
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",
                         "value": "valkey-cli validate",
@@ -524,11 +524,11 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "image": "valkey/valkey:7.2-alpine",
                     },
@@ -555,7 +555,7 @@ class AuthAPITestCase(APITestCase):
     async def acreate_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ) -> tuple[Project, Service]:
         owner = await self.aLoginUser()
         response = await self.async_client.post(
@@ -585,9 +585,9 @@ class AuthAPITestCase(APITestCase):
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",
                         "value": "valkey-cli validate",
@@ -600,7 +600,7 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        await DockerDeploymentChange.objects.abulk_create(other_changes)
+        await DeploymentChange.objects.abulk_create(other_changes)
 
         response = await self.async_client.put(
             reverse(
@@ -619,7 +619,7 @@ class AuthAPITestCase(APITestCase):
     async def acreate_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ):
         owner = await self.aLoginUser()
         response = await self.async_client.post(
@@ -652,9 +652,9 @@ class AuthAPITestCase(APITestCase):
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
                         "value": "/",
@@ -668,11 +668,11 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": await sync_to_async(URL.generate_default_domain)(
                             service
@@ -704,7 +704,7 @@ class AuthAPITestCase(APITestCase):
     def create_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ):
         self.loginUser()
         response = self.client.post(
@@ -736,9 +736,9 @@ class AuthAPITestCase(APITestCase):
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
                         "value": "/",
@@ -752,11 +752,11 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "caddy-web-server.fkiss.me",
                         "associated_port": 80,
