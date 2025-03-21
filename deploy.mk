@@ -86,14 +86,31 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 		exit 1; \
 	fi; \
 	docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1; \
-	echo -e "\n🏁 Deploy done, Please give this is a little minutes before accessing your website 🏁"; \
-	echo -e "\n> You can monitor the services deployed by running \x1b[96mdocker service ls --filter label=\x1b[33m\"zane.stack=true\"\x1b[0m"; \
-	echo -e "  And wait for all services (except for \x1b[90mzane_temporal-admin-tools\x1b[0m) to show up as \x1b[96mreplicated   1/1\x1b[0m to attest that everything started succesfully"; \
-	echo -e "\n> You can also monitor the new versions of the services by running \x1b[96mdocker ps --filter label=\x1b[33m\"com.docker.stack.namespace=zane\"\x1b[0m"; \
-	echo -e "  And wait for all services to show up as \x1b[96m(healthy)\x1b[0m to attest that everything started succesfully"; \
-	echo -e "\nit can take up to 5 minutes to start on the first deploy. \x1b[96m$$ACCESS_URL\x1b[0m"; \
-	echo -e "\nOnce everything is ok, zaneops will be accessible at \x1b[96m$$ACCESS_URL\x1b[0m"; \
-	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m ======"
+	echo -e "\n🏁 Deploy initiated"; \
+	spinner=( '◐' '◓' '◑' '◒' ); i=0; \
+	while true; do \
+		incomplete=0; \
+		while IFS=";" read -r svc_name svc_replicas; do \
+			if [[ "$$svc_name" == *"temporal-admin-tools" ]]; then \
+				if [[ "$$svc_replicas" != "0/1 (1/1 completed)" ]]; then \
+					incomplete=1; \
+					break; \
+				fi; \
+			else \
+				if [[ "$$svc_replicas" != "1/1" ]]; then \
+					incomplete=1;\
+					break; \
+				fi; \
+			fi; \
+		done < <(docker service ls --filter "name=zane_" --format "{{.Name}};{{.Replicas}}"); \
+		if [ $$incomplete -eq 0 ]; then break; fi; \
+		printf "\rWaiting for all services to reach desired state, this should take less than 5 minutes... \033[33m%s\033[0m " "$${spinner[$$((i % 4))]}"; \
+		i=$$((i+1)); \
+		sleep 0.1; \
+	done; \
+	printf "\rWaiting for all services to reach desired state... Done 💓                                 \n"; \
+	echo -e "\n> You can now access your ZaneOps dashboard at \x1b[96m$$ACCESS_URL\x1b[0m"; \
+	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m"
 
 create-user: ### Create the first user to login in into the dashboard
 	@docker exec -it $$(docker ps -qf "name=zane_app") /bin/bash -c "source /venv/bin/activate && python manage.py createsuperuser"
